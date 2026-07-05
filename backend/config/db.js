@@ -1,13 +1,14 @@
-import mysql from "mysql2/promise";
-import dotenv from 'dotenv';
+const mysql = require("mysql2/promise");
+const dotenv = require("dotenv");
+
 dotenv.config();
 
 const pool = mysql.createPool({
-  host: process.env.DB_HOST,
-  user: process.env.DB_USER,
-  port: Number(process.env.DB_PORT),
-  password: process.env.DB_PASS,
-  database: process.env.DB_NAME,
+  host: "localhost",
+  user: "root",
+  port: 3308,
+  password: "1234",
+  database: "fitlekdb",
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0
@@ -24,4 +25,4 @@ const pool = mysql.createPool({
   }
 })();
 
-export default pool;
+module.exports = pool;
