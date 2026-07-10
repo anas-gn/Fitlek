@@ -1,7 +1,6 @@
-const express = require('express');
+import express from 'express';
 const router = express.Router();
-const db = require('../../config/db');
-
+import db from '../../config/db.js';
 // ─── Routes spécifiques d'abord (/me avant /:userId) ───
 //
 // GET /advisors/me?userID=:id  — Profil de l'advisor actuel
@@ -11,7 +10,7 @@ router.get('/me', async (req, res) => {
     if (!userID) return res.status(400).json({ error: 'userID required' });
     const [rows] = await db.query(
       `SELECT ap.*, u.createdAt AS userCreatedAt
-       FROM advisorProfiles ap
+       FROM advisorprofiles ap
        JOIN users u ON u.id = ap.userID
        WHERE ap.userID = ?`,
       [userID]
@@ -31,7 +30,7 @@ router.post('/me', async (req, res) => {
     const { userID, specialty, location, companyName } = req.body;
     if (!userID || !specialty) return res.status(400).json({ error: 'userID and specialty required' });
     await db.query(
-      'INSERT INTO advisorProfiles (userID, specialty, location, companyName) VALUES (?,?,?,?)',
+      'INSERT INTO advisorprofiles (userID, specialty, location, companyName) VALUES (?,?,?,?)',
       [userID, specialty, location || null, companyName || null]
     );
     res.status(201).json({ message: 'Advisor profile created' });
@@ -44,7 +43,7 @@ router.put('/me', async (req, res) => {
     const { userID, specialty, location, companyName } = req.body;
     if (!userID) return res.status(400).json({ error: 'userID required' });
     await db.query(
-      'UPDATE advisorProfiles SET specialty=?, location=?, companyName=? WHERE userID=?',
+      'UPDATE advisorprofiles SET specialty=?, location=?, companyName=? WHERE userID=?',
       [specialty || null, location || null, companyName || null, userID]
     );
     res.json({ message: 'Updated' });
@@ -62,7 +61,7 @@ router.get('/:userId/coaches', async (req, res) => {
               cp.bio, cp.instagramPage, cp.invitationCode,
               cp.earnedPoints, cp.totalInvitations
        FROM users u
-       JOIN coachProfiles cp ON cp.userID = u.id
+       JOIN coachprofiles cp ON cp.userID = u.id
        WHERE u.role = 'coach'
          AND cp.advisorID = ?
        ORDER BY cp.earnedPoints DESC`,
@@ -84,7 +83,7 @@ router.get('/:advisorID/revenue', async (req, res) => {
          COUNT(*)                             AS sessions,
          SUM(r.price)                         AS revenue
        FROM reservations r
-       JOIN coachProfiles cp ON cp.userID = r.coachID
+       JOIN coachprofiles cp ON cp.userID = r.coachID
        WHERE cp.advisorID = ?
          AND r.status = 'confirmed'
          AND r.reservedDate >= DATE_SUB(CURDATE(), INTERVAL 6 MONTH)
@@ -114,11 +113,11 @@ router.get('/', async (req, res) => {
     const [rows] = await db.query(
       `SELECT u.id, u.firstName, u.lastName, u.email, u.avatarUrl,
               ap.specialty, ap.location, ap.companyName, ap.createdAt
-       FROM users u JOIN advisorProfiles ap ON ap.userID = u.id
+       FROM users u JOIN advisorprofiles ap ON ap.userID = u.id
        WHERE u.role='advisor' ORDER BY u.createdAt DESC`
     );
     res.json(rows);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-module.exports = router;
+export default router;

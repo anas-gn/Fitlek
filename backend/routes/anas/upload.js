@@ -1,8 +1,9 @@
-const express    = require('express');
-const router     = express.Router();
-const cloudinary = require('cloudinary').v2;
-const { CloudinaryStorage } = require('multer-storage-cloudinary');
-const multer     = require('multer');
+import express from 'express';
+const router = express.Router();
+import cloudinaryPkg from 'cloudinary';
+const cloudinary = cloudinaryPkg.v2;
+import { CloudinaryStorage } from 'multer-storage-cloudinary';
+import multer from 'multer';
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -52,4 +53,4 @@ router.post('/avatar', (req, res) => {
   });
 });
 
-module.exports = router;
+export default router;

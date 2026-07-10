@@ -1,7 +1,6 @@
-const express = require('express');
+import express from 'express';
 const router = express.Router();
-const db = require('../../config/db');
-
+import db from '../../config/db.js';
 // GET /conversations
 router.get('/', async (req, res) => {
   try {
@@ -25,7 +24,63 @@ router.get('/', async (req, res) => {
     res.json(rows);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
+router.post('/find-or-create', async (req, res) => {
+  try {
+    const { clientID, coachID } = req.body;
 
+    const [existing] = await db.query(
+      'SELECT id FROM conversations WHERE clientID=? AND coachID=?',
+      [clientID, coachID]
+    );
+
+    if (existing.length) {
+      return res.json({ conversationID: existing[0].id, created: false });
+    }
+
+    const [result] = await db.query(
+      'INSERT INTO conversations (clientID, coachID, createdAt) VALUES (?,?,NOW())',
+      [clientID, coachID]
+    );
+
+    res.status(201).json({ conversationID: result.insertId, created: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+// GET /conversations/find
+// Récupère une conversation spécifique client-coach (sans créer)
+router.get('/find', async (req, res) => {
+  try {
+    const { clientID, coachID } = req.query;
+    if (!clientID || !coachID) return res.status(400).json({ error: 'clientID and coachID required' });
+
+    const [rows] = await db.query(
+      'SELECT * FROM conversations WHERE clientID=? AND coachID=? LIMIT 1',
+      [clientID, coachID]
+    );
+    if (!rows.length) return res.status(404).json({ error: 'Conversation not found' });
+    res.json(rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+// GET /conversations/find
+// Récupère une conversation spécifique client-coach (lecture seule, sans créer)
+router.get('/find', async (req, res) => {
+  try {
+    const { clientID, coachID } = req.query;
+    if (!clientID || !coachID) return res.status(400).json({ error: 'clientID and coachID required' });
+
+    const [rows] = await db.query(
+      'SELECT * FROM conversations WHERE clientID=? AND coachID=? LIMIT 1',
+      [clientID, coachID]
+    );
+    if (!rows.length) return res.status(404).json({ error: 'Conversation not found' });
+    res.json(rows[0]);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 // POST /conversations
 router.post('/', async (req, res) => {
   try {
@@ -45,4 +100,4 @@ router.post('/', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-module.exports = router;
+export default router;

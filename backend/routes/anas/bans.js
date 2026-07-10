@@ -1,7 +1,6 @@
-const express = require('express');
+import express from 'express';
 const router = express.Router();
-const db = require('../../config/db');
-
+import db from '../../config/db.js';
 // GET /bans
 router.get('/', async (req, res) => {
   try {
@@ -30,7 +29,7 @@ router.post('/', async (req, res) => {
       'INSERT INTO bans (userID, bannedBy, banType, reason, expiresAt) VALUES (?,?,?,?,?)',
       [userID, bannedBy, banType, reason, expiresAt || null]
     );
-    await db.query('UPDATE authTokens SET revokedAt=NOW() WHERE userID=?', [userID]);
+    await db.query('UPDATE authtokens SET revokedAt=NOW() WHERE userID=?', [userID]);
 
     res.status(201).json({ message: 'User banned', banID: result.insertId });
   } catch (err) { res.status(500).json({ error: err.message }); }
@@ -62,4 +61,4 @@ router.get('/user/:userID', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-module.exports = router;
+export default router;

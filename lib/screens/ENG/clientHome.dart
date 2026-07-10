@@ -17,7 +17,7 @@ const _lime = Color(0xFFC6F135);
 const _dark = Color(0xFF0A0A0A);
 const _card = Color(0xFF141414);
 const _cardBorder = Color(0xFF232323);
-const _baseUrl = 'http://localhost:3000/api';
+const _baseUrl = 'http://192.168.0.232:3000/api';
 
 class _FitlekLogoPainter extends CustomPainter {
   final Color strokeColor;
@@ -533,11 +533,12 @@ class _HomeScreenState extends State<HomeScreen> {
           _buildHomeBody(),
           DiscoverScreen(clientID: widget.clientID, token: widget.token),
           SessionsScreen(clientID: widget.clientID, token: widget.token),
-          ClientProfileScreen(
-            clientID: widget.clientID,
-            token: widget.token,
-            onLogout: widget.onLogout,
-          ),
+         ClientProfileScreen(
+  clientID: widget.clientID,    // ← même valeur, nom différent
+  token: widget.token,  // ← nouveau paramètre optionnel
+  onLogout: widget.onLogout,
+),
+
         ],
       ),
       bottomNavigationBar: _buildNavBar(),

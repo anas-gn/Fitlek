@@ -1,9 +1,9 @@
-const express = require('express');
+import express from 'express';
 const router = express.Router();
-const db = require('../../config/db');
-const bcrypt = require('bcrypt');
-const jwt = require('jsonwebtoken');
-const crypto = require('crypto');
+import db from '../../config/db.js';
+import bcrypt from 'bcrypt';
+import jwt from 'jsonwebtoken';
+import crypto from 'crypto';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'fitlek_secret';
 
@@ -41,7 +41,7 @@ router.post('/register', async (req, res) => {
     if (role === 'advisor') {
       try {
         await db.query(
-          'INSERT INTO advisorProfiles (userID, specialty) VALUES (?,?)',
+          'INSERT INTO advisorprofiles (userID, specialty) VALUES (?,?)',
           [userID, 'À compléter']
         );
       } catch (err) {
@@ -61,7 +61,7 @@ router.post('/register', async (req, res) => {
         const coach_advisorID = advisorID || null;
         
         await db.query(
-          'INSERT INTO coachProfiles (userID, bio, instagramPage, certificateUrl, invitationCode, advisorID) VALUES (?,?,?,?,?,?)',
+          'INSERT INTO coachprofiles (userID, bio, instagramPage, certificateUrl, invitationCode, advisorID) VALUES (?,?,?,?,?,?)',
           [userID, '', '', '', invCode, coach_advisorID]
         );
       } catch (err) {
@@ -114,7 +114,7 @@ router.post('/login', async (req, res) => {
     const expiresAt = new Date(Date.now() + 30 * 86400000);
 
     await db.query(
-      'INSERT INTO authTokens (userID, refreshToken, deviceInfo, expiresAt) VALUES (?,?,?,?)',
+      'INSERT INTO authtokens (userID, refreshToken, deviceInfo, expiresAt) VALUES (?,?,?,?)',
       [user.id, refreshToken, deviceInfo || null, expiresAt]
     );
 
@@ -148,7 +148,7 @@ router.post('/refresh', async (req, res) => {
     }
 
     const [rows] = await db.query(
-      'SELECT * FROM authTokens WHERE refreshToken=? AND revokedAt IS NULL AND expiresAt > NOW()',
+      'SELECT * FROM authtokens WHERE refreshToken=? AND revokedAt IS NULL AND expiresAt > NOW()',
       [refreshToken]
     );
     if (!rows.length) {
@@ -177,7 +177,7 @@ router.post('/logout', async (req, res) => {
       return res.status(400).json({ error: 'Refresh token required' });
     }
     
-    await db.query('UPDATE authTokens SET revokedAt=NOW() WHERE refreshToken=?', [refreshToken]);
+    await db.query('UPDATE authtokens SET revokedAt=NOW() WHERE refreshToken=?', [refreshToken]);
     res.json({ message: 'Logged out' });
   } catch (err) { 
     res.status(500).json({ error: err.message }); 
@@ -198,7 +198,7 @@ router.post('/forgot-password', async (req, res) => {
     const token = crypto.randomBytes(32).toString('hex');
     const expiresAt = new Date(Date.now() + 3600000);
     await db.query(
-      'INSERT INTO passwordResetTokens (userID, token, expiresAt) VALUES (?,?,?)',
+      'INSERT INTO passwordresettokens (userID, token, expiresAt) VALUES (?,?,?)',
       [users[0].id, token, expiresAt]
     );
     // TODO: send email with reset link
@@ -219,7 +219,7 @@ router.post('/reset-password', async (req, res) => {
     }
 
     const [rows] = await db.query(
-      'SELECT * FROM passwordResetTokens WHERE token=? AND usedAt IS NULL AND expiresAt > NOW()',
+      'SELECT * FROM passwordresettokens WHERE token=? AND usedAt IS NULL AND expiresAt > NOW()',
       [token]
     );
     if (!rows.length) {
@@ -228,7 +228,7 @@ router.post('/reset-password', async (req, res) => {
 
     const passwordHash = await bcrypt.hash(newPassword, 12);
     await db.query('UPDATE users SET passwordHash=? WHERE id=?', [passwordHash, rows[0].userID]);
-    await db.query('UPDATE passwordResetTokens SET usedAt=NOW() WHERE id=?', [rows[0].id]);
+    await db.query('UPDATE passwordresettokens SET usedAt=NOW() WHERE id=?', [rows[0].id]);
     res.json({ message: 'Password reset successfully' });
   } catch (err) { 
     res.status(500).json({ error: err.message }); 
@@ -244,13 +244,13 @@ router.post('/sync-profiles', async (req, res) => {
     // Trouvez les advisors sans profil
     const [advisorsNoProfile] = await db.query(
       `SELECT u.id FROM users u
-       LEFT JOIN advisorProfiles ap ON ap.userID = u.id
+       LEFT JOIN advisorprofiles ap ON ap.userID = u.id
        WHERE u.role='advisor' AND ap.id IS NULL`
     );
 
     for (const advisor of advisorsNoProfile) {
       await db.query(
-        'INSERT INTO advisorProfiles (userID, specialty) VALUES (?,?)',
+        'INSERT INTO advisorprofiles (userID, specialty) VALUES (?,?)',
         [advisor.id, 'À compléter']
       ).catch(err => console.error(`Failed to sync advisor ${advisor.id}:`, err));
     }
@@ -258,14 +258,14 @@ router.post('/sync-profiles', async (req, res) => {
     // Trouvez les coaches sans profil
     const [coachesNoProfile] = await db.query(
       `SELECT u.id FROM users u
-       LEFT JOIN coachProfiles cp ON cp.userID = u.id
+       LEFT JOIN coachprofiles cp ON cp.userID = u.id
        WHERE u.role='coach' AND cp.id IS NULL`
     );
 
     for (const coach of coachesNoProfile) {
       const invCode = crypto.randomBytes(6).toString('hex').toUpperCase();
       await db.query(
-        'INSERT INTO coachProfiles (userID, bio, instagramPage, certificateUrl, invitationCode, advisorID) VALUES (?,?,?,?,?,?)',
+        'INSERT INTO coachprofiles (userID, bio, instagramPage, certificateUrl, invitationCode, advisorID) VALUES (?,?,?,?,?,?)',
         [coach.id, '', '', '', invCode, null]  // ← advisorID = null pour les anciens coaches
       ).catch(err => console.error(`Failed to sync coach ${coach.id}:`, err));
     }
@@ -279,5 +279,38 @@ router.post('/sync-profiles', async (req, res) => {
     res.status(500).json({ error: err.message }); 
   }
 });
+// ─── POST /auth/check-email ────────────────────────────────────────
+// Vérifie si l'email existe (étape 1 simplifiée)
+router.post('/check-email', async (req, res) => {
+  try {
+    const { email } = req.body;
+    const [users] = await db.query('SELECT id FROM users WHERE email=?', [email]);
+    res.json({ exists: users.length > 0 });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
-module.exports = router;
+// ─── POST /auth/reset-password-direct ──────────────────────────────
+// Réinitialise directement sans token (étape 2 simplifiée)
+router.post('/reset-password-direct', async (req, res) => {
+  try {
+    const { email, newPassword } = req.body;
+    if (!email || !newPassword) {
+      return res.status(400).json({ error: 'Email and password required' });
+    }
+
+    const [users] = await db.query('SELECT id FROM users WHERE email=?', [email]);
+    if (!users.length) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const passwordHash = await bcrypt.hash(newPassword, 12);
+    await db.query('UPDATE users SET passwordHash=? WHERE id=?', [passwordHash, users[0].id]);
+    
+    res.json({ message: 'Password updated successfully' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+export default router;

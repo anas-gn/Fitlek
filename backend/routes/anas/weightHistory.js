@@ -1,7 +1,6 @@
-const express = require('express');
+import express from 'express';
 const router = express.Router();
-const db = require('../../config/db');
-
+import db from '../../config/db.js';
 // GET /weight-history/me
 router.get('/me', async (req, res) => {
   try {
@@ -118,4 +117,4 @@ router.delete('/:id', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-module.exports = router;
+export default router;

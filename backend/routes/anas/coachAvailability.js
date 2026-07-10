@@ -1,12 +1,11 @@
-const express = require('express');
+import express from 'express';
 const router = express.Router();
-const db = require('../../config/db');
-
+import db from '../../config/db.js';
 // GET /availability/:coachID
 router.get('/:coachID', async (req, res) => {
   try {
     const { date } = req.query;
-    let sql = 'SELECT * FROM coachAvailabilityBlocks WHERE coachID=?';
+    let sql = 'SELECT * FROM coachavailabilityblocks WHERE coachID=?';
     const params = [req.params.coachID];
     if (date) { sql += ' AND blockedDate=?'; params.push(date); }
     sql += ' ORDER BY blockedDate, startTime';
@@ -23,7 +22,7 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ error: 'coachID, blockedDate, startTime and endTime required' });
 
     const [result] = await db.query(
-      'INSERT INTO coachAvailabilityBlocks (coachID, blockedDate, startTime, endTime, note) VALUES (?,?,?,?,?)',
+      'INSERT INTO coachavailabilityblocks (coachID, blockedDate, startTime, endTime, note) VALUES (?,?,?,?,?)',
       [coachID, blockedDate, startTime, endTime, note || null]
     );
     res.status(201).json({ message: 'Block created', id: result.insertId });
@@ -34,12 +33,12 @@ router.post('/', async (req, res) => {
 router.delete('/:id', async (req, res) => {
   try {
     const [rows] = await db.query(
-      'SELECT id FROM coachAvailabilityBlocks WHERE id=?', [req.params.id]
+      'SELECT id FROM coachavailabilityblocks WHERE id=?', [req.params.id]
     );
     if (!rows.length) return res.status(404).json({ error: 'Block not found' });
-    await db.query('DELETE FROM coachAvailabilityBlocks WHERE id=?', [req.params.id]);
+    await db.query('DELETE FROM coachavailabilityblocks WHERE id=?', [req.params.id]);
     res.json({ message: 'Block deleted' });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-module.exports = router;
+export default router;

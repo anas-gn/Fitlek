@@ -60,6 +60,8 @@ class CoachModel {
         speciality: json['speciality'],
       );
 
+  get ville => null;
+
   Map<String, dynamic> toJson() => {
         'id': id,
         'firstName': firstName,

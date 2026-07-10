@@ -1,7 +1,6 @@
-const express = require('express');
+import express from 'express';
 const router = express.Router();
-const db = require('../../config/db');
-
+import db from '../../config/db.js';
 // GET /reservations
 router.get('/', async (req, res) => {
   try {
@@ -38,7 +37,7 @@ router.get('/advisor/:advisorID', async (req, res) => {
                FROM reservations r
                JOIN users c   ON c.id  = r.clientID
                JOIN users co  ON co.id = r.coachID
-               JOIN coachProfiles cp ON cp.userID = r.coachID
+               JOIN coachprofiles cp ON cp.userID = r.coachID
                WHERE cp.advisorID = ?`;
     const params = [req.params.advisorID];
 
@@ -94,7 +93,7 @@ router.post('/', async (req, res) => {
 
     // Vérifier créneau bloqué par le coach
     const [blocks] = await db.query(
-      `SELECT id FROM coachAvailabilityBlocks
+      `SELECT id FROM coachavailabilityblocks
        WHERE coachID=? AND blockedDate=? AND startTime <= ? AND endTime > ?`,
       [coachID, reservedDate, reservedTime, reservedTime]
     );
@@ -106,8 +105,8 @@ router.post('/', async (req, res) => {
 
     const [advisorInfo] = await db.query(
       `SELECT ap.location, ap.companyName
-       FROM coachProfiles cp
-       JOIN advisorProfiles ap ON ap.userID = cp.advisorID
+       FROM coachprofiles cp
+       JOIN advisorprofiles ap ON ap.userID = cp.advisorID
        WHERE cp.userID = ?`,
       [coachID]
     );
@@ -185,4 +184,4 @@ router.patch('/:id/price', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-module.exports = router;
+export default router;

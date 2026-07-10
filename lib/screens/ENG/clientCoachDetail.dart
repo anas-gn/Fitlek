@@ -6,19 +6,14 @@ import 'package:http/http.dart' as http;
 import 'package:fitlek1/models/anas/reservation.dart';
 import 'package:fitlek1/models/anas/coach.dart';
 import 'clientBooking.dart';
+import 'clientConversation.dart';
 
-// ─────────────────────────────────────────────
-//  Constants
-// ─────────────────────────────────────────────
 const _lime       = Color(0xFFC6F135);
 const _dark       = Color(0xFF0A0A0A);
 const _card       = Color(0xFF141414);
 const _cardBorder = Color(0xFF232323);
-const _baseUrl    = 'http://localhost:3000/api';
+const _baseUrl    = 'http://192.168.0.232:3000/api';
 
-// ─────────────────────────────────────────────
-//  ReviewModel
-// ─────────────────────────────────────────────
 class _ReviewItem {
   final int id;
   final int coachID;
@@ -52,9 +47,6 @@ class _ReviewItem {
   );
 }
 
-// ─────────────────────────────────────────────
-//  CoachDetailScreen
-// ─────────────────────────────────────────────
 class CoachDetailScreen extends StatefulWidget {
   final ReservationModel session;
   final int    clientID;
@@ -73,29 +65,25 @@ class CoachDetailScreen extends StatefulWidget {
 
 class _CoachDetailScreenState extends State<CoachDetailScreen>
     with SingleTickerProviderStateMixin {
-  // Data
   CoachModel?       _coach;
   List<_ReviewItem> _reviews     = [];
   double            _avgRating   = 0;
   int               _totalReviews = 0;
   _ReviewItem?      _myReview;
 
-  // State
   bool    _loadingCoach   = true;
   bool    _loadingReviews = true;
   String? _errorCoach;
 
-  // Review form
   int     _pendingRating  = 0;
   bool    _submittingReview = false;
   final   _commentCtrl    = TextEditingController();
   bool    _showReviewForm = false;
 
-  // Invitation
   bool    _sendingInvite  = false;
-  bool    _hasInvited     = false;
+  String  _inviteStatus   = 'none';
+  int?    _conversationID;
 
-  // Animation
   late AnimationController _animCtrl;
   late Animation<double>   _fadeAnim;
 
@@ -105,7 +93,7 @@ class _CoachDetailScreenState extends State<CoachDetailScreen>
     _animCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 600));
     _fadeAnim = CurvedAnimation(parent: _animCtrl, curve: Curves.easeOut);
     _fetchAll();
-    _checkExistingInvitation();
+    _checkInvitationStatus();
   }
 
   @override
@@ -120,7 +108,6 @@ class _CoachDetailScreenState extends State<CoachDetailScreen>
     _animCtrl.forward();
   }
 
-  // ── GET /coaches/:id ───────────────────────────────────────────
   Future<void> _fetchCoach() async {
     setState(() { _loadingCoach = true; _errorCoach = null; });
     try {
@@ -134,7 +121,6 @@ class _CoachDetailScreenState extends State<CoachDetailScreen>
 
       if (res.statusCode == 200) {
         final jsonData = jsonDecode(res.body);
-        debugPrint('Coach data: $jsonData');
         setState(() {
           _coach = CoachModel.fromJson(jsonData);
           _loadingCoach = false;
@@ -147,7 +133,6 @@ class _CoachDetailScreenState extends State<CoachDetailScreen>
     }
   }
 
-  // ── GET /reviews/coach/:coachID ───────────────────────────────
   Future<void> _fetchReviews() async {
     setState(() => _loadingReviews = true);
     try {
@@ -164,8 +149,7 @@ class _CoachDetailScreenState extends State<CoachDetailScreen>
         final list  = (data['reviews'] as List)
             .map((e) => _ReviewItem.fromJson(e))
             .toList();
-        final myReview = list.where((r) => r.clientID == widget.clientID)
-            .isNotEmpty
+        final myReview = list.where((r) => r.clientID == widget.clientID).isNotEmpty
             ? list.firstWhere((r) => r.clientID == widget.clientID)
             : null;
 
@@ -186,7 +170,6 @@ class _CoachDetailScreenState extends State<CoachDetailScreen>
     }
   }
 
-  // ── POST /reviews ─────────────────────────────────────────────
   Future<void> _submitReview() async {
     if (_pendingRating == 0) {
       _showSnack("Sélectionne une note d'abord", isError: true);
@@ -223,7 +206,6 @@ class _CoachDetailScreenState extends State<CoachDetailScreen>
     }
   }
 
-  // ── POST /invitations/send ────────────────────────────────────
   Future<void> _sendInvitation() async {
     setState(() => _sendingInvite = true);
     try {
@@ -241,10 +223,10 @@ class _CoachDetailScreenState extends State<CoachDetailScreen>
 
       if (res.statusCode == 201) {
         _showSnack('Invitation envoyée au coach ✓');
-        setState(() => _hasInvited = true);
+        setState(() => _inviteStatus = 'pending');
       } else if (res.statusCode == 409) {
         _showSnack('Invitation déjà envoyée', isError: true);
-        setState(() => _hasInvited = true);
+        setState(() => _inviteStatus = 'pending');
       } else {
         final body = jsonDecode(res.body);
         _showSnack(body['error'] ?? 'Erreur serveur', isError: true);
@@ -256,11 +238,10 @@ class _CoachDetailScreenState extends State<CoachDetailScreen>
     }
   }
 
-  // ── GET /invitations/received/:coachID ──────────────────────
-  Future<void> _checkExistingInvitation() async {
+  Future<void> _checkInvitationStatus() async {
     try {
       final res = await http.get(
-        Uri.parse('$_baseUrl/invitations/received/${widget.session.coachID}'),
+        Uri.parse('$_baseUrl/invitations/status/${widget.session.coachID}/${widget.clientID}'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer ${widget.token}',
@@ -268,17 +249,61 @@ class _CoachDetailScreenState extends State<CoachDetailScreen>
       ).timeout(const Duration(seconds: 10));
 
       if (res.statusCode == 200) {
-        final data = jsonDecode(res.body) as List;
-        final alreadyInvited = data.any(
-          (inv) => inv['invitedUserID'] == widget.clientID,
-        );
-        if (alreadyInvited) {
-          setState(() => _hasInvited = true);
+        final data = jsonDecode(res.body) as Map<String, dynamic>;
+        final status = data['status'];
+        if (status != null) {
+          setState(() => _inviteStatus = status);
+        }
+        if (status == 'accepted') {
+          await _fetchConversation();
         }
       }
-    } catch (e) {
-      // Silencieux
-    }
+    } catch (e) {}
+  }
+
+  Future<void> _fetchConversation() async {
+    try {
+      final res = await http.post(
+        Uri.parse('$_baseUrl/conversations/find-or-create'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ${widget.token}',
+        },
+        body: jsonEncode({
+          'clientID': widget.clientID,
+          'coachID': widget.session.coachID,
+        }),
+      ).timeout(const Duration(seconds: 10));
+
+      if (res.statusCode == 200 || res.statusCode == 201) {
+        final data = jsonDecode(res.body) as Map<String, dynamic>;
+        setState(() => _conversationID = data['conversationID']);
+      }
+    } catch (e) {}
+  }
+
+  void _openConversation() {
+    if (_conversationID == null) return;
+    Navigator.push(context, PageRouteBuilder(
+      pageBuilder: (_, __, ___) => ClientConversationScreen(
+        conversationID: _conversationID!,
+        clientID: widget.clientID,
+        token: widget.token,
+        coachName: _coach?.fullName ?? widget.session.coachName,
+        coachAvatar: _coach?.avatarUrl ?? widget.session.coachImageUrl,
+        coachSpeciality: _coach?.speciality ?? widget.session.coachSpeciality,
+      ),
+      transitionsBuilder: (_, anim, __, child) => FadeTransition(
+        opacity: anim,
+        child: SlideTransition(
+          position: Tween<Offset>(
+            begin: const Offset(0, 0.04), end: Offset.zero,
+          ).animate(CurvedAnimation(parent: anim, curve: Curves.easeOutCubic)),
+          child: child,
+        ),
+      ),
+      transitionDuration: const Duration(milliseconds: 380),
+    ));
   }
 
   void _showSnack(String msg, {bool isError = false}) {
@@ -292,9 +317,6 @@ class _CoachDetailScreenState extends State<CoachDetailScreen>
     ));
   }
 
-  // ──────────────────────────────────────────────────────────────
-  //  BUILD
-  // ──────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
     if (_loadingCoach) return _buildLoading();
@@ -302,7 +324,6 @@ class _CoachDetailScreenState extends State<CoachDetailScreen>
     return _buildContent();
   }
 
-  // ── Loading ──────────────────────────────────────────────────
   Widget _buildLoading() => const Scaffold(
     backgroundColor: _dark,
     body: Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
@@ -314,7 +335,6 @@ class _CoachDetailScreenState extends State<CoachDetailScreen>
     ])),
   );
 
-  // ── Error ────────────────────────────────────────────────────
   Widget _buildError() => Scaffold(
     backgroundColor: _dark,
     body: SafeArea(child: Column(children: [
@@ -333,7 +353,6 @@ class _CoachDetailScreenState extends State<CoachDetailScreen>
     ])),
   );
 
-  // ── Content ──────────────────────────────────────────────────
   Widget _buildContent() {
     final s = widget.session;
     final c = _coach!;
@@ -350,51 +369,30 @@ class _CoachDetailScreenState extends State<CoachDetailScreen>
       child: Scaffold(
         backgroundColor: _dark,
         body: CustomScrollView(slivers: [
-          // ── Hero ───────────────────────────────────────────────
           SliverToBoxAdapter(child: _buildHero(context, imageUrl, name, speciality, rating)),
-
-          // ── Stats strip ────────────────────────────────────────
           SliverToBoxAdapter(child: _buildStats(rating, c.totalInvitations, _totalReviews)),
-
-          // ── Prix & Téléphone ───────────────────────────────────
-          if (c.price != null || c.tel != null)
+          if (c.ville != null || c.tel != null)
             SliverToBoxAdapter(child: _buildContactInfo(c)),
-
-          // ── Instagram ─────────────────────────────────────────
           if (c.instagramPage.isNotEmpty)
             SliverToBoxAdapter(child: _buildInstagram(c.instagramPage)),
-
-          // ── Speciality tags ────────────────────────────────────
           if (speciality.isNotEmpty)
             SliverToBoxAdapter(child: _buildTags(speciality)),
-
-          // ── Bio ────────────────────────────────────────────────
           if (c.bio.isNotEmpty)
             SliverToBoxAdapter(child: _buildBio(c.bio)),
-
-          // ── Bouton Inviter ────────────────────────────────────
           SliverToBoxAdapter(child: _buildInviteCTA()),
-
-          // ── CTA Réserver ───────────────────────────────────────
           SliverToBoxAdapter(child: _buildBookCTA(context, s)),
-
-          // ── Section Avis ───────────────────────────────────────
           SliverToBoxAdapter(child: _buildReviewsSection(rating, canReview)),
-
-          // ── Bottom padding ────────────────────────────────────
           const SliverToBoxAdapter(child: SizedBox(height: 40)),
         ]),
       ),
     );
   }
 
-  // ── Hero ─────────────────────────────────────────────────────
   Widget _buildHero(BuildContext ctx, String imageUrl, String name,
       String speciality, double rating) {
     return SizedBox(
       height: 380,
       child: Stack(children: [
-        // Background image
         Positioned.fill(
           child: imageUrl.isNotEmpty
               ? Image.network(imageUrl, fit: BoxFit.cover,
@@ -403,8 +401,6 @@ class _CoachDetailScreenState extends State<CoachDetailScreen>
                   errorBuilder: (_, __, ___) => _avatarPlaceholder(name))
               : _avatarPlaceholder(name),
         ),
-
-        // Gradient overlay
         Positioned.fill(child: DecoratedBox(
           decoration: const BoxDecoration(gradient: LinearGradient(
             begin: Alignment.topCenter, end: Alignment.bottomCenter,
@@ -412,12 +408,8 @@ class _CoachDetailScreenState extends State<CoachDetailScreen>
             stops: [0.0, 1.0],
           )),
         )),
-
-        // Back
         Positioned(top: 52, left: 16,
           child: SafeArea(child: _backBtn(onTap: () => Navigator.pop(ctx), transparent: true))),
-
-        // Badge vérifié
         Positioned(top: 52, right: 16,
           child: SafeArea(child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
@@ -433,8 +425,6 @@ class _CoachDetailScreenState extends State<CoachDetailScreen>
             ]),
           )),
         ),
-
-        // Rating pill (bottom right)
         if (_avgRating > 0 || _totalReviews > 0)
           Positioned(bottom: 76, right: 20,
             child: Container(
@@ -455,8 +445,6 @@ class _CoachDetailScreenState extends State<CoachDetailScreen>
               ]),
             ),
           ),
-
-        // Name & speciality
         Positioned(bottom: 20, left: 20, right: 20,
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text(name, style: const TextStyle(
@@ -480,7 +468,6 @@ class _CoachDetailScreenState extends State<CoachDetailScreen>
     )),
   );
 
-  // ── Stats strip ───────────────────────────────────────────────
   Widget _buildStats(double rating, int totalInvitations, int totalReviews) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
@@ -515,7 +502,6 @@ class _CoachDetailScreenState extends State<CoachDetailScreen>
     ),
   );
 
-  // ── Contact Info (Prix + Téléphone) ─────────────────────────
   Widget _buildContactInfo(CoachModel c) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
@@ -536,15 +522,15 @@ class _CoachDetailScreenState extends State<CoachDetailScreen>
                 color: Colors.white, fontSize: 15, fontWeight: FontWeight.w800)),
             ]),
             const SizedBox(height: 14),
-            if (c.price != null)
+            if (c.ville != null && c.ville!.isNotEmpty)
               _infoRow(
-                icon: Icons.euro_rounded,
-                label: 'Prix par séance',
-                value: '${c.price!.toStringAsFixed(2)} €',
+                icon: Icons.location_on_rounded,
+                label: 'Ville',
+                value: c.ville!,
                 valueColor: _lime,
                 onTap: null,
               ),
-            if (c.price != null && c.tel != null)
+            if (c.ville != null && c.ville!.isNotEmpty && c.tel != null)
               const SizedBox(height: 12),
             if (c.tel != null)
               _infoRow(
@@ -623,7 +609,6 @@ class _CoachDetailScreenState extends State<CoachDetailScreen>
     return child;
   }
 
-  // ── Tags spécialité ───────────────────────────────────────────
   Widget _buildTags(String speciality) {
     final tags = speciality.split(RegExp(r'[,/]')).map((t) => t.trim())
         .where((t) => t.isNotEmpty).toList();
@@ -643,7 +628,6 @@ class _CoachDetailScreenState extends State<CoachDetailScreen>
     );
   }
 
-  // ── Instagram ─────────────────────────────────────────────────
   Widget _buildInstagram(String handle) {
     final display = handle.startsWith('http') ? handle.split('/').last : handle;
     return Padding(
@@ -677,7 +661,6 @@ class _CoachDetailScreenState extends State<CoachDetailScreen>
     );
   }
 
-  // ── Bio ───────────────────────────────────────────────────────
   Widget _buildBio(String bio) => Padding(
     padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -688,66 +671,103 @@ class _CoachDetailScreenState extends State<CoachDetailScreen>
     ]),
   );
 
-  // ── Invite CTA ────────────────────────────────────────────────
-  Widget _buildInviteCTA() => Padding(
-    padding: const EdgeInsets.fromLTRB(20, 28, 20, 0),
-    child: GestureDetector(
-      onTap: _hasInvited || _sendingInvite ? null : _sendInvitation,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(vertical: 17),
-        decoration: BoxDecoration(
-          color: _hasInvited
-              ? _lime.withOpacity(0.15)
-              : const Color(0xFFC6F135),
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: _hasInvited
-                ? _lime.withOpacity(0.4)
-                : const Color(0xFFC6F135).withOpacity(0.5),
-            width: 1,
-          ),
-          boxShadow: _hasInvited
-              ? null
-              : [
-                  BoxShadow(
-                    color: const Color(0xFFC6F135).withOpacity(0.20),
-                    blurRadius: 20,
-                    offset: const Offset(0, 6),
-                  ),
-                ],
-        ),
-        child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-          _sendingInvite
-              ? const SizedBox(
-                  width: 16, height: 16,
-                  child: CircularProgressIndicator(
-                    color: Colors.black,
-                    strokeWidth: 2,
-                  ),
-                )
-              : Icon(
-                  _hasInvited ? Icons.check_circle_rounded : Icons.person_add_rounded,
-                  color: _hasInvited ? _lime : Colors.black,
-                  size: 16,
-                ),
-          const SizedBox(width: 8),
-          Text(
-            _hasInvited ? 'INVITATION ENVOYÉE' : 'INVITER CE COACH',
-            style: TextStyle(
-              color: _hasInvited ? _lime : Colors.black,
-              fontWeight: FontWeight.w900,
-              fontSize: 13,
-              letterSpacing: 1.8,
-            ),
-          ),
-        ]),
-      ),
-    ),
-  );
+  Widget _buildInviteCTA() {
+    final String btnText;
+    final IconData btnIcon;
+    final Color btnColor;
+    final Color textColor;
+    final bool isDisabled;
+    final VoidCallback? onTap;
 
-  // ── Book CTA ──────────────────────────────────────────────────
+    switch (_inviteStatus) {
+      case 'accepted':
+        btnText = 'ENVOYER UN MESSAGE';
+        btnIcon = Icons.chat_bubble_rounded;
+        btnColor = _lime;
+        textColor = Colors.black;
+        isDisabled = false;
+        onTap = _openConversation;
+        break;
+      case 'pending':
+        btnText = 'INVITATION ENVOYÉE';
+        btnIcon = Icons.schedule_rounded;
+        btnColor = _lime.withOpacity(0.15);
+        textColor = _lime;
+        isDisabled = true;
+        onTap = null;
+        break;
+      case 'refused':
+        btnText = 'INVITATION REFUSÉE';
+        btnIcon = Icons.cancel_rounded;
+        btnColor = Colors.red.withOpacity(0.15);
+        textColor = Colors.redAccent;
+        isDisabled = true;
+        onTap = null;
+        break;
+      default:
+        btnText = 'INVITER CE COACH';
+        btnIcon = Icons.person_add_rounded;
+        btnColor = const Color(0xFFC6F135);
+        textColor = Colors.black;
+        isDisabled = false;
+        onTap = _sendInvitation;
+    }
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 28, 20, 0),
+      child: GestureDetector(
+        onTap: _sendingInvite ? null : onTap,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(vertical: 17),
+          decoration: BoxDecoration(
+            color: btnColor,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: _inviteStatus == 'accepted'
+                  ? const Color(0xFFC6F135).withOpacity(0.5)
+                  : isDisabled
+                      ? (_inviteStatus == 'refused' ? Colors.red.withOpacity(0.4) : _lime.withOpacity(0.4))
+                      : const Color(0xFFC6F135).withOpacity(0.5),
+              width: 1,
+            ),
+            boxShadow: isDisabled
+                ? null
+                : [
+                    BoxShadow(
+                      color: const Color(0xFFC6F135).withOpacity(0.20),
+                      blurRadius: 20,
+                      offset: const Offset(0, 6),
+                    ),
+                  ],
+          ),
+          child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+            _sendingInvite
+                ? const SizedBox(
+                    width: 16, height: 16,
+                    child: CircularProgressIndicator(
+                      color: Colors.black,
+                      strokeWidth: 2,
+                    ),
+                  )
+                : Icon(btnIcon, color: textColor, size: 16),
+            const SizedBox(width: 8),
+            Text(
+              btnText,
+              style: TextStyle(
+                color: textColor,
+                fontWeight: FontWeight.w900,
+                fontSize: 13,
+                letterSpacing: 1.8,
+              ),
+            ),
+          ]),
+        ),
+      ),
+    );
+  }
+
   Widget _buildBookCTA(BuildContext ctx, ReservationModel s) => Padding(
     padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
     child: GestureDetector(
@@ -790,12 +810,10 @@ class _CoachDetailScreenState extends State<CoachDetailScreen>
     ),
   );
 
-  // ── Reviews section (header + form + list) ────────────────────
   Widget _buildReviewsSection(double rating, bool canReview) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(0, 28, 0, 0),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        // Header
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20),
           child: Row(children: [
@@ -817,8 +835,6 @@ class _CoachDetailScreenState extends State<CoachDetailScreen>
             ),
           ]),
         ),
-
-        // Bouton "Laisser un avis" ou "Modifier mon avis"
         if (canReview) ...[
           const SizedBox(height: 16),
           Padding(
@@ -853,8 +869,6 @@ class _CoachDetailScreenState extends State<CoachDetailScreen>
             ),
           ),
         ],
-
-        // Formulaire avis (collapsible)
         if (canReview && _showReviewForm) ...[
           const SizedBox(height: 12),
           Padding(
@@ -862,10 +876,7 @@ class _CoachDetailScreenState extends State<CoachDetailScreen>
             child: _buildReviewForm(),
           ),
         ],
-
         const SizedBox(height: 16),
-
-        // Liste avis
         if (_loadingReviews)
           const Center(child: Padding(
             padding: EdgeInsets.all(24),
@@ -880,7 +891,6 @@ class _CoachDetailScreenState extends State<CoachDetailScreen>
     );
   }
 
-  // ── Review form ───────────────────────────────────────────────
   Widget _buildReviewForm() => Container(
     padding: const EdgeInsets.all(16),
     decoration: BoxDecoration(
@@ -888,7 +898,6 @@ class _CoachDetailScreenState extends State<CoachDetailScreen>
       borderRadius: BorderRadius.circular(14),
       border: Border.all(color: _lime.withOpacity(0.2))),
     child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      // Stars
       const Text('Ta note', style: TextStyle(
         color: Colors.white60, fontSize: 11, fontWeight: FontWeight.w600)),
       const SizedBox(height: 8),
@@ -908,10 +917,7 @@ class _CoachDetailScreenState extends State<CoachDetailScreen>
           ),
         );
       })),
-
       const SizedBox(height: 14),
-
-      // Comment
       const Text('Commentaire (optionnel)', style: TextStyle(
         color: Colors.white60, fontSize: 11, fontWeight: FontWeight.w600)),
       const SizedBox(height: 8),
@@ -936,10 +942,7 @@ class _CoachDetailScreenState extends State<CoachDetailScreen>
             borderSide: const BorderSide(color: _lime, width: 1.5)),
         ),
       ),
-
       const SizedBox(height: 14),
-
-      // Submit
       SizedBox(
         width: double.infinity,
         child: GestureDetector(
@@ -965,7 +968,6 @@ class _CoachDetailScreenState extends State<CoachDetailScreen>
     ]),
   );
 
-  // ── Review card ───────────────────────────────────────────────
   Widget _buildReviewCard(_ReviewItem review) {
     final isMyReview = review.clientID == widget.clientID;
     final month = [
@@ -983,7 +985,6 @@ class _CoachDetailScreenState extends State<CoachDetailScreen>
           color: isMyReview ? _lime.withOpacity(0.3) : _cardBorder)),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [
-          // Avatar
           Container(
             width: 34, height: 34,
             decoration: BoxDecoration(
@@ -1017,7 +1018,6 @@ class _CoachDetailScreenState extends State<CoachDetailScreen>
             Text('$month ${review.createdAt.year}',
               style: const TextStyle(color: Colors.white24, fontSize: 10)),
           ])),
-          // Stars
           Row(children: List.generate(5, (i) => Icon(
             i < review.rating ? Icons.star_rounded : Icons.star_outline_rounded,
             color: _lime, size: 12))),
@@ -1031,7 +1031,6 @@ class _CoachDetailScreenState extends State<CoachDetailScreen>
     );
   }
 
-  // ── Empty reviews ─────────────────────────────────────────────
   Widget _buildEmptyReviews() => Padding(
     padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
     child: Container(
@@ -1051,7 +1050,6 @@ class _CoachDetailScreenState extends State<CoachDetailScreen>
     ),
   );
 
-  // ── Helpers ───────────────────────────────────────────────────
   Widget _sectionHeader(String title) => Row(mainAxisSize: MainAxisSize.min, children: [
     Container(width: 3, height: 16, color: _lime,
       margin: const EdgeInsets.only(right: 10)),

@@ -19,7 +19,7 @@ const _dark       = Color(0xFF0A0A0A);
 const _card       = Color(0xFF141414);
 const _cardBorder = Color(0xFF232323);
 const _darkGray   = Color(0xFF1A1A1A);
-const _baseUrl    = 'http://localhost:3000/api';
+const _baseUrl    = 'http://192.168.0.232:3000/api';
 
 // ─── DTOs ────────────────────────────────────────────────────────────────────
 class _AdvisorDTO {

@@ -1,207 +1,216 @@
-const express = require('express');
-const router = express.Router();
-const db = require('../../config/db');
-const crypto = require('crypto');
+import express from 'express';
+import db from '../../config/db.js';
 
-// ═══════════════════════════════════════════════════════════════
-// GET /invitations/me  —  Invitations envoyées par un coach
-// ═══════════════════════════════════════════════════════════════
+const router = express.Router();
+
+// ─────────────────────────────────────────────
+//  GET /invitations/me
+//  Le coach voit TOUTES ses invitations reçues
+//  (avec les infos de l'utilisateur invité)
+// ─────────────────────────────────────────────
 router.get('/me', async (req, res) => {
   try {
     const { coachID } = req.query;
+    if (!coachID) return res.status(400).json({ error: 'coachID required' });
+
     const [rows] = await db.query(
-      `SELECT i.*, CONCAT(u.firstName,' ',u.lastName) AS invitedUserName
-       FROM invitations i
+      `SELECT 
+         i.id,
+         i.coachID,
+         i.invitedUserID,
+         i.status,
+         i.clickedAt,
+         i.respondedAt,
+         CONCAT(u.firstName,' ',u.lastName) AS invitedUserName,
+         u.firstName,
+         u.lastName,
+         u.avatarUrl AS invitedUserAvatar
+       FROM invitations i 
        JOIN users u ON u.id = i.invitedUserID
-       WHERE i.coachID=? ORDER BY i.clickedAt DESC`,
+       WHERE i.coachID = ?
+       ORDER BY i.clickedAt DESC`,
       [coachID]
     );
     res.json(rows);
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) { 
+    res.status(500).json({ error: err.message }); 
+  }
 });
 
-// ═══════════════════════════════════════════════════════════════
-// POST /invitations/use  —  Utiliser un code d'invitation
-// ═══════════════════════════════════════════════════════════════
+// ─────────────────────────────────────────────
+//  POST /invitations/use
+//  Le client utilise un code d'invitation
+// ─────────────────────────────────────────────
 router.post('/use', async (req, res) => {
   try {
     const { invitationCode, invitedUserID } = req.body;
     if (!invitationCode || !invitedUserID)
       return res.status(400).json({ error: 'invitationCode and invitedUserID required' });
 
+    // Récupère le coach via son code d'invitation
     const [coach] = await db.query(
-      'SELECT userID FROM coachProfiles WHERE invitationCode=?', [invitationCode]
+      'SELECT userID FROM coachprofiles WHERE invitationCode = ?', 
+      [invitationCode]
     );
     if (!coach.length) return res.status(404).json({ error: 'Invalid invitation code' });
 
     const coachID = coach[0].userID;
+
+    // Vérifie si déjà utilisé
     const [existing] = await db.query(
-      'SELECT id FROM invitations WHERE coachID=? AND invitedUserID=?', [coachID, invitedUserID]
+      'SELECT id FROM invitations WHERE coachID = ? AND invitedUserID = ?', 
+      [coachID, invitedUserID]
     );
     if (existing.length) return res.status(409).json({ error: 'Already used' });
 
-    await db.query(
-      'INSERT INTO invitations (coachID, invitedUserID, pointsEarned) VALUES (?,?,20)',
+    // Crée l'invitation en "pending"
+    const [result] = await db.query(
+      'INSERT INTO invitations (coachID, invitedUserID, status) VALUES (?, ?, "pending")',
       [coachID, invitedUserID]
     );
-    await db.query(
-      'UPDATE coachProfiles SET totalInvitations=totalInvitations+1, earnedPoints=earnedPoints+20 WHERE userID=?',
-      [coachID]
-    );
 
-    res.status(201).json({ message: 'Invitation registered', pointsAwarded: 20 });
-  } catch (err) { res.status(500).json({ error: err.message }); }
-});
-
-// ═══════════════════════════════════════════════════════════════
-// POST /invitations/send  —  Envoyer une invitation À un coach
-// (Le client envoie une invitation au coach pour le rejoindre)
-// ═══════════════════════════════════════════════════════════════
-router.post('/send', async (req, res) => {
-  try {
-    const { senderID, coachID, message } = req.body;
-
-    // ── Validation ─────────────────────────────────────────────
-    if (!senderID || !coachID) {
-      return res.status(400).json({ error: 'senderID and coachID are required' });
-    }
-
-    // ── Vérifier l'expéditeur ──────────────────────────────────
-    const [sender] = await db.query(
-      'SELECT id, role FROM users WHERE id=?', [senderID]
-    );
-    if (!sender.length) {
-      return res.status(404).json({ error: 'Sender not found' });
-    }
-
-    // ── Vérifier le coach ──────────────────────────────────────
-    const [coach] = await db.query(
-      `SELECT cp.userID, cp.invitationCode,
-              u.email, CONCAT(u.firstName,' ',u.lastName) AS coachName
-       FROM coachProfiles cp
-       JOIN users u ON u.id = cp.userID
-       WHERE cp.userID=?`,
-      [coachID]
-    );
-    if (!coach.length) {
-      return res.status(404).json({ error: 'Coach not found' });
-    }
-
-    // ── Auto-invitation interdite ──────────────────────────────
-    if (parseInt(senderID) === parseInt(coachID)) {
-      return res.status(400).json({ error: 'Cannot invite yourself' });
-    }
-
-    // ── Vérifier doublon ─────────────────────────────────────
-    const [existing] = await db.query(
-      'SELECT id FROM invitations WHERE coachID=? AND invitedUserID=?',
-      [coachID, senderID]
-    );
-    if (existing.length) {
-      return res.status(409).json({ error: 'Invitation already exists' });
-    }
-
-    // ── Créer l'invitation ─────────────────────────────────────
-    const [result] = await db.query(
-      `INSERT INTO invitations (coachID, invitedUserID, pointsEarned, clickedAt)
-       VALUES (?, ?, 0, NOW())`,
-      [coachID, senderID]
-    );
-
-    res.status(201).json({
-      message: 'Invitation sent successfully',
-      invitationId: result.insertId,
-      coachName: coach[0].coachName,
-      coachEmail: coach[0].email
+    res.status(201).json({ 
+      message: 'Invitation en attente de validation', 
+      id: result.insertId 
     });
-
-  } catch (err) {
-    res.status(500).json({ error: err.message });
+  } catch (err) { 
+    res.status(500).json({ error: err.message }); 
   }
 });
 
-// ═══════════════════════════════════════════════════════════════
-// GET /invitations/received/:coachID  —  Invitations reçues
-// par un coach (les clients qui l'ont invité)
-// ═══════════════════════════════════════════════════════════════
+// ─────────────────────────────────────────────
+//  POST /invitations/send
+//  Le client envoie une invitation directe au coach
+//  (utilisé par CoachDetailScreen)
+// ─────────────────────────────────────────────
+router.post('/send', async (req, res) => {
+  try {
+    const { senderID, coachID } = req.body;
+    if (!senderID || !coachID)
+      return res.status(400).json({ error: 'senderID and coachID required' });
+
+    // Vérifie si déjà invité
+    const [existing] = await db.query(
+      'SELECT id FROM invitations WHERE coachID = ? AND invitedUserID = ?',
+      [coachID, senderID]
+    );
+    if (existing.length) return res.status(409).json({ error: 'Already invited' });
+
+    // Crée l'invitation
+    const [result] = await db.query(
+      'INSERT INTO invitations (coachID, invitedUserID, status) VALUES (?, ?, "pending")',
+      [coachID, senderID]
+    );
+
+    res.status(201).json({ 
+      message: 'Invitation envoyée', 
+      id: result.insertId 
+    });
+  } catch (err) { 
+    res.status(500).json({ error: err.message }); 
+  }
+});
+
+// ─────────────────────────────────────────────
+//  GET /invitations/received/:coachID
+//  Vérifie si un client a déjà invité ce coach
+//  (utilisé par CoachDetailScreen)
+// ─────────────────────────────────────────────
 router.get('/received/:coachID', async (req, res) => {
   try {
     const { coachID } = req.params;
     const [rows] = await db.query(
-      `SELECT i.*,
-        CONCAT(u.firstName,' ',u.lastName) AS senderName,
-        u.avatarUrl AS senderAvatar
-       FROM invitations i
-       JOIN users u ON u.id = i.invitedUserID
-       WHERE i.coachID=? AND i.pointsEarned = 0
-       ORDER BY i.clickedAt DESC`,
+      'SELECT * FROM invitations WHERE coachID = ?',
       [coachID]
     );
     res.json(rows);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
+  } catch (err) { 
+    res.status(500).json({ error: err.message }); 
   }
 });
 
-// ═══════════════════════════════════════════════════════════════
-// PATCH /invitations/:id/accept  —  Accepter une invitation
-// (Le coach accepte → points gagnés)
-// ═══════════════════════════════════════════════════════════════
+// ─────────────────────────────────────────────
+//  PATCH /invitations/:id/accept
+//  Le coach ACCEPTE l'invitation
+// ─────────────────────────────────────────────
 router.patch('/:id/accept', async (req, res) => {
   try {
-    const { id } = req.params;
-
-    const [invitation] = await db.query(
-      'SELECT * FROM invitations WHERE id=?', [id]
+    // Vérifie que l'invitation existe et est en "pending" ou "refused"
+    const [rows] = await db.query(
+      'SELECT * FROM invitations WHERE id = ? AND status IN ("pending", "refused")', 
+      [req.params.id]
     );
-    if (!invitation.length) {
-      return res.status(404).json({ error: 'Invitation not found' });
-    }
+    if (!rows.length) 
+      return res.status(404).json({ error: 'Invitation introuvable ou déjà acceptée' });
 
-    // Déjà traitée (points déjà gagnés = déjà acceptée)
-    if (invitation[0].pointsEarned > 0) {
-      return res.status(400).json({ error: 'Invitation already accepted' });
-    }
+    const inv = rows[0];
 
-    // Mettre à jour l'invitation avec les points
+    // Met à jour l'invitation
     await db.query(
-      'UPDATE invitations SET pointsEarned=20, clickedAt=NOW() WHERE id=?',
-      [id]
+      'UPDATE invitations SET status = "accepted", respondedAt = NOW() WHERE id = ?', 
+      [req.params.id]
     );
 
-    // Incrémenter les stats du coach
+    // Met à jour les stats du coach (+1 invitation, +20 points)
     await db.query(
-      'UPDATE coachProfiles SET totalInvitations=totalInvitations+1, earnedPoints=earnedPoints+20 WHERE userID=?',
-      [invitation[0].coachID]
+      'UPDATE coachprofiles SET totalInvitations = totalInvitations + 1, earnedPoints = earnedPoints + 20 WHERE userID = ?',
+      [inv.coachID]
     );
 
-    res.json({ message: 'Invitation accepted', pointsAwarded: 20 });
+    // Crée le lien coach-client
+    await db.query(
+      'INSERT IGNORE INTO coachclients (coachID, clientID) VALUES (?, ?)',
+      [inv.coachID, inv.invitedUserID]
+    );
 
-  } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.json({ 
+      message: 'Invitation acceptée', 
+      pointsAwarded: 20 
+    });
+  } catch (err) { 
+    res.status(500).json({ error: err.message }); 
   }
 });
-
-// ═══════════════════════════════════════════════════════════════
-// DELETE /invitations/:id  —  Refuser/supprimer une invitation
-// ═══════════════════════════════════════════════════════════════
-router.delete('/:id', async (req, res) => {
+// GET /invitations/status/:coachID/:clientID
+router.get('/status/:coachID/:clientID', async (req, res) => {
   try {
-    const { id } = req.params;
-
-    const [invitation] = await db.query(
-      'SELECT * FROM invitations WHERE id=?', [id]
+    const { coachID, clientID } = req.params;
+    const [rows] = await db.query(
+      'SELECT status FROM invitations WHERE coachID = ? AND invitedUserID = ? LIMIT 1',
+      [coachID, clientID]
     );
-    if (!invitation.length) {
-      return res.status(404).json({ error: 'Invitation not found' });
-    }
-
-    await db.query('DELETE FROM invitations WHERE id=?', [id]);
-    res.json({ message: 'Invitation deleted' });
-
+    if (!rows.length) return res.json({ status: null });
+    res.json({ status: rows[0].status });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
+// ─────────────────────────────────────────────
+//  PATCH /invitations/:id/refuse
+//  Le coach REFUSE l'invitation
+// ─────────────────────────────────────────────
+router.patch('/:id/refuse', async (req, res) => {
+  try {
+    // Vérifie que l'invitation existe et est en "pending"
+    const [rows] = await db.query(
+      'SELECT * FROM invitations WHERE id = ? AND status = "pending"', 
+      [req.params.id]
+    );
+    if (!rows.length) 
+      return res.status(404).json({ error: 'Invitation introuvable ou déjà traitée' });
 
-module.exports = router;
+    // Met à jour l'invitation
+    await db.query(
+      'UPDATE invitations SET status = "refused", respondedAt = NOW() WHERE id = ?', 
+      [req.params.id]
+    );
+
+    res.json({ 
+      message: 'Invitation refusée' 
+    });
+  } catch (err) { 
+    res.status(500).json({ error: err.message }); 
+  }
+});
+
+export default router;

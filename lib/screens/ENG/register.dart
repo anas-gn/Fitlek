@@ -17,7 +17,10 @@ const _blue = Color(0xFF64B5F6);
 const _green = Color(0xFF4CAF50);
 const _red = Color(0xFFFF5252);
 
-const _baseUrl = 'http://localhost:3000/api';
+const _baseUrl = 'http://192.168.0.232:3000/api';
+
+const _bgImageUrl =
+    'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?q=80&w=1400&auto=format&fit=crop';
 
 class _FitlekLogoPainter extends CustomPainter {
   final Color strokeColor;
@@ -100,6 +103,49 @@ class _LogoWatermark extends StatelessWidget {
             painter: _FitlekLogoPainter(strokeColor: Colors.white, circleColor: _lime),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _RegisterBackground extends StatelessWidget {
+  const _RegisterBackground();
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned.fill(
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          Image.network(
+            _bgImageUrl,
+            fit: BoxFit.cover,
+            errorBuilder: (_, __, ___) => Container(color: _dark),
+            loadingBuilder: (context, child, progress) {
+              if (progress == null) return child;
+              return Container(color: _dark);
+            },
+          ),
+          Container(color: _dark.withOpacity(0.55)),
+          const DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Color(0xCC0A0A0A),
+                  Color(0xE60A0A0A),
+                  _dark,
+                ],
+                stops: [0.0, 0.45, 1.0],
+              ),
+            ),
+          ),
+          BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 0.3, sigmaY: 0.3),
+            child: Container(color: Colors.transparent),
+          ),
+        ],
       ),
     );
   }
@@ -362,38 +408,43 @@ class _RegisterScreenState extends State<RegisterScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: _dark,
-      body: SafeArea(
-        child: Column(children: [
-          _buildTopBar(),
-          _buildStepper(),
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: FadeTransition(
-                opacity: _fadeAnim,
-                child: SlideTransition(
-                  position: _slideAnim,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const SizedBox(height: 32),
-                      _buildStepHeader(),
-                      const SizedBox(height: 32),
-                      _buildStepContent(),
-                      if (_errorMsg != null) ...[
-                        const SizedBox(height: 16),
-                        _buildErrorBanner(),
-                      ],
-                      const SizedBox(height: 32),
-                      _buildCTA(),
-                      const SizedBox(height: 24),
-                    ],
+      body: Stack(
+        children: [
+          const _RegisterBackground(),
+          SafeArea(
+            child: Column(children: [
+              _buildTopBar(),
+              _buildStepper(),
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: FadeTransition(
+                    opacity: _fadeAnim,
+                    child: SlideTransition(
+                      position: _slideAnim,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const SizedBox(height: 32),
+                          _buildStepHeader(),
+                          const SizedBox(height: 32),
+                          _buildStepContent(),
+                          if (_errorMsg != null) ...[
+                            const SizedBox(height: 16),
+                            _buildErrorBanner(),
+                          ],
+                          const SizedBox(height: 32),
+                          _buildCTA(),
+                          const SizedBox(height: 24),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
               ),
-            ),
+            ]),
           ),
-        ]),
+        ],
       ),
     );
   }
@@ -824,7 +875,7 @@ class _RoleTile extends StatelessWidget {
         duration: const Duration(milliseconds: 220),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: selected ? color.withOpacity(0.08) : _card,
+          color: selected ? color.withOpacity(0.10) : _card.withOpacity(0.72),
           border: Border.all(
             color: selected ? color : _border,
             width: selected ? 1.5 : 1,
@@ -914,7 +965,7 @@ class _GenderTile extends StatelessWidget {
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
         decoration: BoxDecoration(
-          color: selected ? accentColor.withOpacity(0.08) : _card,
+          color: selected ? accentColor.withOpacity(0.10) : _card.withOpacity(0.72),
           border: Border.all(
             color: selected ? accentColor : _border,
             width: selected ? 1.5 : 1,
@@ -1079,7 +1130,7 @@ class _FitField extends StatelessWidget {
       const SizedBox(height: 8),
       Container(
         decoration: BoxDecoration(
-          color: _card,
+          color: _card.withOpacity(0.72),
           border: Border.all(color: _border),
           borderRadius: BorderRadius.circular(12),
         ),

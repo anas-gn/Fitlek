@@ -1,7 +1,6 @@
-const express = require('express');
+import express from 'express';
 const router = express.Router();
-const db = require('../../config/db');
-
+import db from '../../config/db.js';
 router.get('/me', async (req, res) => {
   try {
     const userID = req.query.userID;
@@ -13,7 +12,16 @@ router.get('/me', async (req, res) => {
     res.json(rows[0]);
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
-
+// GET /reservations/client/:clientID/count
+router.get('/client/:clientID/count', async (req, res) => {
+  try {
+    const [rows] = await db.query(
+      'SELECT COUNT(*) as count FROM reservations WHERE clientID=? AND coachID=?',
+      [req.params.clientID, req.query.coachID]
+    );
+    res.json({ count: rows[0].count });
+  } catch (err) { res.status(500).json({ error: err.message }); }
+});
 router.put('/me', async (req, res) => {
   try {
     const { userID, firstName, lastName, gender, avatarUrl, height } = req.body;
@@ -53,4 +61,4 @@ router.get('/', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-module.exports = router;
+export default router;

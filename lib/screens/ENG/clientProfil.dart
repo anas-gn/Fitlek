@@ -17,7 +17,7 @@ const _card = Color(0xFF141414);
 const _cardBorder = Color(0xFF232323);
 const _success = Color(0xFF4CAF50);
 const _errorRed = Color(0xFFFF5252);
-const _baseUrl = 'http://localhost:3000/api';
+const _baseUrl = 'http://192.168.0.232:3000/api';
 
 // ─────────────────────────────────────────────
 //  Models (locaux légers)

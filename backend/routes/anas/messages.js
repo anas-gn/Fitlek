@@ -1,7 +1,6 @@
-const express = require('express');
+import express from 'express';
 const router = express.Router();
-const db = require('../../config/db');
-
+import db from '../../config/db.js';
 // GET /messages/:conversationID
 router.get('/:conversationID', async (req, res) => {
   try {
@@ -60,4 +59,4 @@ router.post('/:conversationID', async (req, res) => {
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
-module.exports = router;
+export default router;

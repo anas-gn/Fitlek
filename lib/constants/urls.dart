@@ -1,0 +1,1 @@
+const String kBaseUrl = 'http://localhost:3000';

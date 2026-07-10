@@ -11,7 +11,7 @@ const _cardBorder = Color(0xFF232323);
 const _success = Color(0xFF4CAF50);
 const _errorRed = Color(0xFFFF5252);
 const _accent = Color(0xFF2A2A2A);
-const _baseUrl = 'http://localhost:3000/api';
+const _baseUrl = 'http://192.168.0.232:3000/api';
 
 class _FitlekLogoPainter extends CustomPainter {
   final Color strokeColor;
@@ -363,7 +363,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> with SingleTi
         child: Row(children: [
           Expanded(
               child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(_session.price > 0 ? '${_session.price.toInt()} MAD' : 'Gratuit',
+            Text(_session.price > 0 ? '${_session.price.toInt()} MAD' : 'En attente de tarification',
                 style: TextStyle(color: _statusColor, fontSize: 32, fontWeight: FontWeight.w800, letterSpacing: -1)),
             const SizedBox(height: 6),
             Text('${_session.durationMin} min · ${_formatTime(_session.sessionStart)} — ${_formatTime(_session.sessionEnd)}',

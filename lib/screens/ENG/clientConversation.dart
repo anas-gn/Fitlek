@@ -7,7 +7,7 @@ const _lime = Color(0xFFC6F135);
 const _dark = Color(0xFF0A0A0A);
 const _card = Color(0xFF141414);
 const _cardBorder = Color(0xFF232323);
-const _baseUrl = 'http://localhost:3000/api';
+const _baseUrl = 'http://192.168.0.232:3000/api';
 
 class _FitlekLogoPainter extends CustomPainter {
   final Color strokeColor;
