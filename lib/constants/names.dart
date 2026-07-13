@@ -1,7 +1,6 @@
-import 'package:flutter/material.dart';
 
-const name    = 'FITLEK';
+const name    = 'SIRVYA';
 class AppNames {
-  static const String appName = 'Fitlek1';
+  static const String appName = 'SIRVYA1';
   static const String coachRole = 'coach';
 }

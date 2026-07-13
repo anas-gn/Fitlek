@@ -9,17 +9,12 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:fitlek1/models/anas/reservation.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'clientCoachDetail.dart';
 
+import '../../theme/fitlek_theme_extension.dart';
 // ─── Constants ──────────────────────────────────────────────────────────────
-const _lime       = Color(0xFFC6F135);
-const _dark       = Color(0xFF0A0A0A);
-const _card       = Color(0xFF141414);
-const _cardBorder = Color(0xFF232323);
-const _darkGray   = Color(0xFF1A1A1A);
-const _baseUrl    = 'http://192.168.0.232:3000/api';
+const _baseUrl    = 'http://localhost:3000/api';
 
 // ─── DTOs ────────────────────────────────────────────────────────────────────
 class _AdvisorDTO {
@@ -176,10 +171,10 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen>
             .cast<Map<String, dynamic>>()
             .where((e) => (e['id'] as int) == widget.advisorId)
             .toList();
-        if (found.isEmpty) throw Exception('Advisor introuvable');
+        if (found.isEmpty) throw Exception('Advisor not found');
         _advisor = _AdvisorDTO.fromJson(found.first);
       } else {
-        throw Exception('Erreur chargement advisor (${results[0].statusCode})');
+        throw Exception('Error loading advisor (${results[0].statusCode})');
       }
 
       // ── Coaches ──────────────────────────────────────────────────
@@ -218,10 +213,10 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen>
 
     final a = _advisor!;
     return Scaffold(
-      backgroundColor: _dark,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
         child: RefreshIndicator(
-          color: _lime, backgroundColor: _card,
+          color: Theme.of(context).colorScheme.primary, backgroundColor: context.fitlek.card,
           onRefresh: _loadData,
           child: NestedScrollView(
             controller: _scrollCtrl,
@@ -253,13 +248,13 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen>
   SliverAppBar _buildSliverAppBar(_AdvisorDTO a) => SliverAppBar(
     expandedHeight: _expandedHeight,
     floating: false, pinned: true,
-    backgroundColor: _dark, elevation: 0,
+    backgroundColor: Theme.of(context).scaffoldBackgroundColor, elevation: 0,
     leading: GestureDetector(
       onTap: () => Navigator.pop(context),
       child: Container(
         margin: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          color: Colors.black.withOpacity(0.6),
+          color: Colors.black.withValues(alpha: 0.6),
           borderRadius: BorderRadius.circular(10),
           border: Border.all(color: Colors.white24)),
         child: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 16),
@@ -268,33 +263,33 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen>
     title: AnimatedOpacity(
       opacity: _isCollapsed ? 1.0 : 0.0,
       duration: const Duration(milliseconds: 200),
-      child: Text(a.fullName, style: const TextStyle(
-        color: Colors.white, fontSize: 15, fontWeight: FontWeight.w800)),
+      child: Text(a.fullName, style: TextStyle(
+        color: Theme.of(context).colorScheme.onSurface, fontSize: 15, fontWeight: FontWeight.w800)),
     ),
     flexibleSpace: FlexibleSpaceBar(
       background: Stack(fit: StackFit.expand, children: [
         a.avatarUrl != null
             ? Image.network(a.avatarUrl!, fit: BoxFit.cover,
-                color: Colors.black.withOpacity(0.4),
+                color: Colors.black.withValues(alpha: 0.4),
                 colorBlendMode: BlendMode.darken,
                 errorBuilder: (_, __, ___) => _defaultCover())
             : _defaultCover(),
         Positioned.fill(child: DecoratedBox(
           decoration: BoxDecoration(gradient: LinearGradient(
             begin: Alignment.topCenter, end: Alignment.bottomCenter,
-            colors: [Colors.transparent, _dark.withOpacity(0.7), _dark],
+            colors: [Colors.transparent, Theme.of(context).scaffoldBackgroundColor.withValues(alpha: 0.7), Theme.of(context).scaffoldBackgroundColor],
             stops: const [0.25, 0.7, 1.0])))),
         if (a.isApproved)
           Positioned(
             bottom: 16, right: 20,
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-              decoration: BoxDecoration(color: _lime, borderRadius: BorderRadius.circular(20)),
-              child: const Row(children: [
-                Icon(Icons.verified_rounded, color: Colors.black, size: 12),
-                SizedBox(width: 5),
-                Text('VÉRIFIÉ', style: TextStyle(
-                  color: Colors.black, fontSize: 9,
+              decoration: BoxDecoration(color: Theme.of(context).colorScheme.primary, borderRadius: BorderRadius.circular(20)),
+              child: Row(children: [
+                Icon(Icons.verified_rounded, color: Theme.of(context).colorScheme.onPrimary, size: 12),
+                const SizedBox(width: 5),
+                Text('VERIFIED', style: TextStyle(
+                  color: Theme.of(context).colorScheme.onPrimary, fontSize: 9,
                   fontWeight: FontWeight.w900, letterSpacing: 1.2)),
               ]),
             )),
@@ -303,11 +298,11 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen>
   );
 
   Widget _defaultCover() => Container(
-    decoration: const BoxDecoration(gradient: LinearGradient(
+    decoration: BoxDecoration(gradient: LinearGradient(
       begin: Alignment.topLeft, end: Alignment.bottomRight,
-      colors: [Color(0xFF1a1a1a), Color(0xFF0d0d0d)])),
+      colors: [context.fitlek.card2, context.fitlek.card])),
     child: Center(child: Icon(Icons.business_rounded,
-      color: _lime.withOpacity(0.15), size: 80)),
+      color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.15), size: 80)),
   );
 
   // ── Header ───────────────────────────────────────────────────────
@@ -318,41 +313,41 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen>
         width: 64, height: 64,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: _lime, width: 2.5),
-          boxShadow: [BoxShadow(color: _lime.withOpacity(0.2), blurRadius: 16, offset: const Offset(0, 4))],
-          color: _darkGray),
+          border: Border.all(color: Theme.of(context).colorScheme.primary, width: 2.5),
+          boxShadow: [BoxShadow(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2), blurRadius: 16, offset: const Offset(0, 4))],
+          color: context.fitlek.card2),
         clipBehavior: Clip.antiAlias,
         child: a.avatarUrl != null
             ? Image.network(a.avatarUrl!, fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => const Icon(Icons.business_rounded, color: _lime, size: 32))
-            : const Icon(Icons.business_rounded, color: _lime, size: 32),
+                errorBuilder: (_, __, ___) => Icon(Icons.business_rounded, color: Theme.of(context).colorScheme.primary, size: 32))
+            : Icon(Icons.business_rounded, color: Theme.of(context).colorScheme.primary, size: 32),
       ),
       const SizedBox(width: 16),
       Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text(a.fullName, style: const TextStyle(
-          color: Colors.white, fontSize: 22, fontWeight: FontWeight.w900,
+        Text(a.fullName, style: TextStyle(
+          color: Theme.of(context).colorScheme.onSurface, fontSize: 22, fontWeight: FontWeight.w900,
           letterSpacing: -0.5, height: 1.1)),
         const SizedBox(height: 6),
         if (a.companyName != null && a.companyName!.isNotEmpty) ...[
-          Text(a.companyName!, style: const TextStyle(
-            color: Colors.white54, fontSize: 12, fontWeight: FontWeight.w600)),
+          Text(a.companyName!, style: TextStyle(
+            color: context.fitlek.textSecondary, fontSize: 12, fontWeight: FontWeight.w600)),
           const SizedBox(height: 6),
         ],
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
           decoration: BoxDecoration(
-            color: _lime.withOpacity(0.1),
+            color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(6),
-            border: Border.all(color: _lime.withOpacity(0.3))),
-          child: Text(a.specialty.toUpperCase(), style: const TextStyle(
-            color: _lime, fontSize: 10, fontWeight: FontWeight.w800, letterSpacing: 1.5)),
+            border: Border.all(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3))),
+          child: Text(a.specialty.toUpperCase(), style: TextStyle(
+            color: Theme.of(context).colorScheme.primary, fontSize: 10, fontWeight: FontWeight.w800, letterSpacing: 1.5)),
         ),
         const SizedBox(height: 6),
         Row(children: [
-          const Icon(Icons.email_rounded, color: Colors.white30, size: 12),
+          Icon(Icons.email_rounded, color: context.fitlek.textMuted, size: 12),
           const SizedBox(width: 5),
           Expanded(child: Text(a.email,
-            style: const TextStyle(color: Colors.white38, fontSize: 11),
+            style: TextStyle(color: context.fitlek.textMuted, fontSize: 11),
             overflow: TextOverflow.ellipsis)),
         ]),
       ])),
@@ -378,42 +373,42 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen>
   Widget _statBox(String val, String label, IconData icon) => Expanded(
     child: Container(
       padding: const EdgeInsets.symmetric(vertical: 12),
-      decoration: BoxDecoration(color: _card,
+      decoration: BoxDecoration(color: context.fitlek.card,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: _cardBorder)),
+        border: Border.all(color: context.fitlek.border)),
       child: Column(children: [
-        Icon(icon, color: _lime, size: 16),
+        Icon(icon, color: Theme.of(context).colorScheme.primary, size: 16),
         const SizedBox(height: 5),
-        Text(val, style: const TextStyle(
-          color: Colors.white, fontSize: 13, fontWeight: FontWeight.w900)),
-        Text(label, style: const TextStyle(color: Colors.white38, fontSize: 9)),
+        Text(val, style: TextStyle(
+          color: Theme.of(context).colorScheme.onSurface, fontSize: 13, fontWeight: FontWeight.w900)),
+        Text(label, style: TextStyle(color: context.fitlek.textMuted, fontSize: 9)),
       ]),
     ),
   );
 
   // ── Tab Bar ──────────────────────────────────────────────────────
   Widget _buildTabBar() => Container(
-    color: _dark,
+    color: Theme.of(context).scaffoldBackgroundColor,
     padding: const EdgeInsets.fromLTRB(20, 12, 20, 10),
     child: Container(
       height: 44,
-      decoration: BoxDecoration(color: _card,
+      decoration: BoxDecoration(color: context.fitlek.card,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: _cardBorder)),
+        border: Border.all(color: context.fitlek.border)),
       child: TabBar(
         controller: _tabController,
         isScrollable: true,
-        indicator: BoxDecoration(color: _lime, borderRadius: BorderRadius.circular(9)),
+        indicator: BoxDecoration(color: Theme.of(context).colorScheme.primary, borderRadius: BorderRadius.circular(9)),
         indicatorSize: TabBarIndicatorSize.tab,
         dividerColor: Colors.transparent,
-        labelColor: Colors.black,
-        unselectedLabelColor: Colors.white38,
+        labelColor: Theme.of(context).colorScheme.onPrimary,
+        unselectedLabelColor: context.fitlek.textMuted,
         labelStyle: const TextStyle(fontWeight: FontWeight.w800, fontSize: 10, letterSpacing: 0.8),
         tabs: [
-          Tab(child: Text('COACHS (${_coaches.length})')),
-          const Tab(text: 'À PROPOS'),
-          Tab(child: Text('GALERIE (${_images.length})')),
-          const Tab(text: 'LOCALISATION'),
+          Tab(child: Text('COACHES (${_coaches.length})')),
+          const Tab(text: 'ABOUT'),
+          Tab(child: Text('GALLERY (${_images.length})')),
+          const Tab(text: 'LOCATION'),
         ],
       ),
     ),
@@ -423,10 +418,10 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen>
   Widget _buildCoachesTab() {
     if (_coaches.isEmpty) {
       return Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-        Icon(Icons.people_outline, color: Colors.white.withOpacity(0.08), size: 52),
+        Icon(Icons.people_outline, color: context.fitlek.textMuted, size: 52),
         const SizedBox(height: 14),
-        const Text('Aucun coach associé pour le moment',
-          style: TextStyle(color: Colors.white24, fontSize: 13)),
+        Text('No coaches linked yet',
+          style: TextStyle(color: context.fitlek.textMuted, fontSize: 13)),
       ]));
     }
     return ListView.builder(
@@ -448,7 +443,7 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen>
       coachName:       coach.fullName,
       coachSpeciality: coach.bio.isNotEmpty
           ? (coach.bio.length > 40 ? '${coach.bio.substring(0, 40)}…' : coach.bio)
-          : 'Coach certifié',
+          : 'Certified coach',
       coachImageUrl:   coach.avatarUrl ?? '',
       coachRating:     0.0,
       sessionStart:    DateTime.now(),
@@ -480,36 +475,36 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen>
   Widget _buildAboutTab(_AdvisorDTO a) => ListView(
     padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
     children: [
-      _sectionLabel('PROFIL', Icons.person_rounded),
+      _sectionLabel('PROFILE', Icons.person_rounded),
       const SizedBox(height: 12),
-      _infoTile(Icons.badge_rounded,          'Nom complet', a.fullName),
+      _infoTile(Icons.badge_rounded,          'Full name', a.fullName),
       const SizedBox(height: 8),
       _infoTile(Icons.email_rounded,          'Email',       a.email),
       const SizedBox(height: 8),
-      _infoTile(Icons.fitness_center_rounded, 'Spécialité',  a.specialty),
+      _infoTile(Icons.fitness_center_rounded, 'Specialty',  a.specialty),
       if (a.companyName != null && a.companyName!.isNotEmpty) ...[
         const SizedBox(height: 8),
-        _infoTile(Icons.business_rounded, 'Nom de la salle', a.companyName!),
+        _infoTile(Icons.business_rounded, 'Gym name', a.companyName!),
       ],
       if (a.location != null && a.location!.isNotEmpty) ...[
         const SizedBox(height: 8),
-        _infoTile(Icons.location_on_rounded, 'Adresse', a.location!),
+        _infoTile(Icons.location_on_rounded, 'Address', a.location!),
       ],
       const SizedBox(height: 24),
-      _sectionLabel('STATISTIQUES', Icons.bar_chart_rounded),
+      _sectionLabel('STATISTICS', Icons.bar_chart_rounded),
       const SizedBox(height: 12),
       Container(
         padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(color: _card,
+        decoration: BoxDecoration(color: context.fitlek.card,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: _cardBorder)),
+          border: Border.all(color: context.fitlek.border)),
         child: Column(children: [
-          _statRow("Coachs dans l'équipe", '${_coaches.length}'),
+          _statRow('Coaches on the team', '${_coaches.length}'),
           _divider(),
           _statRow('Total invitations',
             _coaches.fold<int>(0, (s, c) => s + c.totalInvitations).toString()),
           _divider(),
-          _statRow('Points cumulés',
+          _statRow('Total points',
             _coaches.fold<int>(0, (s, c) => s + c.earnedPoints).toString()),
         ]),
       ),
@@ -519,23 +514,23 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen>
   Widget _statRow(String label, String value) => Padding(
     padding: const EdgeInsets.symmetric(vertical: 10),
     child: Row(children: [
-      Text(label, style: const TextStyle(color: Colors.white54, fontSize: 12)),
+      Text(label, style: TextStyle(color: context.fitlek.textSecondary, fontSize: 12)),
       const Spacer(),
-      Text(value, style: const TextStyle(
-        color: _lime, fontWeight: FontWeight.w800, fontSize: 13)),
+      Text(value, style: TextStyle(
+        color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w800, fontSize: 13)),
     ]),
   );
 
-  Widget _divider() => Divider(height: 1, color: Colors.white.withOpacity(0.05));
+  Widget _divider() => Divider(height: 1, color: context.fitlek.border);
 
   // ── Gallery Tab (Images de la salle) ─────────────────────────────
   Widget _buildGalleryTab() {
     if (_images.isEmpty) {
       return Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-        Icon(Icons.photo_library_outlined, color: Colors.white.withOpacity(0.08), size: 52),
+        Icon(Icons.photo_library_outlined, color: context.fitlek.textMuted, size: 52),
         const SizedBox(height: 14),
-        const Text('Aucune image de la salle pour le moment',
-          style: TextStyle(color: Colors.white24, fontSize: 13)),
+        Text('No gym images yet',
+          style: TextStyle(color: context.fitlek.textMuted, fontSize: 13)),
       ]));
     }
     return GridView.builder(
@@ -552,16 +547,16 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen>
         child: Container(
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: _cardBorder),
+            border: Border.all(color: context.fitlek.border),
           ),
           clipBehavior: Clip.antiAlias,
           child: Image.network(
             _images[i].urlImage,
             fit: BoxFit.cover,
             errorBuilder: (_, __, ___) => Container(
-              color: _darkGray,
-              child: const Center(
-                child: Icon(Icons.broken_image_rounded, color: Colors.white24, size: 32),
+              color: context.fitlek.card2,
+              child: Center(
+                child: Icon(Icons.broken_image_rounded, color: context.fitlek.textMuted, size: 32),
               ),
             ),
           ),
@@ -573,7 +568,7 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen>
   void _showImageFullScreen(String url) {
     showDialog(
       context: context,
-      barrierColor: Colors.black.withOpacity(0.95),
+      barrierColor: Colors.black.withValues(alpha: 0.95),
       builder: (_) => GestureDetector(
         onTap: () => Navigator.pop(context),
         child: InteractiveViewer(
@@ -595,28 +590,28 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen>
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
       children: [
-        _sectionLabel('ADRESSE', Icons.location_on_rounded),
+        _sectionLabel('ADDRESS', Icons.location_on_rounded),
         const SizedBox(height: 12),
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: _card,
+            color: context.fitlek.card,
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: _cardBorder),
+            border: Border.all(color: context.fitlek.border),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               if (a.companyName != null && a.companyName!.isNotEmpty) ...[
-                Text(a.companyName!, style: const TextStyle(
-                  color: Colors.white, fontSize: 16, fontWeight: FontWeight.w800)),
+                Text(a.companyName!, style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurface, fontSize: 16, fontWeight: FontWeight.w800)),
                 const SizedBox(height: 4),
               ],
               Text(
-                a.location ?? 'Adresse non renseignée',
+                a.location ?? 'Address not provided',
                 style: TextStyle(
                   color: a.location != null && a.location!.isNotEmpty
-                      ? Colors.white54 : Colors.white24,
+                      ? context.fitlek.textSecondary : context.fitlek.textMuted,
                   fontSize: 13,
                   height: 1.4,
                 ),
@@ -625,14 +620,14 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen>
           ),
         ),
         const SizedBox(height: 24),
-        _sectionLabel('CARTE', Icons.map_rounded),
+        _sectionLabel('MAP', Icons.map_rounded),
         const SizedBox(height: 12),
         Container(
           height: 280,
           decoration: BoxDecoration(
-            color: _card,
+            color: context.fitlek.card,
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: _cardBorder),
+            border: Border.all(color: context.fitlek.border),
           ),
           clipBehavior: Clip.antiAlias,
           child: ClipRRect(
@@ -640,11 +635,11 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen>
             child: a.location != null && a.location!.isNotEmpty
                 ? _buildMiniMap(a.location!)
                 : Container(
-                    color: _darkGray,
-                    child: const Center(
+                    color: context.fitlek.card2,
+                    child: Center(
                       child: Text(
-                        'Localisation non disponible',
-                        style: TextStyle(color: Colors.white24, fontSize: 13),
+                        'Location not available',
+                        style: TextStyle(color: context.fitlek.textMuted, fontSize: 13),
                       ),
                     ),
                   ),
@@ -657,12 +652,12 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen>
   // Mini carte stylisée (sans clé API requise)
   Widget _buildMiniMap(String address) {
     return Container(
-      color: const Color(0xFF1a1a2e),
+      color: context.fitlek.card2,
       child: Stack(
         fit: StackFit.expand,
         children: [
           CustomPaint(
-            painter: _MapGridPainter(),
+            painter: _MapGridPainter(context.fitlek.textMuted),
             size: const Size(double.infinity, 280),
           ),
           Center(
@@ -672,20 +667,20 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen>
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                   decoration: BoxDecoration(
-                    color: _lime,
+                    color: Theme.of(context).colorScheme.primary,
                     borderRadius: BorderRadius.circular(8),
                     boxShadow: [
                       BoxShadow(
-                        color: _lime.withOpacity(0.4),
+                        color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.4),
                         blurRadius: 12,
                         offset: const Offset(0, 4),
                       ),
                     ],
                   ),
                   child: Text(
-                    _advisor?.companyName ?? 'Salle',
-                    style: const TextStyle(
-                      color: Colors.black,
+                    _advisor?.companyName ?? 'Gym',
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.onPrimary,
                       fontSize: 11,
                       fontWeight: FontWeight.w800,
                     ),
@@ -694,11 +689,11 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen>
                 const SizedBox(height: 4),
                 Icon(
                   Icons.location_on,
-                  color: _lime,
+                  color: Theme.of(context).colorScheme.primary,
                   size: 36,
                   shadows: [
                     Shadow(
-                      color: _lime.withOpacity(0.5),
+                      color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.5),
                       blurRadius: 10,
                     ),
                   ],
@@ -716,7 +711,7 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen>
                 gradient: LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
-                  colors: [Colors.transparent, _dark.withOpacity(0.8)],
+                  colors: [Colors.transparent, Theme.of(context).scaffoldBackgroundColor.withValues(alpha: 0.8)],
                 ),
               ),
             ),
@@ -729,16 +724,16 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen>
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 decoration: BoxDecoration(
-                  color: _lime,
+                  color: Theme.of(context).colorScheme.primary,
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: const Row(
+                child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.open_in_new_rounded, color: Colors.black, size: 14),
-                    SizedBox(width: 6),
-                    Text('OUVRIR', style: TextStyle(
-                      color: Colors.black, fontSize: 10,
+                    Icon(Icons.open_in_new_rounded, color: Theme.of(context).colorScheme.onPrimary, size: 14),
+                    const SizedBox(width: 6),
+                    Text('OPEN', style: TextStyle(
+                      color: Theme.of(context).colorScheme.onPrimary, fontSize: 10,
                       fontWeight: FontWeight.w800, letterSpacing: 0.5)),
                   ],
                 ),
@@ -761,36 +756,36 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen>
   // ── Helpers ──────────────────────────────────────────────────────
   Widget _infoTile(IconData icon, String label, String value) => Container(
     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-    decoration: BoxDecoration(color: _card,
+    decoration: BoxDecoration(color: context.fitlek.card,
       borderRadius: BorderRadius.circular(12),
-      border: Border.all(color: _cardBorder)),
+      border: Border.all(color: context.fitlek.border)),
     child: Row(children: [
       Container(
         width: 36, height: 36,
         decoration: BoxDecoration(
-          color: _lime.withOpacity(0.1), borderRadius: BorderRadius.circular(9)),
-        child: Icon(icon, color: _lime, size: 16)),
+          color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(9)),
+        child: Icon(icon, color: Theme.of(context).colorScheme.primary, size: 16)),
       const SizedBox(width: 14),
       Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text(label, style: const TextStyle(color: Colors.white38, fontSize: 10)),
+        Text(label, style: TextStyle(color: context.fitlek.textMuted, fontSize: 10)),
         const SizedBox(height: 3),
-        Text(value, style: const TextStyle(
-          color: Colors.white, fontSize: 13, fontWeight: FontWeight.w700)),
+        Text(value, style: TextStyle(
+          color: Theme.of(context).colorScheme.onSurface, fontSize: 13, fontWeight: FontWeight.w700)),
       ])),
     ]),
   );
 
   Widget _sectionLabel(String title, IconData icon) => Row(children: [
-    Container(width: 3, height: 16, color: _lime, margin: const EdgeInsets.only(right: 10)),
-    Icon(icon, color: _lime, size: 15),
+    Container(width: 3, height: 16, color: Theme.of(context).colorScheme.primary, margin: const EdgeInsets.only(right: 10)),
+    Icon(icon, color: Theme.of(context).colorScheme.primary, size: 15),
     const SizedBox(width: 7),
-    Text(title, style: const TextStyle(
-      color: Colors.white, fontSize: 13, fontWeight: FontWeight.w800, letterSpacing: 1)),
+    Text(title, style: TextStyle(
+      color: Theme.of(context).colorScheme.onSurface, fontSize: 13, fontWeight: FontWeight.w800, letterSpacing: 1)),
   ]);
 
   // ── Skeleton ─────────────────────────────────────────────────────
   Widget _buildSkeleton() => Scaffold(
-    backgroundColor: _dark,
+    backgroundColor: Theme.of(context).scaffoldBackgroundColor,
     body: SafeArea(child: Column(children: [
       _shimBox(double.infinity, 260),
       const SizedBox(height: 20),
@@ -816,25 +811,25 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen>
   );
 
   Widget _buildError() => Scaffold(
-    backgroundColor: _dark,
+    backgroundColor: Theme.of(context).scaffoldBackgroundColor,
     body: SafeArea(child: Center(child: Padding(
       padding: const EdgeInsets.all(32),
       child: Column(mainAxisSize: MainAxisSize.min, children: [
-        const Icon(Icons.wifi_off_rounded, color: Colors.white24, size: 52),
+        Icon(Icons.wifi_off_rounded, color: context.fitlek.textMuted, size: 52),
         const SizedBox(height: 16),
-        const Text('Erreur de chargement',
-          style: TextStyle(color: Colors.white54, fontSize: 15, fontWeight: FontWeight.w700)),
+        Text('Loading error',
+          style: TextStyle(color: context.fitlek.textSecondary, fontSize: 15, fontWeight: FontWeight.w700)),
         const SizedBox(height: 8),
-        Text(_error ?? '', style: const TextStyle(color: Colors.white24, fontSize: 12),
+        Text(_error ?? '', style: TextStyle(color: context.fitlek.textMuted, fontSize: 12),
           textAlign: TextAlign.center),
         const SizedBox(height: 24),
         GestureDetector(
           onTap: _loadData,
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 13),
-            decoration: BoxDecoration(color: _lime, borderRadius: BorderRadius.circular(12)),
-            child: const Text('RÉESSAYER', style: TextStyle(
-              color: Colors.black, fontWeight: FontWeight.w900, letterSpacing: 1.5)),
+            decoration: BoxDecoration(color: Theme.of(context).colorScheme.primary, borderRadius: BorderRadius.circular(12)),
+            child: Text('RETRY', style: TextStyle(
+              color: Theme.of(context).colorScheme.onPrimary, fontWeight: FontWeight.w900, letterSpacing: 1.5)),
           ),
         ),
       ])),
@@ -845,16 +840,19 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen>
     width:  w == double.infinity ? null : w,
     height: h,
     decoration: BoxDecoration(
-      color: Colors.white.withOpacity(0.07),
+      color: context.fitlek.card2,
       borderRadius: BorderRadius.circular(radius)));
 }
 
 // ─── Map Grid Painter ──────────────────────────────────────────────────────
 class _MapGridPainter extends CustomPainter {
+  final Color gridColor;
+  _MapGridPainter(this.gridColor);
+
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = Colors.white.withOpacity(0.03)
+      ..color = gridColor.withValues(alpha: 0.15)
       ..strokeWidth = 1;
 
     const spacing = 40.0;
@@ -867,7 +865,7 @@ class _MapGridPainter extends CustomPainter {
     }
 
     final streetPaint = Paint()
-      ..color = Colors.white.withOpacity(0.06)
+      ..color = gridColor.withValues(alpha: 0.3)
       ..strokeWidth = 2;
 
     canvas.drawLine(Offset(size.width * 0.3, 0), Offset(size.width * 0.3, size.height), streetPaint);
@@ -877,7 +875,8 @@ class _MapGridPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  bool shouldRepaint(covariant _MapGridPainter oldDelegate) =>
+      oldDelegate.gridColor != gridColor;
 }
 
 // ─── Tab Bar Delegate ────────────────────────────────────────────────────────
@@ -902,9 +901,9 @@ class _CoachCard extends StatelessWidget {
       onTap: onTap,
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
-        decoration: BoxDecoration(color: _card,
+        decoration: BoxDecoration(color: context.fitlek.card,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: _cardBorder)),
+          border: Border.all(color: context.fitlek.border)),
         clipBehavior: Clip.antiAlias,
         child: Row(children: [
           Stack(children: [
@@ -912,43 +911,43 @@ class _CoachCard extends StatelessWidget {
               width: 96, height: 110,
               child: coach.avatarUrl != null
                   ? Image.network(coach.avatarUrl!, fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => _placeholder())
-                  : _placeholder(),
+                      errorBuilder: (_, __, ___) => _placeholder(context))
+                  : _placeholder(context),
             ),
             if (coach.isPremium)
               Positioned(top: 6, right: 6,
                 child: Container(
                   padding: const EdgeInsets.all(4),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFFFD700), shape: BoxShape.circle,
+                    color: context.fitlek.premium, shape: BoxShape.circle,
                     boxShadow: [BoxShadow(
-                      color: const Color(0xFFFFD700).withOpacity(0.5), blurRadius: 8)]),
+                      color: context.fitlek.premium.withValues(alpha: 0.5), blurRadius: 8)]),
                   child: const Icon(Icons.star_rounded, color: Colors.black, size: 10))),
           ]),
           Expanded(child: Padding(
             padding: const EdgeInsets.all(14),
             child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Row(children: [
-                Expanded(child: Text(coach.fullName, style: const TextStyle(
-                  color: Colors.white, fontWeight: FontWeight.w800, fontSize: 14))),
+                Expanded(child: Text(coach.fullName, style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurface, fontWeight: FontWeight.w800, fontSize: 14))),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(color: _lime, borderRadius: BorderRadius.circular(8)),
-                  child: const Text('VOIR', style: TextStyle(
-                    color: Colors.black, fontWeight: FontWeight.w900, fontSize: 9, letterSpacing: 1))),
+                  decoration: BoxDecoration(color: Theme.of(context).colorScheme.primary, borderRadius: BorderRadius.circular(8)),
+                  child: Text('VIEW', style: TextStyle(
+                    color: Theme.of(context).colorScheme.onPrimary, fontWeight: FontWeight.w900, fontSize: 9, letterSpacing: 1))),
               ]),
               const SizedBox(height: 6),
               Text(
                 coach.bio.isNotEmpty
                     ? (coach.bio.length > 55 ? '${coach.bio.substring(0, 55)}…' : coach.bio)
-                    : 'Coach certifié',
-                style: const TextStyle(color: Colors.white38, fontSize: 11, height: 1.4),
+                    : 'Certified coach',
+                style: TextStyle(color: context.fitlek.textMuted, fontSize: 11, height: 1.4),
                 maxLines: 2),
               const SizedBox(height: 10),
               Row(children: [
-                _chip(Icons.card_giftcard_rounded, '${coach.totalInvitations} inv.'),
+                _chip(context, Icons.card_giftcard_rounded, '${coach.totalInvitations} inv.'),
                 const SizedBox(width: 8),
-                _chip(Icons.bolt_rounded, '${coach.earnedPoints} pts'),
+                _chip(context, Icons.bolt_rounded, '${coach.earnedPoints} pts'),
               ]),
             ]),
           )),
@@ -957,22 +956,22 @@ class _CoachCard extends StatelessWidget {
     );
   }
 
-  Widget _placeholder() => Container(
-    color: _darkGray,
+  Widget _placeholder(BuildContext context) => Container(
+    color: context.fitlek.card2,
     child: Center(child: Text(
       coach.firstName.isNotEmpty ? coach.firstName[0] : '?',
-      style: const TextStyle(color: _lime, fontSize: 32, fontWeight: FontWeight.w900))),
+      style: TextStyle(color: Theme.of(context).colorScheme.primary, fontSize: 32, fontWeight: FontWeight.w900))),
   );
 
-  Widget _chip(IconData icon, String label) => Container(
+  Widget _chip(BuildContext context, IconData icon, String label) => Container(
     padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
     decoration: BoxDecoration(
-      color: _lime.withOpacity(0.08), borderRadius: BorderRadius.circular(6),
-      border: Border.all(color: _lime.withOpacity(0.2))),
+      color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(6),
+      border: Border.all(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2))),
     child: Row(children: [
-      Icon(icon, color: _lime, size: 10),
+      Icon(icon, color: Theme.of(context).colorScheme.primary, size: 10),
       const SizedBox(width: 3),
-      Text(label, style: const TextStyle(color: _lime, fontSize: 9, fontWeight: FontWeight.w700)),
+      Text(label, style: TextStyle(color: Theme.of(context).colorScheme.primary, fontSize: 9, fontWeight: FontWeight.w700)),
     ]),
   );
 }

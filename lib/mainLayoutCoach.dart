@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'components/ENG/coachHeader.dart';
 import 'components/ENG/coachNavbar.dart';
@@ -6,9 +7,11 @@ import 'screens/ENG/coachCalendar.dart';
 import 'screens/ENG/coachConversations.dart';
 import 'screens/ENG/coachClients.dart';
 import 'screens/ENG/coachProfile.dart';
+import 'screens/ENG/coachNotifications.dart';
+import 'screens/ENG/coachChat.dart';
+import 'models/coachConversation.dart';
 import 'screens/ENG/login.dart';
 import 'services/apiService.dart';
-
 class MainLayoutCoach extends StatefulWidget {
   const MainLayoutCoach({super.key});
 
@@ -16,7 +19,7 @@ class MainLayoutCoach extends StatefulWidget {
   State<MainLayoutCoach> createState() => _MainLayoutCoachState();
 }
 
-class _MainLayoutCoachState extends State<MainLayoutCoach> {
+class _MainLayoutCoachState extends State<MainLayoutCoach> with WidgetsBindingObserver {
   int _currentIndex = 0;
   bool _loading = true;
 
@@ -27,12 +30,30 @@ class _MainLayoutCoachState extends State<MainLayoutCoach> {
   String? _avatarUrl;
   String? _email;
 
+  int _unreadCount = 0;
+  Timer? _pollTimer;
+
   bool get _showHeader => _currentIndex != 4;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _loadSession();
+  }
+
+  @override
+  void dispose() {
+    _pollTimer?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _loadUnreadCount();
+    }
   }
 
   Future<void> _loadSession() async {
@@ -53,10 +74,72 @@ class _MainLayoutCoachState extends State<MainLayoutCoach> {
       _coachID = userData['id'] is int ? userData['id'] as int : int.tryParse(userData['id'].toString());
       _token = token;
       _firstName = userData['firstName']?.toString() ?? '';
-      _lastName = userData['lastName']?.toString() ?? '';
-      _avatarUrl = userData['avatarUrl']?.toString();
-      _email = userData['email']?.toString();
       _loading = false;
+    });
+
+    // Fetch the full authenticated coach profile (real name + avatar) from the
+    // existing backend endpoint so the header shows real, backend-driven data.
+    _loadCoachProfile();
+
+    // Notification unread count: one centralized fetch + controlled polling
+    // (no realtime/socket infrastructure exists in this project).
+    _loadUnreadCount();
+    _pollTimer?.cancel();
+    _pollTimer = Timer.periodic(const Duration(seconds: 45), (_) => _loadUnreadCount());
+  }
+
+  Future<void> _loadUnreadCount() async {
+    final res = await ApiService.get('/coach/notifications/unread-count');
+    if (!mounted || res['ok'] != true) return;
+    final count = res['count'];
+    setState(() => _unreadCount = count is int ? count : int.tryParse('$count') ?? 0);
+  }
+
+  Future<void> _openNotifications() async {
+    final result = await Navigator.of(context).push<Map<String, dynamic>>(
+      MaterialPageRoute(builder: (_) => const CoachNotifications()),
+    );
+    if (!mounted) return;
+    await _loadUnreadCount();
+    if (result != null) _handleNotificationTap(result);
+  }
+
+  void _handleNotificationTap(Map<String, dynamic> n) {
+    switch (n['type']) {
+      case 'new_message':
+        final convId = n['relatedEntityID'];
+        if (convId == null) return;
+        Navigator.of(context).push(MaterialPageRoute(
+          builder: (_) => CoachChat(
+            conversation: CoachConversation(
+              id: convId.toString(),
+              clientId: '',
+              clientName: (n['actorName'] ?? 'Client').toString(),
+              clientPhotoUrl: (n['actorAvatar'] ?? '').toString(),
+              lastMessage: '',
+              lastMessageTime: DateTime.now(),
+              unreadCount: 0,
+            ),
+          ),
+        )).then((_) => _loadUnreadCount());
+        break;
+      case 'new_reservation':
+      case 'upcoming_session':
+        setState(() => _currentIndex = 1); // Coach Calendar tab
+        break;
+    }
+  }
+
+  Future<void> _loadCoachProfile() async {
+    final res = await ApiService.get('/coach/profile');
+    if (!mounted || res['ok'] != true) return;
+    setState(() {
+      _firstName = res['firstName']?.toString() ?? _firstName;
+      _lastName = res['lastName']?.toString() ?? _lastName;
+      _avatarUrl = (res['avatarUrl']?.toString().isNotEmpty ?? false)
+          ? res['avatarUrl'].toString()
+          : _avatarUrl;
+      _email = res['email']?.toString() ?? _email;
     });
   }
 
@@ -72,9 +155,9 @@ class _MainLayoutCoachState extends State<MainLayoutCoach> {
   @override
   Widget build(BuildContext context) {
     if (_loading || _coachID == null) {
-      return const Scaffold(
-        backgroundColor: Colors.black,
-        body: Center(child: CircularProgressIndicator(color: Color(0xFFC6F135))),
+      return Scaffold(
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        body: Center(child: CircularProgressIndicator(color: Theme.of(context).colorScheme.primary)),
       );
     }
 
@@ -91,18 +174,23 @@ class _MainLayoutCoachState extends State<MainLayoutCoach> {
         email: _email,
         token: _token,
         onLogout: _handleLogout,
+        onProfileUpdated: _loadCoachProfile,
       ),
     ];
 
     return Scaffold(
-      backgroundColor: Colors.black,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
         bottom: false,
         child: Column(children: [
           if (_showHeader)
             CoachHeader(
               coachName: '$_firstName $_lastName'.trim(),
+              firstName: _firstName,
               avatarUrl: _avatarUrl ?? '',
+              unreadCount: _unreadCount,
+              onNotificationTap: _openNotifications,
+              onAvatarTap: () => setState(() => _currentIndex = 4),
             ),
           Expanded(
             child: IndexedStack(

@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none">
+  <!-- SIRVYA "S" mark: a single constant-width ribbon folded into a stylized S
+       (top bar -> diagonal spine -> bottom bar) with flag tips pointing to the
+       top-right and bottom-left. Monochrome + transparent background so it can be
+       recolored from Flutter via ColorFilter (BlendMode.srcIn). Geometry is
+       explicit for optical balance and stays crisp down to 24px. -->
+  <path d="M87 28 L29 28 L71 72 L13 72"
+        fill="none"
+        stroke="#004643"
+        stroke-width="21"
+        stroke-linejoin="miter"
+        stroke-linecap="butt"
+        stroke-miterlimit="12"/>
+</svg>

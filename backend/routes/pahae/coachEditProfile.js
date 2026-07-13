@@ -7,9 +7,17 @@ const router = Router();
 
 router.put('/', requireAuth, requireRole('coach'), async (req, res) => {
   const coachID = req.user.id;
-  const { firstName, lastName, gender, bio, instagramPage, avatarUrl } = req.body;
+  const { firstName, lastName, gender, bio, instagramPage, avatarUrl, tel, ville, price } = req.body;
   if (!firstName || !lastName || !gender || !bio || !instagramPage) {
     return res.status(400).json({ message: 'All fields are required.' });
+  }
+  // Optional professional fields — normalize to avoid nulling from undefined.
+  const telValue = tel === undefined || tel === null ? null : String(tel).trim();
+  const villeValue = ville === undefined || ville === null ? null : String(ville).trim();
+  let priceValue = null;
+  if (price !== undefined && price !== null && String(price).trim() !== '') {
+    const parsed = Number(price);
+    priceValue = Number.isNaN(parsed) ? null : parsed;
   }
   const conn = await pool.getConnection();
   try {
@@ -22,8 +30,8 @@ router.put('/', requireAuth, requireRole('coach'), async (req, res) => {
       : [firstName, lastName, gender, coachID];
     await conn.query(userUpdate, userParams);
     await conn.query(
-      `UPDATE coachprofiles SET bio = ?, instagramPage = ? WHERE userID = ?`,
-      [bio, instagramPage, coachID]
+      `UPDATE coachprofiles SET bio = ?, instagramPage = ?, tel = ?, ville = ?, price = ? WHERE userID = ?`,
+      [bio, instagramPage, telValue, villeValue, priceValue, coachID]
     );
     await conn.commit();
     res.json({ message: 'Profile updated.' });

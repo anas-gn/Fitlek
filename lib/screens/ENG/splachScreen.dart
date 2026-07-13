@@ -3,8 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'welcome.dart';
 
-const _lime = Color(0xFFC6F135);
-const _dark = Color(0xFF0A0A0A);
+import '../../theme/fitlek_theme_extension.dart';
+import '../../components/sirvya_logo.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -77,7 +77,7 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _dark,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: Center(
         child: AnimatedBuilder(
           animation: _ctrl,
@@ -90,62 +90,30 @@ class _SplashScreenState extends State<SplashScreen>
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Container(
-                      width: 140,
-                      height: 140,
+                      padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        shape: BoxShape.circle,
+                        borderRadius: BorderRadius.circular(20),
                         boxShadow: [
                           BoxShadow(
-                            color: _lime.withOpacity(0.15 * _glowAnim.value),
+                            color: Theme.of(context)
+                                .colorScheme
+                                .primary
+                                .withValues(alpha: 0.15 * _glowAnim.value),
                             blurRadius: 60 * _glowAnim.value,
-                            spreadRadius: 20 * _glowAnim.value,
+                            spreadRadius: 10 * _glowAnim.value,
                           ),
                         ],
                       ),
-                      child: CustomPaint(
-                        painter: _FitlekLogoPainter(
-                          strokeColor: Colors.white,
-                          circleColor: _lime,
-                        ),
-                        size: const Size(140, 140),
+                      child: const SirvyaLogo(
+                        variant: SirvyaLogoVariant.wordmark,
+                        height: 60,
                       ),
                     ),
-                    const SizedBox(height: 28),
-                    RichText(
-                      text: TextSpan(
-                        children: [
-                          TextSpan(
-                            text: 'FIT',
-                            style: TextStyle(
-                              fontSize: 28,
-                              fontWeight: FontWeight.w900,
-                              color: _lime,
-                              letterSpacing: 6,
-                              shadows: [
-                                Shadow(
-                                  color: _lime.withOpacity(0.3 * _glowAnim.value),
-                                  blurRadius: 20 * _glowAnim.value,
-                                ),
-                              ],
-                            ),
-                          ),
-                          TextSpan(
-                            text: 'LEK',
-                            style: TextStyle(
-                              fontSize: 28,
-                              fontWeight: FontWeight.w900,
-                              color: Colors.white,
-                              letterSpacing: 6,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 20),
                     Text(
-                      'Votre Coach Personnel',
+                      'Your Personal Coach',
                       style: TextStyle(
-                        color: Colors.white.withOpacity(0.4),
+                        color: context.fitlek.textMuted,
                         fontSize: 13,
                         fontWeight: FontWeight.w500,
                         letterSpacing: 2,
@@ -156,10 +124,13 @@ class _SplashScreenState extends State<SplashScreen>
                       width: 32,
                       height: 32,
                       child: CircularProgressIndicator(
-                        color: _lime,
+                        color: Theme.of(context).colorScheme.primary,
                         strokeWidth: 2,
                         valueColor: AlwaysStoppedAnimation<Color>(
-                          _lime.withOpacity(0.6),
+                          Theme.of(context)
+                              .colorScheme
+                              .primary
+                              .withValues(alpha: 0.6),
                         ),
                       ),
                     ),
@@ -168,92 +139,6 @@ class _SplashScreenState extends State<SplashScreen>
               ),
             );
           },
-        ),
-      ),
-    );
-  }
-}
-
-class _FitlekLogoPainter extends CustomPainter {
-  final Color strokeColor;
-  final Color circleColor;
-
-  const _FitlekLogoPainter({required this.strokeColor, required this.circleColor});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final scaleX = size.width / 132;
-    final scaleY = size.height / 120;
-    canvas.save();
-    canvas.scale(scaleX, scaleY);
-
-    canvas.drawCircle(const Offset(65.6104, 17.25), 17.25, Paint()..color = circleColor);
-
-    final path = Path()
-      ..moveTo(5.8103, 21.85)
-      ..cubicTo(19.2827, 35.9, 45.0007, 47.25, 64.4603, 47.7336)
-      ..moveTo(125.41, 21.85)
-      ..cubicTo(112.388, 36.0329, 83.709, 48.212, 64.4603, 47.7336)
-      ..moveTo(64.4603, 47.7336)
-      ..lineTo(64.4603, 106.95)
-      ..cubicTo(87.8436, 95.8333, 128.4, 73.37, 103.56, 72.45)
-      ..cubicTo(78.7203, 71.53, 36.477, 72.0666, 18.4603, 72.45);
-
-    canvas.drawPath(
-      path,
-      Paint()
-        ..color = strokeColor
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 16.1
-        ..strokeCap = StrokeCap.round,
-    );
-    canvas.restore();
-  }
-
-  @override
-  bool shouldRepaint(covariant _FitlekLogoPainter oldDelegate) => false;
-}
-
-class _FitlekLogo extends StatelessWidget {
-  final double height;
-  const _FitlekLogo({this.height = 40});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: height,
-      width: height * 132 / 120,
-      decoration: BoxDecoration(
-        boxShadow: [
-          BoxShadow(
-            color: _lime.withOpacity(0.25),
-            blurRadius: 18,
-            spreadRadius: 1,
-          ),
-        ],
-      ),
-      child: CustomPaint(
-        painter: _FitlekLogoPainter(strokeColor: Colors.white, circleColor: _lime),
-      ),
-    );
-  }
-}
-
-class _LogoWatermark extends StatelessWidget {
-  final double size;
-  const _LogoWatermark({this.size = 340});
-
-  @override
-  Widget build(BuildContext context) {
-    return IgnorePointer(
-      child: Opacity(
-        opacity: 0.035,
-        child: SizedBox(
-          width: size,
-          height: size * 120 / 132,
-          child: CustomPaint(
-            painter: _FitlekLogoPainter(strokeColor: Colors.white, circleColor: _lime),
-          ),
         ),
       ),
     );

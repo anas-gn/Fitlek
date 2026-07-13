@@ -7,72 +7,149 @@ import crypto from 'crypto';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'fitlek_secret';
 
+// Coach-to-Coach referral reward (backend-controlled — never sent by the client).
+const REFERRAL_REWARD_POINTS = 20;
+
+// Normalize a referral/invitation code the same way everywhere.
+function normalizeReferralCode(raw) {
+  return (raw ?? '').toString().trim().toUpperCase();
+}
+
+// Generate a unique coach invitation code (does not expose the DB id).
+async function generateUniqueInvitationCode(conn) {
+  for (let i = 0; i < 6; i++) {
+    const code = crypto.randomBytes(6).toString('hex').toUpperCase();
+    const [dup] = await conn.query(
+      'SELECT id FROM coachprofiles WHERE invitationCode = ? LIMIT 1',
+      [code]
+    );
+    if (!dup.length) return code;
+  }
+  // Extremely unlikely fallback: longer token.
+  return crypto.randomBytes(9).toString('hex').toUpperCase();
+}
+
+// ─────────────────────────────────────────────────────────────────────
+// GET /auth/validate-referral?code=XXXX
+// Public, minimal-info check used for live feedback during Coach signup.
+// Reveals ONLY whether the code is a valid coach referral code.
+// Final/authoritative validation still happens inside /auth/register.
+// ─────────────────────────────────────────────────────────────────────
+router.get('/validate-referral', async (req, res) => {
+  try {
+    const code = normalizeReferralCode(req.query.code);
+    if (!code) return res.json({ valid: false });
+    const [rows] = await db.query(
+      `SELECT cp.userID
+       FROM coachprofiles cp
+       JOIN users u ON u.id = cp.userID
+       WHERE cp.invitationCode = ? AND u.role = 'coach'
+       LIMIT 1`,
+      [code]
+    );
+    res.json({ valid: rows.length > 0 });
+  } catch (err) {
+    res.status(500).json({ error: 'Validation failed' });
+  }
+});
+
 // ─────────────────────────────────────────────────────────────────────
 // POST /auth/register - Enregistre nouvel utilisateur + crée profil si nécessaire
+// Optional coach-to-coach referral: when a new COACH provides a valid
+// `referralCode`, the inviting coach earns REFERRAL_REWARD_POINTS exactly once.
+// The whole operation is atomic.
 // ─────────────────────────────────────────────────────────────────────
 router.post('/register', async (req, res) => {
+  const { firstName, lastName, email, password, gender, role = 'client', advisorID } = req.body;
+
+  // Validation des champs obligatoires
+  if (!firstName || !lastName || !email || !password || !gender) {
+    return res.status(400).json({ error: 'Missing required fields' });
+  }
+
+  // Referral code only applies to coach registrations.
+  const referralCode = role === 'coach' ? normalizeReferralCode(req.body.referralCode) : '';
+
+  const conn = await db.getConnection();
   try {
-    const { firstName, lastName, email, password, gender, role = 'client', advisorID } = req.body;
-    
-    // Validation des champs obligatoires
-    if (!firstName || !lastName || !email || !password || !gender) {
-      return res.status(400).json({ error: 'Missing required fields' });
-    }
+    await conn.beginTransaction();
 
     // Vérifier si l'email existe déjà
-    const [existing] = await db.query('SELECT id FROM users WHERE email = ?', [email]);
+    const [existing] = await conn.query('SELECT id FROM users WHERE email = ?', [email]);
     if (existing.length) {
+      await conn.rollback();
       return res.status(409).json({ error: 'Email already registered' });
+    }
+
+    // Authoritatively validate the referral code BEFORE creating anything.
+    let inviterCoachID = null;
+    if (referralCode) {
+      const [inviterRows] = await conn.query(
+        `SELECT cp.userID AS inviterID
+         FROM coachprofiles cp
+         JOIN users u ON u.id = cp.userID
+         WHERE cp.invitationCode = ? AND u.role = 'coach'
+         LIMIT 1`,
+        [referralCode]
+      );
+      if (!inviterRows.length) {
+        await conn.rollback();
+        return res.status(400).json({ error: 'This invitation code is invalid.' });
+      }
+      inviterCoachID = inviterRows[0].inviterID;
     }
 
     // Hasher le mot de passe
     const passwordHash = await bcrypt.hash(password, 12);
-    
+
     // Créer l'utilisateur
-    const [result] = await db.query(
+    const [result] = await conn.query(
       'INSERT INTO users (firstName, lastName, email, passwordHash, gender, role) VALUES (?,?,?,?,?,?)',
       [firstName, lastName, email, passwordHash, gender, role]
     );
     const userID = result.insertId;
 
-    // ─────────────────────────────────────────────────────────────────
-    // ✨ NOUVEAU : Auto-créer le profil Advisor avec profil vide
-    // ─────────────────────────────────────────────────────────────────
+    // Auto-créer le profil Advisor avec profil vide
     if (role === 'advisor') {
-      try {
-        await db.query(
-          'INSERT INTO advisorprofiles (userID, specialty) VALUES (?,?)',
-          [userID, 'À compléter']
-        );
-      } catch (err) {
-        console.error('Failed to create advisor profile:', err);
-        // Non-fatal, continue
-      }
+      await conn.query(
+        'INSERT INTO advisorprofiles (userID, specialty) VALUES (?,?)',
+        [userID, 'À compléter']
+      );
     }
 
-    // ─────────────────────────────────────────────────────────────────
-    // ✨ NOUVEAU : Auto-créer le profil Coach AVEC advisorID si fourni
-    // ─────────────────────────────────────────────────────────────────
+    // Auto-créer le profil Coach (code unique) + éventuel referral
     if (role === 'coach') {
-      try {
-        const invCode = crypto.randomBytes(6).toString('hex').toUpperCase();
-        
-        // ✅ Passer advisorID (peut être null ou un nombre)
-        const coach_advisorID = advisorID || null;
-        
-        await db.query(
-          'INSERT INTO coachprofiles (userID, bio, instagramPage, certificateUrl, invitationCode, advisorID) VALUES (?,?,?,?,?,?)',
-          [userID, '', '', '', invCode, coach_advisorID]
+      const invCode = await generateUniqueInvitationCode(conn);
+      const coach_advisorID = advisorID || null;
+      await conn.query(
+        'INSERT INTO coachprofiles (userID, bio, instagramPage, certificateUrl, invitationCode, advisorID) VALUES (?,?,?,?,?,?)',
+        [userID, '', '', '', invCode, coach_advisorID]
+      );
+
+      if (inviterCoachID) {
+        // Durable once-only guard: UNIQUE(invitedCoachID) on coachreferrals.
+        await conn.query(
+          'INSERT INTO coachreferrals (inviterCoachID, invitedCoachID, invitationCode, pointsAwarded) VALUES (?,?,?,?)',
+          [inviterCoachID, userID, referralCode, REFERRAL_REWARD_POINTS]
         );
-      } catch (err) {
-        console.error('Failed to create coach profile:', err);
-        // Non-fatal, continue
+        // Reward amount is decided here, not by the client.
+        await conn.query(
+          'UPDATE coachprofiles SET earnedPoints = earnedPoints + ?, totalInvitations = totalInvitations + 1 WHERE userID = ?',
+          [REFERRAL_REWARD_POINTS, inviterCoachID]
+        );
       }
     }
 
+    await conn.commit();
     res.status(201).json({ message: 'User created', userID });
-  } catch (err) { 
-    res.status(500).json({ error: err.message }); 
+  } catch (err) {
+    await conn.rollback();
+    if (err && err.code === 'ER_DUP_ENTRY') {
+      return res.status(409).json({ error: 'This referral has already been recorded.' });
+    }
+    res.status(500).json({ error: err.message });
+  } finally {
+    conn.release();
   }
 });
 

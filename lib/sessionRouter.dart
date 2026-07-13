@@ -16,7 +16,6 @@ class SessionRouter extends StatefulWidget {
 class _SessionRouterState extends State<SessionRouter> {
   Widget? _target;
   bool _loading = true;
-  String? _error;
 
   @override
   void initState() {
@@ -43,11 +42,10 @@ class _SessionRouterState extends State<SessionRouter> {
             _target = const SplashScreen();
         }
       });
-    } catch (e) {
+    } catch (_) {
       if (!mounted) return;
       setState(() {
         _loading = false;
-        _error = e.toString();
         _target = const SplashScreen();
       });
     }
@@ -119,10 +117,11 @@ class _ClientHomeLoaderState extends State<_ClientHomeLoader> {
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
-      backgroundColor: Colors.black,
+    return Scaffold(
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: Center(
-        child: CircularProgressIndicator(color: Color(0xFFA3FF12)),
+        child: CircularProgressIndicator(
+            color: Theme.of(context).colorScheme.primary),
       ),
     );
   }

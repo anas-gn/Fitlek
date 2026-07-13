@@ -3,18 +3,9 @@
 // ─────────────────────────────────────────────
 
 import 'package:flutter/material.dart';
-import 'dart:math' as math;
-
-// ─── Constants ──────────────────────────────────────────────────────────────
-const _lime       = Color(0xFFC6F135);
-const _limeDark   = Color(0xFF9BC420);
-const _dark       = Color(0xFF0A0A0A);
-const _darkElev2  = Color(0xFF141414);
-const _darkElev3  = Color(0xFF1A1A1A);
-const _cardBorder = Color(0xFF232323);
-const _textPrimary   = Colors.white;
-const _textSecondary = Color(0xFF9CA3AF);
-const _textMuted     = Color(0xFF6B7280);
+import '../../components/sirvya_logo.dart';
+import '../../constants/app_colors.dart';
+import '../../theme/fitlek_theme_extension.dart';
 
 // ═════════════════════════════════════════════
 //  APP HEADER — Logo + Avatar + Notification
@@ -44,6 +35,9 @@ class AppHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final f = context.fitlek;
     final isScrolled = scrollOffset > 50;
 
     return AnimatedContainer(
@@ -51,125 +45,83 @@ class AppHeader extends StatelessWidget {
       curve: Curves.easeOutCubic,
       padding: EdgeInsets.fromLTRB(20, 12, 20, isScrolled ? 12 : 16),
       decoration: BoxDecoration(
-        color: isScrolled ? _darkElev2.withOpacity(0.95) : Colors.transparent,
+        color: isScrolled ? f.card.withValues(alpha: 0.95) : Colors.transparent,
         border: Border(
           bottom: BorderSide(
-            color: isScrolled ? _cardBorder.withOpacity(0.5) : Colors.transparent,
+            color: isScrolled
+                ? f.border.withValues(alpha: 0.5)
+                : Colors.transparent,
             width: 1,
           ),
         ),
-        boxShadow: isScrolled ? [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.2),
-            blurRadius: 20,
-            offset: const Offset(0, 4),
-          ),
-        ] : null,
+        boxShadow: isScrolled
+            ? [
+                BoxShadow(
+                  color: f.shadow,
+                  blurRadius: 20,
+                  offset: const Offset(0, 4),
+                ),
+              ]
+            : null,
       ),
       child: SafeArea(
         bottom: false,
         child: Row(
           children: [
-            // Back button OR Logo
             if (showBackButton)
-              _buildBackButton()
+              _buildBackButton(context)
             else
-              _buildLogo(),
-
+              _buildLogo(context),
             const Spacer(),
-
-            // Title (si fourni et scrolled)
             if (title != null && isScrolled)
               Expanded(
                 child: Text(
                   title!,
                   textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    color: _textPrimary,
+                  style: TextStyle(
+                    color: cs.onSurface,
                     fontSize: 16,
                     fontWeight: FontWeight.w800,
                     letterSpacing: -0.3,
                   ),
                 ),
               ),
-
             if (title != null && isScrolled) const Spacer(),
-
-            // Notification Bell
-            if (onNotificationTap != null)
-              _buildNotificationBell(),
-
+            if (onNotificationTap != null) _buildNotificationBell(context),
             const SizedBox(width: 12),
-
-            // Avatar avec glow
-            _buildAvatar(),
+            _buildAvatar(context),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildBackButton() {
+  Widget _buildBackButton(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final f = context.fitlek;
+
     return GestureDetector(
       onTap: onBackTap ?? () {},
       child: Container(
         padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
-          color: _darkElev3,
+          color: f.card2,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: _cardBorder, width: 1),
+          border: Border.all(color: f.border, width: 1),
         ),
-        child: const Icon(Icons.arrow_back_ios_new_rounded, color: _textPrimary, size: 16),
+        child: Icon(Icons.arrow_back_ios_new_rounded,
+            color: cs.onSurface, size: 16),
       ),
     );
   }
 
-  Widget _buildLogo() {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        // Logo SVG custom
-        SizedBox(
-          width: 36,
-          height: 32,
-          child: CustomPaint(
-            size: const Size(132, 120),
-            painter: _FitLekLogoPainter(),
-          ),
-        ),
-        const SizedBox(width: 10),
-        // Texte FITLEK
-        RichText(
-          text: const TextSpan(
-            children: [
-              TextSpan(
-                text: 'FIT',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w900,
-                  color: _lime,
-                  letterSpacing: 3,
-                  height: 1,
-                ),
-              ),
-              TextSpan(
-                text: 'LEK',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w900,
-                  color: _textPrimary,
-                  letterSpacing: 3,
-                  height: 1,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
+  Widget _buildLogo(BuildContext context) {
+    return const SirvyaLogo(variant: SirvyaLogoVariant.wordmark, height: 28);
   }
 
-  Widget _buildNotificationBell() {
+  Widget _buildNotificationBell(BuildContext context) {
+    final f = context.fitlek;
+
     return GestureDetector(
       onTap: onNotificationTap,
       child: Stack(
@@ -177,13 +129,13 @@ class AppHeader extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: _darkElev3,
+              color: f.card2,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: _cardBorder, width: 1),
+              border: Border.all(color: f.border, width: 1),
             ),
-            child: const Icon(Icons.notifications_outlined, color: _textSecondary, size: 20),
+            child: Icon(Icons.notifications_outlined,
+                color: f.textSecondary, size: 20),
           ),
-          // Badge notification
           Positioned(
             top: 8,
             right: 8,
@@ -191,7 +143,7 @@ class AppHeader extends StatelessWidget {
               width: 8,
               height: 8,
               decoration: const BoxDecoration(
-                color: Color(0xFFEF4444),
+                color: AppColors.error,
                 shape: BoxShape.circle,
               ),
             ),
@@ -201,7 +153,10 @@ class AppHeader extends StatelessWidget {
     );
   }
 
-  Widget _buildAvatar() {
+  Widget _buildAvatar(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final f = context.fitlek;
+
     return GestureDetector(
       onTap: onAvatarTap,
       child: Container(
@@ -209,7 +164,7 @@ class AppHeader extends StatelessWidget {
           shape: BoxShape.circle,
           boxShadow: [
             BoxShadow(
-              color: _lime.withOpacity(0.25),
+              color: cs.primary.withValues(alpha: 0.25),
               blurRadius: 12,
               spreadRadius: 1,
             ),
@@ -217,7 +172,7 @@ class AppHeader extends StatelessWidget {
         ),
         child: CircleAvatar(
           radius: 22,
-          backgroundColor: _darkElev3,
+          backgroundColor: f.card2,
           backgroundImage: avatarUrl != null && avatarUrl!.isNotEmpty
               ? NetworkImage(avatarUrl!)
               : null,
@@ -226,8 +181,8 @@ class AppHeader extends StatelessWidget {
                   firstName != null && firstName!.isNotEmpty
                       ? firstName![0].toUpperCase()
                       : '?',
-                  style: const TextStyle(
-                    color: _lime,
+                  style: TextStyle(
+                    color: cs.primary,
                     fontSize: 16,
                     fontWeight: FontWeight.w900,
                   ),
@@ -240,83 +195,7 @@ class AppHeader extends StatelessWidget {
 }
 
 // ═════════════════════════════════════════════
-//  LOGO PAINTER — SVG FitLek
-// ═════════════════════════════════════════════
-
-class _FitLekLogoPainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final scaleX = size.width / 132;
-    final scaleY = size.height / 120;
-
-    // Circle (head) — #D1F96B (lime)
-    final headPaint = Paint()
-      ..color = const Color(0xFFD1F96B)
-      ..style = PaintingStyle.fill;
-
-    canvas.drawCircle(
-      Offset(65.6104 * scaleX, 17.25 * scaleY),
-      17.25 * math.min(scaleX, scaleY),
-      headPaint,
-    );
-
-    // Body path — white stroke
-    final bodyPaint = Paint()
-      ..color = Colors.white
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 16.1 * math.min(scaleX, scaleY)
-      ..strokeCap = StrokeCap.round
-      ..strokeJoin = StrokeJoin.round;
-
-    final path = Path();
-    // M5.8103 21.85
-    path.moveTo(5.8103 * scaleX, 21.85 * scaleY);
-    // C19.2827 35.9 45.0007 47.25 64.4603 47.7336
-    path.cubicTo(
-      19.2827 * scaleX, 35.9 * scaleY,
-      45.0007 * scaleX, 47.25 * scaleY,
-      64.4603 * scaleX, 47.7336 * scaleY,
-    );
-    // M125.41 21.85
-    path.moveTo(125.41 * scaleX, 21.85 * scaleY);
-    // C112.388 36.0329 83.709 48.212 64.4603 47.7336
-    path.cubicTo(
-      112.388 * scaleX, 36.0329 * scaleY,
-      83.709 * scaleX, 48.212 * scaleY,
-      64.4603 * scaleX, 47.7336 * scaleY,
-    );
-    // M64.4603 47.7336
-    path.moveTo(64.4603 * scaleX, 47.7336 * scaleY);
-    // V106.95
-    path.lineTo(64.4603 * scaleX, 106.95 * scaleY);
-    // C87.8436 95.8333 128.4 73.37 103.56 72.45
-    path.cubicTo(
-      87.8436 * scaleX, 95.8333 * scaleY,
-      128.4 * scaleX, 73.37 * scaleY,
-      103.56 * scaleX, 72.45 * scaleY,
-    );
-    // C78.7203 71.53 36.477 72.0666 18.4603 72.45
-    path.cubicTo(
-      78.7203 * scaleX, 71.53 * scaleY,
-      36.477 * scaleX, 72.0666 * scaleY,
-      18.4603 * scaleX, 72.45 * scaleY,
-    );
-
-    canvas.drawPath(path, bodyPaint);
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
-}
-
-
-// ─────────────────────────────────────────────
-//  app_footer.dart — Bottom Navigation Premium
-//  Widget réutilisable pour toutes les pages
-// ─────────────────────────────────────────────
-
-// ═════════════════════════════════════════════
-//  APP FOOTER — Bottom Navigation Glassmorphism
+//  APP FOOTER — Bottom Navigation
 // ═════════════════════════════════════════════
 
 class AppFooter extends StatelessWidget {
@@ -333,32 +212,21 @@ class AppFooter extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final f = context.fitlek;
+
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            _darkElev2.withOpacity(0.95),
-            _darkElev2.withOpacity(0.98),
-          ],
-        ),
+        color: cs.surface,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(
-          color: const Color(0xFF2A2A2A).withOpacity(0.5),
-          width: 1,
-        ),
+        border: Border.all(color: f.border.withValues(alpha: 0.6), width: 1),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.4),
+            color: f.shadow,
             blurRadius: 30,
             offset: const Offset(0, 10),
-          ),
-          BoxShadow(
-            color: _lime.withOpacity(0.03),
-            blurRadius: 40,
-            offset: const Offset(0, -5),
           ),
         ],
       ),
@@ -377,42 +245,30 @@ class AppFooter extends StatelessWidget {
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 300),
                   curve: Curves.easeOutCubic,
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                   decoration: BoxDecoration(
-                    gradient: active
-                        ? const LinearGradient(
-                            colors: [_lime, _limeDark],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          )
-                        : null,
+                    color: active
+                        ? cs.primary.withValues(alpha: 0.12)
+                        : Colors.transparent,
                     borderRadius: BorderRadius.circular(16),
-                    boxShadow: active
-                        ? [
-                            BoxShadow(
-                              color: _lime.withOpacity(0.35),
-                              blurRadius: 20,
-                              spreadRadius: 2,
-                              offset: const Offset(0, 4),
-                            ),
-                          ]
-                        : null,
                   ),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(
                         active ? item.activeIcon : item.icon,
-                        color: active ? Colors.black : _textMuted,
+                        color: active ? cs.primary : f.navUnselected,
                         size: 22,
                       ),
                       const SizedBox(height: 3),
                       Text(
                         item.label,
                         style: TextStyle(
-                          color: active ? Colors.black : _textMuted,
+                          color: active ? cs.primary : f.navUnselected,
                           fontSize: 10,
-                          fontWeight: active ? FontWeight.w800 : FontWeight.w500,
+                          fontWeight:
+                              active ? FontWeight.w800 : FontWeight.w500,
                           letterSpacing: 0.3,
                         ),
                       ),
@@ -428,10 +284,6 @@ class AppFooter extends StatelessWidget {
   }
 }
 
-// ═════════════════════════════════════════════
-//  NAV ITEM MODEL
-// ═════════════════════════════════════════════
-
 class NavItem {
   final IconData icon;
   final IconData activeIcon;
@@ -443,12 +295,6 @@ class NavItem {
     required this.label,
   });
 }
-
-
-// ─────────────────────────────────────────────
-//  main_screen.dart — Écran principal assemblé
-//  Header + Body + Footer séparés
-// ─────────────────────────────────────────────
 
 // ═════════════════════════════════════════════
 //  MAIN SCREEN — Assemble Header + Body + Footer
@@ -480,30 +326,28 @@ class _MainScreenState extends State<MainScreen>
   final ScrollController _scrollCtrl = ScrollController();
   double _scrollOffset = 0;
 
-  // Définis tes vrais écrans ici
-  // Remplace ces placeholders par tes imports réels
   late final List<Widget> _screens;
 
   static const _navItems = [
     NavItem(
       icon: Icons.home_outlined,
       activeIcon: Icons.home_rounded,
-      label: 'Accueil',
+      label: 'Home',
     ),
     NavItem(
       icon: Icons.explore_outlined,
       activeIcon: Icons.explore_rounded,
-      label: 'Explorer',
+      label: 'Explore',
     ),
     NavItem(
       icon: Icons.calendar_today_outlined,
       activeIcon: Icons.calendar_month_rounded,
-      label: 'Séances',
+      label: 'Sessions',
     ),
     NavItem(
       icon: Icons.person_outline,
       activeIcon: Icons.person_rounded,
-      label: 'Profil',
+      label: 'Profile',
     ),
   ];
 
@@ -514,12 +358,11 @@ class _MainScreenState extends State<MainScreen>
       setState(() => _scrollOffset = _scrollCtrl.offset);
     });
 
-    // Remplace ces placeholders par tes vrais écrans
     _screens = [
-      _HomePlaceholder(),           // ← Remplace par ton HomeScreen
-      _ExplorePlaceholder(),        // ← Remplace par ClientList
-      _SessionsPlaceholder(),       // ← Remplace par ClientSessions
-      _ProfilePlaceholder(),        // ← Remplace par ClientProfil
+      _HomePlaceholder(),
+      _ExplorePlaceholder(),
+      _SessionsPlaceholder(),
+      _ProfilePlaceholder(),
     ];
   }
 
@@ -534,24 +377,20 @@ class _MainScreenState extends State<MainScreen>
     setState(() => _currentIndex = index);
   }
 
-  void _onAvatarTap() {
-    setState(() => _currentIndex = 3); // Va au profil
-  }
+  void _onAvatarTap() => setState(() => _currentIndex = 3);
 
-  void _onNotificationTap() {
-    // Ouvre la page notifications
-    debugPrint('Notifications tapped');
-  }
+  void _onNotificationTap() => debugPrint('Notifications tapped');
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Scaffold(
-      backgroundColor: _dark,
+      backgroundColor: theme.scaffoldBackgroundColor,
       extendBody: true,
       extendBodyBehindAppBar: true,
       body: Column(
         children: [
-          // ═══ HEADER (fixe en haut) ═══
           AppHeader(
             firstName: widget.firstName,
             avatarUrl: widget.avatarUrl,
@@ -559,8 +398,6 @@ class _MainScreenState extends State<MainScreen>
             onNotificationTap: _onNotificationTap,
             scrollOffset: _scrollOffset,
           ),
-
-          // ═══ BODY (scrollable) ═══
           Expanded(
             child: IndexedStack(
               index: _currentIndex,
@@ -569,8 +406,6 @@ class _MainScreenState extends State<MainScreen>
           ),
         ],
       ),
-
-      // ═══ FOOTER (fixe en bas) ═══
       bottomNavigationBar: AppFooter(
         currentIndex: _currentIndex,
         onTap: _onNavTap,
@@ -580,14 +415,11 @@ class _MainScreenState extends State<MainScreen>
   }
 }
 
-
-// ═════════════════════════════════════════════
-//  PLACEHOLDER SCREENS (à remplacer par les tiens)
-// ═════════════════════════════════════════════
-
 class _HomePlaceholder extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
+    final f = context.fitlek;
+
     return ListView.builder(
       padding: const EdgeInsets.all(20),
       itemCount: 20,
@@ -595,13 +427,13 @@ class _HomePlaceholder extends StatelessWidget {
         margin: const EdgeInsets.only(bottom: 12),
         height: 80,
         decoration: BoxDecoration(
-          color: _darkElev2,
+          color: f.card,
           borderRadius: BorderRadius.circular(16),
         ),
         child: Center(
           child: Text(
             'Home Content $i',
-            style: const TextStyle(color: _textSecondary),
+            style: TextStyle(color: f.textSecondary),
           ),
         ),
       ),
@@ -612,8 +444,14 @@ class _HomePlaceholder extends StatelessWidget {
 class _ExplorePlaceholder extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return const Center(
-      child: Text('Explorer', style: TextStyle(color: _textPrimary, fontSize: 24)),
+    return Center(
+      child: Text(
+        'Explore',
+        style: TextStyle(
+          color: Theme.of(context).colorScheme.onSurface,
+          fontSize: 24,
+        ),
+      ),
     );
   }
 }
@@ -621,8 +459,14 @@ class _ExplorePlaceholder extends StatelessWidget {
 class _SessionsPlaceholder extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return const Center(
-      child: Text('Séances', style: TextStyle(color: _textPrimary, fontSize: 24)),
+    return Center(
+      child: Text(
+        'Sessions',
+        style: TextStyle(
+          color: Theme.of(context).colorScheme.onSurface,
+          fontSize: 24,
+        ),
+      ),
     );
   }
 }
@@ -630,8 +474,14 @@ class _SessionsPlaceholder extends StatelessWidget {
 class _ProfilePlaceholder extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return const Center(
-      child: Text('Profil', style: TextStyle(color: _textPrimary, fontSize: 24)),
+    return Center(
+      child: Text(
+        'Profile',
+        style: TextStyle(
+          color: Theme.of(context).colorScheme.onSurface,
+          fontSize: 24,
+        ),
+      ),
     );
   }
 }

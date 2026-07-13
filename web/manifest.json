@@ -1,11 +1,11 @@
 {
-    "name": "fitlek1",
-    "short_name": "fitlek1",
+    "name": "SIRVYA",
+    "short_name": "SIRVYA",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "description": "SIRVYA",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

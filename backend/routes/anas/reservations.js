@@ -121,6 +121,31 @@ router.post('/', async (req, res) => {
       [cID, coachID, reservedDate, reservedTime, autoLocation, autoCompanyName]
     );
 
+    // Notify the coach of the new reservation (best-effort, de-duplicated by
+    // uniqueKey; created only after the reservation insert succeeded).
+    try {
+      const [[client]] = await db.query(
+        'SELECT firstName, lastName, avatarUrl FROM users WHERE id=?',
+        [cID]
+      );
+      const clientName = client ? `${client.firstName} ${client.lastName}`.trim() : 'A client';
+      await db.query(
+        `INSERT IGNORE INTO notifications
+           (recipientUserID, type, title, body, relatedEntityID, actorName, actorAvatar, uniqueKey)
+         VALUES (?, 'new_reservation', 'New reservation', ?, ?, ?, ?, ?)`,
+        [
+          coachID,
+          `${clientName} requested a session.`,
+          result.insertId,
+          clientName,
+          client?.avatarUrl ?? null,
+          `reservation:${result.insertId}:coach:${coachID}`,
+        ]
+      );
+    } catch (notifyErr) {
+      console.error('new_reservation notification failed:', notifyErr.message);
+    }
+
     res.status(201).json({
       message: 'Reservation created',
       reservationID: result.insertId,

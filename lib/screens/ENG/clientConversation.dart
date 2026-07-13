@@ -3,72 +3,8 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
-const _lime = Color(0xFFC6F135);
-const _dark = Color(0xFF0A0A0A);
-const _card = Color(0xFF141414);
-const _cardBorder = Color(0xFF232323);
-const _baseUrl = 'http://192.168.0.232:3000/api';
-
-class _FitlekLogoPainter extends CustomPainter {
-  final Color strokeColor;
-  final Color circleColor;
-
-  const _FitlekLogoPainter({required this.strokeColor, required this.circleColor});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final scaleX = size.width / 132;
-    final scaleY = size.height / 120;
-    canvas.save();
-    canvas.scale(scaleX, scaleY);
-
-    canvas.drawCircle(const Offset(65.6104, 17.25), 17.25, Paint()..color = circleColor);
-
-    final path = Path()
-      ..moveTo(5.8103, 21.85)
-      ..cubicTo(19.2827, 35.9, 45.0007, 47.25, 64.4603, 47.7336)
-      ..moveTo(125.41, 21.85)
-      ..cubicTo(112.388, 36.0329, 83.709, 48.212, 64.4603, 47.7336)
-      ..moveTo(64.4603, 47.7336)
-      ..lineTo(64.4603, 106.95)
-      ..cubicTo(87.8436, 95.8333, 128.4, 73.37, 103.56, 72.45)
-      ..cubicTo(78.7203, 71.53, 36.477, 72.0666, 18.4603, 72.45);
-
-    canvas.drawPath(
-      path,
-      Paint()
-        ..color = strokeColor
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 16.1
-        ..strokeCap = StrokeCap.round,
-    );
-    canvas.restore();
-  }
-
-  @override
-  bool shouldRepaint(covariant _FitlekLogoPainter oldDelegate) => false;
-}
-
-class _LogoWatermark extends StatelessWidget {
-  final double size;
-  const _LogoWatermark({this.size = 320});
-
-  @override
-  Widget build(BuildContext context) {
-    return IgnorePointer(
-      child: Opacity(
-        opacity: 0.035,
-        child: SizedBox(
-          width: size,
-          height: size * 120 / 132,
-          child: CustomPaint(
-            painter: _FitlekLogoPainter(strokeColor: Colors.white, circleColor: _lime),
-          ),
-        ),
-      ),
-    );
-  }
-}
+import '../../theme/fitlek_theme_extension.dart';
+const _baseUrl = 'http://localhost:3000/api';
 
 class _Message {
   final int id;
@@ -142,7 +78,7 @@ class _ClientConversationScreenState extends State<ClientConversationScreen> {
 
   Map<String, String> get _headers => {
         'Content-Type': 'application/json',
-        'Authorization': 'Bearer ' + widget.token,
+        'Authorization': 'Bearer ${widget.token}',
       };
 
   @override
@@ -171,18 +107,11 @@ class _ClientConversationScreenState extends State<ClientConversationScreen> {
   }
 
   String _getMessagesUrl(int pageNum) {
-    return _baseUrl +
-        '/messages/' +
-        widget.conversationID.toString() +
-        '?page=' +
-        pageNum.toString() +
-        '&limit=50' +
-        '&readerID=' +
-        widget.clientID.toString();
+    return '$_baseUrl/messages/${widget.conversationID}?page=$pageNum&limit=50&readerID=${widget.clientID}';
   }
 
   String _getSendUrl() {
-    return _baseUrl + '/messages/' + widget.conversationID.toString();
+    return '$_baseUrl/messages/${widget.conversationID}';
   }
 
   Future<void> _fetchMessages({bool silent = false}) async {
@@ -206,7 +135,7 @@ class _ClientConversationScreenState extends State<ClientConversationScreen> {
       } else {
         if (mounted) {
           setState(() {
-            _error = 'Erreur (' + res.statusCode.toString() + ')';
+            _error = 'Error (${res.statusCode})';
             _loading = false;
           });
         }
@@ -214,7 +143,7 @@ class _ClientConversationScreenState extends State<ClientConversationScreen> {
     } catch (_) {
       if (mounted) {
         setState(() {
-          _error = 'Serveur inaccessible';
+          _error = 'Server unreachable';
           _loading = false;
         });
       }
@@ -320,25 +249,20 @@ class _ClientConversationScreenState extends State<ClientConversationScreen> {
     final target = DateTime(d.year, d.month, d.day);
     final diff = today.difference(target).inDays;
 
-    if (diff == 0) return "Aujourd'hui";
-    if (diff == 1) return 'Hier';
-    const m = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun', 'Jul', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc'];
-    return d.day.toString() + ' ' + m[d.month - 1] + ' ' + d.year.toString();
+    if (diff == 0) return 'Today';
+    if (diff == 1) return 'Yesterday';
+    const m = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return '${d.day} ${m[d.month - 1]} ${d.year}';
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _dark,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: _buildAppBar(),
       body: SafeArea(
         child: Stack(
           children: [
-            Positioned(
-              right: -80,
-              top: 60,
-              child: _LogoWatermark(size: 300),
-            ),
             Column(
               children: [
                 Expanded(child: _buildMessagesList()),
@@ -353,15 +277,15 @@ class _ClientConversationScreenState extends State<ClientConversationScreen> {
 
   PreferredSizeWidget _buildAppBar() {
     return AppBar(
-      backgroundColor: _card,
+      backgroundColor: context.fitlek.card,
       elevation: 0,
       toolbarHeight: 56,
       leadingWidth: 44,
       leading: GestureDetector(
         onTap: () => Navigator.pop(context),
-        child: const Padding(
-          padding: EdgeInsets.only(left: 12),
-          child: Icon(Icons.arrow_back_ios_rounded, color: Colors.white, size: 20),
+        child: Padding(
+          padding: const EdgeInsets.only(left: 12),
+          child: Icon(Icons.arrow_back_ios_rounded, color: Theme.of(context).colorScheme.onSurface, size: 20),
         ),
       ),
       title: Row(
@@ -369,18 +293,18 @@ class _ClientConversationScreenState extends State<ClientConversationScreen> {
           Container(
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              border: Border.all(color: _lime, width: 2),
+              border: Border.all(color: Theme.of(context).colorScheme.primary, width: 2),
             ),
             child: CircleAvatar(
               radius: 18,
-              backgroundColor: const Color(0xFF1A1A1A),
+              backgroundColor: context.fitlek.card2,
               backgroundImage: widget.coachAvatar != null && widget.coachAvatar!.isNotEmpty
                   ? NetworkImage(widget.coachAvatar!)
                   : null,
               child: (widget.coachAvatar == null || widget.coachAvatar!.isEmpty)
                   ? Text(
                       widget.coachName != null && widget.coachName!.isNotEmpty ? widget.coachName![0].toUpperCase() : '?',
-                      style: const TextStyle(color: _lime, fontSize: 14, fontWeight: FontWeight.w900),
+                      style: TextStyle(color: Theme.of(context).colorScheme.primary, fontSize: 14, fontWeight: FontWeight.w900),
                     )
                   : null,
             ),
@@ -393,14 +317,14 @@ class _ClientConversationScreenState extends State<ClientConversationScreen> {
               children: [
                 Text(
                   widget.coachName ?? 'Conversation',
-                  style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w800),
+                  style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 14, fontWeight: FontWeight.w800),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
                 if (widget.coachSpeciality != null)
                   Text(
                     widget.coachSpeciality!,
-                    style: TextStyle(color: Colors.white.withOpacity(0.4), fontSize: 11, fontWeight: FontWeight.w500),
+                    style: TextStyle(color: context.fitlek.textSecondary, fontSize: 11, fontWeight: FontWeight.w500),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -412,23 +336,23 @@ class _ClientConversationScreenState extends State<ClientConversationScreen> {
       actions: [
         IconButton(
           onPressed: () {},
-          icon: const Icon(Icons.more_vert_rounded, color: Colors.white54, size: 20),
+          icon: Icon(Icons.more_vert_rounded, color: context.fitlek.textMuted, size: 20),
         ),
       ],
       bottom: PreferredSize(
         preferredSize: const Size.fromHeight(1),
-        child: Container(height: 1, color: _cardBorder),
+        child: Container(height: 1, color: context.fitlek.border),
       ),
     );
   }
 
   Widget _buildMessagesList() {
     if (_loading) {
-      return const Center(
+      return Center(
         child: SizedBox(
           width: 20,
           height: 20,
-          child: CircularProgressIndicator(color: _lime, strokeWidth: 2),
+          child: CircularProgressIndicator(color: Theme.of(context).colorScheme.primary, strokeWidth: 2),
         ),
       );
     }
@@ -440,22 +364,22 @@ class _ClientConversationScreenState extends State<ClientConversationScreen> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               const SizedBox(height: 60),
-              const Icon(Icons.error_outline_rounded, color: Colors.white24, size: 40),
+              Icon(Icons.error_outline_rounded, color: context.fitlek.textMuted, size: 40),
               const SizedBox(height: 12),
-              Text(_error!, style: const TextStyle(color: Colors.white38, fontSize: 13)),
+              Text(_error!, style: TextStyle(color: context.fitlek.textMuted, fontSize: 13)),
               const SizedBox(height: 16),
               GestureDetector(
                 onTap: _fetchMessages,
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                   decoration: BoxDecoration(
-                    color: _lime.withOpacity(0.1),
+                    color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: _lime.withOpacity(0.3)),
+                    border: Border.all(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3)),
                   ),
-                  child: const Text(
-                    'RÉESSAYER',
-                    style: TextStyle(color: _lime, fontWeight: FontWeight.w800, fontSize: 11, letterSpacing: 1),
+                  child: Text(
+                    'RETRY',
+                    style: TextStyle(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w800, fontSize: 11, letterSpacing: 1),
                   ),
                 ),
               ),
@@ -473,18 +397,18 @@ class _ClientConversationScreenState extends State<ClientConversationScreen> {
             Container(
               width: 64,
               height: 64,
-              decoration: BoxDecoration(color: _lime.withOpacity(0.08), shape: BoxShape.circle),
-              child: Icon(Icons.chat_bubble_outline_rounded, color: _lime.withOpacity(0.4), size: 28),
+              decoration: BoxDecoration(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.08), shape: BoxShape.circle),
+              child: Icon(Icons.chat_bubble_outline_rounded, color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.4), size: 28),
             ),
             const SizedBox(height: 16),
-            const Text(
-              'Commencez la conversation',
-              style: TextStyle(color: Colors.white38, fontSize: 14, fontWeight: FontWeight.w600),
+            Text(
+              'Start the conversation',
+              style: TextStyle(color: context.fitlek.textMuted, fontSize: 14, fontWeight: FontWeight.w600),
             ),
             const SizedBox(height: 6),
             Text(
-              'Envoyez votre premier message',
-              style: TextStyle(color: Colors.white.withOpacity(0.2), fontSize: 12),
+              'Send your first message',
+              style: TextStyle(color: context.fitlek.textMuted, fontSize: 12),
             ),
           ],
         ),
@@ -499,13 +423,13 @@ class _ClientConversationScreenState extends State<ClientConversationScreen> {
       itemCount: timeline.length + (_loadingMore ? 1 : 0),
       itemBuilder: (context, i) {
         if (_loadingMore && i == 0) {
-          return const Padding(
-            padding: EdgeInsets.only(bottom: 12),
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 12),
             child: Center(
               child: SizedBox(
                 width: 16,
                 height: 16,
-                child: CircularProgressIndicator(color: _lime, strokeWidth: 2),
+                child: CircularProgressIndicator(color: Theme.of(context).colorScheme.primary, strokeWidth: 2),
               ),
             ),
           );
@@ -520,13 +444,13 @@ class _ClientConversationScreenState extends State<ClientConversationScreen> {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
                 decoration: BoxDecoration(
-                  color: _card,
+                  color: context.fitlek.card,
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: _cardBorder, width: 1),
+                  border: Border.all(color: context.fitlek.border, width: 1),
                 ),
                 child: Text(
                   _formatDivider(item),
-                  style: TextStyle(color: Colors.white.withOpacity(0.4), fontSize: 10.5, fontWeight: FontWeight.w700, letterSpacing: 0.5),
+                  style: TextStyle(color: context.fitlek.textSecondary, fontSize: 10.5, fontWeight: FontWeight.w700, letterSpacing: 0.5),
                 ),
               ),
             ),
@@ -553,18 +477,18 @@ class _ClientConversationScreenState extends State<ClientConversationScreen> {
                       ? Container(
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            border: Border.all(color: _lime.withOpacity(0.3), width: 1.5),
+                            border: Border.all(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3), width: 1.5),
                           ),
                           child: CircleAvatar(
                             radius: 14,
-                            backgroundColor: const Color(0xFF1A1A1A),
+                            backgroundColor: context.fitlek.card2,
                             backgroundImage: msg.senderAvatar != null && msg.senderAvatar!.isNotEmpty
                                 ? NetworkImage(msg.senderAvatar!)
                                 : null,
                             child: (msg.senderAvatar == null || msg.senderAvatar!.isEmpty)
                                 ? Text(
                                     msg.senderName != null && msg.senderName!.isNotEmpty ? msg.senderName![0].toUpperCase() : '?',
-                                    style: const TextStyle(color: _lime, fontSize: 10, fontWeight: FontWeight.w900),
+                                    style: TextStyle(color: Theme.of(context).colorScheme.primary, fontSize: 10, fontWeight: FontWeight.w900),
                                   )
                                 : null,
                           ),
@@ -577,14 +501,14 @@ class _ClientConversationScreenState extends State<ClientConversationScreen> {
                   constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.68),
                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                   decoration: BoxDecoration(
-                    color: isMe ? _lime : _card,
+                    color: isMe ? Theme.of(context).colorScheme.primary : context.fitlek.card,
                     borderRadius: BorderRadius.only(
                       topLeft: const Radius.circular(16),
                       topRight: const Radius.circular(16),
                       bottomLeft: Radius.circular(isMe ? 16 : 4),
                       bottomRight: Radius.circular(isMe ? 4 : 16),
                     ),
-                    border: isMe ? null : Border.all(color: _cardBorder, width: 1),
+                    border: isMe ? null : Border.all(color: context.fitlek.border, width: 1),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -592,7 +516,7 @@ class _ClientConversationScreenState extends State<ClientConversationScreen> {
                     children: [
                       Text(
                         msg.body,
-                        style: TextStyle(color: isMe ? Colors.black : Colors.white, fontSize: 13.5, height: 1.4),
+                        style: TextStyle(color: isMe ? Theme.of(context).colorScheme.onPrimary : Theme.of(context).colorScheme.onSurface, fontSize: 13.5, height: 1.4),
                       ),
                       const SizedBox(height: 4),
                       Row(
@@ -601,7 +525,7 @@ class _ClientConversationScreenState extends State<ClientConversationScreen> {
                           Text(
                             _formatTime(msg.createdAt),
                             style: TextStyle(
-                              color: isMe ? Colors.black.withOpacity(0.5) : Colors.white.withOpacity(0.3),
+                              color: isMe ? Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.6) : context.fitlek.textMuted,
                               fontSize: 9,
                               fontWeight: FontWeight.w600,
                             ),
@@ -610,7 +534,7 @@ class _ClientConversationScreenState extends State<ClientConversationScreen> {
                             const SizedBox(width: 4),
                             Icon(
                               msg.isRead ? Icons.done_all_rounded : Icons.done_rounded,
-                              color: Colors.black.withOpacity(0.5),
+                              color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.6),
                               size: 12,
                             ),
                           ],
@@ -631,8 +555,8 @@ class _ClientConversationScreenState extends State<ClientConversationScreen> {
     return Container(
       padding: EdgeInsets.fromLTRB(12, 8, 12, 8 + MediaQuery.of(context).padding.bottom),
       decoration: BoxDecoration(
-        color: _card,
-        border: Border(top: BorderSide(color: _cardBorder, width: 1)),
+        color: context.fitlek.card,
+        border: Border(top: BorderSide(color: context.fitlek.border, width: 1)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.end,
@@ -640,22 +564,22 @@ class _ClientConversationScreenState extends State<ClientConversationScreen> {
           Expanded(
             child: Container(
               decoration: BoxDecoration(
-                color: const Color(0xFF1A1A1A),
+                color: context.fitlek.inputFill,
                 borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: _cardBorder, width: 1),
+                border: Border.all(color: context.fitlek.border, width: 1),
               ),
               child: TextField(
                 controller: _msgCtrl,
                 focusNode: _focusNode,
-                style: const TextStyle(color: Colors.white, fontSize: 14),
+                style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 14),
                 maxLines: 4,
                 minLines: 1,
                 textInputAction: TextInputAction.send,
                 onChanged: (_) => setState(() {}),
                 onSubmitted: (_) => _sendMessage(),
                 decoration: InputDecoration(
-                  hintText: 'Écrivez un message...',
-                  hintStyle: TextStyle(color: Colors.white.withOpacity(0.25), fontSize: 14),
+                  hintText: 'Write a message...',
+                  hintStyle: TextStyle(color: context.fitlek.textMuted, fontSize: 14),
                   contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                   border: InputBorder.none,
                 ),
@@ -670,18 +594,18 @@ class _ClientConversationScreenState extends State<ClientConversationScreen> {
               width: 44,
               height: 44,
               decoration: BoxDecoration(
-                color: (_sending || _msgCtrl.text.trim().isEmpty) ? _lime.withOpacity(0.25) : _lime,
+                color: (_sending || _msgCtrl.text.trim().isEmpty) ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.25) : Theme.of(context).colorScheme.primary,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: _sending
-                  ? const Center(
+                  ? Center(
                       child: SizedBox(
                         width: 18,
                         height: 18,
-                        child: CircularProgressIndicator(color: Colors.black, strokeWidth: 2),
+                        child: CircularProgressIndicator(color: Theme.of(context).colorScheme.onPrimary, strokeWidth: 2),
                       ),
                     )
-                  : const Icon(Icons.send_rounded, color: Colors.black, size: 20),
+                  : Icon(Icons.send_rounded, color: Theme.of(context).colorScheme.onPrimary, size: 20),
             ),
           ),
         ],
@@ -690,6 +614,6 @@ class _ClientConversationScreenState extends State<ClientConversationScreen> {
   }
 
   String _formatTime(DateTime d) {
-    return d.hour.toString().padLeft(2, '0') + ':' + d.minute.toString().padLeft(2, '0');
+    return '${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}';
   }
 }

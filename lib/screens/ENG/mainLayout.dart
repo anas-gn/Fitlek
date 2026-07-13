@@ -6,15 +6,13 @@
 import 'package:flutter/material.dart';
 import 'headerFooter.dart';
 
+import '../../theme/fitlek_theme_extension.dart';
 // Importe tes vrais écrans ici
 // import 'homeScreen.dart';
 // import 'clientList.dart';
 // import 'clientSessions.dart';
 // import 'clientProfil.dart';
 
-const _dark = Color(0xFF0A0A0A);
-const _darkElev2 = Color(0xFF141414);
-const _textMuted = Color(0xFF6B7280);
 
 class MainLayout extends StatefulWidget {
   final int clientID;
@@ -45,22 +43,22 @@ class _MainLayoutState extends State<MainLayout> {
     NavItem(
       icon: Icons.home_outlined,
       activeIcon: Icons.home_rounded,
-      label: 'Accueil',
+      label: 'Home',
     ),
     NavItem(
       icon: Icons.explore_outlined,
       activeIcon: Icons.explore_rounded,
-      label: 'Explorer',
+      label: 'Explore',
     ),
     NavItem(
       icon: Icons.calendar_today_outlined,
       activeIcon: Icons.calendar_month_rounded,
-      label: 'Séances',
+      label: 'Sessions',
     ),
     NavItem(
       icon: Icons.person_outline,
       activeIcon: Icons.person_rounded,
-      label: 'Profil',
+      label: 'Profile',
     ),
   ];
 
@@ -76,23 +74,23 @@ class _MainLayoutState extends State<MainLayout> {
     // ═══ REMPLACE CES PLACEHOLDERS PAR TES VRAIS ÉCRANS ═══
     _screens = [
       _PlaceholderScreen(
-        title: 'Accueil',
-        color: const Color(0xFFC6F135),
+        title: 'Home',
+        color: Theme.of(context).colorScheme.primary,
         scrollCtrl: _scrollCtrl,
       ),
       _PlaceholderScreen(
-        title: 'Explorer',
-        color: const Color(0xFF8B5CF6),
+        title: 'Explore',
+        color: context.fitlek.violet,
         scrollCtrl: _scrollCtrl,
       ),
       _PlaceholderScreen(
-        title: 'Séances',
-        color: const Color(0xFF3B82F6),
+        title: 'Sessions',
+        color: context.fitlek.info,
         scrollCtrl: _scrollCtrl,
       ),
       _PlaceholderScreen(
-        title: 'Profil',
-        color: const Color(0xFFEF4444),
+        title: 'Profile',
+        color: context.fitlek.error,
         scrollCtrl: _scrollCtrl,
       ),
     ];
@@ -135,7 +133,7 @@ class _MainLayoutState extends State<MainLayout> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _dark,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       extendBody: true,
       extendBodyBehindAppBar: true,
       
@@ -193,10 +191,10 @@ class _PlaceholderScreen extends StatelessWidget {
         margin: const EdgeInsets.only(bottom: 12),
         height: 100,
         decoration: BoxDecoration(
-          color: _darkElev2,
+          color: context.fitlek.card,
           borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: color.withOpacity(0.2),
+            color: color.withValues(alpha: 0.2),
             width: 1,
           ),
         ),
@@ -216,9 +214,9 @@ class _PlaceholderScreen extends StatelessWidget {
               ),
               const SizedBox(height: 4),
               Text(
-                'Remplace ce placeholder par ton vrai écran',
+                'Replace this placeholder with your real screen',
                 style: TextStyle(
-                  color: _textMuted,
+                  color: context.fitlek.textMuted,
                   fontSize: 11,
                 ),
               ),

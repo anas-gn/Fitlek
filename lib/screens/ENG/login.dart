@@ -9,71 +9,11 @@ import '../../mainLayoutCoach.dart';
 import 'welcome.dart';
 import 'register.dart';
 
-const _lime = Color(0xFFC6F135);
-const _dark = Color(0xFF0A0A0A);
-const _card = Color(0xFF141414);
-const _border = Color(0xFF232323);
-const _muted = Color(0xFF888888);
-const _white = Color(0xFFFFFFFF);
-const _errorRed = Color(0xFFFF5252);
+import '../../theme/fitlek_theme_extension.dart';
+import '../../constants/app_colors.dart';
+import '../../components/sirvya_logo.dart';
 
 const _baseUrl = 'http://localhost:3000/api';
-
-class _FitlekLogoPainter extends CustomPainter {
-  final Color strokeColor;
-  final Color circleColor;
-
-  const _FitlekLogoPainter({required this.strokeColor, required this.circleColor});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final scaleX = size.width / 132;
-    final scaleY = size.height / 120;
-    canvas.save();
-    canvas.scale(scaleX, scaleY);
-
-    canvas.drawCircle(const Offset(65.6104, 17.25), 17.25, Paint()..color = circleColor);
-
-    final path = Path()
-      ..moveTo(5.8103, 21.85)
-      ..cubicTo(19.2827, 35.9, 45.0007, 47.25, 64.4603, 47.7336)
-      ..moveTo(125.41, 21.85)
-      ..cubicTo(112.388, 36.0329, 83.709, 48.212, 64.4603, 47.7336)
-      ..moveTo(64.4603, 47.7336)
-      ..lineTo(64.4603, 106.95)
-      ..cubicTo(87.8436, 95.8333, 128.4, 73.37, 103.56, 72.45)
-      ..cubicTo(78.7203, 71.53, 36.477, 72.0666, 18.4603, 72.45);
-
-    canvas.drawPath(
-      path,
-      Paint()
-        ..color = strokeColor
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 16.1
-        ..strokeCap = StrokeCap.round,
-    );
-    canvas.restore();
-  }
-
-  @override
-  bool shouldRepaint(covariant _FitlekLogoPainter oldDelegate) => false;
-}
-
-class _FitlekLogo extends StatelessWidget {
-  final double height;
-  const _FitlekLogo({this.height = 40});
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: height,
-      width: height * 132 / 120,
-      child: CustomPaint(
-        painter: _FitlekLogoPainter(strokeColor: Colors.white, circleColor: _lime),
-      ),
-    );
-  }
-}
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -122,7 +62,7 @@ class _LoginScreenState extends State<LoginScreen>
     final password = _passwordCtrl.text;
 
     if (email.isEmpty || password.isEmpty) {
-      setState(() => _errorMsg = 'Veuillez remplir tous les champs.');
+      setState(() => _errorMsg = 'Please fill in all fields.');
       return;
     }
 
@@ -152,7 +92,7 @@ class _LoginScreenState extends State<LoginScreen>
 
         if (token == null || token.isEmpty) {
           setState(() {
-            _errorMsg = 'Token invalide reçu du serveur.';
+            _errorMsg = 'Invalid token received from the server.';
             _loading = false;
           });
           return;
@@ -160,7 +100,7 @@ class _LoginScreenState extends State<LoginScreen>
 
         if (user == null) {
           setState(() {
-            _errorMsg = 'Données utilisateur manquantes.';
+            _errorMsg = 'User data is missing.';
             _loading = false;
           });
           return;
@@ -172,7 +112,7 @@ class _LoginScreenState extends State<LoginScreen>
 
         if (role == null || id == null) {
           setState(() {
-            _errorMsg = 'Informations utilisateur incomplètes.';
+            _errorMsg = 'Incomplete user information.';
             _loading = false;
           });
           return;
@@ -188,7 +128,10 @@ class _LoginScreenState extends State<LoginScreen>
         await ApiService.saveUserData(id, firstName);
 
         final savedToken = await ApiService.getToken();
-        if (kDebugMode) debugPrint('✅ TOKEN VERIFIED: ${savedToken != null ? "Saved" : "Not Saved"}');
+        if (kDebugMode) {
+          debugPrint(
+              '✅ TOKEN VERIFIED: ${savedToken != null ? "Saved" : "Not Saved"}');
+        }
 
         if (!mounted) return;
 
@@ -207,7 +150,7 @@ class _LoginScreenState extends State<LoginScreen>
             break;
           default:
             setState(() {
-              _errorMsg = 'Rôle non reconnu: \$role';
+              _errorMsg = 'Unrecognized role: \$role';
               _loading = false;
             });
             return;
@@ -225,23 +168,23 @@ class _LoginScreenState extends State<LoginScreen>
       } else {
         final errorMsg = body['message'] ??
             body['error'] ??
-            'Erreur de connexion (\${res.statusCode})';
+            'Login error (\${res.statusCode})';
 
         setState(() {
           _errorMsg = _friendly(errorMsg.toString());
           _loading = false;
         });
       }
-    } on http.ClientException catch (e) {
+    } on http.ClientException {
       if (kDebugMode) debugPrint('❌ NETWORK ERROR: \$e');
       setState(() {
-        _errorMsg = 'Impossible de contacter le serveur. Vérifiez votre connexion.';
+        _errorMsg = 'Unable to reach the server. Check your connection.';
         _loading = false;
       });
     } catch (e) {
       if (kDebugMode) debugPrint('❌ LOGIN ERROR: \$e');
       setState(() {
-        _errorMsg = 'Erreur: \$e';
+        _errorMsg = 'Error: \$e';
         _loading = false;
       });
     }
@@ -271,16 +214,16 @@ class _LoginScreenState extends State<LoginScreen>
   String _friendly(String raw) {
     final lower = raw.toLowerCase();
     if (lower.contains('credentials') || lower.contains('invalid')) {
-      return 'Email ou mot de passe incorrect.';
+      return 'Incorrect email or password.';
     }
     if (lower.contains('banned') || lower.contains('suspend')) {
-      return 'Ce compte est suspendu.';
+      return 'This account is suspended.';
     }
     if (lower.contains('required')) {
-      return 'Veuillez remplir tous les champs.';
+      return 'Please fill in all fields.';
     }
     if (lower.contains('not found')) {
-      return 'Aucun compte trouvé avec cet email.';
+      return 'No account found with this email.';
     }
     return raw;
   }
@@ -288,14 +231,14 @@ class _LoginScreenState extends State<LoginScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _dark,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: Stack(
         children: [
           Positioned.fill(
             child: Image.network(
               'https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?w=1200&q=80',
               fit: BoxFit.cover,
-              color: Colors.black.withOpacity(0.4),
+              color: Colors.black.withValues(alpha: 0.4),
               colorBlendMode: BlendMode.darken,
               loadingBuilder: (_, child, p) =>
                   p == null ? child : Container(color: const Color(0xFF111111)),
@@ -310,9 +253,9 @@ class _LoginScreenState extends State<LoginScreen>
                   colors: [
                     Colors.transparent,
                     Colors.transparent,
-                    _dark.withOpacity(0.3),
-                    _dark.withOpacity(0.7),
-                    _dark,
+                    AppColors.cyprus.withValues(alpha: 0.4),
+                    AppColors.cyprus.withValues(alpha: 0.85),
+                    AppColors.cyprus,
                   ],
                   stops: const [0.0, 0.2, 0.5, 0.85, 1.0],
                 ),
@@ -359,33 +302,12 @@ class _LoginScreenState extends State<LoginScreen>
   }
 
   Widget _buildHeader() {
-    return Row(
+    return const Row(
       children: [
-        const _FitlekLogo(height: 36),
-        const SizedBox(width: 10),
-        RichText(
-          text: const TextSpan(
-            children: [
-              TextSpan(
-                text: 'FIT',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w900,
-                  color: _lime,
-                  letterSpacing: 3,
-                ),
-              ),
-              TextSpan(
-                text: 'LEK',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w900,
-                  color: _white,
-                  letterSpacing: 3,
-                ),
-              ),
-            ],
-          ),
+        SirvyaLogo(
+          variant: SirvyaLogoVariant.wordmark,
+          height: 32,
+          color: AppColors.sand,
         ),
       ],
     );
@@ -396,22 +318,22 @@ class _LoginScreenState extends State<LoginScreen>
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
-          'Content de vous revoir',
+          'Welcome back',
           style: TextStyle(
             fontSize: 42,
             fontWeight: FontWeight.w900,
-            color: _white,
+            color: Colors.white,
             height: 1.1,
             letterSpacing: -1,
           ),
         ),
         const SizedBox(height: 12),
         Text(
-          'Connectez-vous pour accéder à votre espace et gérer vos activités.',
+          'Log in to access your space and manage your activities.',
           style: TextStyle(
             fontSize: 14,
             height: 1.5,
-            color: _white.withOpacity(0.6),
+            color: Colors.white.withValues(alpha: 0.7),
           ),
         ),
       ],
@@ -423,20 +345,21 @@ class _LoginScreenState extends State<LoginScreen>
       children: [
         _LoginField(
           controller: _emailCtrl,
-          label: 'Adresse email',
-          hint: 'votre@email.com',
+          label: 'Email address',
+          hint: 'your@email.com',
           icon: Icons.email_rounded,
           keyboardType: TextInputType.emailAddress,
         ),
         const SizedBox(height: 16),
         _LoginField(
           controller: _passwordCtrl,
-          label: 'Mot de passe',
+          label: 'Password',
           hint: '••••••••',
           icon: Icons.lock_rounded,
           isPassword: true,
           showPassword: _showPassword,
-          onTogglePassword: () => setState(() => _showPassword = !_showPassword),
+          onTogglePassword: () =>
+              setState(() => _showPassword = !_showPassword),
           onSubmit: _loading ? null : _login,
         ),
       ],
@@ -447,19 +370,19 @@ class _LoginScreenState extends State<LoginScreen>
     return Align(
       alignment: Alignment.centerRight,
       child: GestureDetector(
-         onTap: () => Navigator.pushReplacement(
-            context,
-            PageRouteBuilder(
-              pageBuilder: (_, __, ___) => const ClientForgotScreen(),
-              transitionsBuilder: (_, a, __, child) =>
-                  FadeTransition(opacity: a, child: child),
-              transitionDuration: const Duration(milliseconds: 500),
-            ),
+        onTap: () => Navigator.pushReplacement(
+          context,
+          PageRouteBuilder(
+            pageBuilder: (_, __, ___) => const ClientForgotScreen(),
+            transitionsBuilder: (_, a, __, child) =>
+                FadeTransition(opacity: a, child: child),
+            transitionDuration: const Duration(milliseconds: 500),
           ),
+        ),
         child: const Text(
-          'Mot de passe oublié ?',
+          'Forgot password?',
           style: TextStyle(
-            color: _lime,
+            color: AppColors.sand,
             fontSize: 12,
             fontWeight: FontWeight.w700,
           ),
@@ -476,13 +399,14 @@ class _LoginScreenState extends State<LoginScreen>
         width: double.infinity,
         height: 60,
         decoration: BoxDecoration(
-          color: _loading ? _lime.withOpacity(0.6) : _lime,
+          color:
+              _loading ? AppColors.sand.withValues(alpha: 0.6) : AppColors.sand,
           borderRadius: BorderRadius.circular(16),
           boxShadow: _loading
               ? []
               : [
                   BoxShadow(
-                    color: _lime.withOpacity(0.3),
+                    color: Colors.black.withValues(alpha: 0.25),
                     blurRadius: 24,
                     offset: const Offset(0, 8),
                   ),
@@ -494,19 +418,20 @@ class _LoginScreenState extends State<LoginScreen>
                   width: 24,
                   height: 24,
                   child: CircularProgressIndicator(
-                    color: Colors.black,
+                    color: AppColors.cyprus,
                     strokeWidth: 2.5,
                   ),
                 )
-              : Row(
+              : const Row(
                   mainAxisAlignment: MainAxisAlignment.center,
-                  children: const [
-                    Icon(Icons.login_rounded, color: Colors.black, size: 18),
+                  children: [
+                    Icon(Icons.login_rounded,
+                        color: AppColors.cyprus, size: 18),
                     SizedBox(width: 10),
                     Text(
-                      'SE CONNECTER',
+                      'LOG IN',
                       style: TextStyle(
-                        color: Colors.black,
+                        color: AppColors.cyprus,
                         fontWeight: FontWeight.w900,
                         fontSize: 14,
                         letterSpacing: 1.5,
@@ -527,9 +452,10 @@ class _LoginScreenState extends State<LoginScreen>
         width: double.infinity,
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         decoration: BoxDecoration(
-          color: _errorRed.withOpacity(0.1),
+          color: context.fitlek.error.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: _errorRed.withOpacity(0.35), width: 1),
+          border: Border.all(
+              color: context.fitlek.error.withValues(alpha: 0.35), width: 1),
         ),
         child: Row(
           children: [
@@ -537,12 +463,12 @@ class _LoginScreenState extends State<LoginScreen>
               width: 32,
               height: 32,
               decoration: BoxDecoration(
-                color: _errorRed.withOpacity(0.12),
+                color: context.fitlek.error.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.error_outline_rounded,
-                color: _errorRed,
+                color: context.fitlek.error,
                 size: 16,
               ),
             ),
@@ -550,8 +476,8 @@ class _LoginScreenState extends State<LoginScreen>
             Expanded(
               child: Text(
                 _errorMsg ?? '',
-                style: const TextStyle(
-                  color: _errorRed,
+                style: TextStyle(
+                  color: context.fitlek.error,
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
                 ),
@@ -568,16 +494,16 @@ class _LoginScreenState extends State<LoginScreen>
       children: [
         Expanded(
           child: Divider(
-            color: _white.withOpacity(0.08),
+            color: Colors.white.withValues(alpha: 0.15),
             thickness: 1,
           ),
         ),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 14),
           child: Text(
-            'Pas encore inscrit ?',
+            'Not registered yet?',
             style: TextStyle(
-              color: _white.withOpacity(0.4),
+              color: Colors.white.withValues(alpha: 0.55),
               fontSize: 11,
               letterSpacing: 0.5,
             ),
@@ -585,7 +511,7 @@ class _LoginScreenState extends State<LoginScreen>
         ),
         Expanded(
           child: Divider(
-            color: _white.withOpacity(0.08),
+            color: Colors.white.withValues(alpha: 0.15),
             thickness: 1,
           ),
         ),
@@ -605,19 +531,19 @@ class _LoginScreenState extends State<LoginScreen>
               color: Colors.transparent,
               borderRadius: BorderRadius.circular(14),
               border: Border.all(
-                color: _lime.withOpacity(0.4),
+                color: AppColors.sand.withValues(alpha: 0.5),
                 width: 1.5,
               ),
             ),
-            child: Row(
+            child: const Row(
               mainAxisAlignment: MainAxisAlignment.center,
-              children: const [
-                Icon(Icons.person_add_rounded, color: _lime, size: 18),
+              children: [
+                Icon(Icons.person_add_rounded, color: AppColors.sand, size: 18),
                 SizedBox(width: 10),
                 Text(
-                  'CRÉER UN COMPTE',
+                  'CREATE AN ACCOUNT',
                   style: TextStyle(
-                    color: _lime,
+                    color: AppColors.sand,
                     fontWeight: FontWeight.w900,
                     fontSize: 14,
                     letterSpacing: 1.5,
@@ -632,18 +558,18 @@ class _LoginScreenState extends State<LoginScreen>
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Text(
-              'Retourner à ',
+              'Back to ',
               style: TextStyle(
-                color: _white.withOpacity(0.5),
+                color: Colors.white.withValues(alpha: 0.55),
                 fontSize: 12,
               ),
             ),
             GestureDetector(
               onTap: _goToWelcome,
               child: const Text(
-                'l accueil',
+                'home',
                 style: TextStyle(
-                  color: _lime,
+                  color: AppColors.sand,
                   fontSize: 12,
                   fontWeight: FontWeight.w700,
                 ),
@@ -688,7 +614,7 @@ class _LoginField extends StatelessWidget {
           child: Text(
             label,
             style: TextStyle(
-              color: _white.withOpacity(0.7),
+              color: Colors.white.withValues(alpha: 0.7),
               fontSize: 12,
               fontWeight: FontWeight.w700,
               letterSpacing: 0.5,
@@ -697,12 +623,13 @@ class _LoginField extends StatelessWidget {
         ),
         Container(
           decoration: BoxDecoration(
-            color: _card,
+            color: AppColors.cyprus.withValues(alpha: 0.55),
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: _border, width: 1),
+            border: Border.all(
+                color: Colors.white.withValues(alpha: 0.18), width: 1),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.3),
+                color: Colors.black.withValues(alpha: 0.25),
                 blurRadius: 8,
                 offset: const Offset(0, 2),
               ),
@@ -714,14 +641,14 @@ class _LoginField extends StatelessWidget {
             obscureText: isPassword && !showPassword,
             onSubmitted: onSubmit != null ? (_) => onSubmit!() : null,
             style: const TextStyle(
-              color: _white,
+              color: Colors.white,
               fontSize: 15,
               fontWeight: FontWeight.w500,
             ),
             decoration: InputDecoration(
               hintText: hint,
               hintStyle: TextStyle(
-                color: _muted.withOpacity(0.5),
+                color: Colors.white.withValues(alpha: 0.4),
                 fontSize: 14,
               ),
               border: InputBorder.none,
@@ -734,10 +661,10 @@ class _LoginField extends StatelessWidget {
                 width: 40,
                 height: 40,
                 decoration: BoxDecoration(
-                  color: _lime.withOpacity(0.08),
+                  color: AppColors.sand.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: Icon(icon, color: _lime, size: 18),
+                child: Icon(icon, color: AppColors.sand, size: 18),
               ),
               prefixIconConstraints: const BoxConstraints(minWidth: 0),
               suffixIcon: isPassword
@@ -749,7 +676,7 @@ class _LoginField extends StatelessWidget {
                           showPassword
                               ? Icons.visibility_off_rounded
                               : Icons.visibility_rounded,
-                          color: _muted,
+                          color: Colors.white.withValues(alpha: 0.55),
                           size: 20,
                         ),
                       ),

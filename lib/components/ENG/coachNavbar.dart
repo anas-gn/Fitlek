@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../theme/fitlek_theme_extension.dart';
 
 class CoachNavbar extends StatelessWidget {
   final int currentIndex;
@@ -12,18 +13,22 @@ class CoachNavbar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final cs = theme.colorScheme;
+    final fitlek = context.fitlek;
+
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFF0A0A0A),
+        color: cs.surface,
         border: Border(
           top: BorderSide(
-            color: const Color(0xFFA3FF12).withOpacity(0.15),
+            color: cs.primary.withValues(alpha: 0.15),
             width: 1,
           ),
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.6),
+            color: fitlek.shadow,
             blurRadius: 20,
             offset: const Offset(0, -5),
           ),
@@ -89,6 +94,9 @@ class _NavItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final fitlek = context.fitlek;
+
     return GestureDetector(
       onTap: onTap,
       behavior: HitTestBehavior.opaque,
@@ -96,9 +104,7 @@ class _NavItem extends StatelessWidget {
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
-          color: isSelected
-              ? const Color(0xFFA3FF12).withOpacity(0.1)
-              : Colors.transparent,
+          color: isSelected ? cs.primary.withValues(alpha: 0.1) : Colors.transparent,
           borderRadius: BorderRadius.circular(12),
         ),
         child: Column(
@@ -107,20 +113,15 @@ class _NavItem extends StatelessWidget {
             Icon(
               icon,
               size: 22,
-              color: isSelected
-                  ? const Color(0xFFA3FF12)
-                  : Colors.white.withOpacity(0.4),
+              color: isSelected ? cs.primary : fitlek.navUnselected,
             ),
             const SizedBox(height: 3),
             Text(
               label,
               style: TextStyle(
                 fontSize: 10,
-                fontWeight:
-                    isSelected ? FontWeight.w700 : FontWeight.w400,
-                color: isSelected
-                    ? const Color(0xFFA3FF12)
-                    : Colors.white.withOpacity(0.4),
+                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w400,
+                color: isSelected ? cs.primary : fitlek.navUnselected,
                 letterSpacing: 0.3,
               ),
             ),

@@ -24,4 +24,24 @@ router.get('/', requireAuth, requireRole('coach'), async (req, res) => {
   }
 });
 
+// Coach-to-Coach referral history for the authenticated coach.
+// Returns only safe display fields (no private/account data).
+router.get('/referrals', requireAuth, requireRole('coach'), async (req, res) => {
+  const coachID = req.user.id;
+  try {
+    const [rows] = await pool.query(
+      `SELECT cr.id, cr.pointsAwarded, cr.createdAt,
+              u.firstName, u.lastName, u.avatarUrl
+       FROM coachreferrals cr
+       JOIN users u ON u.id = cr.invitedCoachID
+       WHERE cr.inviterCoachID = ?
+       ORDER BY cr.createdAt DESC`,
+      [coachID]
+    );
+    res.json(rows);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
+
 export default router;

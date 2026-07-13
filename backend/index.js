@@ -7,6 +7,7 @@ import coachChat from './routes/pahae/coachChat.js';
 import coachClients from './routes/pahae/coachClients.js';
 import coachInviteClients from './routes/pahae/coachInviteClients.js';
 import coachInvitations from './routes/pahae/coachInvitations.js';
+import coachNotifications from './routes/pahae/coachNotifications.js';
 import coachProfile from './routes/pahae/coachProfile.js';
 import coachAvatarRouter from './routes/pahae/coachAvatar.js';
 import coachEditProfile from './routes/pahae/coachEditProfile.js';
@@ -45,7 +46,11 @@ import uploadRoutes from './routes/anas/upload.js';
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
+import { ensureReferralSchema, ensureNotificationSchema } from './config/ensureSchema.js';
 dotenv.config();
+
+ensureReferralSchema().catch((e) => console.error('❌ Referral schema ensure failed:', e.message));
+ensureNotificationSchema().catch((e) => console.error('❌ Notification schema ensure failed:', e.message));
 
 const app = express();
 
@@ -68,6 +73,7 @@ app.use('/api/coach/chat',          coachChat);
 app.use('/api/coach/clients',       coachClients);
 app.use('/api/coach/invite',        coachInviteClients);
 app.use('/api/coach/invitations',   coachInvitations);
+app.use('/api/coach/notifications', coachNotifications);
 app.use('/api/coach/profile',       coachProfile);
 app.use('/api/coach/profile/edit',  coachEditProfile);
 

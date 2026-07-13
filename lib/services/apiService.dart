@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -126,12 +125,12 @@ class ApiService {
       if (kDebugMode) debugPrint('NETWORK ERROR GET $path: $e');
       return {
         'ok': false,
-        'message': 'Erreur reseau. Verifiez votre connexion.',
+        'message': 'Network error. Check your connection.',
         'status': 0,
       };
     } catch (e) {
       if (kDebugMode) debugPrint('ERROR GET $path: $e');
-      return {'ok': false, 'message': 'Erreur: $e', 'status': 0};
+      return {'ok': false, 'message': 'Error: $e', 'status': 0};
     }
   }
 
@@ -160,12 +159,12 @@ class ApiService {
       if (kDebugMode) debugPrint('NETWORK ERROR POST $path: $e');
       return {
         'ok': false,
-        'message': 'Erreur reseau. Verifiez votre connexion.',
+        'message': 'Network error. Check your connection.',
         'status': 0,
       };
     } catch (e) {
       if (kDebugMode) debugPrint('ERROR POST $path: $e');
-      return {'ok': false, 'message': 'Erreur: $e', 'status': 0};
+      return {'ok': false, 'message': 'Error: $e', 'status': 0};
     }
   }
 
@@ -180,7 +179,7 @@ class ApiService {
           .timeout(const Duration(seconds: 15));
       return _handle(response);
     } catch (e) {
-      return {'ok': false, 'message': 'Erreur: $e', 'status': 0};
+      return {'ok': false, 'message': 'Error: $e', 'status': 0};
     }
   }
 
@@ -199,7 +198,7 @@ class ApiService {
           .timeout(const Duration(seconds: 15));
       return _handle(response);
     } catch (e) {
-      return {'ok': false, 'message': 'Erreur: $e', 'status': 0};
+      return {'ok': false, 'message': 'Error: $e', 'status': 0};
     }
   }
 
@@ -211,7 +210,7 @@ class ApiService {
           .timeout(const Duration(seconds: 15));
       return _handle(response);
     } catch (e) {
-      return {'ok': false, 'message': 'Erreur: $e', 'status': 0};
+      return {'ok': false, 'message': 'Error: $e', 'status': 0};
     }
   }
 
@@ -247,7 +246,7 @@ class ApiService {
       final response = await http.Response.fromStream(streamed);
       return _handle(response);
     } catch (e) {
-      return {'ok': false, 'message': 'Erreur upload: $e', 'status': 0};
+      return {'ok': false, 'message': 'Upload error: $e', 'status': 0};
     }
   }
 
@@ -260,11 +259,11 @@ class ApiService {
         return {...(decoded as Map<String, dynamic>), 'ok': true};
       }
 
-      String message = 'Erreur inconnue';
+      String message = 'Unknown error';
       if (decoded is Map<String, dynamic>) {
         message = decoded['message'] ??
             decoded['error'] ??
-            'Erreur ${response.statusCode}';
+            'Error ${response.statusCode}';
       }
 
       if (kDebugMode) debugPrint('API ERROR ${response.statusCode}: $message');
@@ -277,7 +276,7 @@ class ApiService {
     } catch (e) {
       return {
         'ok': false,
-        'message': 'Reponse invalide du serveur',
+        'message': 'Invalid server response',
         'status': response.statusCode,
       };
     }

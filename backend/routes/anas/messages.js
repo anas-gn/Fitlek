@@ -34,7 +34,7 @@ router.post('/:conversationID', async (req, res) => {
 
     // Vérifier que la conversation existe et que l'expéditeur en fait partie
     const [conv] = await db.query(
-      'SELECT id FROM conversations WHERE id=? AND (coachID=? OR clientID=?)',
+      'SELECT id, coachID, clientID FROM conversations WHERE id=? AND (coachID=? OR clientID=?)',
       [req.params.conversationID, senderID, senderID]
     );
     if (!conv.length) return res.status(404).json({ error: 'Conversation not found or access denied' });
@@ -47,6 +47,34 @@ router.post('/:conversationID', async (req, res) => {
       'UPDATE conversations SET lastMessageAt=NOW() WHERE id=?',
       [req.params.conversationID]
     );
+
+    // Notify the COACH when a client wrote to them (never notify the sender).
+    // Best-effort + de-duplicated by uniqueKey; failure must not break sending.
+    const { coachID, clientID } = conv[0];
+    if (Number(senderID) === Number(clientID)) {
+      try {
+        const [[client]] = await db.query(
+          'SELECT firstName, lastName, avatarUrl FROM users WHERE id=?',
+          [clientID]
+        );
+        const clientName = client ? `${client.firstName} ${client.lastName}`.trim() : 'A client';
+        await db.query(
+          `INSERT IGNORE INTO notifications
+             (recipientUserID, type, title, body, relatedEntityID, actorName, actorAvatar, uniqueKey)
+           VALUES (?, 'new_message', 'New message', ?, ?, ?, ?, ?)`,
+          [
+            coachID,
+            `${clientName} sent you a message.`,
+            req.params.conversationID,
+            clientName,
+            client?.avatarUrl ?? null,
+            `message:${result.insertId}:coach:${coachID}`,
+          ]
+        );
+      } catch (notifyErr) {
+        console.error('new_message notification failed:', notifyErr.message);
+      }
+    }
 
     res.status(201).json({
       id: result.insertId,

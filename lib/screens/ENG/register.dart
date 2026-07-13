@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:ui';
 import 'package:flutter/material.dart';
@@ -5,108 +6,21 @@ import 'package:http/http.dart' as http;
 import 'login.dart';
 import 'welcome.dart';
 
+import '../../theme/fitlek_theme_extension.dart';
+import '../../components/sirvya_logo.dart';
+
+enum _ReferralStatus { idle, checking, valid, invalid }
+
 // ─── Palette ────────────────────────────────────────────────────────────────
-const _lime = Color(0xFFC6F135);
-const _dark = Color(0xFF0A0A0A);
-const _card = Color(0xFF141414);
-const _border = Color(0xFF232323);
-const _muted = Color(0xFF888888);
-const _white = Color(0xFFFFFFFF);
 const _orange = Color(0xFFFFB74D);
 const _blue = Color(0xFF64B5F6);
 const _green = Color(0xFF4CAF50);
 const _red = Color(0xFFFF5252);
 
-const _baseUrl = 'http://192.168.0.232:3000/api';
+const _baseUrl = 'http://localhost:3000/api';
 
 const _bgImageUrl =
     'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?q=80&w=1400&auto=format&fit=crop';
-
-class _FitlekLogoPainter extends CustomPainter {
-  final Color strokeColor;
-  final Color circleColor;
-
-  const _FitlekLogoPainter({required this.strokeColor, required this.circleColor});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final scaleX = size.width / 132;
-    final scaleY = size.height / 120;
-    canvas.save();
-    canvas.scale(scaleX, scaleY);
-
-    canvas.drawCircle(const Offset(65.6104, 17.25), 17.25, Paint()..color = circleColor);
-
-    final path = Path()
-      ..moveTo(5.8103, 21.85)
-      ..cubicTo(19.2827, 35.9, 45.0007, 47.25, 64.4603, 47.7336)
-      ..moveTo(125.41, 21.85)
-      ..cubicTo(112.388, 36.0329, 83.709, 48.212, 64.4603, 47.7336)
-      ..moveTo(64.4603, 47.7336)
-      ..lineTo(64.4603, 106.95)
-      ..cubicTo(87.8436, 95.8333, 128.4, 73.37, 103.56, 72.45)
-      ..cubicTo(78.7203, 71.53, 36.477, 72.0666, 18.4603, 72.45);
-
-    canvas.drawPath(
-      path,
-      Paint()
-        ..color = strokeColor
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 16.1
-        ..strokeCap = StrokeCap.round,
-    );
-    canvas.restore();
-  }
-
-  @override
-  bool shouldRepaint(covariant _FitlekLogoPainter oldDelegate) => false;
-}
-
-class _FitlekLogo extends StatelessWidget {
-  final double height;
-  const _FitlekLogo({this.height = 40});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: height,
-      width: height * 132 / 120,
-      decoration: BoxDecoration(
-        boxShadow: [
-          BoxShadow(
-            color: _lime.withOpacity(0.25),
-            blurRadius: 18,
-            spreadRadius: 1,
-          ),
-        ],
-      ),
-      child: CustomPaint(
-        painter: _FitlekLogoPainter(strokeColor: Colors.white, circleColor: _lime),
-      ),
-    );
-  }
-}
-
-class _LogoWatermark extends StatelessWidget {
-  final double size;
-  const _LogoWatermark({this.size = 340});
-
-  @override
-  Widget build(BuildContext context) {
-    return IgnorePointer(
-      child: Opacity(
-        opacity: 0.035,
-        child: SizedBox(
-          width: size,
-          height: size * 120 / 132,
-          child: CustomPaint(
-            painter: _FitlekLogoPainter(strokeColor: Colors.white, circleColor: _lime),
-          ),
-        ),
-      ),
-    );
-  }
-}
 
 class _RegisterBackground extends StatelessWidget {
   const _RegisterBackground();
@@ -120,24 +34,28 @@ class _RegisterBackground extends StatelessWidget {
           Image.network(
             _bgImageUrl,
             fit: BoxFit.cover,
-            errorBuilder: (_, __, ___) => Container(color: _dark),
+            errorBuilder: (_, __, ___) =>
+                Container(color: Theme.of(context).scaffoldBackgroundColor),
             loadingBuilder: (context, child, progress) {
               if (progress == null) return child;
-              return Container(color: _dark);
+              return Container(
+                  color: Theme.of(context).scaffoldBackgroundColor);
             },
           ),
-          Container(color: _dark.withOpacity(0.55)),
-          const DecoratedBox(
+          Container(
+              color:
+                  Theme.of(context).scaffoldBackgroundColor.withValues(alpha: 0.55)),
+          DecoratedBox(
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
                 colors: [
-                  Color(0xCC0A0A0A),
-                  Color(0xE60A0A0A),
-                  _dark,
+                  const Color(0xCC0A0A0A),
+                  const Color(0xE60A0A0A),
+                  Theme.of(context).scaffoldBackgroundColor,
                 ],
-                stops: [0.0, 0.45, 1.0],
+                stops: const [0.0, 0.45, 1.0],
               ),
             ),
           ),
@@ -160,13 +78,16 @@ class RegisterScreen extends StatefulWidget {
 
 class _RegisterScreenState extends State<RegisterScreen>
     with TickerProviderStateMixin {
-
   final _firstNameCtrl = TextEditingController();
   final _lastNameCtrl = TextEditingController();
   final _emailCtrl = TextEditingController();
   final _passwordCtrl = TextEditingController();
   final _confirmCtrl = TextEditingController();
   final _heightCtrl = TextEditingController();
+  final _referralCtrl = TextEditingController();
+
+  Timer? _referralDebounce;
+  _ReferralStatus _referralStatus = _ReferralStatus.idle;
 
   int _step = 0;
   String? _role;
@@ -184,9 +105,11 @@ class _RegisterScreenState extends State<RegisterScreen>
   @override
   void initState() {
     super.initState();
-    _fadeCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 400));
+    _fadeCtrl = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 400));
     _fadeAnim = CurvedAnimation(parent: _fadeCtrl, curve: Curves.easeOut);
-    _slideCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 400));
+    _slideCtrl = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 400));
     _slideAnim = Tween<Offset>(begin: const Offset(0.05, 0), end: Offset.zero)
         .animate(CurvedAnimation(parent: _slideCtrl, curve: Curves.easeOut));
     _fadeCtrl.forward();
@@ -203,7 +126,57 @@ class _RegisterScreenState extends State<RegisterScreen>
     _passwordCtrl.dispose();
     _confirmCtrl.dispose();
     _heightCtrl.dispose();
+    _referralCtrl.dispose();
+    _referralDebounce?.cancel();
     super.dispose();
+  }
+
+  void _onReferralChanged(String v) {
+    _referralDebounce?.cancel();
+    final code = v.trim();
+    if (code.isEmpty) {
+      setState(() => _referralStatus = _ReferralStatus.idle);
+      return;
+    }
+    setState(() => _referralStatus = _ReferralStatus.checking);
+    _referralDebounce =
+        Timer(const Duration(milliseconds: 500), () => _checkReferral(code));
+  }
+
+  Future<void> _checkReferral(String code) async {
+    try {
+      final res = await http
+          .get(Uri.parse(
+              '$_baseUrl/auth/validate-referral?code=${Uri.encodeQueryComponent(code)}'))
+          .timeout(const Duration(seconds: 8));
+      if (!mounted || _referralCtrl.text.trim() != code) return;
+      final data = jsonDecode(res.body) as Map<String, dynamic>;
+      setState(() => _referralStatus = data['valid'] == true
+          ? _ReferralStatus.valid
+          : _ReferralStatus.invalid);
+    } catch (_) {
+      if (!mounted || _referralCtrl.text.trim() != code) return;
+      setState(() => _referralStatus = _ReferralStatus.idle);
+    }
+  }
+
+  Widget? _referralSuffixIcon() {
+    switch (_referralStatus) {
+      case _ReferralStatus.checking:
+        return const Padding(
+          padding: EdgeInsets.all(14),
+          child: SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(strokeWidth: 2)),
+        );
+      case _ReferralStatus.valid:
+        return const Icon(Icons.check_circle_rounded, color: _green, size: 20);
+      case _ReferralStatus.invalid:
+        return const Icon(Icons.error_rounded, color: _red, size: 20);
+      case _ReferralStatus.idle:
+        return null;
+    }
   }
 
   void _animateStep() {
@@ -217,21 +190,29 @@ class _RegisterScreenState extends State<RegisterScreen>
   String? _validateStep(int step) {
     switch (step) {
       case 0:
-        return _role == null ? 'Sélectionne ton rôle pour continuer' : null;
+        return _role == null ? 'Select your role to continue' : null;
       case 1:
-        if (_firstNameCtrl.text.trim().isEmpty) return 'Prénom requis';
-        if (_lastNameCtrl.text.trim().isEmpty) return 'Nom requis';
+        if (_firstNameCtrl.text.trim().isEmpty) return 'First name required';
+        if (_lastNameCtrl.text.trim().isEmpty) return 'Last name required';
         if (!RegExp(r'^[\w.+-]+@[\w-]+\.[a-z]{2,}$', caseSensitive: false)
-            .hasMatch(_emailCtrl.text.trim())) return 'Email invalide';
-        if (_heightCtrl.text.trim().isEmpty) return 'Taille requise';
-        if (double.tryParse(_heightCtrl.text.trim()) == null) return 'Taille invalide';
+            .hasMatch(_emailCtrl.text.trim())) {
+          return 'Invalid email';
+        }
+        if (_heightCtrl.text.trim().isEmpty) return 'Height required';
+        if (double.tryParse(_heightCtrl.text.trim()) == null) {
+          return 'Invalid height';
+        }
         return null;
       case 2:
-        if (_passwordCtrl.text.length < 6) return 'Mot de passe trop court (min 6 car.)';
-        if (_passwordCtrl.text != _confirmCtrl.text) return 'Les mots de passe ne correspondent pas';
+        if (_passwordCtrl.text.length < 6) {
+          return 'Password too short (min 6 chars)';
+        }
+        if (_passwordCtrl.text != _confirmCtrl.text) {
+          return 'Passwords do not match';
+        }
         return null;
       case 3:
-        return _gender == null ? 'Sélectionne ton genre pour continuer' : null;
+        return _gender == null ? 'Select your gender to continue' : null;
       default:
         return null;
     }
@@ -277,19 +258,25 @@ class _RegisterScreenState extends State<RegisterScreen>
       _errorMsg = null;
     });
     try {
-      final res = await http.post(
-        Uri.parse('$_baseUrl/auth/register'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'firstName': _firstNameCtrl.text.trim(),
-          'lastName': _lastNameCtrl.text.trim(),
-          'email': _emailCtrl.text.trim().toLowerCase(),
-          'password': _passwordCtrl.text,
-          'gender': _gender,
-          'role': _role,
-          'height': double.tryParse(_heightCtrl.text.trim()),
-        }),
-      ).timeout(const Duration(seconds: 12));
+      final body = <String, dynamic>{
+        'firstName': _firstNameCtrl.text.trim(),
+        'lastName': _lastNameCtrl.text.trim(),
+        'email': _emailCtrl.text.trim().toLowerCase(),
+        'password': _passwordCtrl.text,
+        'gender': _gender,
+        'role': _role,
+        'height': double.tryParse(_heightCtrl.text.trim()),
+      };
+      if (_role == 'coach' && _referralCtrl.text.trim().isNotEmpty) {
+        body['referralCode'] = _referralCtrl.text.trim();
+      }
+      final res = await http
+          .post(
+            Uri.parse('$_baseUrl/auth/register'),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode(body),
+          )
+          .timeout(const Duration(seconds: 12));
 
       final data = jsonDecode(res.body) as Map<String, dynamic>;
       if (res.statusCode == 201) {
@@ -297,10 +284,10 @@ class _RegisterScreenState extends State<RegisterScreen>
         _showSuccess();
       } else {
         setState(() =>
-            _errorMsg = data['error'] as String? ?? 'Erreur lors de l\'inscription');
+            _errorMsg = data['error'] as String? ?? 'Registration failed');
       }
     } catch (_) {
-      setState(() => _errorMsg = 'Impossible de contacter le serveur');
+      setState(() => _errorMsg = 'Unable to reach the server');
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -309,7 +296,7 @@ class _RegisterScreenState extends State<RegisterScreen>
   void _showSuccess() {
     showModalBottomSheet(
       context: context,
-      backgroundColor: _card,
+      backgroundColor: context.fitlek.card,
       isDismissible: false,
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
@@ -320,34 +307,39 @@ class _RegisterScreenState extends State<RegisterScreen>
             width: 80,
             height: 80,
             decoration: BoxDecoration(
-              color: _roleColor(_role).withOpacity(0.15),
+              color: _roleColor(_role).withValues(alpha: 0.15),
               shape: BoxShape.circle,
             ),
-            child: Icon(Icons.check_rounded,
-                color: _roleColor(_role), size: 40),
+            child:
+                Icon(Icons.check_rounded, color: _roleColor(_role), size: 40),
           ),
           const SizedBox(height: 24),
-          Text('Compte créé !',
-              style: const TextStyle(
-                  color: _white, fontSize: 26, fontWeight: FontWeight.w900)),
+          Text('Account created!',
+              style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurface,
+                  fontSize: 26,
+                  fontWeight: FontWeight.w900)),
           const SizedBox(height: 12),
           RichText(
             textAlign: TextAlign.center,
             text: TextSpan(children: [
               TextSpan(
-                text: 'Bienvenue ${_firstNameCtrl.text.trim()}. ',
-                style: const TextStyle(
-                    color: _muted, fontSize: 14, height: 1.6),
+                text: 'Welcome ${_firstNameCtrl.text.trim()}. ',
+                style: TextStyle(
+                    color: context.fitlek.textMuted, fontSize: 14, height: 1.6),
               ),
               if (_role == 'coach' || _role == 'advisor')
                 const TextSpan(
-                  text: 'Ton compte est en attente d\'approbation.',
+                  text: 'Your account is pending approval.',
                   style: TextStyle(color: _orange, fontSize: 14, height: 1.6),
                 )
               else
-                const TextSpan(
-                  text: 'Tu peux maintenant te connecter.',
-                  style: TextStyle(color: _muted, fontSize: 14, height: 1.6),
+                TextSpan(
+                  text: 'You can now log in.',
+                  style: TextStyle(
+                      color: context.fitlek.textMuted,
+                      fontSize: 14,
+                      height: 1.6),
                 ),
             ]),
           ),
@@ -373,16 +365,16 @@ class _RegisterScreenState extends State<RegisterScreen>
                 borderRadius: BorderRadius.circular(14),
                 boxShadow: [
                   BoxShadow(
-                    color: _roleColor(_role).withOpacity(0.3),
+                    color: _roleColor(_role).withValues(alpha: 0.3),
                     blurRadius: 16,
                     offset: const Offset(0, 6),
                   ),
                 ],
               ),
-              child: const Text('Se connecter',
+              child: Text('Log in',
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                      color: _dark,
+                      color: Theme.of(context).scaffoldBackgroundColor,
                       fontSize: 15,
                       fontWeight: FontWeight.w800,
                       letterSpacing: 0.5)),
@@ -396,7 +388,7 @@ class _RegisterScreenState extends State<RegisterScreen>
   Color _roleColor(String? role) {
     switch (role) {
       case 'coach':
-        return _lime;
+        return Theme.of(context).colorScheme.primary;
       case 'advisor':
         return _blue;
       default:
@@ -407,7 +399,7 @@ class _RegisterScreenState extends State<RegisterScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _dark,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: Stack(
         children: [
           const _RegisterBackground(),
@@ -457,50 +449,20 @@ class _RegisterScreenState extends State<RegisterScreen>
         children: [
           IconButton(
             onPressed: _prevStep,
-            icon: const Icon(Icons.arrow_back_ios_new_rounded,
-                size: 18, color: _white),
+            icon: Icon(Icons.arrow_back_ios_new_rounded,
+                size: 18, color: Theme.of(context).colorScheme.onSurface),
           ),
           const Spacer(),
-          const _FitlekLogo(height: 32),
+          const SirvyaLogo(variant: SirvyaLogoVariant.wordmark, height: 26),
           const SizedBox(width: 10),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              RichText(
-                text: const TextSpan(
-                  children: [
-                    TextSpan(
-                      text: 'FIT',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w900,
-                        color: _lime,
-                        letterSpacing: 2.5,
-                      ),
-                    ),
-                    TextSpan(
-                      text: 'LEK',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w900,
-                        color: _white,
-                        letterSpacing: 2.5,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 1),
-              const Text(
-                'Inscription',
-                style: TextStyle(
-                  color: _muted,
-                  fontSize: 10,
-                  letterSpacing: 0.5,
-                ),
-              ),
-            ],
+          Text(
+            'Sign up',
+            style: TextStyle(
+              color: context.fitlek.textMuted,
+              fontSize: 11,
+              letterSpacing: 0.5,
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ],
       ),
@@ -525,8 +487,8 @@ class _RegisterScreenState extends State<RegisterScreen>
                     color: done
                         ? _roleColor(_role)
                         : active
-                            ? _roleColor(_role).withOpacity(0.4)
-                            : _border,
+                            ? _roleColor(_role).withValues(alpha: 0.4)
+                            : context.fitlek.border,
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
@@ -540,22 +502,22 @@ class _RegisterScreenState extends State<RegisterScreen>
   }
 
   static const _stepLabels = [
-    'ÉTAPE 1 / 4',
-    'ÉTAPE 2 / 4',
-    'ÉTAPE 3 / 4',
-    'ÉTAPE 4 / 4'
+    'STEP 1 / 4',
+    'STEP 2 / 4',
+    'STEP 3 / 4',
+    'STEP 4 / 4'
   ];
   static const _stepTitles = [
-    'Quel est\nton rôle ?',
-    'Qui es-tu ?',
-    'Sécurise\nton compte',
-    'Une dernière\nchose'
+    'What is\nyour role?',
+    'Who are you?',
+    'Secure\nyour account',
+    'One last\nthing'
   ];
   static const _stepSubs = [
-    'Choisis comment tu vas utiliser Fitlek.',
-    'Dis-nous comment t\'appeler.',
-    'Crée un mot de passe solide.',
-    'Pour personnaliser ton expérience.',
+    'Choose how you\'ll use SIRVYA.',
+    'Tell us what to call you.',
+    'Create a strong password.',
+    'To personalize your experience.',
   ];
 
   Widget _buildStepHeader() {
@@ -568,11 +530,15 @@ class _RegisterScreenState extends State<RegisterScreen>
               letterSpacing: 1.8)),
       const SizedBox(height: 8),
       Text(_stepTitles[_step],
-          style: const TextStyle(
-              color: _white, fontSize: 36, fontWeight: FontWeight.w900, height: 1.1)),
+          style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurface,
+              fontSize: 36,
+              fontWeight: FontWeight.w900,
+              height: 1.1)),
       const SizedBox(height: 10),
       Text(_stepSubs[_step],
-          style: const TextStyle(color: _muted, fontSize: 14, height: 1.5)),
+          style: TextStyle(
+              color: context.fitlek.textMuted, fontSize: 14, height: 1.5)),
     ]);
   }
 
@@ -597,7 +563,7 @@ class _RegisterScreenState extends State<RegisterScreen>
       _RoleTile(
         role: 'client',
         label: 'Client',
-        description: 'Trouve un coach et réserve des séances.',
+        description: 'Find a coach and book sessions.',
         icon: Icons.person_rounded,
         color: _green,
         selected: _role == 'client',
@@ -610,9 +576,9 @@ class _RegisterScreenState extends State<RegisterScreen>
       _RoleTile(
         role: 'coach',
         label: 'Coach',
-        description: 'Gère tes clients et développe ton activité.',
+        description: 'Manage your clients and grow your business.',
         icon: Icons.fitness_center_rounded,
-        color: _lime,
+        color: Theme.of(context).colorScheme.primary,
         selected: _role == 'coach',
         onTap: () => setState(() {
           _role = 'coach';
@@ -630,7 +596,7 @@ class _RegisterScreenState extends State<RegisterScreen>
         Expanded(
           child: _FitField(
             controller: _firstNameCtrl,
-            label: 'Prénom',
+            label: 'First name',
             hint: 'Anas',
             accentColor: _roleColor(_role),
           ),
@@ -639,7 +605,7 @@ class _RegisterScreenState extends State<RegisterScreen>
         Expanded(
           child: _FitField(
             controller: _lastNameCtrl,
-            label: 'Nom',
+            label: 'Last name',
             hint: 'Benali',
             accentColor: _roleColor(_role),
           ),
@@ -649,14 +615,14 @@ class _RegisterScreenState extends State<RegisterScreen>
       _FitField(
         controller: _emailCtrl,
         label: 'Email',
-        hint: 'ton@email.ma',
+        hint: 'you@email.ma',
         keyboardType: TextInputType.emailAddress,
         accentColor: _roleColor(_role),
       ),
       const SizedBox(height: 16),
       _FitField(
         controller: _heightCtrl,
-        label: 'Taille (cm)',
+        label: 'Height (cm)',
         hint: '175',
         keyboardType: TextInputType.number,
         accentColor: _roleColor(_role),
@@ -669,7 +635,7 @@ class _RegisterScreenState extends State<RegisterScreen>
     return Column(children: [
       _FitField(
         controller: _passwordCtrl,
-        label: 'Mot de passe',
+        label: 'Password',
         hint: '••••••••',
         obscure: _obscurePass,
         accentColor: _roleColor(_role),
@@ -679,7 +645,7 @@ class _RegisterScreenState extends State<RegisterScreen>
             _obscurePass
                 ? Icons.visibility_off_rounded
                 : Icons.visibility_rounded,
-            color: _muted,
+            color: context.fitlek.textMuted,
             size: 20,
           ),
         ),
@@ -688,7 +654,7 @@ class _RegisterScreenState extends State<RegisterScreen>
       const SizedBox(height: 16),
       _FitField(
         controller: _confirmCtrl,
-        label: 'Confirmer le mot de passe',
+        label: 'Confirm password',
         hint: '••••••••',
         obscure: _obscureConf,
         accentColor: _roleColor(_role),
@@ -698,7 +664,7 @@ class _RegisterScreenState extends State<RegisterScreen>
             _obscureConf
                 ? Icons.visibility_off_rounded
                 : Icons.visibility_rounded,
-            color: _muted,
+            color: context.fitlek.textMuted,
             size: 20,
           ),
         ),
@@ -715,7 +681,7 @@ class _RegisterScreenState extends State<RegisterScreen>
   Widget _buildStep3() {
     return Column(children: [
       _GenderTile(
-        label: 'Homme',
+        label: 'Male',
         icon: Icons.male_rounded,
         selected: _gender == 'Male',
         accentColor: _roleColor(_role),
@@ -723,7 +689,7 @@ class _RegisterScreenState extends State<RegisterScreen>
       ),
       const SizedBox(height: 12),
       _GenderTile(
-        label: 'Femme',
+        label: 'Female',
         icon: Icons.female_rounded,
         selected: _gender == 'Female',
         accentColor: _roleColor(_role),
@@ -731,13 +697,37 @@ class _RegisterScreenState extends State<RegisterScreen>
       ),
       const SizedBox(height: 12),
       _GenderTile(
-        label: 'Autre',
+        label: 'Other',
         icon: Icons.person_outline_rounded,
         selected: _gender == 'Other',
         accentColor: _roleColor(_role),
         onTap: () => setState(() => _gender = 'Other'),
       ),
       if (_role == 'coach') ...[
+        const SizedBox(height: 20),
+        _FitField(
+          controller: _referralCtrl,
+          label: 'Invitation code (optional)',
+          hint: 'e.g. A1B2C3D4E5F6',
+          accentColor: _roleColor(_role),
+          onChanged: _onReferralChanged,
+          suffix: _referralSuffixIcon(),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Enter a Coach referral code if another Coach invited you.',
+          style: TextStyle(
+              color: context.fitlek.textMuted, fontSize: 12, height: 1.4),
+        ),
+        if (_referralStatus == _ReferralStatus.invalid) ...[
+          const SizedBox(height: 6),
+          const Text('This code is not recognized.',
+              style: TextStyle(color: _red, fontSize: 12)),
+        ] else if (_referralStatus == _ReferralStatus.valid) ...[
+          const SizedBox(height: 6),
+          const Text('Valid coach code',
+              style: TextStyle(color: _green, fontSize: 12)),
+        ],
         const SizedBox(height: 20),
         _NoticeBanner(
           role: _role!,
@@ -766,7 +756,7 @@ class _RegisterScreenState extends State<RegisterScreen>
                   borderRadius: BorderRadius.circular(14),
                   boxShadow: [
                     BoxShadow(
-                      color: _roleColor(_role).withOpacity(0.3),
+                      color: _roleColor(_role).withValues(alpha: 0.3),
                       blurRadius: 16,
                       offset: const Offset(0, 6),
                     ),
@@ -776,9 +766,9 @@ class _RegisterScreenState extends State<RegisterScreen>
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(
-                      _step < 3 ? 'CONTINUER' : 'CRÉER MON COMPTE',
-                      style: const TextStyle(
-                        color: _dark,
+                      _step < 3 ? 'CONTINUE' : 'CREATE MY ACCOUNT',
+                      style: TextStyle(
+                        color: Theme.of(context).scaffoldBackgroundColor,
                         fontSize: 15,
                         fontWeight: FontWeight.w800,
                         letterSpacing: 1.2,
@@ -789,7 +779,7 @@ class _RegisterScreenState extends State<RegisterScreen>
                       _step < 3
                           ? Icons.arrow_forward_rounded
                           : Icons.check_rounded,
-                      color: _dark,
+                      color: Theme.of(context).scaffoldBackgroundColor,
                       size: 18,
                     ),
                   ],
@@ -799,9 +789,9 @@ class _RegisterScreenState extends State<RegisterScreen>
       const SizedBox(height: 16),
       if (_step == 0)
         Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-          const Text(
-            'Déjà inscrit ? ',
-            style: TextStyle(color: _muted, fontSize: 13),
+          Text(
+            'Already registered? ',
+            style: TextStyle(color: context.fitlek.textMuted, fontSize: 13),
           ),
           GestureDetector(
             onTap: () => Navigator.pushReplacement(
@@ -814,7 +804,7 @@ class _RegisterScreenState extends State<RegisterScreen>
               ),
             ),
             child: Text(
-              'Se connecter',
+              'Log in',
               style: TextStyle(
                 color: _roleColor(_role),
                 fontSize: 13,
@@ -830,8 +820,8 @@ class _RegisterScreenState extends State<RegisterScreen>
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
-        color: _red.withOpacity(0.1),
-        border: Border.all(color: _red.withOpacity(0.35)),
+        color: _red.withValues(alpha: 0.1),
+        border: Border.all(color: _red.withValues(alpha: 0.35)),
         borderRadius: BorderRadius.circular(10),
       ),
       child: Row(children: [
@@ -875,9 +865,11 @@ class _RoleTile extends StatelessWidget {
         duration: const Duration(milliseconds: 220),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: selected ? color.withOpacity(0.10) : _card.withOpacity(0.72),
+          color: selected
+              ? color.withValues(alpha: 0.10)
+              : context.fitlek.card.withValues(alpha: 0.72),
           border: Border.all(
-            color: selected ? color : _border,
+            color: selected ? color : context.fitlek.border,
             width: selected ? 1.5 : 1,
           ),
           borderRadius: BorderRadius.circular(16),
@@ -887,7 +879,7 @@ class _RoleTile extends StatelessWidget {
             width: 52,
             height: 52,
             decoration: BoxDecoration(
-              color: color.withOpacity(0.15),
+              color: color.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Icon(icon, color: color, size: 24),
@@ -900,7 +892,12 @@ class _RoleTile extends StatelessWidget {
                 Text(
                   label,
                   style: TextStyle(
-                    color: selected ? _white : _white.withOpacity(0.8),
+                    color: selected
+                        ? Theme.of(context).colorScheme.onSurface
+                        : Theme.of(context)
+                            .colorScheme
+                            .onSurface
+                            .withValues(alpha: 0.8),
                     fontSize: 15,
                     fontWeight: FontWeight.w800,
                   ),
@@ -908,8 +905,8 @@ class _RoleTile extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(
                   description,
-                  style: const TextStyle(
-                    color: _muted,
+                  style: TextStyle(
+                    color: context.fitlek.textMuted,
                     fontSize: 12,
                     height: 1.4,
                   ),
@@ -926,12 +923,13 @@ class _RoleTile extends StatelessWidget {
               shape: BoxShape.circle,
               color: selected ? color : Colors.transparent,
               border: Border.all(
-                color: selected ? color : _border,
+                color: selected ? color : context.fitlek.border,
                 width: 1.5,
               ),
             ),
             child: selected
-                ? Icon(Icons.check_rounded, size: 13, color: _dark)
+                ? Icon(Icons.check_rounded,
+                    size: 13, color: Theme.of(context).scaffoldBackgroundColor)
                 : null,
           ),
         ]),
@@ -965,22 +963,26 @@ class _GenderTile extends StatelessWidget {
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
         decoration: BoxDecoration(
-          color: selected ? accentColor.withOpacity(0.10) : _card.withOpacity(0.72),
+          color: selected
+              ? accentColor.withValues(alpha: 0.10)
+              : context.fitlek.card.withValues(alpha: 0.72),
           border: Border.all(
-            color: selected ? accentColor : _border,
+            color: selected ? accentColor : context.fitlek.border,
             width: selected ? 1.5 : 1,
           ),
           borderRadius: BorderRadius.circular(14),
         ),
         child: Row(children: [
           Icon(icon,
-              color: selected ? accentColor : _muted,
+              color: selected ? accentColor : context.fitlek.textMuted,
               size: 22),
           const SizedBox(width: 14),
           Text(
             label,
             style: TextStyle(
-              color: selected ? _white : _muted,
+              color: selected
+                  ? Theme.of(context).colorScheme.onSurface
+                  : context.fitlek.textMuted,
               fontSize: 15,
               fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
             ),
@@ -994,12 +996,13 @@ class _GenderTile extends StatelessWidget {
               shape: BoxShape.circle,
               color: selected ? accentColor : Colors.transparent,
               border: Border.all(
-                color: selected ? accentColor : _border,
+                color: selected ? accentColor : context.fitlek.border,
                 width: 1.5,
               ),
             ),
             child: selected
-                ? Icon(Icons.check_rounded, size: 12, color: _dark)
+                ? Icon(Icons.check_rounded,
+                    size: 12, color: Theme.of(context).scaffoldBackgroundColor)
                 : null,
           ),
         ]),
@@ -1030,7 +1033,7 @@ class _PasswordStrengthBar extends StatelessWidget {
     return s.clamp(0, 4);
   }
 
-  Color get _color {
+  Color _strengthColor(BuildContext context) {
     switch (_strength) {
       case 1:
         return Colors.red.shade400;
@@ -1041,20 +1044,20 @@ class _PasswordStrengthBar extends StatelessWidget {
       case 4:
         return accentColor;
       default:
-        return _border;
+        return context.fitlek.border;
     }
   }
 
   String get _label {
     switch (_strength) {
       case 1:
-        return 'Faible';
+        return 'Weak';
       case 2:
-        return 'Moyen';
+        return 'Medium';
       case 3:
-        return 'Bien';
+        return 'Good';
       case 4:
-        return 'Fort';
+        return 'Strong';
       default:
         return '';
     }
@@ -1073,7 +1076,9 @@ class _PasswordStrengthBar extends StatelessWidget {
               margin: const EdgeInsets.only(right: 4),
               height: 4,
               decoration: BoxDecoration(
-                color: i < _strength ? _color : _border,
+                color: i < _strength
+                    ? _strengthColor(context)
+                    : context.fitlek.border,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -1082,9 +1087,9 @@ class _PasswordStrengthBar extends StatelessWidget {
       ),
       const SizedBox(height: 8),
       Text(
-        'Sécurité : $_label',
+        'Security: $_label',
         style: TextStyle(
-          color: _color,
+          color: _strengthColor(context),
           fontSize: 12,
           fontWeight: FontWeight.w600,
         ),
@@ -1121,7 +1126,7 @@ class _FitField extends StatelessWidget {
       Text(
         label,
         style: TextStyle(
-          color: accentColor.withOpacity(0.75),
+          color: accentColor.withValues(alpha: 0.75),
           fontSize: 12,
           fontWeight: FontWeight.w700,
           letterSpacing: 0.5,
@@ -1130,8 +1135,8 @@ class _FitField extends StatelessWidget {
       const SizedBox(height: 8),
       Container(
         decoration: BoxDecoration(
-          color: _card.withOpacity(0.72),
-          border: Border.all(color: _border),
+          color: context.fitlek.card.withValues(alpha: 0.72),
+          border: Border.all(color: context.fitlek.border),
           borderRadius: BorderRadius.circular(12),
         ),
         child: TextField(
@@ -1139,10 +1144,11 @@ class _FitField extends StatelessWidget {
           obscureText: obscure,
           keyboardType: keyboardType,
           onChanged: onChanged,
-          style: const TextStyle(color: _white, fontSize: 15),
+          style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurface, fontSize: 15),
           decoration: InputDecoration(
             hintText: hint,
-            hintStyle: const TextStyle(color: _muted, fontSize: 15),
+            hintStyle: TextStyle(color: context.fitlek.textMuted, fontSize: 15),
             border: InputBorder.none,
             contentPadding: const EdgeInsets.symmetric(
               horizontal: 16,
@@ -1173,17 +1179,18 @@ class _NoticeBanner extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: _orange.withOpacity(0.08),
-        border: Border.all(color: _orange.withOpacity(0.3)),
+        color: _orange.withValues(alpha: 0.08),
+        border: Border.all(color: _orange.withValues(alpha: 0.3)),
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
         const Icon(Icons.info_outline_rounded, color: _orange, size: 18),
         const SizedBox(width: 10),
         Expanded(
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          child:
+              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             const Text(
-              'Validation requise',
+              'Approval required',
               style: TextStyle(
                 color: _orange,
                 fontSize: 13,
@@ -1193,10 +1200,10 @@ class _NoticeBanner extends StatelessWidget {
             const SizedBox(height: 4),
             Text(
               isCoach
-                  ? 'Ton compte coach sera examiné par un conseiller. Tu pourras exercer une fois approuvé(e).'
-                  : 'Ton compte conseiller sera activé après vérification par l\'administration.',
-              style: const TextStyle(
-                color: _muted,
+                  ? 'Your coach account will be reviewed by an advisor. You can start once approved.'
+                  : 'Your advisor account will be activated after verification by the administration.',
+              style: TextStyle(
+                color: context.fitlek.textMuted,
                 fontSize: 12,
                 height: 1.5,
               ),

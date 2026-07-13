@@ -13,76 +13,10 @@ import 'clientSessions.dart';
 import 'clientList.dart';
 import 'clientProfil.dart';
 
-const _lime = Color(0xFFC6F135);
-const _dark = Color(0xFF0A0A0A);
-const _card = Color(0xFF141414);
-const _cardBorder = Color(0xFF232323);
-const _baseUrl = 'http://192.168.0.232:3000/api';
+import '../../theme/fitlek_theme_extension.dart';
+import '../../components/sirvya_logo.dart';
 
-class _FitlekLogoPainter extends CustomPainter {
-  final Color strokeColor;
-  final Color circleColor;
-
-  const _FitlekLogoPainter({required this.strokeColor, required this.circleColor});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final scaleX = size.width / 132;
-    final scaleY = size.height / 120;
-    canvas.save();
-    canvas.scale(scaleX, scaleY);
-
-    canvas.drawCircle(const Offset(65.6104, 17.25), 17.25, Paint()..color = circleColor);
-
-    final path = Path()
-      ..moveTo(5.8103, 21.85)
-      ..cubicTo(19.2827, 35.9, 45.0007, 47.25, 64.4603, 47.7336)
-      ..moveTo(125.41, 21.85)
-      ..cubicTo(112.388, 36.0329, 83.709, 48.212, 64.4603, 47.7336)
-      ..moveTo(64.4603, 47.7336)
-      ..lineTo(64.4603, 106.95)
-      ..cubicTo(87.8436, 95.8333, 128.4, 73.37, 103.56, 72.45)
-      ..cubicTo(78.7203, 71.53, 36.477, 72.0666, 18.4603, 72.45);
-
-    canvas.drawPath(
-      path,
-      Paint()
-        ..color = strokeColor
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 16.1
-        ..strokeCap = StrokeCap.round,
-    );
-    canvas.restore();
-  }
-
-  @override
-  bool shouldRepaint(covariant _FitlekLogoPainter oldDelegate) => false;
-}
-
-class _FitlekLogo extends StatelessWidget {
-  final double height;
-  const _FitlekLogo({this.height = 40});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: height,
-      width: height * 132 / 120,
-      decoration: BoxDecoration(
-        boxShadow: [
-          BoxShadow(
-            color: _lime.withOpacity(0.25),
-            blurRadius: 18,
-            spreadRadius: 1,
-          ),
-        ],
-      ),
-      child: CustomPaint(
-        painter: _FitlekLogoPainter(strokeColor: Colors.white, circleColor: _lime),
-      ),
-    );
-  }
-}
+const _baseUrl = 'http://localhost:3000/api';
 
 class _AdvisorItem {
   final int id;
@@ -182,6 +116,7 @@ class _HomeScreenState extends State<HomeScreen> {
         final List data = jsonDecode(res.body);
         if (data.isNotEmpty) {
           final conv = data.first;
+          if (!mounted) return;
           Navigator.push(
             context,
             _fadeSlide(
@@ -209,6 +144,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
           if (createRes.statusCode == 201) {
             final newConv = jsonDecode(createRes.body);
+            if (!mounted) return;
             Navigator.push(
               context,
               _fadeSlide(
@@ -229,8 +165,8 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildMessagesBanner() {
-    final int totalUnread = 3;
-    final bool hasUnread = totalUnread > 0;
+    const int totalUnread = 3;
+    const bool hasUnread = totalUnread > 0;
 
     return GestureDetector(
       onTap: () {
@@ -248,16 +184,21 @@ class _HomeScreenState extends State<HomeScreen> {
         margin: const EdgeInsets.fromLTRB(24, 20, 24, 0),
         padding: const EdgeInsets.all(18),
         decoration: BoxDecoration(
-          color: _card,
+          color: context.fitlek.card,
           borderRadius: BorderRadius.circular(18),
           border: Border.all(
-            color: hasUnread ? _lime.withOpacity(0.3) : _cardBorder,
+            color: hasUnread
+                ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.3)
+                : context.fitlek.border,
             width: 1,
           ),
           boxShadow: hasUnread
               ? [
                   BoxShadow(
-                    color: _lime.withOpacity(0.05),
+                    color: Theme.of(context)
+                        .colorScheme
+                        .primary
+                        .withValues(alpha: 0.05),
                     blurRadius: 20,
                     offset: const Offset(0, 6),
                   ),
@@ -273,13 +214,18 @@ class _HomeScreenState extends State<HomeScreen> {
                   height: 48,
                   decoration: BoxDecoration(
                     color: hasUnread
-                        ? _lime.withOpacity(0.12)
-                        : const Color(0xFF1A1A1A),
+                        ? Theme.of(context)
+                            .colorScheme
+                            .primary
+                            .withValues(alpha: 0.12)
+                        : context.fitlek.card2,
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Icon(
                     Icons.chat_bubble_rounded,
-                    color: hasUnread ? _lime : Colors.white.withOpacity(0.3),
+                    color: hasUnread
+                        ? Theme.of(context).colorScheme.primary
+                        : context.fitlek.textMuted,
                     size: 22,
                   ),
                 ),
@@ -291,14 +237,15 @@ class _HomeScreenState extends State<HomeScreen> {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 6, vertical: 2),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFFF5252),
+                        color: context.fitlek.error,
                         borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: _card, width: 2),
+                        border:
+                            Border.all(color: context.fitlek.card, width: 2),
                       ),
                       child: Text(
                         totalUnread > 99 ? '99+' : '$totalUnread',
-                        style: const TextStyle(
-                          color: Colors.white,
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.onError,
                           fontSize: 9,
                           fontWeight: FontWeight.w900,
                         ),
@@ -308,37 +255,37 @@ class _HomeScreenState extends State<HomeScreen> {
               ],
             ),
             const SizedBox(width: 16),
-            const Expanded(
+            Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Messagerie',
+                    'Messages',
                     style: TextStyle(
-                      color: Colors.white,
+                      color: Theme.of(context).colorScheme.onSurface,
                       fontWeight: FontWeight.w800,
                       fontSize: 14,
                     ),
                   ),
-                  SizedBox(height: 4),
+                  const SizedBox(height: 4),
                   Text(
-                    'Discutez avec vos coachs',
-                    style: TextStyle(color: Colors.white38, fontSize: 12),
+                    'Chat with your coaches',
+                    style: TextStyle(
+                        color: context.fitlek.textMuted, fontSize: 12),
                   ),
                 ],
               ),
             ),
             Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               decoration: BoxDecoration(
-                color: _lime,
+                color: Theme.of(context).colorScheme.primary,
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: const Text(
-                'OUVRIR',
+              child: Text(
+                'OPEN',
                 style: TextStyle(
-                  color: Colors.black,
+                  color: Theme.of(context).colorScheme.onPrimary,
                   fontWeight: FontWeight.w900,
                   fontSize: 10,
                   letterSpacing: 1.2,
@@ -385,13 +332,13 @@ class _HomeScreenState extends State<HomeScreen> {
         });
       } else {
         setState(() {
-          _coachError = 'Erreur (${res.statusCode})';
+          _coachError = 'Error (${res.statusCode})';
           _loadingCoaches = false;
         });
       }
     } catch (_) {
       setState(() {
-        _coachError = 'Serveur inaccessible';
+        _coachError = 'Server unreachable';
         _loadingCoaches = false;
       });
     }
@@ -416,13 +363,13 @@ class _HomeScreenState extends State<HomeScreen> {
         });
       } else {
         setState(() {
-          _advisorError = 'Erreur (${res.statusCode})';
+          _advisorError = 'Error (${res.statusCode})';
           _loadingAdvisors = false;
         });
       }
     } catch (_) {
       setState(() {
-        _advisorError = 'Serveur inaccessible';
+        _advisorError = 'Server unreachable';
         _loadingAdvisors = false;
       });
     }
@@ -516,7 +463,8 @@ class _HomeScreenState extends State<HomeScreen> {
             position: Tween<Offset>(
               begin: const Offset(0, 0.04),
               end: Offset.zero,
-            ).animate(CurvedAnimation(parent: anim, curve: Curves.easeOutCubic)),
+            ).animate(
+                CurvedAnimation(parent: anim, curve: Curves.easeOutCubic)),
             child: child,
           ),
         ),
@@ -526,19 +474,18 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _dark,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: IndexedStack(
         index: _navIndex,
         children: [
           _buildHomeBody(),
           DiscoverScreen(clientID: widget.clientID, token: widget.token),
           SessionsScreen(clientID: widget.clientID, token: widget.token),
-         ClientProfileScreen(
-  clientID: widget.clientID,    // ← même valeur, nom différent
-  token: widget.token,  // ← nouveau paramètre optionnel
-  onLogout: widget.onLogout,
-),
-
+          ClientProfileScreen(
+            clientID: widget.clientID, // ← même valeur, nom différent
+            token: widget.token, // ← nouveau paramètre optionnel
+            onLogout: widget.onLogout,
+          ),
         ],
       ),
       bottomNavigationBar: _buildNavBar(),
@@ -548,8 +495,8 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildHomeBody() {
     return SafeArea(
       child: RefreshIndicator(
-        color: _lime,
-        backgroundColor: _card,
+        color: Theme.of(context).colorScheme.primary,
+        backgroundColor: context.fitlek.card,
         onRefresh: () async {
           await Future.wait([
             _fetchCoaches(),
@@ -566,14 +513,14 @@ class _HomeScreenState extends State<HomeScreen> {
             SliverToBoxAdapter(child: _buildMessagesBanner()),
             SliverToBoxAdapter(
               child: _sectionHeader(
-                'Coachs recommandés',
+                'Recommended coaches',
                 onSeeAll: () => setState(() => _navIndex = 1),
               ),
             ),
             SliverToBoxAdapter(child: _buildCoachList()),
             SliverToBoxAdapter(
               child: _sectionHeader(
-                'Sociétés de coaching',
+                'Coaching companies',
                 onSeeAll: () => setState(() => _navIndex = 1),
               ),
             ),
@@ -591,44 +538,19 @@ class _HomeScreenState extends State<HomeScreen> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          const _FitlekLogo(height: 40),
-          const SizedBox(width: 10),
-          RichText(
-            text: const TextSpan(
-              children: [
-                TextSpan(
-                  text: 'FIT',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w900,
-                    color: _lime,
-                    letterSpacing: 2.5,
-                  ),
-                ),
-                TextSpan(
-                  text: 'LEK',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w900,
-                    color: Colors.white,
-                    letterSpacing: 2.5,
-                  ),
-                ),
-              ],
-            ),
-          ),
+          const SirvyaLogo(variant: SirvyaLogoVariant.wordmark, height: 30),
           const Spacer(),
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              const Text(
-                'Bonjour,',
-                style: TextStyle(color: Colors.white38, fontSize: 11),
+              Text(
+                'Hello,',
+                style: TextStyle(color: context.fitlek.textMuted, fontSize: 11),
               ),
               Text(
-                widget.firstName != null ? '${widget.firstName}' : 'Bienvenue',
-                style: const TextStyle(
-                  color: Colors.white,
+                widget.firstName != null ? '${widget.firstName}' : 'Welcome',
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurface,
                   fontSize: 13,
                   fontWeight: FontWeight.w700,
                 ),
@@ -641,11 +563,12 @@ class _HomeScreenState extends State<HomeScreen> {
             child: Container(
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                border: Border.all(color: _lime, width: 2),
+                border: Border.all(
+                    color: Theme.of(context).colorScheme.primary, width: 2),
               ),
               child: CircleAvatar(
                 radius: 20,
-                backgroundColor: const Color(0xFF1A1A1A),
+                backgroundColor: context.fitlek.card2,
                 backgroundImage: _avatarUrl != null && _avatarUrl!.isNotEmpty
                     ? NetworkImage(_avatarUrl!)
                     : null,
@@ -654,8 +577,8 @@ class _HomeScreenState extends State<HomeScreen> {
                         widget.firstName != null && widget.firstName!.isNotEmpty
                             ? widget.firstName![0].toUpperCase()
                             : '?',
-                        style: const TextStyle(
-                          color: _lime,
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.primary,
                           fontSize: 16,
                           fontWeight: FontWeight.w900,
                         ),
@@ -677,23 +600,23 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Container(
           height: 50,
           decoration: BoxDecoration(
-            color: _card,
+            color: context.fitlek.card,
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: _cardBorder, width: 1),
+            border: Border.all(color: context.fitlek.border, width: 1),
           ),
           child: Row(
             children: [
               const SizedBox(width: 16),
               Icon(
                 Icons.search_rounded,
-                color: Colors.white.withOpacity(0.3),
+                color: context.fitlek.textMuted,
                 size: 20,
               ),
               const SizedBox(width: 10),
               Text(
-                'Rechercher coachs, salles…',
+                'Search coaches, gyms…',
                 style: TextStyle(
-                  color: Colors.white.withOpacity(0.3),
+                  color: context.fitlek.textMuted,
                   fontSize: 14,
                 ),
               ),
@@ -702,12 +625,12 @@ class _HomeScreenState extends State<HomeScreen> {
                 margin: const EdgeInsets.only(right: 8),
                 padding: const EdgeInsets.all(9),
                 decoration: BoxDecoration(
-                  color: _lime,
+                  color: Theme.of(context).colorScheme.primary,
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.tune_rounded,
-                  color: Colors.black,
+                  color: Theme.of(context).colorScheme.onPrimary,
                   size: 15,
                 ),
               ),
@@ -730,7 +653,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 margin: const EdgeInsets.only(right: 10),
                 height: 72,
                 decoration: BoxDecoration(
-                  color: _card,
+                  color: context.fitlek.card,
                   borderRadius: BorderRadius.circular(12),
                 ),
               ),
@@ -742,22 +665,22 @@ class _HomeScreenState extends State<HomeScreen> {
 
     final stats = [
       {
-        'label': 'Total séances',
+        'label': 'Total sessions',
         'value': '$_totalSessions',
         'icon': Icons.bolt_rounded,
-        'color': _lime,
+        'color': Theme.of(context).colorScheme.primary,
       },
       {
-        'label': 'Confirmées',
+        'label': 'Confirmed',
         'value': '$_confirmedSessions',
         'icon': Icons.check_circle_rounded,
-        'color': const Color(0xFF4CAF50),
+        'color': context.fitlek.success,
       },
       {
-        'label': 'En attente',
+        'label': 'Pending',
         'value': '$_pendingSessions',
         'icon': Icons.hourglass_top_rounded,
-        'color': const Color(0xFFFFB74D),
+        'color': context.fitlek.warning,
       },
     ];
 
@@ -776,9 +699,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 padding:
                     const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
                 decoration: BoxDecoration(
-                  color: _card,
+                  color: context.fitlek.card,
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: color.withOpacity(0.2), width: 1),
+                  border:
+                      Border.all(color: color.withValues(alpha: 0.2), width: 1),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -797,8 +721,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     const SizedBox(height: 3),
                     Text(
                       e.value['label'] as String,
-                      style: const TextStyle(
-                        color: Colors.white38,
+                      style: TextStyle(
+                        color: context.fitlek.textMuted,
                         fontSize: 9,
                         fontWeight: FontWeight.w600,
                       ),
@@ -821,14 +745,15 @@ class _HomeScreenState extends State<HomeScreen> {
         margin: const EdgeInsets.fromLTRB(24, 20, 24, 0),
         height: 140,
         decoration: BoxDecoration(
-          color: _card,
+          color: context.fitlek.card,
           borderRadius: BorderRadius.circular(18),
         ),
-        child: const Center(
+        child: Center(
           child: SizedBox(
             width: 20,
             height: 20,
-            child: CircularProgressIndicator(color: _lime, strokeWidth: 2),
+            child: CircularProgressIndicator(
+                color: Theme.of(context).colorScheme.primary, strokeWidth: 2),
           ),
         ),
       );
@@ -841,9 +766,9 @@ class _HomeScreenState extends State<HomeScreen> {
           margin: const EdgeInsets.fromLTRB(24, 20, 24, 0),
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            color: _card,
+            color: context.fitlek.card,
             borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: _cardBorder, width: 1),
+            border: Border.all(color: context.fitlek.border, width: 1),
           ),
           child: Row(
             children: [
@@ -851,32 +776,36 @@ class _HomeScreenState extends State<HomeScreen> {
                 width: 48,
                 height: 48,
                 decoration: BoxDecoration(
-                  color: _lime.withOpacity(0.1),
+                  color: Theme.of(context)
+                      .colorScheme
+                      .primary
+                      .withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.calendar_today_rounded,
-                  color: _lime,
+                  color: Theme.of(context).colorScheme.primary,
                   size: 22,
                 ),
               ),
               const SizedBox(width: 16),
-              const Expanded(
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Aucune séance prévue',
+                      'No sessions scheduled',
                       style: TextStyle(
-                        color: Colors.white,
+                        color: Theme.of(context).colorScheme.onSurface,
                         fontWeight: FontWeight.w800,
                         fontSize: 14,
                       ),
                     ),
-                    SizedBox(height: 4),
+                    const SizedBox(height: 4),
                     Text(
-                      'Réservez une séance avec un coach',
-                      style: TextStyle(color: Colors.white38, fontSize: 12),
+                      'Book a session with a coach',
+                      style: TextStyle(
+                          color: context.fitlek.textMuted, fontSize: 12),
                     ),
                   ],
                 ),
@@ -885,13 +814,13 @@ class _HomeScreenState extends State<HomeScreen> {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 decoration: BoxDecoration(
-                  color: _lime,
+                  color: Theme.of(context).colorScheme.primary,
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: const Text(
-                  'EXPLORER',
+                child: Text(
+                  'EXPLORE',
                   style: TextStyle(
-                    color: Colors.black,
+                    color: Theme.of(context).colorScheme.onPrimary,
                     fontWeight: FontWeight.w900,
                     fontSize: 10,
                     letterSpacing: 1.2,
@@ -908,22 +837,26 @@ class _HomeScreenState extends State<HomeScreen> {
     final diff = s.sessionStart.difference(DateTime.now());
     final daysLeft = diff.inDays;
     final countdown = daysLeft == 0
-        ? "Aujourd'hui"
+        ? 'Today'
         : daysLeft == 1
-            ? 'Demain'
-            : 'Dans $daysLeft jours';
+            ? 'Tomorrow'
+            : 'In $daysLeft days';
 
     return GestureDetector(
       onTap: () => setState(() => _navIndex = 2),
       child: Container(
         margin: const EdgeInsets.fromLTRB(24, 20, 24, 0),
         decoration: BoxDecoration(
-          color: _card,
+          color: context.fitlek.card,
           borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: _lime.withOpacity(0.2), width: 1),
+          border: Border.all(
+              color:
+                  Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
+              width: 1),
           boxShadow: [
             BoxShadow(
-              color: _lime.withOpacity(0.04),
+              color:
+                  Theme.of(context).colorScheme.primary.withValues(alpha: 0.04),
               blurRadius: 20,
               offset: const Offset(0, 6),
             ),
@@ -940,7 +873,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 height: 140,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: _lime.withOpacity(0.06),
+                  color: Theme.of(context)
+                      .colorScheme
+                      .primary
+                      .withValues(alpha: 0.06),
                 ),
               ),
             ),
@@ -954,16 +890,16 @@ class _HomeScreenState extends State<HomeScreen> {
                       Container(
                         width: 8,
                         height: 8,
-                        decoration: const BoxDecoration(
-                          color: _lime,
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.primary,
                           shape: BoxShape.circle,
                         ),
                       ),
                       const SizedBox(width: 8),
-                      const Text(
-                        'PROCHAINE SÉANCE',
+                      Text(
+                        'NEXT SESSION',
                         style: TextStyle(
-                          color: _lime,
+                          color: Theme.of(context).colorScheme.primary,
                           fontSize: 10,
                           fontWeight: FontWeight.w800,
                           letterSpacing: 2,
@@ -976,13 +912,13 @@ class _HomeScreenState extends State<HomeScreen> {
                           vertical: 4,
                         ),
                         decoration: BoxDecoration(
-                          color: _lime,
+                          color: Theme.of(context).colorScheme.primary,
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Text(
                           countdown,
-                          style: const TextStyle(
-                            color: Colors.black,
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.onPrimary,
                             fontSize: 10,
                             fontWeight: FontWeight.w900,
                           ),
@@ -996,19 +932,22 @@ class _HomeScreenState extends State<HomeScreen> {
                       Container(
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          border: Border.all(color: _lime, width: 2),
+                          border: Border.all(
+                              color: Theme.of(context).colorScheme.primary,
+                              width: 2),
                         ),
                         child: CircleAvatar(
                           radius: 24,
-                          backgroundColor: const Color(0xFF1A1A1A),
+                          backgroundColor: context.fitlek.card2,
                           backgroundImage: s.coachImageUrl.isNotEmpty
                               ? NetworkImage(s.coachImageUrl)
                               : null,
                           child: s.coachImageUrl.isEmpty
                               ? Text(
                                   s.coachName.isNotEmpty ? s.coachName[0] : '?',
-                                  style: const TextStyle(
-                                    color: _lime,
+                                  style: TextStyle(
+                                    color:
+                                        Theme.of(context).colorScheme.primary,
                                     fontWeight: FontWeight.w900,
                                     fontSize: 18,
                                   ),
@@ -1023,8 +962,8 @@ class _HomeScreenState extends State<HomeScreen> {
                           children: [
                             Text(
                               s.coachName,
-                              style: const TextStyle(
-                                color: Colors.white,
+                              style: TextStyle(
+                                color: Theme.of(context).colorScheme.onSurface,
                                 fontSize: 16,
                                 fontWeight: FontWeight.w900,
                                 letterSpacing: -0.3,
@@ -1036,7 +975,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                   ? s.coachSpeciality
                                   : 'Coach',
                               style: TextStyle(
-                                color: Colors.white.withOpacity(0.5),
+                                color: context.fitlek.textSecondary,
                                 fontSize: 12,
                               ),
                             ),
@@ -1049,22 +988,24 @@ class _HomeScreenState extends State<HomeScreen> {
                           vertical: 5,
                         ),
                         decoration: BoxDecoration(
-                          color:
-                              (s.isConfirmed ? const Color(0xFF4CAF50) : _lime)
-                                  .withOpacity(0.15),
+                          color: (s.isConfirmed
+                                  ? context.fitlek.success
+                                  : Theme.of(context).colorScheme.primary)
+                              .withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(
-                            color:
-                                (s.isConfirmed ? const Color(0xFF4CAF50) : _lime)
-                                    .withOpacity(0.4),
+                            color: (s.isConfirmed
+                                    ? context.fitlek.success
+                                    : Theme.of(context).colorScheme.primary)
+                                .withValues(alpha: 0.4),
                           ),
                         ),
                         child: Text(
-                          s.isConfirmed ? 'CONFIRMÉE' : 'EN ATTENTE',
+                          s.isConfirmed ? 'CONFIRMED' : 'PENDING',
                           style: TextStyle(
                             color: s.isConfirmed
-                                ? const Color(0xFF4CAF50)
-                                : _lime,
+                                ? context.fitlek.success
+                                : Theme.of(context).colorScheme.primary,
                             fontSize: 9,
                             fontWeight: FontWeight.w800,
                             letterSpacing: 0.8,
@@ -1074,7 +1015,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     ],
                   ),
                   const SizedBox(height: 14),
-                  Divider(color: Colors.white.withOpacity(0.07), height: 1),
+                  Divider(color: context.fitlek.border, height: 1),
                   const SizedBox(height: 10),
                   GestureDetector(
                     onTap: () => _openConversationWithCoach(
@@ -1087,20 +1028,28 @@ class _HomeScreenState extends State<HomeScreen> {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 12, vertical: 6),
                       decoration: BoxDecoration(
-                        color: _lime.withOpacity(0.1),
+                        color: Theme.of(context)
+                            .colorScheme
+                            .primary
+                            .withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: _lime.withOpacity(0.25)),
+                        border: Border.all(
+                            color: Theme.of(context)
+                                .colorScheme
+                                .primary
+                                .withValues(alpha: 0.25)),
                       ),
-                      child: const Row(
+                      child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Icon(Icons.chat_bubble_outline_rounded,
-                              color: _lime, size: 13),
-                          SizedBox(width: 6),
+                              color: Theme.of(context).colorScheme.primary,
+                              size: 13),
+                          const SizedBox(width: 6),
                           Text(
                             'MESSAGE',
                             style: TextStyle(
-                              color: _lime,
+                              color: Theme.of(context).colorScheme.primary,
                               fontWeight: FontWeight.w800,
                               fontSize: 9,
                               letterSpacing: 1,
@@ -1123,9 +1072,9 @@ class _HomeScreenState extends State<HomeScreen> {
                         '${_formatTime(s.sessionStart)} — ${_formatTime(s.sessionEnd)}',
                       ),
                       const Spacer(),
-                      const Icon(
+                      Icon(
                         Icons.chevron_right_rounded,
-                        color: Colors.white24,
+                        color: context.fitlek.textMuted,
                         size: 20,
                       ),
                     ],
@@ -1141,11 +1090,11 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _metaChip(IconData icon, String text) => Row(
         children: [
-          Icon(icon, color: Colors.white.withOpacity(0.35), size: 12),
+          Icon(icon, color: context.fitlek.textMuted, size: 12),
           const SizedBox(width: 5),
           Text(
             text,
-            style: TextStyle(color: Colors.white.withOpacity(0.55), fontSize: 11),
+            style: TextStyle(color: context.fitlek.textSecondary, fontSize: 11),
           ),
         ],
       );
@@ -1157,13 +1106,13 @@ class _HomeScreenState extends State<HomeScreen> {
             Container(
               width: 3,
               height: 18,
-              color: _lime,
+              color: Theme.of(context).colorScheme.primary,
               margin: const EdgeInsets.only(right: 10),
             ),
             Text(
               title,
-              style: const TextStyle(
-                color: Colors.white,
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurface,
                 fontSize: 16,
                 fontWeight: FontWeight.w800,
               ),
@@ -1173,17 +1122,18 @@ class _HomeScreenState extends State<HomeScreen> {
               onTap: onSeeAll,
               child: Row(
                 children: [
-                  const Text(
-                    'TOUT VOIR',
+                  Text(
+                    'SEE ALL',
                     style: TextStyle(
-                      color: _lime,
+                      color: Theme.of(context).colorScheme.primary,
                       fontSize: 11,
                       fontWeight: FontWeight.w700,
                       letterSpacing: 1.2,
                     ),
                   ),
                   const SizedBox(width: 4),
-                  const Icon(Icons.chevron_right_rounded, color: _lime, size: 14),
+                  Icon(Icons.chevron_right_rounded,
+                      color: Theme.of(context).colorScheme.primary, size: 14),
                 ],
               ),
             ),
@@ -1203,7 +1153,7 @@ class _HomeScreenState extends State<HomeScreen> {
             width: 160,
             margin: const EdgeInsets.only(right: 14),
             decoration: BoxDecoration(
-              color: _card,
+              color: context.fitlek.card,
               borderRadius: BorderRadius.circular(14),
             ),
           ),
@@ -1216,8 +1166,8 @@ class _HomeScreenState extends State<HomeScreen> {
         height: 80,
         alignment: Alignment.center,
         child: Text(
-          _coachError ?? 'Aucun coach disponible',
-          style: const TextStyle(color: Colors.white38, fontSize: 13),
+          _coachError ?? 'No coaches available',
+          style: TextStyle(color: context.fitlek.textMuted, fontSize: 13),
         ),
       );
     }
@@ -1247,7 +1197,7 @@ class _HomeScreenState extends State<HomeScreen> {
               margin: const EdgeInsets.only(bottom: 14),
               height: 110,
               decoration: BoxDecoration(
-                color: _card,
+                color: context.fitlek.card,
                 borderRadius: BorderRadius.circular(14),
               ),
             ),
@@ -1261,8 +1211,8 @@ class _HomeScreenState extends State<HomeScreen> {
         height: 80,
         alignment: Alignment.center,
         child: Text(
-          _advisorError ?? 'Aucune société disponible',
-          style: const TextStyle(color: Colors.white38, fontSize: 13),
+          _advisorError ?? 'No companies available',
+          style: TextStyle(color: context.fitlek.textMuted, fontSize: 13),
         ),
       );
     }
@@ -1281,10 +1231,10 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildNavBar() {
     const items = [
-      (Icons.home_rounded, 'Accueil'),
-      (Icons.search_rounded, 'Explorer'),
-      (Icons.calendar_today_rounded, 'Séances'),
-      (Icons.person_rounded, 'Profil'),
+      (Icons.home_rounded, 'Home'),
+      (Icons.search_rounded, 'Explore'),
+      (Icons.calendar_today_rounded, 'Sessions'),
+      (Icons.person_rounded, 'Profile'),
     ];
 
     const leftItems = [0, 1];
@@ -1296,11 +1246,12 @@ class _HomeScreenState extends State<HomeScreen> {
       children: [
         Container(
           decoration: BoxDecoration(
-            color: const Color(0xFF0D0D0D),
-            border: Border(top: BorderSide(color: _cardBorder, width: 1)),
+            color: context.fitlek.card,
+            border:
+                Border(top: BorderSide(color: context.fitlek.border, width: 1)),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.4),
+                color: context.fitlek.shadow,
                 blurRadius: 20,
                 offset: const Offset(0, -4),
               ),
@@ -1324,23 +1275,19 @@ class _HomeScreenState extends State<HomeScreen> {
               width: 54,
               height: 54,
               decoration: BoxDecoration(
-                          boxShadow: [
+                boxShadow: [
                   BoxShadow(
-                    color: _lime.withOpacity(0.15),
+                    color: Theme.of(context)
+                        .colorScheme
+                        .primary
+                        .withValues(alpha: 0.15),
                     blurRadius: 20,
                     spreadRadius: 2,
                   ),
-                  
                 ],
               ),
-              child: Center(
-                child: Container(
-                  width: 52,
-                  height: 52,
-                  child: const Center(
-                    child: _FitlekLogo(height: 42),
-                  ),
-                ),
+              child: const Center(
+                child: SirvyaLogo(variant: SirvyaLogoVariant.mark, height: 40),
               ),
             ),
           ),
@@ -1358,7 +1305,9 @@ class _HomeScreenState extends State<HomeScreen> {
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
-          color: active ? _lime.withOpacity(0.12) : Colors.transparent,
+          color: active
+              ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.12)
+              : Colors.transparent,
           borderRadius: BorderRadius.circular(12),
         ),
         child: Column(
@@ -1366,14 +1315,18 @@ class _HomeScreenState extends State<HomeScreen> {
           children: [
             Icon(
               item.$1,
-              color: active ? _lime : Colors.white24,
+              color: active
+                  ? Theme.of(context).colorScheme.primary
+                  : context.fitlek.navUnselected,
               size: 22,
             ),
             const SizedBox(height: 4),
             Text(
               item.$2,
               style: TextStyle(
-                color: active ? _lime : Colors.white24,
+                color: active
+                    ? Theme.of(context).colorScheme.primary
+                    : context.fitlek.navUnselected,
                 fontSize: 10,
                 fontWeight: active ? FontWeight.w700 : FontWeight.w400,
                 letterSpacing: 0.3,
@@ -1387,10 +1340,20 @@ class _HomeScreenState extends State<HomeScreen> {
 
   String _formatDate(DateTime d) {
     const m = [
-      'Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Jun',
-      'Jul', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc',
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
     ];
-    const w = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
+    const w = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
     return '${w[d.weekday - 1]} ${d.day} ${m[d.month - 1]}';
   }
 
@@ -1412,9 +1375,9 @@ class _CoachCard extends StatelessWidget {
         width: 165,
         margin: const EdgeInsets.only(right: 14),
         decoration: BoxDecoration(
-          color: _card,
+          color: context.fitlek.card,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: _cardBorder, width: 1),
+          border: Border.all(color: context.fitlek.border, width: 1),
         ),
         clipBehavior: Clip.antiAlias,
         child: Column(
@@ -1431,20 +1394,20 @@ class _CoachCard extends StatelessWidget {
                           fit: BoxFit.cover,
                           loadingBuilder: (_, child, p) => p == null
                               ? child
-                              : Container(color: const Color(0xFF1A1A1A)),
-                          errorBuilder: (_, __, ___) => _placeholder(),
+                              : Container(color: context.fitlek.card2),
+                          errorBuilder: (_, __, ___) => _placeholder(context),
                         )
-                      : _placeholder(),
+                      : _placeholder(context),
                 ),
                 if (coach.isPremium)
                   Positioned(
                     top: 8,
                     right: 8,
                     child: Container(
-                      padding:
-                          const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 6, vertical: 3),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFFFD700),
+                        color: context.fitlek.premium,
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: const Icon(
@@ -1459,15 +1422,17 @@ class _CoachCard extends StatelessWidget {
                     bottom: 8,
                     left: 8,
                     child: Container(
-                      padding:
-                          const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 7, vertical: 3),
                       decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(0.75),
+                        color: Colors.black.withValues(alpha: 0.75),
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Row(
                         children: [
-                          const Icon(Icons.star_rounded, color: _lime, size: 11),
+                          Icon(Icons.star_rounded,
+                              color: Theme.of(context).colorScheme.primary,
+                              size: 11),
                           const SizedBox(width: 3),
                           Text(
                             coach.rating!.toStringAsFixed(1),
@@ -1493,8 +1458,8 @@ class _CoachCard extends StatelessWidget {
                       coach.fullName,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: Colors.white,
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurface,
                         fontWeight: FontWeight.w800,
                         fontSize: 13,
                       ),
@@ -1504,22 +1469,31 @@ class _CoachCard extends StatelessWidget {
                       coach.speciality ?? '',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(color: Colors.white38, fontSize: 11),
+                      style: TextStyle(
+                          color: context.fitlek.textMuted, fontSize: 11),
                     ),
                     const Spacer(),
                     Container(
                       width: double.infinity,
                       padding: const EdgeInsets.symmetric(vertical: 7),
                       decoration: BoxDecoration(
-                        color: _lime.withOpacity(0.1),
+                        color: Theme.of(context)
+                            .colorScheme
+                            .primary
+                            .withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(7),
-                        border: Border.all(color: _lime.withOpacity(0.25), width: 1),
+                        border: Border.all(
+                            color: Theme.of(context)
+                                .colorScheme
+                                .primary
+                                .withValues(alpha: 0.25),
+                            width: 1),
                       ),
-                      child: const Text(
-                        'VOIR',
+                      child: Text(
+                        'VIEW',
                         textAlign: TextAlign.center,
                         style: TextStyle(
-                          color: _lime,
+                          color: Theme.of(context).colorScheme.primary,
                           fontWeight: FontWeight.w900,
                           fontSize: 10,
                           letterSpacing: 1.5,
@@ -1536,13 +1510,13 @@ class _CoachCard extends StatelessWidget {
     );
   }
 
-  Widget _placeholder() => Container(
-        color: const Color(0xFF1A1A1A),
+  Widget _placeholder(BuildContext context) => Container(
+        color: context.fitlek.card2,
         child: Center(
           child: Text(
             coach.fullName.isNotEmpty ? coach.fullName[0].toUpperCase() : '?',
-            style: const TextStyle(
-              color: _lime,
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.primary,
               fontSize: 40,
               fontWeight: FontWeight.w900,
             ),
@@ -1565,9 +1539,9 @@ class _AdvisorCard extends StatelessWidget {
         margin: const EdgeInsets.only(bottom: 14),
         height: 110,
         decoration: BoxDecoration(
-          color: _card,
+          color: context.fitlek.card,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: _cardBorder, width: 1),
+          border: Border.all(color: context.fitlek.border, width: 1),
         ),
         clipBehavior: Clip.antiAlias,
         child: Row(
@@ -1580,10 +1554,10 @@ class _AdvisorCard extends StatelessWidget {
                       fit: BoxFit.cover,
                       loadingBuilder: (_, child, p) => p == null
                           ? child
-                          : Container(color: const Color(0xFF1A1A1A)),
-                      errorBuilder: (_, __, ___) => _defaultCover(),
+                          : Container(color: context.fitlek.card2),
+                      errorBuilder: (_, __, ___) => _defaultCover(context),
                     )
-                  : _defaultCover(),
+                  : _defaultCover(context),
             ),
             Expanded(
               child: Padding(
@@ -1596,8 +1570,8 @@ class _AdvisorCard extends StatelessWidget {
                         Expanded(
                           child: Text(
                             advisor.fullName,
-                            style: const TextStyle(
-                              color: Colors.white,
+                            style: TextStyle(
+                              color: Theme.of(context).colorScheme.onSurface,
                               fontWeight: FontWeight.w800,
                               fontSize: 14,
                             ),
@@ -1606,22 +1580,32 @@ class _AdvisorCard extends StatelessWidget {
                           ),
                         ),
                         if (advisor.isApproved)
-                          const Icon(Icons.verified_rounded, color: _lime, size: 14),
+                          Icon(Icons.verified_rounded,
+                              color: Theme.of(context).colorScheme.primary,
+                              size: 14),
                       ],
                     ),
                     const SizedBox(height: 5),
                     Container(
-                      padding:
-                          const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 7, vertical: 3),
                       decoration: BoxDecoration(
-                        color: _lime.withOpacity(0.1),
+                        color: Theme.of(context)
+                            .colorScheme
+                            .primary
+                            .withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(5),
-                        border: Border.all(color: _lime.withOpacity(0.25), width: 1),
+                        border: Border.all(
+                            color: Theme.of(context)
+                                .colorScheme
+                                .primary
+                                .withValues(alpha: 0.25),
+                            width: 1),
                       ),
                       child: Text(
                         advisor.specialty.toUpperCase(),
-                        style: const TextStyle(
-                          color: _lime,
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.primary,
                           fontSize: 9,
                           fontWeight: FontWeight.w800,
                           letterSpacing: 1.2,
@@ -1630,16 +1614,16 @@ class _AdvisorCard extends StatelessWidget {
                     ),
                     const Spacer(),
                     Container(
-                      padding:
-                          const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 5),
                       decoration: BoxDecoration(
-                        color: _lime,
+                        color: Theme.of(context).colorScheme.primary,
                         borderRadius: BorderRadius.circular(7),
                       ),
-                      child: const Text(
-                        'VOIR LES COACHS',
+                      child: Text(
+                        'VIEW COACHES',
                         style: TextStyle(
-                          color: Colors.black,
+                          color: Theme.of(context).colorScheme.onPrimary,
                           fontWeight: FontWeight.w900,
                           fontSize: 9,
                           letterSpacing: 1,
@@ -1656,12 +1640,12 @@ class _AdvisorCard extends StatelessWidget {
     );
   }
 
-  Widget _defaultCover() => Container(
-        color: const Color(0xFF1A1A1A),
+  Widget _defaultCover(BuildContext context) => Container(
+        color: context.fitlek.card2,
         child: Center(
           child: Icon(
             Icons.business_rounded,
-            color: _lime.withOpacity(0.3),
+            color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3),
             size: 36,
           ),
         ),

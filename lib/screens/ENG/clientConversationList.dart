@@ -4,72 +4,8 @@ import 'package:http/http.dart' as http;
 
 import 'clientConversation.dart';
 
-const _lime = Color(0xFFC6F135);
-const _dark = Color(0xFF0A0A0A);
-const _card = Color(0xFF141414);
-const _cardBorder = Color(0xFF232323);
-const _baseUrl = 'http://192.168.0.232:3000/api';
-
-class _FitlekLogoPainter extends CustomPainter {
-  final Color strokeColor;
-  final Color circleColor;
-
-  const _FitlekLogoPainter({required this.strokeColor, required this.circleColor});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final scaleX = size.width / 132;
-    final scaleY = size.height / 120;
-    canvas.save();
-    canvas.scale(scaleX, scaleY);
-
-    canvas.drawCircle(const Offset(65.6104, 17.25), 17.25, Paint()..color = circleColor);
-
-    final path = Path()
-      ..moveTo(5.8103, 21.85)
-      ..cubicTo(19.2827, 35.9, 45.0007, 47.25, 64.4603, 47.7336)
-      ..moveTo(125.41, 21.85)
-      ..cubicTo(112.388, 36.0329, 83.709, 48.212, 64.4603, 47.7336)
-      ..moveTo(64.4603, 47.7336)
-      ..lineTo(64.4603, 106.95)
-      ..cubicTo(87.8436, 95.8333, 128.4, 73.37, 103.56, 72.45)
-      ..cubicTo(78.7203, 71.53, 36.477, 72.0666, 18.4603, 72.45);
-
-    canvas.drawPath(
-      path,
-      Paint()
-        ..color = strokeColor
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 16.1
-        ..strokeCap = StrokeCap.round,
-    );
-    canvas.restore();
-  }
-
-  @override
-  bool shouldRepaint(covariant _FitlekLogoPainter oldDelegate) => false;
-}
-
-class _LogoWatermark extends StatelessWidget {
-  final double size;
-  const _LogoWatermark({this.size = 360});
-
-  @override
-  Widget build(BuildContext context) {
-    return IgnorePointer(
-      child: Opacity(
-        opacity: 0.04,
-        child: SizedBox(
-          width: size,
-          height: size * 120 / 132,
-          child: CustomPaint(
-            painter: _FitlekLogoPainter(strokeColor: Colors.white, circleColor: _lime),
-          ),
-        ),
-      ),
-    );
-  }
-}
+import '../../theme/fitlek_theme_extension.dart';
+const _baseUrl = 'http://localhost:3000/api';
 
 class _ConversationItem {
   final int id;
@@ -92,7 +28,7 @@ class _ConversationItem {
         id: j['id'],
         coachID: j['coachID'],
         clientID: j['clientID'],
-        otherName: j['otherName'] ?? 'Inconnu',
+        otherName: j['otherName'] ?? 'Unknown',
         otherAvatar: j['otherAvatar'],
         lastMessageAt: j['lastMessageAt'] != null ? DateTime.tryParse(j['lastMessageAt']) : null,
       );
@@ -122,7 +58,7 @@ class _ClientConversationsListScreenState extends State<ClientConversationsListS
 
   Map<String, String> get _headers => {
         'Content-Type': 'application/json',
-        'Authorization': 'Bearer ' + widget.token,
+        'Authorization': 'Bearer ${widget.token}',
       };
 
   List<_ConversationItem> get _filtered {
@@ -145,7 +81,7 @@ class _ClientConversationsListScreenState extends State<ClientConversationsListS
   }
 
   String _getConversationsUrl() {
-    return _baseUrl + '/conversations?userID=' + widget.clientID.toString() + '&role=client';
+    return '$_baseUrl/conversations?userID=${widget.clientID}&role=client';
   }
 
   Future<void> _fetchConversations() async {
@@ -172,13 +108,13 @@ class _ClientConversationsListScreenState extends State<ClientConversationsListS
         });
       } else {
         setState(() {
-          _error = 'Erreur (' + res.statusCode.toString() + ')';
+          _error = 'Error (${res.statusCode})';
           _loading = false;
         });
       }
     } catch (_) {
       setState(() {
-        _error = 'Serveur inaccessible';
+        _error = 'Server unreachable';
         _loading = false;
       });
     }
@@ -216,22 +152,17 @@ class _ClientConversationsListScreenState extends State<ClientConversationsListS
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _dark,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: _buildAppBar(),
       body: Stack(
         children: [
-          Positioned(
-            right: -70,
-            bottom: -30,
-            child: _LogoWatermark(size: 380),
-          ),
           Column(
             children: [
               _buildSearchBar(),
               Expanded(
                 child: RefreshIndicator(
-                  color: _lime,
-                  backgroundColor: _card,
+                  color: Theme.of(context).colorScheme.primary,
+                  backgroundColor: context.fitlek.card,
                   onRefresh: _fetchConversations,
                   child: _buildBody(),
                 ),
@@ -245,32 +176,32 @@ class _ClientConversationsListScreenState extends State<ClientConversationsListS
 
   PreferredSizeWidget _buildAppBar() {
     return AppBar(
-      backgroundColor: _card,
+      backgroundColor: context.fitlek.card,
       elevation: 0,
       toolbarHeight: 56,
       leadingWidth: 44,
       leading: GestureDetector(
         onTap: () => Navigator.pop(context),
-        child: const Padding(
-          padding: EdgeInsets.only(left: 12),
-          child: Icon(Icons.arrow_back_ios_rounded, color: Colors.white, size: 20),
+        child: Padding(
+          padding: const EdgeInsets.only(left: 12),
+          child: Icon(Icons.arrow_back_ios_rounded, color: Theme.of(context).colorScheme.onSurface, size: 20),
         ),
       ),
-      title: const Text(
+      title: Text(
         'Messages',
         style: TextStyle(
-          color: Colors.white,
+          color: Theme.of(context).colorScheme.onSurface,
           fontSize: 17,
           fontWeight: FontWeight.w800,
           letterSpacing: -0.3,
         ),
       ),
-      actions: [
+      actions: const [
         
       ],
       bottom: PreferredSize(
         preferredSize: const Size.fromHeight(1),
-        child: Container(height: 1, color: _cardBorder),
+        child: Container(height: 1, color: context.fitlek.border),
       ),
     );
   }
@@ -281,22 +212,22 @@ class _ClientConversationsListScreenState extends State<ClientConversationsListS
       child: Container(
         height: 46,
         decoration: BoxDecoration(
-          color: _card,
+          color: context.fitlek.card,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: _cardBorder, width: 1),
+          border: Border.all(color: context.fitlek.border, width: 1),
         ),
         child: Row(
           children: [
             const SizedBox(width: 14),
-            Icon(Icons.search_rounded, color: Colors.white.withOpacity(0.3), size: 19),
+            Icon(Icons.search_rounded, color: context.fitlek.textMuted, size: 19),
             const SizedBox(width: 10),
             Expanded(
               child: TextField(
                 controller: _searchCtrl,
-                style: const TextStyle(color: Colors.white, fontSize: 13.5),
+                style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 13.5),
                 decoration: InputDecoration(
-                  hintText: 'Rechercher une conversation…',
-                  hintStyle: TextStyle(color: Colors.white.withOpacity(0.3), fontSize: 13.5),
+                  hintText: 'Search a conversation…',
+                  hintStyle: TextStyle(color: context.fitlek.textMuted, fontSize: 13.5),
                   border: InputBorder.none,
                   isCollapsed: true,
                 ),
@@ -307,7 +238,7 @@ class _ClientConversationsListScreenState extends State<ClientConversationsListS
                 onTap: () => _searchCtrl.clear(),
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 12),
-                  child: Icon(Icons.close_rounded, color: Colors.white.withOpacity(0.3), size: 18),
+                  child: Icon(Icons.close_rounded, color: context.fitlek.textMuted, size: 18),
                 ),
               ),
           ],
@@ -326,9 +257,9 @@ class _ClientConversationsListScreenState extends State<ClientConversationsListS
             margin: const EdgeInsets.fromLTRB(16, 0, 16, 8),
             height: 78,
             decoration: BoxDecoration(
-              color: _card,
+              color: context.fitlek.card,
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: _cardBorder, width: 1),
+              border: Border.all(color: context.fitlek.border, width: 1),
             ),
           ),
         ),
@@ -339,10 +270,10 @@ class _ClientConversationsListScreenState extends State<ClientConversationsListS
       return ListView(
         children: [
           const SizedBox(height: 60),
-          const Icon(Icons.error_outline_rounded, color: Colors.white24, size: 48),
+          Icon(Icons.error_outline_rounded, color: context.fitlek.textMuted, size: 48),
           const SizedBox(height: 16),
           Center(
-            child: Text(_error!, style: const TextStyle(color: Colors.white38, fontSize: 14)),
+            child: Text(_error!, style: TextStyle(color: context.fitlek.textMuted, fontSize: 14)),
           ),
           const SizedBox(height: 20),
           Center(
@@ -351,13 +282,13 @@ class _ClientConversationsListScreenState extends State<ClientConversationsListS
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                 decoration: BoxDecoration(
-                  color: _lime.withOpacity(0.1),
+                  color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: _lime.withOpacity(0.3)),
+                  border: Border.all(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3)),
                 ),
-                child: const Text(
-                  'RÉESSAYER',
-                  style: TextStyle(color: _lime, fontWeight: FontWeight.w800, fontSize: 12, letterSpacing: 1),
+                child: Text(
+                  'RETRY',
+                  style: TextStyle(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w800, fontSize: 12, letterSpacing: 1),
                 ),
               ),
             ),
@@ -376,22 +307,22 @@ class _ClientConversationsListScreenState extends State<ClientConversationsListS
             child: Container(
               width: 72,
               height: 72,
-              decoration: BoxDecoration(color: _lime.withOpacity(0.06), shape: BoxShape.circle),
-              child: Icon(Icons.chat_bubble_outline_rounded, color: _lime.withOpacity(0.3), size: 32),
+              decoration: BoxDecoration(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.06), shape: BoxShape.circle),
+              child: Icon(Icons.chat_bubble_outline_rounded, color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3), size: 32),
             ),
           ),
           const SizedBox(height: 20),
-          const Center(
+          Center(
             child: Text(
-              'Aucune conversation',
-              style: TextStyle(color: Colors.white38, fontSize: 15, fontWeight: FontWeight.w600),
+              'No conversations',
+              style: TextStyle(color: context.fitlek.textMuted, fontSize: 15, fontWeight: FontWeight.w600),
             ),
           ),
           const SizedBox(height: 8),
           Center(
             child: Text(
-              'Vos conversations apparaîtront ici',
-              style: TextStyle(color: Colors.white.withOpacity(0.2), fontSize: 13),
+              'Your conversations will appear here',
+              style: TextStyle(color: context.fitlek.textMuted, fontSize: 13),
             ),
           ),
         ],
@@ -403,13 +334,13 @@ class _ClientConversationsListScreenState extends State<ClientConversationsListS
         children: [
           const SizedBox(height: 80),
           Center(
-            child: Icon(Icons.search_off_rounded, color: Colors.white.withOpacity(0.2), size: 40),
+            child: Icon(Icons.search_off_rounded, color: context.fitlek.textMuted, size: 40),
           ),
           const SizedBox(height: 16),
           Center(
             child: Text(
-              'Aucun résultat pour "$_query"',
-              style: TextStyle(color: Colors.white.withOpacity(0.35), fontSize: 13.5),
+              'No results for "$_query"',
+              style: TextStyle(color: context.fitlek.textSecondary, fontSize: 13.5),
             ),
           ),
         ],
@@ -439,15 +370,15 @@ class _ConversationTile extends StatelessWidget {
       margin: const EdgeInsets.fromLTRB(16, 0, 16, 8),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: _cardBorder, width: 1),
+        border: Border.all(color: context.fitlek.border, width: 1),
       ),
       clipBehavior: Clip.antiAlias,
       child: Material(
-        color: _card,
+        color: context.fitlek.card,
         child: InkWell(
           onTap: onTap,
-          splashColor: _lime.withOpacity(0.06),
-          highlightColor: _lime.withOpacity(0.03),
+          splashColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.06),
+          highlightColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.03),
           child: Padding(
             padding: const EdgeInsets.all(14),
             child: Row(
@@ -455,18 +386,18 @@ class _ConversationTile extends StatelessWidget {
                 Container(
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    border: Border.all(color: _cardBorder, width: 1.5),
+                    border: Border.all(color: context.fitlek.border, width: 1.5),
                   ),
                   child: CircleAvatar(
                     radius: 26,
-                    backgroundColor: const Color(0xFF1A1A1A),
+                    backgroundColor: context.fitlek.card2,
                     backgroundImage: conversation.otherAvatar != null && conversation.otherAvatar!.isNotEmpty
                         ? NetworkImage(conversation.otherAvatar!)
                         : null,
                     child: (conversation.otherAvatar == null || conversation.otherAvatar!.isEmpty)
                         ? Text(
                             conversation.otherName.isNotEmpty ? conversation.otherName[0].toUpperCase() : '?',
-                            style: const TextStyle(color: _lime, fontSize: 18, fontWeight: FontWeight.w900),
+                            style: TextStyle(color: Theme.of(context).colorScheme.primary, fontSize: 18, fontWeight: FontWeight.w900),
                           )
                         : null,
                   ),
@@ -484,27 +415,27 @@ class _ConversationTile extends StatelessWidget {
                               conversation.otherName,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w700),
+                              style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 14, fontWeight: FontWeight.w700),
                             ),
                           ),
                           if (conversation.lastMessageAt != null)
                             Text(
                               _formatTime(conversation.lastMessageAt!),
-                              style: TextStyle(color: Colors.white.withOpacity(0.25), fontSize: 11, fontWeight: FontWeight.w400),
+                              style: TextStyle(color: context.fitlek.textMuted, fontSize: 11, fontWeight: FontWeight.w400),
                             ),
                         ],
                       ),
                       const SizedBox(height: 6),
                       Row(
                         children: [
-                          Icon(Icons.chat_bubble_outline_rounded, size: 12, color: Colors.white.withOpacity(0.25)),
+                          Icon(Icons.chat_bubble_outline_rounded, size: 12, color: context.fitlek.textMuted),
                           const SizedBox(width: 5),
                           Expanded(
                             child: Text(
-                              'Appuyez pour ouvrir la conversation',
+                              'Tap to open conversation',
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: TextStyle(color: Colors.white.withOpacity(0.35), fontSize: 12.5, fontWeight: FontWeight.w400),
+                              style: TextStyle(color: context.fitlek.textSecondary, fontSize: 12.5, fontWeight: FontWeight.w400),
                             ),
                           ),
                         ],
@@ -513,7 +444,7 @@ class _ConversationTile extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 4),
-                const Icon(Icons.chevron_right_rounded, color: Colors.white24, size: 20),
+                Icon(Icons.chevron_right_rounded, color: context.fitlek.textMuted, size: 20),
               ],
             ),
           ),
@@ -527,14 +458,14 @@ class _ConversationTile extends StatelessWidget {
     final diff = now.difference(d);
 
     if (diff.inDays == 0) {
-      return d.hour.toString().padLeft(2, '0') + ':' + d.minute.toString().padLeft(2, '0');
+      return '${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}';
     } else if (diff.inDays == 1) {
-      return 'Hier';
+      return 'Yesterday';
     } else if (diff.inDays < 7) {
-      const days = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
+      const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
       return days[d.weekday - 1];
     } else {
-      return d.day.toString().padLeft(2, '0') + '/' + d.month.toString().padLeft(2, '0');
+      return '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}';
     }
   }
 }

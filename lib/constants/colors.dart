@@ -1,6 +1,6 @@
-import 'package:flutter/material.dart';
+/// Central color exports for Fitlek.
+/// Prefer [Theme.of(context).colorScheme] and [FitlekColors] extension for theme-aware UI.
+library;
 
-const _lime = Color(0xFFC6F135);
-const _dark = Color(0xFF0A0A0A);
-const _card = Color(0xFF141414);
-const _cardBorder = Color(0xFF232323);
+export 'app_colors.dart';
+export '../theme/fitlek_theme_extension.dart';

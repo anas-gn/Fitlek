@@ -1,23 +1,20 @@
 import 'dart:convert';
-import 'dart:io';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
-import 'login.dart'; // ⚠️ adapte ce chemin vers ton fichier LoginScreen
+import 'login.dart';
+import '../../components/theme_selector.dart';
+import '../../theme/fitlek_theme_extension.dart';
+import '../../components/sirvya_logo.dart';
+// ⚠️ adapte ce chemin vers ton fichier LoginScreen
 import 'package:flutter/foundation.dart';
 import 'package:http_parser/http_parser.dart';
 // ─────────────────────────────────────────────
 //  Constants
 // ─────────────────────────────────────────────
 
-const _lime = Color(0xFFC6F135);
-const _dark = Color(0xFF0A0A0A);
-const _card = Color(0xFF141414);
-const _cardBorder = Color(0xFF232323);
-const _success = Color(0xFF4CAF50);
-const _errorRed = Color(0xFFFF5252);
-const _baseUrl = 'http://192.168.0.232:3000/api';
+const _baseUrl = 'http://localhost:3000/api';
 
 // ─────────────────────────────────────────────
 //  Models (locaux légers)
@@ -27,7 +24,7 @@ class _WeightEntry {
   final String label;
   final double weight;
   final String date;
-  const _WeightEntry(this.label, this.weight, {this.date = ''});
+  const _WeightEntry(this.label, this.weight) : date = '';
 }
 
 class _WeightStats {
@@ -48,92 +45,6 @@ class _WeightStats {
 // ─────────────────────────────────────────────
 //  ClientProfileScreen
 // ─────────────────────────────────────────────
-
-class _FitlekLogoPainter extends CustomPainter {
-  final Color strokeColor;
-  final Color circleColor;
-
-  const _FitlekLogoPainter({required this.strokeColor, required this.circleColor});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final scaleX = size.width / 132;
-    final scaleY = size.height / 120;
-    canvas.save();
-    canvas.scale(scaleX, scaleY);
-
-    canvas.drawCircle(const Offset(65.6104, 17.25), 17.25, Paint()..color = circleColor);
-
-    final path = Path()
-      ..moveTo(5.8103, 21.85)
-      ..cubicTo(19.2827, 35.9, 45.0007, 47.25, 64.4603, 47.7336)
-      ..moveTo(125.41, 21.85)
-      ..cubicTo(112.388, 36.0329, 83.709, 48.212, 64.4603, 47.7336)
-      ..moveTo(64.4603, 47.7336)
-      ..lineTo(64.4603, 106.95)
-      ..cubicTo(87.8436, 95.8333, 128.4, 73.37, 103.56, 72.45)
-      ..cubicTo(78.7203, 71.53, 36.477, 72.0666, 18.4603, 72.45);
-
-    canvas.drawPath(
-      path,
-      Paint()
-        ..color = strokeColor
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 16.1
-        ..strokeCap = StrokeCap.round,
-    );
-    canvas.restore();
-  }
-
-  @override
-  bool shouldRepaint(covariant _FitlekLogoPainter oldDelegate) => false;
-}
-
-class _FitlekLogo extends StatelessWidget {
-  final double height;
-  const _FitlekLogo({this.height = 40});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: height,
-      width: height * 132 / 120,
-      decoration: BoxDecoration(
-        boxShadow: [
-          BoxShadow(
-            color: _lime.withOpacity(0.25),
-            blurRadius: 18,
-            spreadRadius: 1,
-          ),
-        ],
-      ),
-      child: CustomPaint(
-        painter: _FitlekLogoPainter(strokeColor: Colors.white, circleColor: _lime),
-      ),
-    );
-  }
-}
-
-class _LogoWatermark extends StatelessWidget {
-  final double size;
-  const _LogoWatermark({this.size = 340});
-
-  @override
-  Widget build(BuildContext context) {
-    return IgnorePointer(
-      child: Opacity(
-        opacity: 0.035,
-        child: SizedBox(
-          width: size,
-          height: size * 120 / 132,
-          child: CustomPaint(
-            painter: _FitlekLogoPainter(strokeColor: Colors.white, circleColor: _lime),
-          ),
-        ),
-      ),
-    );
-  }
-}
 
 class ClientProfileScreen extends StatefulWidget {
   final int clientID;
@@ -172,7 +83,7 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
   final _emailCtrl = TextEditingController();
   final _heightCtrl = TextEditingController(text: '165');
   final _goalCtrl = TextEditingController(
-    text: 'Perte de poids et tonification',
+    text: 'Weight loss and toning',
   );
 
   String _selectedGender = 'Female';
@@ -183,36 +94,14 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
   _WeightStats _weightStats = const _WeightStats();
   bool _loadingWeight = false;
 
-  // ── Goals (local) ─────────────────────────────────────────────────
-  final List<Map<String, dynamic>> _goals = [
-    {
-      'title': 'Atteindre 65 kg',
-      'progress': 0.55,
-      'status': 'in_progress',
-      'deadline': 'Sep 2026',
-    },
-    {
-      'title': 'Courir 5 km',
-      'progress': 0.80,
-      'status': 'in_progress',
-      'deadline': 'Juil 2026',
-    },
-    {
-      'title': 'Faire 20 pompes',
-      'progress': 1.0,
-      'status': 'achieved',
-      'deadline': 'Mai 2026',
-    },
-  ];
-
   // ── Stats ─────────────────────────────────────────────────────────
   int _sessionsCount = 0;
 
   // ── Headers ───────────────────────────────────────────────────────
   Map<String, String> get _headers => {
-    'Content-Type': 'application/json',
-    'Authorization': 'Bearer ${widget.token}',
-  };
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ${widget.token}',
+      };
 
   double? _parseDouble(dynamic value) {
     if (value == null) return null;
@@ -273,18 +162,20 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
         if (mounted) setState(() => _loadingProfile = false);
       } else {
         final body = jsonDecode(res.body);
-        if (mounted)
+        if (mounted) {
           setState(() {
-            _loadError = body['error'] ?? 'Erreur serveur (${res.statusCode})';
+            _loadError = body['error'] ?? 'Server error (${res.statusCode})';
             _loadingProfile = false;
           });
+        }
       }
     } catch (e) {
-      if (mounted)
+      if (mounted) {
         setState(() {
-          _loadError = 'Impossible de joindre le serveur.';
+          _loadError = 'Unable to reach the server.';
           _loadingProfile = false;
         });
+      }
     }
   }
 
@@ -362,7 +253,7 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
 
       if (statsRes.statusCode == 200) {
         final s = jsonDecode(statsRes.body) as Map<String, dynamic>;
-        if (mounted)
+        if (mounted) {
           setState(
             () => _weightStats = _WeightStats(
               current: _parseDouble(s['currentWeight']),
@@ -372,6 +263,7 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
               total: (s['totalEntries'] as num?)?.toInt() ?? 0,
             ),
           );
+        }
       } else {
         debugPrint(
           '❌ Weight stats status: ${statsRes.statusCode} body: ${statsRes.body}',
@@ -387,6 +279,7 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
   // ── POST weight entry ─────────────────────────────────────────────
 
   Future<void> _addWeight(double weight) async {
+    final errorColor = context.fitlek.error;
     try {
       final res = await http
           .post(
@@ -397,19 +290,20 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
           .timeout(const Duration(seconds: 10));
 
       if (res.statusCode == 201) {
-        _showSnack('Poids enregistré ✓');
+        _showSnack('Weight saved ✓');
         await _fetchWeightData(); // refresh
       } else {
-        _showSnack('Erreur lors de l\'enregistrement', color: _errorRed);
+        _showSnack('Error while saving', color: errorColor);
       }
     } catch (_) {
-      _showSnack('Impossible de joindre le serveur.', color: _errorRed);
+      _showSnack('Unable to reach the server.', color: errorColor);
     }
   }
 
   // ── Avatar upload ─────────────────────────────────────────────────
 
   Future<void> _pickAndUploadAvatar() async {
+    final errorColor = context.fitlek.error;
     final picker = ImagePicker();
     final XFile? file = await picker.pickImage(
       source: ImageSource.gallery,
@@ -433,8 +327,8 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
         final mime = ext == 'png'
             ? 'image/png'
             : ext == 'webp'
-            ? 'image/webp'
-            : 'image/jpeg';
+                ? 'image/webp'
+                : 'image/jpeg';
 
         request.files.add(
           http.MultipartFile.fromBytes(
@@ -451,8 +345,8 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
       }
 
       final streamedRes = await request.send().timeout(
-        const Duration(seconds: 30),
-      );
+            const Duration(seconds: 30),
+          );
       final res = await http.Response.fromStream(streamedRes);
 
       if (res.statusCode == 200) {
@@ -475,13 +369,13 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
             .timeout(const Duration(seconds: 10));
 
         if (mounted) setState(() => _avatarUrl = newUrl);
-        _showSnack('Photo de profil mise à jour ✓');
+        _showSnack('Profile photo updated ✓');
       } else {
         final body = jsonDecode(res.body);
-        _showSnack(body['error'] ?? 'Erreur upload', color: _errorRed);
+        _showSnack(body['error'] ?? 'Upload error', color: errorColor);
       }
     } catch (e) {
-      _showSnack('Erreur : $e', color: _errorRed);
+      _showSnack('Error: $e', color: errorColor);
     } finally {
       if (mounted) setState(() => _uploadingAvatar = false);
     }
@@ -490,6 +384,7 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
   // ── PUT /api/clients/me ───────────────────────────────────────────
 
   Future<void> _saveProfile() async {
+    final errorColor = context.fitlek.error;
     setState(() => _saving = true);
     try {
       final res = await http
@@ -508,12 +403,13 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
           .timeout(const Duration(seconds: 10));
 
       if (res.statusCode == 200) {
-        if (mounted)
+        if (mounted) {
           setState(() {
             _isEditing = false;
             _saveSuccess = true;
             _saving = false;
           });
+        }
         Future.delayed(const Duration(seconds: 2), () {
           if (mounted) setState(() => _saveSuccess = false);
         });
@@ -521,13 +417,13 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
         final data = jsonDecode(res.body);
         if (mounted) setState(() => _saving = false);
         _showSnack(
-          data['error'] ?? 'Erreur lors de la sauvegarde.',
-          color: _errorRed,
+          data['error'] ?? 'Error while saving.',
+          color: errorColor,
         );
       }
     } catch (e) {
       if (mounted) setState(() => _saving = false);
-      _showSnack('Impossible de joindre le serveur.', color: _errorRed);
+      _showSnack('Unable to reach the server.', color: errorColor);
     }
   }
 
@@ -546,11 +442,12 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
     );
   }
 
-  void _showSnack(String msg, {Color color = _success}) {
+  void _showSnack(String msg, {Color? color}) {
+    final snackColor = color ?? context.fitlek.success;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(msg, style: const TextStyle(fontWeight: FontWeight.w600)),
-        backgroundColor: color.withOpacity(0.9),
+        backgroundColor: snackColor.withValues(alpha: 0.9),
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         duration: const Duration(seconds: 3),
@@ -561,11 +458,11 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
   String _genderDisplay(String g) {
     switch (g) {
       case 'Male':
-        return 'Homme';
+        return 'Male';
       case 'Female':
-        return 'Femme';
+        return 'Female';
       default:
-        return 'Autre';
+        return 'Other';
     }
   }
 
@@ -597,19 +494,19 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
             final confirm = confirmCtrl.text.trim();
 
             if (oldPass.isEmpty || newPass.isEmpty || confirm.isEmpty) {
-              setSheetState(() => errorMsg = 'Tous les champs sont requis.');
+              setSheetState(() => errorMsg = 'All fields are required.');
               return;
             }
             if (newPass.length < 6) {
               setSheetState(
                 () => errorMsg =
-                    'Le nouveau mot de passe doit contenir au moins 6 caractères.',
+                    'The new password must be at least 6 characters.',
               );
               return;
             }
             if (newPass != confirm) {
               setSheetState(
-                () => errorMsg = 'Les mots de passe ne correspondent pas.',
+                () => errorMsg = 'Passwords do not match.',
               );
               return;
             }
@@ -633,19 +530,19 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                   .timeout(const Duration(seconds: 10));
 
               if (res.statusCode == 200) {
-                if (mounted) Navigator.pop(ctx);
-                _showSnack('Mot de passe mis à jour ✓');
+                if (ctx.mounted) Navigator.pop(ctx);
+                _showSnack('Password updated ✓');
               } else {
                 final data = jsonDecode(res.body);
                 setSheetState(() {
                   saving = false;
-                  errorMsg = data['error'] ?? 'Erreur lors de la mise à jour.';
+                  errorMsg = data['error'] ?? 'Error while updating.';
                 });
               }
             } catch (e) {
               setSheetState(() {
                 saving = false;
-                errorMsg = 'Impossible de joindre le serveur.';
+                errorMsg = 'Unable to reach the server.';
               });
             }
           }
@@ -660,18 +557,20 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
               margin: const EdgeInsets.only(bottom: 12),
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
               decoration: BoxDecoration(
-                color: _dark,
+                color: Theme.of(context).scaffoldBackgroundColor,
                 borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: _cardBorder),
+                border: Border.all(color: context.fitlek.border),
               ),
               child: TextField(
                 controller: c,
                 obscureText: obscure,
-                style: const TextStyle(color: Colors.white, fontSize: 13),
+                style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurface,
+                    fontSize: 13),
                 decoration: InputDecoration(
                   labelText: label,
-                  labelStyle: const TextStyle(
-                    color: Colors.white38,
+                  labelStyle: TextStyle(
+                    color: context.fitlek.textMuted,
                     fontSize: 12,
                   ),
                   border: InputBorder.none,
@@ -680,7 +579,7 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                       obscure
                           ? Icons.visibility_off_rounded
                           : Icons.visibility_rounded,
-                      color: Colors.white24,
+                      color: context.fitlek.textMuted,
                       size: 18,
                     ),
                     onPressed: toggle,
@@ -696,9 +595,10 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
             ),
             child: Container(
               padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
-              decoration: const BoxDecoration(
-                color: _card,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+              decoration: BoxDecoration(
+                color: context.fitlek.card,
+                borderRadius:
+                    const BorderRadius.vertical(top: Radius.circular(20)),
               ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -707,7 +607,7 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                     width: 40,
                     height: 4,
                     decoration: BoxDecoration(
-                      color: Colors.white12,
+                      color: context.fitlek.border,
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
@@ -718,20 +618,23 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                         width: 36,
                         height: 36,
                         decoration: BoxDecoration(
-                          color: _lime.withOpacity(0.1),
+                          color: Theme.of(context)
+                              .colorScheme
+                              .primary
+                              .withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(10),
                         ),
-                        child: const Icon(
+                        child: Icon(
                           Icons.lock_rounded,
-                          color: _lime,
+                          color: Theme.of(context).colorScheme.primary,
                           size: 18,
                         ),
                       ),
                       const SizedBox(width: 12),
-                      const Text(
-                        'Changer le mot de passe',
+                      Text(
+                        'Change password',
                         style: TextStyle(
-                          color: Colors.white,
+                          color: Theme.of(context).colorScheme.onSurface,
                           fontSize: 16,
                           fontWeight: FontWeight.w800,
                         ),
@@ -740,19 +643,19 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                   ),
                   const SizedBox(height: 20),
                   passwordField(
-                    'Mot de passe actuel',
+                    'Current password',
                     oldCtrl,
                     obscureOld,
                     () => setSheetState(() => obscureOld = !obscureOld),
                   ),
                   passwordField(
-                    'Nouveau mot de passe',
+                    'New password',
                     newCtrl,
                     obscureNew,
                     () => setSheetState(() => obscureNew = !obscureNew),
                   ),
                   passwordField(
-                    'Confirmer le mot de passe',
+                    'Confirm password',
                     confirmCtrl,
                     obscureConfirm,
                     () => setSheetState(() => obscureConfirm = !obscureConfirm),
@@ -761,17 +664,17 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                     const SizedBox(height: 4),
                     Row(
                       children: [
-                        const Icon(
+                        Icon(
                           Icons.error_outline_rounded,
-                          color: _errorRed,
+                          color: context.fitlek.error,
                           size: 14,
                         ),
                         const SizedBox(width: 6),
                         Expanded(
                           child: Text(
                             errorMsg!,
-                            style: const TextStyle(
-                              color: _errorRed,
+                            style: TextStyle(
+                              color: context.fitlek.error,
                               fontSize: 12,
                             ),
                           ),
@@ -787,23 +690,30 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                       width: double.infinity,
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       decoration: BoxDecoration(
-                        color: saving ? _lime.withOpacity(0.4) : _lime,
+                        color: saving
+                            ? Theme.of(context)
+                                .colorScheme
+                                .primary
+                                .withValues(alpha: 0.4)
+                            : Theme.of(context).colorScheme.primary,
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Center(
                         child: saving
-                            ? const SizedBox(
+                            ? SizedBox(
                                 width: 20,
                                 height: 20,
                                 child: CircularProgressIndicator(
-                                  color: Colors.black,
+                                  color:
+                                      Theme.of(context).colorScheme.onPrimary,
                                   strokeWidth: 2,
                                 ),
                               )
-                            : const Text(
-                                'METTRE À JOUR',
+                            : Text(
+                                'UPDATE',
                                 style: TextStyle(
-                                  color: Colors.black,
+                                  color:
+                                      Theme.of(context).colorScheme.onPrimary,
                                   fontWeight: FontWeight.w900,
                                   fontSize: 13,
                                   letterSpacing: 1.2,
@@ -830,222 +740,224 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
     return _buildContent();
   }
 
-  Widget _buildLoading() => const Scaffold(
-    backgroundColor: _dark,
-    body: Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          SizedBox(
-            width: 28,
-            height: 28,
-            child: CircularProgressIndicator(color: _lime, strokeWidth: 2),
+  Widget _buildLoading() => Scaffold(
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        body: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SizedBox(
+                width: 28,
+                height: 28,
+                child: CircularProgressIndicator(
+                    color: Theme.of(context).colorScheme.primary,
+                    strokeWidth: 2),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Loading profile...',
+                style: TextStyle(color: context.fitlek.textMuted, fontSize: 13),
+              ),
+            ],
           ),
-          SizedBox(height: 16),
-          Text(
-            'Chargement du profil...',
-            style: TextStyle(color: Colors.white38, fontSize: 13),
-          ),
-        ],
-      ),
-    ),
-  );
+        ),
+      );
 
   Widget _buildError() => Scaffold(
-    backgroundColor: _dark,
-    body: Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(Icons.wifi_off_rounded, color: Colors.white12, size: 52),
-          const SizedBox(height: 16),
-          Text(
-            _loadError!,
-            style: const TextStyle(color: Colors.white38, fontSize: 13),
-          ),
-          const SizedBox(height: 20),
-          GestureDetector(
-            onTap: _fetchProfile,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-              decoration: BoxDecoration(
-                color: _lime.withOpacity(0.12),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: _lime.withOpacity(0.4)),
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        body: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.wifi_off_rounded,
+                  color: context.fitlek.textMuted, size: 52),
+              const SizedBox(height: 16),
+              Text(
+                _loadError!,
+                style: TextStyle(color: context.fitlek.textMuted, fontSize: 13),
               ),
-              child: const Text(
-                'Réessayer',
-                style: TextStyle(
-                  color: _lime,
-                  fontWeight: FontWeight.w700,
-                  fontSize: 13,
+              const SizedBox(height: 20),
+              GestureDetector(
+                onTap: _fetchProfile,
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context)
+                        .colorScheme
+                        .primary
+                        .withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                        color: Theme.of(context)
+                            .colorScheme
+                            .primary
+                            .withValues(alpha: 0.4)),
+                  ),
+                  child: Text(
+                    'Retry',
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.primary,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 13,
+                    ),
+                  ),
                 ),
               ),
-            ),
+            ],
           ),
-        ],
-      ),
-    ),
-  );
+        ),
+      );
 
   Widget _buildContent() => Scaffold(
-    backgroundColor: _dark,
-    body: SafeArea(
-      child: Column(
-        children: [
-          _buildHeader(),
-          _buildProfileHero(),
-          _buildStatsRow(),
-          _buildTabBar(),
-          Expanded(
-            child: TabBarView(
-              controller: _tabController,
-              children: [_buildProfileTab(), _buildProgressTab()],
-            ),
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        body: SafeArea(
+          child: Column(
+            children: [
+              _buildHeader(),
+              _buildProfileHero(),
+              _buildStatsRow(),
+              _buildTabBar(),
+              Expanded(
+                child: TabBarView(
+                  controller: _tabController,
+                  children: [_buildProfileTab(), _buildProgressTab()],
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
-    ),
-  );
+        ),
+      );
 
   // ── Header ────────────────────────────────────────────────────────
 
   Widget _buildHeader() => Padding(
-    padding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
-    child: Row(
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        const _FitlekLogo(height: 36),
-        const SizedBox(width: 10),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        padding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            RichText(
-              text: const TextSpan(
-                children: [
-                  TextSpan(
-                    text: 'FIT',
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w900,
-                      color: _lime,
-                      letterSpacing: 2.5,
-                    ),
+            const SirvyaLogo(variant: SirvyaLogoVariant.wordmark, height: 28),
+            const SizedBox(width: 10),
+            Text('My profile',
+                style: TextStyle(
+                    color: context.fitlek.textSecondary,
+                    fontSize: 13,
+                    letterSpacing: 0.5,
+                    fontWeight: FontWeight.w600)),
+            const Spacer(),
+            if (_isPremium)
+              Container(
+                margin: const EdgeInsets.only(right: 10),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                  color: context.fitlek.premium.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                    color: context.fitlek.premium.withValues(alpha: 0.4),
                   ),
-                  TextSpan(
-                    text: 'LEK',
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w900,
-                      color: Colors.white,
-                      letterSpacing: 2.5,
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.workspace_premium_rounded,
+                      color: context.fitlek.premium,
+                      size: 12,
                     ),
-                  ),
-                ],
+                    const SizedBox(width: 5),
+                    Text(
+                      'PREMIUM',
+                      style: TextStyle(
+                        color: context.fitlek.premium,
+                        fontSize: 9,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 1.2,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            if (_saveSuccess)
+              Container(
+                margin: const EdgeInsets.only(right: 8),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: context.fitlek.success.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(
+                      color: context.fitlek.success.withValues(alpha: 0.4)),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.check_circle_rounded,
+                        color: context.fitlek.success, size: 13),
+                    const SizedBox(width: 6),
+                    Text(
+                      'Saved',
+                      style: TextStyle(
+                        color: context.fitlek.success,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            GestureDetector(
+              onTap: _saving ? null : _toggleEdit,
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                decoration: BoxDecoration(
+                  color: _isEditing
+                      ? Theme.of(context).colorScheme.primary
+                      : context.fitlek.card,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                      color: _isEditing
+                          ? Theme.of(context).colorScheme.primary
+                          : context.fitlek.border),
+                ),
+                child: _saving
+                    ? SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(
+                          color: Theme.of(context).colorScheme.onPrimary,
+                          strokeWidth: 2,
+                        ),
+                      )
+                    : Row(
+                        children: [
+                          Icon(
+                            _isEditing
+                                ? Icons.save_rounded
+                                : Icons.edit_rounded,
+                            color: _isEditing
+                                ? Theme.of(context).colorScheme.onPrimary
+                                : context.fitlek.textSecondary,
+                            size: 14,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            _isEditing ? 'Save' : 'Edit',
+                            style: TextStyle(
+                              color: _isEditing
+                                  ? Theme.of(context).colorScheme.onPrimary
+                                  : context.fitlek.textSecondary,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ],
+                      ),
               ),
             ),
-            const SizedBox(height: 2),
-            const Text('Mon profil', style: TextStyle(color: Colors.white54, fontSize: 12, letterSpacing: 0.5)),
           ],
         ),
-        const Spacer(),
-        if (_isPremium)
-          Container(
-            margin: const EdgeInsets.only(right: 10),
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-            decoration: BoxDecoration(
-              color: const Color(0xFFFFD700).withOpacity(0.12),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(
-                color: const Color(0xFFFFD700).withOpacity(0.4),
-              ),
-            ),
-            child: const Row(
-              children: [
-                Icon(
-                  Icons.workspace_premium_rounded,
-                  color: Color(0xFFFFD700),
-                  size: 12,
-                ),
-                SizedBox(width: 5),
-                Text(
-                  'PREMIUM',
-                  style: TextStyle(
-                    color: Color(0xFFFFD700),
-                    fontSize: 9,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 1.2,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        if (_saveSuccess)
-          Container(
-            margin: const EdgeInsets.only(right: 8),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              color: _success.withOpacity(0.15),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: _success.withOpacity(0.4)),
-            ),
-            child: const Row(
-              children: [
-                Icon(Icons.check_circle_rounded, color: _success, size: 13),
-                SizedBox(width: 6),
-                Text(
-                  'Sauvegardé',
-                  style: TextStyle(
-                    color: _success,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        GestureDetector(
-          onTap: _saving ? null : _toggleEdit,
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-            decoration: BoxDecoration(
-              color: _isEditing ? _lime : _card,
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: _isEditing ? _lime : _cardBorder),
-            ),
-            child: _saving
-                ? const SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(
-                      color: Colors.black,
-                      strokeWidth: 2,
-                    ),
-                  )
-                : Row(
-                    children: [
-                      Icon(
-                        _isEditing ? Icons.save_rounded : Icons.edit_rounded,
-                        color: _isEditing ? Colors.black : Colors.white54,
-                        size: 14,
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        _isEditing ? 'Sauvegarder' : 'Modifier',
-                        style: TextStyle(
-                          color: _isEditing ? Colors.black : Colors.white54,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ],
-                  ),
-          ),
-        ),
-      ],
-    ),
-  );
+      );
 
   // ── Profile hero avec avatar cliquable ────────────────────────────
 
@@ -1063,34 +975,36 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                 Container(
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    border: Border.all(color: _lime, width: 2.5),
+                    border: Border.all(
+                        color: Theme.of(context).colorScheme.primary,
+                        width: 2.5),
                   ),
                   child: _uploadingAvatar
-                      ? const CircleAvatar(
+                      ? CircleAvatar(
                           radius: 36,
-                          backgroundColor: Color(0xFF1A1A1A),
+                          backgroundColor: context.fitlek.card2,
                           child: SizedBox(
                             width: 20,
                             height: 20,
                             child: CircularProgressIndicator(
-                              color: _lime,
+                              color: Theme.of(context).colorScheme.primary,
                               strokeWidth: 2,
                             ),
                           ),
                         )
                       : CircleAvatar(
                           radius: 36,
-                          backgroundColor: const Color(0xFF1A1A1A),
-                          backgroundImage: hasAvatar
-                              ? NetworkImage(_avatarUrl!)
-                              : null,
+                          backgroundColor: context.fitlek.card2,
+                          backgroundImage:
+                              hasAvatar ? NetworkImage(_avatarUrl!) : null,
                           child: !hasAvatar
                               ? Text(
                                   _firstNameCtrl.text.isNotEmpty
                                       ? _firstNameCtrl.text[0].toUpperCase()
                                       : '?',
-                                  style: const TextStyle(
-                                    color: _lime,
+                                  style: TextStyle(
+                                    color:
+                                        Theme.of(context).colorScheme.primary,
                                     fontSize: 28,
                                     fontWeight: FontWeight.w900,
                                   ),
@@ -1106,13 +1020,17 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                     width: 26,
                     height: 26,
                     decoration: BoxDecoration(
-                      color: _uploadingAvatar ? Colors.grey : _lime,
+                      color: _uploadingAvatar
+                          ? Colors.grey
+                          : Theme.of(context).colorScheme.primary,
                       shape: BoxShape.circle,
-                      border: Border.all(color: _dark, width: 2),
+                      border: Border.all(
+                          color: Theme.of(context).scaffoldBackgroundColor,
+                          width: 2),
                     ),
-                    child: const Icon(
+                    child: Icon(
                       Icons.camera_alt_rounded,
-                      color: Colors.black,
+                      color: Theme.of(context).colorScheme.onPrimary,
                       size: 12,
                     ),
                   ),
@@ -1127,8 +1045,8 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
               children: [
                 Text(
                   '${_firstNameCtrl.text} ${_lastNameCtrl.text}'.trim(),
-                  style: const TextStyle(
-                    color: Colors.white,
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurface,
                     fontSize: 20,
                     fontWeight: FontWeight.w900,
                     letterSpacing: -0.5,
@@ -1137,7 +1055,8 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                 const SizedBox(height: 4),
                 Text(
                   _emailCtrl.text,
-                  style: const TextStyle(color: Colors.white38, fontSize: 12),
+                  style:
+                      TextStyle(color: context.fitlek.textMuted, fontSize: 12),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
@@ -1148,15 +1067,16 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                     vertical: 4,
                   ),
                   decoration: BoxDecoration(
-                    color: _lime.withOpacity(0.1),
+                    color: Theme.of(context)
+                        .colorScheme
+                        .primary
+                        .withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(6),
                   ),
                   child: Text(
-                    _goalCtrl.text.isNotEmpty
-                        ? _goalCtrl.text
-                        : 'Objectif non défini',
-                    style: const TextStyle(
-                      color: _lime,
+                    _goalCtrl.text.isNotEmpty ? _goalCtrl.text : 'No goal set',
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.primary,
                       fontSize: 10,
                       fontWeight: FontWeight.w700,
                     ),
@@ -1179,16 +1099,16 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
         _weightStats.current ?? double.tryParse(_heightCtrl.text) ?? 68.0;
     final stats = [
       {
-        'label': 'Séances',
+        'label': 'Sessions',
         'value': '$_sessionsCount',
         'icon': Icons.bolt_rounded,
       },
       {
-        'label': 'Poids',
+        'label': 'Weight',
         'value': '${currentW.toStringAsFixed(1)} kg',
         'icon': Icons.monitor_weight_rounded,
       },
-      {'label': 'IMC', 'value': _calcBMI(), 'icon': Icons.favorite_rounded},
+      {'label': 'BMI', 'value': _calcBMI(), 'icon': Icons.favorite_rounded},
     ];
     return Padding(
       padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
@@ -1204,26 +1124,28 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                   ),
                   padding: const EdgeInsets.symmetric(vertical: 10),
                   decoration: BoxDecoration(
-                    color: _card,
+                    color: context.fitlek.card,
                     borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: _cardBorder),
+                    border: Border.all(color: context.fitlek.border),
                   ),
                   child: Column(
                     children: [
-                      Icon(e.value['icon'] as IconData, color: _lime, size: 16),
+                      Icon(e.value['icon'] as IconData,
+                          color: Theme.of(context).colorScheme.primary,
+                          size: 16),
                       const SizedBox(height: 4),
                       Text(
                         e.value['value'] as String,
-                        style: const TextStyle(
-                          color: Colors.white,
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.onSurface,
                           fontSize: 12,
                           fontWeight: FontWeight.w900,
                         ),
                       ),
                       Text(
                         e.value['label'] as String,
-                        style: const TextStyle(
-                          color: Colors.white38,
+                        style: TextStyle(
+                          color: context.fitlek.textMuted,
                           fontSize: 9,
                         ),
                       ),
@@ -1240,40 +1162,40 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
   // ── Tab bar ───────────────────────────────────────────────────────
 
   Widget _buildTabBar() => Padding(
-    padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
-    child: Container(
-      height: 42,
-      decoration: BoxDecoration(
-        color: _card,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: _cardBorder),
-      ),
-      child: TabBar(
-        controller: _tabController,
-        indicator: BoxDecoration(
-          color: _lime,
-          borderRadius: BorderRadius.circular(8),
+        padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
+        child: Container(
+          height: 42,
+          decoration: BoxDecoration(
+            color: context.fitlek.card,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: context.fitlek.border),
+          ),
+          child: TabBar(
+            controller: _tabController,
+            indicator: BoxDecoration(
+              color: Theme.of(context).colorScheme.primary,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            indicatorSize: TabBarIndicatorSize.tab,
+            dividerColor: Colors.transparent,
+            labelColor: Theme.of(context).colorScheme.onPrimary,
+            unselectedLabelColor: context.fitlek.textMuted,
+            labelStyle: const TextStyle(
+              fontWeight: FontWeight.w800,
+              fontSize: 10,
+              letterSpacing: 0.8,
+            ),
+            unselectedLabelStyle: const TextStyle(
+              fontWeight: FontWeight.w500,
+              fontSize: 10,
+            ),
+            tabs: const [
+              Tab(text: 'PROFILE'),
+              Tab(text: 'PROGRESS'),
+            ],
+          ),
         ),
-        indicatorSize: TabBarIndicatorSize.tab,
-        dividerColor: Colors.transparent,
-        labelColor: Colors.black,
-        unselectedLabelColor: Colors.white38,
-        labelStyle: const TextStyle(
-          fontWeight: FontWeight.w800,
-          fontSize: 10,
-          letterSpacing: 0.8,
-        ),
-        unselectedLabelStyle: const TextStyle(
-          fontWeight: FontWeight.w500,
-          fontSize: 10,
-        ),
-        tabs: const [
-          Tab(text: 'PROFIL'),
-          Tab(text: 'PROGRESSION'),
-        ],
-      ),
-    ),
-  );
+      );
 
   // ── ONGLET 1 : Profil ─────────────────────────────────────────────
 
@@ -1281,10 +1203,10 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
     return ListView(
       padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
       children: [
-        _sectionLabel('INFORMATIONS PERSONNELLES'),
+        _sectionLabel('PERSONAL INFORMATION'),
         const SizedBox(height: 12),
-        _formRow('Prénom', _firstNameCtrl, Icons.person_rounded),
-        _formRow('Nom', _lastNameCtrl, Icons.person_outline_rounded),
+        _formRow('First name', _firstNameCtrl, Icons.person_rounded),
+        _formRow('Last name', _lastNameCtrl, Icons.person_outline_rounded),
         _formRow(
           'Email',
           _emailCtrl,
@@ -1292,54 +1214,58 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
           keyboardType: TextInputType.emailAddress,
         ),
         const SizedBox(height: 20),
-        _sectionLabel('DONNÉES FITNESS'),
+        _sectionLabel('FITNESS DATA'),
         const SizedBox(height: 12),
         _buildGenderSelector(),
         _formRow(
-          'Taille (cm)',
+          'Height (cm)',
           _heightCtrl,
           Icons.height_rounded,
           keyboardType: TextInputType.number,
         ),
         _formRow(
-          'Objectif fitness',
+          'Fitness goal',
           _goalCtrl,
           Icons.flag_rounded,
           maxLines: 2,
         ),
         const SizedBox(height: 20),
-        _sectionLabel('SÉCURITÉ'),
+        _sectionLabel('SECURITY'),
         const SizedBox(height: 12),
         _actionTile(
           Icons.lock_rounded,
-          'Changer le mot de passe',
+          'Change password',
           onTap: _showChangePasswordSheet,
         ),
         _actionTile(
           Icons.notifications_rounded,
-          'Préférences de notification',
+          'Notification preferences',
           onTap: () {},
         ),
-        _actionTile(Icons.language_rounded, 'Langue — Français', onTap: () {}),
+        _actionTile(Icons.language_rounded, 'Language — English', onTap: () {}),
+        const SizedBox(height: 12),
+        ThemeSelectorTile(controller: ThemeControllerScope.of(context)),
         const SizedBox(height: 20),
         GestureDetector(
           onTap: _goToLogin,
           child: Container(
             padding: const EdgeInsets.symmetric(vertical: 14),
             decoration: BoxDecoration(
-              color: _errorRed.withOpacity(0.08),
+              color: context.fitlek.error.withValues(alpha: 0.08),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: _errorRed.withOpacity(0.25)),
+              border: Border.all(
+                  color: context.fitlek.error.withValues(alpha: 0.25)),
             ),
-            child: const Row(
+            child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.logout_rounded, color: _errorRed, size: 16),
-                SizedBox(width: 8),
+                Icon(Icons.logout_rounded,
+                    color: context.fitlek.error, size: 16),
+                const SizedBox(width: 8),
                 Text(
-                  'SE DÉCONNECTER',
+                  'LOG OUT',
                   style: TextStyle(
-                    color: _errorRed,
+                    color: context.fitlek.error,
                     fontWeight: FontWeight.w800,
                     fontSize: 12,
                     letterSpacing: 1.5,
@@ -1358,10 +1284,12 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
-        color: _card,
+        color: context.fitlek.card,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: _isEditing ? _lime.withOpacity(0.3) : _cardBorder,
+          color: _isEditing
+              ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.3)
+              : context.fitlek.border,
         ),
       ),
       child: Row(
@@ -1370,15 +1298,17 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
             width: 32,
             height: 32,
             decoration: BoxDecoration(
-              color: _lime.withOpacity(0.08),
+              color:
+                  Theme.of(context).colorScheme.primary.withValues(alpha: 0.08),
               borderRadius: BorderRadius.circular(8),
             ),
-            child: const Icon(Icons.wc_rounded, color: _lime, size: 15),
+            child: Icon(Icons.wc_rounded,
+                color: Theme.of(context).colorScheme.primary, size: 15),
           ),
           const SizedBox(width: 14),
-          const Text(
-            'Genre',
-            style: TextStyle(color: Colors.white54, fontSize: 13),
+          Text(
+            'Gender',
+            style: TextStyle(color: context.fitlek.textSecondary, fontSize: 13),
           ),
           const Spacer(),
           if (_isEditing)
@@ -1395,14 +1325,21 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                       vertical: 4,
                     ),
                     decoration: BoxDecoration(
-                      color: sel ? _lime : Colors.transparent,
+                      color: sel
+                          ? Theme.of(context).colorScheme.primary
+                          : Colors.transparent,
                       borderRadius: BorderRadius.circular(6),
-                      border: Border.all(color: sel ? _lime : _cardBorder),
+                      border: Border.all(
+                          color: sel
+                              ? Theme.of(context).colorScheme.primary
+                              : context.fitlek.border),
                     ),
                     child: Text(
                       _genderDisplay(g),
                       style: TextStyle(
-                        color: sel ? Colors.black : Colors.white38,
+                        color: sel
+                            ? Theme.of(context).colorScheme.onPrimary
+                            : context.fitlek.textMuted,
                         fontSize: 11,
                         fontWeight: FontWeight.w700,
                       ),
@@ -1414,8 +1351,8 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
           else
             Text(
               _genderDisplay(_selectedGender),
-              style: const TextStyle(
-                color: Colors.white,
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurface,
                 fontSize: 13,
                 fontWeight: FontWeight.w700,
               ),
@@ -1436,10 +1373,12 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
-        color: _card,
+        color: context.fitlek.card,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: _isEditing ? _lime.withOpacity(0.3) : _cardBorder,
+          color: _isEditing
+              ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.3)
+              : context.fitlek.border,
         ),
       ),
       child: Row(
@@ -1449,10 +1388,12 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
             width: 32,
             height: 32,
             decoration: BoxDecoration(
-              color: _lime.withOpacity(0.08),
+              color:
+                  Theme.of(context).colorScheme.primary.withValues(alpha: 0.08),
               borderRadius: BorderRadius.circular(8),
             ),
-            child: Icon(icon, color: _lime, size: 15),
+            child: Icon(icon,
+                color: Theme.of(context).colorScheme.primary, size: 15),
           ),
           const SizedBox(width: 14),
           Expanded(
@@ -1461,7 +1402,8 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
               children: [
                 Text(
                   label,
-                  style: const TextStyle(color: Colors.white38, fontSize: 10),
+                  style:
+                      TextStyle(color: context.fitlek.textMuted, fontSize: 10),
                 ),
                 const SizedBox(height: 2),
                 _isEditing
@@ -1469,8 +1411,8 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                         controller: ctrl,
                         keyboardType: keyboardType,
                         maxLines: maxLines,
-                        style: const TextStyle(
-                          color: Colors.white,
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.onSurface,
                           fontSize: 13,
                           fontWeight: FontWeight.w600,
                         ),
@@ -1482,8 +1424,8 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                       )
                     : Text(
                         ctrl.text,
-                        style: const TextStyle(
-                          color: Colors.white,
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.onSurface,
                           fontSize: 13,
                           fontWeight: FontWeight.w600,
                         ),
@@ -1492,7 +1434,7 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
             ),
           ),
           if (_isEditing)
-            const Icon(Icons.edit_rounded, color: Colors.white24, size: 14),
+            Icon(Icons.edit_rounded, color: context.fitlek.textMuted, size: 14),
         ],
       ),
     );
@@ -1505,9 +1447,9 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
         margin: const EdgeInsets.only(bottom: 10),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         decoration: BoxDecoration(
-          color: _card,
+          color: context.fitlek.card,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: _cardBorder),
+          border: Border.all(color: context.fitlek.border),
         ),
         child: Row(
           children: [
@@ -1515,21 +1457,26 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
               width: 32,
               height: 32,
               decoration: BoxDecoration(
-                color: _lime.withOpacity(0.08),
+                color: Theme.of(context)
+                    .colorScheme
+                    .primary
+                    .withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: Icon(icon, color: _lime, size: 15),
+              child: Icon(icon,
+                  color: Theme.of(context).colorScheme.primary, size: 15),
             ),
             const SizedBox(width: 14),
             Expanded(
               child: Text(
                 label,
-                style: const TextStyle(color: Colors.white70, fontSize: 13),
+                style: TextStyle(
+                    color: context.fitlek.textSecondary, fontSize: 13),
               ),
             ),
-            const Icon(
+            Icon(
               Icons.chevron_right_rounded,
-              color: Colors.white24,
+              color: context.fitlek.textMuted,
               size: 18,
             ),
           ],
@@ -1542,11 +1489,12 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
 
   Widget _buildProgressTab() {
     if (_loadingWeight && _weightData.isEmpty) {
-      return const Center(
+      return Center(
         child: SizedBox(
           width: 24,
           height: 24,
-          child: CircularProgressIndicator(color: _lime, strokeWidth: 2),
+          child: CircularProgressIndicator(
+              color: Theme.of(context).colorScheme.primary, strokeWidth: 2),
         ),
       );
     }
@@ -1555,7 +1503,7 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
     final start = _weightStats.start ?? current;
     final lost = start - current;
 
-    final hasSeries = _weightData.length >= 1;
+    final hasSeries = _weightData.isNotEmpty;
     final minW = hasSeries
         ? _weightData.map((e) => e.weight).reduce(math.min)
         : current - 2;
@@ -1565,8 +1513,8 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
     final range = (maxW - minW).abs() + 4;
 
     return RefreshIndicator(
-      color: _lime,
-      backgroundColor: _card,
+      color: Theme.of(context).colorScheme.primary,
+      backgroundColor: context.fitlek.card,
       onRefresh: _fetchWeightData,
       child: ListView(
         padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
@@ -1575,47 +1523,50 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
           Row(
             children: [
               _progressStat(
-                'Poids actuel',
+                'Current weight',
                 '${current.toStringAsFixed(1)} kg',
                 Icons.monitor_weight_rounded,
-                _lime,
+                Theme.of(context).colorScheme.primary,
               ),
               const SizedBox(width: 10),
               _progressStat(
-                lost >= 0 ? 'Perdu' : 'Pris',
+                lost >= 0 ? 'Lost' : 'Gained',
                 '${lost >= 0 ? '-' : '+'}${lost.abs().toStringAsFixed(1)} kg',
                 Icons.trending_down_rounded,
-                _success,
+                context.fitlek.success,
               ),
               const SizedBox(width: 10),
               _progressStat(
-                'IMC',
+                'BMI',
                 _calcBMI(),
                 Icons.favorite_rounded,
-                const Color(0xFF64B5F6),
+                context.fitlek.info,
               ),
             ],
           ),
           const SizedBox(height: 20),
 
           // Chart
-          _sectionLabel('ÉVOLUTION DU POIDS'),
+          _sectionLabel('WEIGHT TREND'),
           const SizedBox(height: 14),
           if (hasSeries)
             Container(
               height: 200,
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: _card,
+                color: context.fitlek.card,
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: _cardBorder),
+                border: Border.all(color: context.fitlek.border),
               ),
               child: CustomPaint(
                 painter: _WeightChartPainter(
                   data: _weightData,
                   minValue: minW - 2,
                   range: range,
-                  lineColor: _lime,
+                  lineColor: Theme.of(context).colorScheme.primary,
+                  gridColor: context.fitlek.border,
+                  labelColor: context.fitlek.textMuted,
+                  dotBgColor: context.fitlek.card,
                 ),
                 size: Size.infinite,
               ),
@@ -1624,14 +1575,15 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
             Container(
               height: 80,
               decoration: BoxDecoration(
-                color: _card,
+                color: context.fitlek.card,
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: _cardBorder),
+                border: Border.all(color: context.fitlek.border),
               ),
-              child: const Center(
+              child: Center(
                 child: Text(
-                  'Ajoutez au moins 2 mesures pour voir la courbe',
-                  style: TextStyle(color: Colors.white38, fontSize: 12),
+                  'Add at least 2 entries to see the chart',
+                  style:
+                      TextStyle(color: context.fitlek.textMuted, fontSize: 12),
                 ),
               ),
             ),
@@ -1639,13 +1591,13 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
 
           // Tableau historique
           if (_weightData.isNotEmpty) ...[
-            _sectionLabel('HISTORIQUE — TABLEAU'),
+            _sectionLabel('HISTORY — TABLE'),
             const SizedBox(height: 12),
             Container(
               decoration: BoxDecoration(
-                color: _card,
+                color: context.fitlek.card,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: _cardBorder),
+                border: Border.all(color: context.fitlek.border),
               ),
               child: Column(
                 children: [
@@ -1655,17 +1607,18 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                       horizontal: 16,
                       vertical: 10,
                     ),
-                    decoration: const BoxDecoration(
-                      border: Border(bottom: BorderSide(color: _cardBorder)),
+                    decoration: BoxDecoration(
+                      border: Border(
+                          bottom: BorderSide(color: context.fitlek.border)),
                     ),
                     child: Row(
-                      children: const [
+                      children: [
                         Expanded(
                           flex: 2,
                           child: Text(
-                            'PÉRIODE',
+                            'PERIOD',
                             style: TextStyle(
-                              color: Colors.white38,
+                              color: context.fitlek.textMuted,
                               fontSize: 10,
                               fontWeight: FontWeight.w800,
                               letterSpacing: 1,
@@ -1675,9 +1628,9 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                         Expanded(
                           flex: 2,
                           child: Text(
-                            'POIDS',
+                            'WEIGHT',
                             style: TextStyle(
-                              color: Colors.white38,
+                              color: context.fitlek.textMuted,
                               fontSize: 10,
                               fontWeight: FontWeight.w800,
                               letterSpacing: 1,
@@ -1687,10 +1640,10 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                         Expanded(
                           flex: 2,
                           child: Text(
-                            'VARIATION',
+                            'CHANGE',
                             textAlign: TextAlign.right,
                             style: TextStyle(
-                              color: Colors.white38,
+                              color: context.fitlek.textMuted,
                               fontSize: 10,
                               fontWeight: FontWeight.w800,
                               letterSpacing: 1,
@@ -1716,8 +1669,9 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                       decoration: BoxDecoration(
                         border: isLast
                             ? null
-                            : const Border(
-                                bottom: BorderSide(color: _cardBorder),
+                            : Border(
+                                bottom:
+                                    BorderSide(color: context.fitlek.border),
                               ),
                       ),
                       child: Row(
@@ -1726,8 +1680,8 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                             flex: 2,
                             child: Text(
                               e.value.label,
-                              style: const TextStyle(
-                                color: Colors.white,
+                              style: TextStyle(
+                                color: Theme.of(context).colorScheme.onSurface,
                                 fontSize: 13,
                                 fontWeight: FontWeight.w700,
                               ),
@@ -1737,8 +1691,8 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                             flex: 2,
                             child: Text(
                               '${e.value.weight.toStringAsFixed(1)} kg',
-                              style: const TextStyle(
-                                color: Colors.white,
+                              style: TextStyle(
+                                color: Theme.of(context).colorScheme.onSurface,
                                 fontSize: 13,
                                 fontWeight: FontWeight.w600,
                               ),
@@ -1749,10 +1703,10 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                             child: Align(
                               alignment: Alignment.centerRight,
                               child: e.key == 0
-                                  ? const Text(
+                                  ? Text(
                                       '—',
                                       style: TextStyle(
-                                        color: Colors.white24,
+                                        color: context.fitlek.textMuted,
                                         fontSize: 12,
                                       ),
                                     )
@@ -1762,8 +1716,10 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                                         vertical: 3,
                                       ),
                                       decoration: BoxDecoration(
-                                        color: (isLoss ? _success : _errorRed)
-                                            .withOpacity(0.12),
+                                        color: (isLoss
+                                                ? context.fitlek.success
+                                                : context.fitlek.error)
+                                            .withValues(alpha: 0.12),
                                         borderRadius: BorderRadius.circular(6),
                                       ),
                                       child: Row(
@@ -1774,8 +1730,8 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                                                 ? Icons.arrow_downward_rounded
                                                 : Icons.arrow_upward_rounded,
                                             color: isLoss
-                                                ? _success
-                                                : _errorRed,
+                                                ? context.fitlek.success
+                                                : context.fitlek.error,
                                             size: 11,
                                           ),
                                           const SizedBox(width: 3),
@@ -1783,8 +1739,8 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                                             '${diff.abs().toStringAsFixed(1)} kg',
                                             style: TextStyle(
                                               color: isLoss
-                                                  ? _success
-                                                  : _errorRed,
+                                                  ? context.fitlek.success
+                                                  : context.fitlek.error,
                                               fontSize: 11,
                                               fontWeight: FontWeight.w700,
                                             ),
@@ -1805,7 +1761,7 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
           ],
 
           // Add weight
-          _sectionLabel('AJOUTER UNE MESURE'),
+          _sectionLabel('ADD AN ENTRY'),
           const SizedBox(height: 12),
           _AddWeightWidget(onAdd: _addWeight),
         ],
@@ -1818,9 +1774,9 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
       child: Container(
         padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
-          color: _card,
+          color: context.fitlek.card,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: _cardBorder),
+          border: Border.all(color: context.fitlek.border),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1838,7 +1794,7 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
             const SizedBox(height: 2),
             Text(
               label,
-              style: const TextStyle(color: Colors.white38, fontSize: 10),
+              style: TextStyle(color: context.fitlek.textMuted, fontSize: 10),
             ),
           ],
         ),
@@ -1848,187 +1804,24 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
 
   // ── Helpers généraux ──────────────────────────────────────────────
 
-  Widget _sheetField(String hint, TextEditingController ctrl) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-    decoration: BoxDecoration(
-      color: _dark,
-      borderRadius: BorderRadius.circular(10),
-      border: Border.all(color: _cardBorder),
-    ),
-    child: TextField(
-      controller: ctrl,
-      style: const TextStyle(color: Colors.white, fontSize: 13),
-      decoration: InputDecoration(
-        hintText: hint,
-        hintStyle: const TextStyle(color: Colors.white24, fontSize: 13),
-        border: InputBorder.none,
-        isDense: true,
-        contentPadding: EdgeInsets.zero,
-      ),
-    ),
-  );
-
-  Widget _activityItem(IconData icon, String title, String sub, String time) =>
-      Container(
-        margin: const EdgeInsets.only(bottom: 10),
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: _card,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: _cardBorder),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 36,
-              height: 36,
-              decoration: BoxDecoration(
-                color: _lime.withOpacity(0.08),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Icon(icon, color: _lime, size: 16),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    sub,
-                    style: const TextStyle(color: Colors.white38, fontSize: 11),
-                  ),
-                ],
-              ),
-            ),
-            Text(
-              time,
-              style: const TextStyle(color: Colors.white24, fontSize: 10),
-            ),
-          ],
-        ),
-      );
-
   Widget _sectionLabel(String label) => Row(
-    children: [
-      Container(width: 3, height: 14, color: _lime),
-      const SizedBox(width: 8),
-      Text(
-        label,
-        style: const TextStyle(
-          color: Colors.white38,
-          fontSize: 10,
-          fontWeight: FontWeight.w800,
-          letterSpacing: 2,
-        ),
-      ),
-    ],
-  );
-}
-
-// ─────────────────────────────────────────────
-//  Goal Card
-// ─────────────────────────────────────────────
-
-class _GoalCard extends StatelessWidget {
-  final Map<String, dynamic> goal;
-  const _GoalCard({required this.goal});
-
-  @override
-  Widget build(BuildContext context) {
-    final isAchieved = goal['status'] == 'achieved';
-    final progress = (goal['progress'] as double).clamp(0.0, 1.0);
-    final color = isAchieved ? const Color(0xFF4CAF50) : _lime;
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: _card,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: _cardBorder),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  goal['title'],
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w800,
-                    fontSize: 14,
-                  ),
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: color.withOpacity(0.12),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Text(
-                  isAchieved ? '✓ ATTEINT' : 'EN COURS',
-                  style: TextStyle(
-                    color: color,
-                    fontSize: 9,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 1,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 4),
+          Container(
+              width: 3,
+              height: 14,
+              color: Theme.of(context).colorScheme.primary),
+          const SizedBox(width: 8),
           Text(
-            'Échéance : ${goal['deadline']}',
-            style: const TextStyle(color: Colors.white38, fontSize: 11),
-          ),
-          const SizedBox(height: 12),
-          Stack(
-            children: [
-              Container(
-                height: 6,
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.07),
-                  borderRadius: BorderRadius.circular(3),
-                ),
-              ),
-              FractionallySizedBox(
-                widthFactor: progress,
-                child: Container(
-                  height: 6,
-                  decoration: BoxDecoration(
-                    color: color,
-                    borderRadius: BorderRadius.circular(3),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 6),
-          Text(
-            '${(progress * 100).toInt()}% complété',
+            label,
             style: TextStyle(
-              color: color,
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
+              color: context.fitlek.textMuted,
+              fontSize: 10,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 2,
             ),
           ),
         ],
-      ),
-    );
-  }
+      );
 }
 
 // ─────────────────────────────────────────────
@@ -2052,9 +1845,9 @@ class _AddWeightWidgetState extends State<_AddWeightWidget> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: _card,
+        color: context.fitlek.card,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: _cardBorder),
+        border: Border.all(color: context.fitlek.border),
       ),
       child: Row(
         children: [
@@ -2062,19 +1855,22 @@ class _AddWeightWidgetState extends State<_AddWeightWidget> {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
               decoration: BoxDecoration(
-                color: _dark,
+                color: Theme.of(context).scaffoldBackgroundColor,
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: _cardBorder),
+                border: Border.all(color: context.fitlek.border),
               ),
               child: TextField(
                 controller: _ctrl,
                 keyboardType: const TextInputType.numberWithOptions(
                   decimal: true,
                 ),
-                style: const TextStyle(color: Colors.white, fontSize: 14),
-                decoration: const InputDecoration(
-                  hintText: 'Poids aujourd\'hui (kg)',
-                  hintStyle: TextStyle(color: Colors.white24, fontSize: 13),
+                style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurface,
+                    fontSize: 14),
+                decoration: InputDecoration(
+                  hintText: 'Weight today (kg)',
+                  hintStyle:
+                      TextStyle(color: context.fitlek.textMuted, fontSize: 13),
                   border: InputBorder.none,
                   isDense: true,
                   contentPadding: EdgeInsets.zero,
@@ -2098,22 +1894,27 @@ class _AddWeightWidgetState extends State<_AddWeightWidget> {
               duration: const Duration(milliseconds: 150),
               padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
               decoration: BoxDecoration(
-                color: _saving ? _lime.withOpacity(0.4) : _lime,
+                color: _saving
+                    ? Theme.of(context)
+                        .colorScheme
+                        .primary
+                        .withValues(alpha: 0.4)
+                    : Theme.of(context).colorScheme.primary,
                 borderRadius: BorderRadius.circular(8),
               ),
               child: _saving
-                  ? const SizedBox(
+                  ? SizedBox(
                       width: 20,
                       height: 20,
                       child: CircularProgressIndicator(
-                        color: Colors.black,
+                        color: Theme.of(context).colorScheme.onPrimary,
                         strokeWidth: 2,
                       ),
                     )
-                  : const Text(
-                      'AJOUTER',
+                  : Text(
+                      'ADD',
                       style: TextStyle(
-                        color: Colors.black,
+                        color: Theme.of(context).colorScheme.onPrimary,
                         fontWeight: FontWeight.w900,
                         fontSize: 11,
                         letterSpacing: 1.2,
@@ -2136,12 +1937,18 @@ class _WeightChartPainter extends CustomPainter {
   final double minValue;
   final double range;
   final Color lineColor;
+  final Color gridColor;
+  final Color labelColor;
+  final Color dotBgColor;
 
   const _WeightChartPainter({
     required this.data,
     required this.minValue,
     required this.range,
     required this.lineColor,
+    required this.gridColor,
+    required this.labelColor,
+    required this.dotBgColor,
   });
 
   @override
@@ -2150,7 +1957,7 @@ class _WeightChartPainter extends CustomPainter {
     final stepX = size.width / (data.length - 1);
 
     final gridPaint = Paint()
-      ..color = Colors.white.withOpacity(0.05)
+      ..color = gridColor.withValues(alpha: 0.4)
       ..strokeWidth = 1;
     for (int i = 0; i <= 4; i++) {
       final y = size.height * i / 4;
@@ -2166,7 +1973,9 @@ class _WeightChartPainter extends CustomPainter {
     }).toList();
 
     final path = Path()..moveTo(points.first.dx, size.height);
-    for (final p in points) path.lineTo(p.dx, p.dy);
+    for (final p in points) {
+      path.lineTo(p.dx, p.dy);
+    }
     path
       ..lineTo(points.last.dx, size.height)
       ..close();
@@ -2177,7 +1986,10 @@ class _WeightChartPainter extends CustomPainter {
         ..shader = LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: [lineColor.withOpacity(0.22), lineColor.withOpacity(0.0)],
+          colors: [
+            lineColor.withValues(alpha: 0.22),
+            lineColor.withValues(alpha: 0.0)
+          ],
         ).createShader(Rect.fromLTWH(0, 0, size.width, size.height)),
     );
 
@@ -2208,9 +2020,9 @@ class _WeightChartPainter extends CustomPainter {
     );
 
     final dotFill = Paint()..color = lineColor;
-    final dotBg = Paint()..color = const Color(0xFF141414);
-    const labelStyle = TextStyle(
-      color: Colors.white38,
+    final dotBg = Paint()..color = dotBgColor;
+    final labelStyle = TextStyle(
+      color: labelColor,
       fontSize: 9,
       fontWeight: FontWeight.w600,
     );
@@ -2227,9 +2039,9 @@ class _WeightChartPainter extends CustomPainter {
 
       final vp = TextPainter(
         text: TextSpan(
-          text: '${data[i].weight.toStringAsFixed(1)}',
-          style: const TextStyle(
-            color: _lime,
+          text: data[i].weight.toStringAsFixed(1),
+          style: TextStyle(
+            color: lineColor,
             fontSize: 9,
             fontWeight: FontWeight.w800,
           ),

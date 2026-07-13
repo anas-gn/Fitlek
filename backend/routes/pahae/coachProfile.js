@@ -10,7 +10,8 @@ router.get('/', requireAuth, requireRole('coach'), async (req, res) => {
     const [[row]] = await pool.query(
       `SELECT u.id, u.firstName, u.lastName, u.email, u.gender, u.avatarUrl,
               cp.bio, cp.instagramPage, cp.invitationCode,
-              cp.totalInvitations, cp.earnedPoints
+              cp.totalInvitations, cp.earnedPoints,
+              cp.tel, cp.price, cp.ville, cp.certificateUrl, cp.advisorID
        FROM users u
        JOIN coachprofiles cp ON cp.userID = u.id
        WHERE u.id = ?`,

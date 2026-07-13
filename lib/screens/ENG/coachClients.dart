@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import '../../services/apiService.dart';
 import 'coachInviteClients.dart';
+import 'coachClientDetail.dart';
+
+import '../../theme/fitlek_theme_extension.dart';
 
 class CoachClients extends StatefulWidget {
   const CoachClients({super.key});
@@ -8,349 +11,431 @@ class CoachClients extends StatefulWidget {
   State<CoachClients> createState() => _CoachClientsState();
 }
 
+enum _ClientSort { az, za, newest }
+
 class _CoachClientsState extends State<CoachClients> {
   final _searchCtrl = TextEditingController();
   String _query = '';
   String _filter = 'All';
+  _ClientSort _sort = _ClientSort.az;
   bool _loading = true;
+  bool _error = false;
   List<dynamic> _clients = [];
 
   @override
-  void initState() { super.initState(); _load(); }
+  void initState() {
+    super.initState();
+    _load();
+  }
 
   @override
-  void dispose() { _searchCtrl.dispose(); super.dispose(); }
+  void dispose() {
+    _searchCtrl.dispose();
+    super.dispose();
+  }
 
   Future<void> _load() async {
-    setState(() => _loading = true);
+    setState(() {
+      _loading = true;
+      _error = false;
+    });
     final result = await ApiService.get('/coach/clients');
     if (!mounted) return;
     setState(() {
-      if (result['ok'] == true) _clients = result['data'] ?? [];
+      if (result['ok'] == true) {
+        _clients = result['data'] ?? [];
+      } else {
+        _error = true;
+      }
       _loading = false;
     });
   }
 
-  List<dynamic> get _filtered => _clients.where((c) {
-    final q = _query.toLowerCase();
-    final mQ = '${c['firstName']} ${c['lastName']}'.toLowerCase().contains(q) || (c['email'] ?? '').toLowerCase().contains(q);
-    final mF = _filter == 'All' || (_filter == 'Premium' && (c['isPremium'] == 1 || c['isPremium'] == true)) || (_filter == 'Standard' && !(c['isPremium'] == 1 || c['isPremium'] == true));
-    return mQ && mF;
-  }).toList();
+  bool _premiumOf(dynamic c) => c['isPremium'] == 1 || c['isPremium'] == true;
 
-  int get _premiumCount => _clients.where((c) => c['isPremium'] == 1 || c['isPremium'] == true).length;
+  bool get _isSearching => _query.trim().isNotEmpty;
 
-  void _showInvitePremiumDialog(dynamic c) => showDialog(context: context, builder: (ctx) => Dialog(
-    backgroundColor: const Color(0xFF111111),
-    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
-    child: Padding(padding: const EdgeInsets.all(24), child: Column(mainAxisSize: MainAxisSize.min, children: [
-      Container(width: 56, height: 56, decoration: BoxDecoration(color: const Color(0xFF1A3008), shape: BoxShape.circle),
-        child: const Icon(Icons.star_rounded, color: Color(0xFFA3FF12), size: 28)),
-      const SizedBox(height: 16),
-      const Text('Invite to Premium', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w700)),
-      const SizedBox(height: 8),
-      Text('Send a premium invitation to ${c['firstName']} ${c['lastName']}?',
-          textAlign: TextAlign.center, style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 13, height: 1.5)),
-      const SizedBox(height: 24),
-      Row(children: [
-        Expanded(child: GestureDetector(onTap: () => Navigator.pop(ctx),
-          child: Container(padding: const EdgeInsets.symmetric(vertical: 13), decoration: BoxDecoration(color: const Color(0xFF1A1A1A), borderRadius: BorderRadius.circular(12)),
-            child: const Center(child: Text('Cancel', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)))))),
-        const SizedBox(width: 10),
-        Expanded(child: GestureDetector(
-          onTap: () async {
-            Navigator.pop(ctx);
-            final r = await ApiService.post('/coach/clients/${c['id']}/invite-premium', {});
-            if (!mounted) return;
-            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-              content: Text(r['ok'] == true ? 'Invitation sent to ${c['firstName']}!' : r['message'] ?? 'Failed.'),
-              backgroundColor: r['ok'] == true ? const Color(0xFF0D1A04) : Colors.red,
-              behavior: SnackBarBehavior.floating,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))));
-          },
-          child: Container(padding: const EdgeInsets.symmetric(vertical: 13), decoration: BoxDecoration(color: const Color(0xFFA3FF12), borderRadius: BorderRadius.circular(12)),
-            child: const Center(child: Text('Invite', style: TextStyle(color: Colors.black, fontWeight: FontWeight.w700)))))),
-      ]),
-    ])),
-  ));
+  List<dynamic> get _filtered {
+    final q = _query.trim().toLowerCase();
+    final list = _clients.where((c) {
+      final name = '${c['firstName'] ?? ''} ${c['lastName'] ?? ''}'.toLowerCase();
+      final email = (c['email'] ?? '').toString().toLowerCase();
+      final matchQuery = q.isEmpty || name.contains(q) || email.contains(q);
+      final matchFilter = _filter == 'All' ||
+          (_filter == 'Premium' && _premiumOf(c)) ||
+          (_filter == 'Standard' && !_premiumOf(c));
+      return matchQuery && matchFilter;
+    }).toList();
 
-  // ═══════════════════════════════════════════════════════════════
-  // POPUP INFO CLIENT + NOMBRE DE RESERVATIONS
-  // ═══════════════════════════════════════════════════════════════
-  void _showClientInfoDialog(dynamic c) async {
-    // Recupere les reservations du client chez ce coach
-    final resResult = await ApiService.get('/reservations?userID=${c['id']}&role=client&limit=1000');
-    int reservationCount = 0;
-    if (resResult['ok'] == true && resResult['data'] != null) {
-      reservationCount = (resResult['data'] as List).length;
+    int byName(dynamic a, dynamic b) {
+      final an = '${a['firstName'] ?? ''} ${a['lastName'] ?? ''}'.trim().toLowerCase();
+      final bn = '${b['firstName'] ?? ''} ${b['lastName'] ?? ''}'.trim().toLowerCase();
+      return an.compareTo(bn);
     }
 
-    if (!mounted) return;
+    switch (_sort) {
+      case _ClientSort.az:
+        list.sort(byName);
+        break;
+      case _ClientSort.za:
+        list.sort((a, b) => byName(b, a));
+        break;
+      case _ClientSort.newest:
+        list.sort((a, b) {
+          final ad = DateTime.tryParse((a['linkedAt'] ?? '').toString());
+          final bd = DateTime.tryParse((b['linkedAt'] ?? '').toString());
+          if (ad == null && bd == null) return byName(a, b);
+          if (ad == null) return 1;
+          if (bd == null) return -1;
+          return bd.compareTo(ad);
+        });
+        break;
+    }
+    return list;
+  }
 
-    showDialog(
-      context: context,
-      builder: (ctx) => Dialog(
-        backgroundColor: const Color(0xFF111111),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Avatar
-              Container(
-                width: 72,
-                height: 72,
+  int get _premiumCount => _clients.where(_premiumOf).length;
+
+  Future<void> _openDetail(dynamic c) async {
+    final changed = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => CoachClientDetail(
+          clientId: c['id'].toString(),
+          initialName: '${c['firstName'] ?? ''} ${c['lastName'] ?? ''}'.trim(),
+          initialAvatar: c['avatarUrl']?.toString(),
+          initialPremium: _premiumOf(c),
+        ),
+      ),
+    );
+    if (changed == true) _load();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final f = context.fitlek;
+    return Scaffold(
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      body: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 720),
+          child: Column(children: [
+            _buildTopBar(),
+            Expanded(
+              child: _loading
+                  ? Center(child: CircularProgressIndicator(color: cs.primary))
+                  : _error
+                      ? _buildError()
+                      : _clients.isEmpty
+                          ? _buildEmpty()
+                          : _filtered.isEmpty
+                              ? _buildNoResults()
+                              : RefreshIndicator(
+                                  color: cs.primary,
+                                  backgroundColor: f.card,
+                                  onRefresh: _load,
+                                  child: ListView.builder(
+                                    padding: const EdgeInsets.fromLTRB(20, 4, 20, 20),
+                                    itemCount: _filtered.length,
+                                    itemBuilder: (_, i) => _buildClientCard(_filtered[i]),
+                                  ),
+                                ),
+            ),
+          ]),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTopBar() {
+    final cs = Theme.of(context).colorScheme;
+    final f = context.fitlek;
+    final count = _clients.length;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text('My Clients',
+                  style: TextStyle(color: cs.onSurface, fontSize: 26, fontWeight: FontWeight.w800, letterSpacing: -0.5)),
+              const SizedBox(height: 2),
+              Text(
+                _loading
+                    ? 'Loading…'
+                    : count == 0
+                        ? 'Clients connected to you will appear here'
+                        : '$count client${count == 1 ? '' : 's'} connected to you',
+                style: TextStyle(color: f.textMuted, fontSize: 12.5),
+              ),
+            ]),
+          ),
+          _buildSortButton(),
+          const SizedBox(width: 8),
+          GestureDetector(
+            onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const CoachInviteClients())),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+              decoration: BoxDecoration(color: cs.primary, borderRadius: BorderRadius.circular(12)),
+              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                Icon(Icons.person_add_rounded, color: cs.onPrimary, size: 16),
+                const SizedBox(width: 6),
+                Text('Invite', style: TextStyle(color: cs.onPrimary, fontSize: 13, fontWeight: FontWeight.w700)),
+              ]),
+            ),
+          ),
+        ]),
+        const SizedBox(height: 14),
+        Row(children: [
+          Expanded(child: _statBox('${_clients.length}', 'Total', cs.onSurface)),
+          const SizedBox(width: 10),
+          Expanded(child: _statBox('$_premiumCount', 'Premium', cs.primary)),
+          const SizedBox(width: 10),
+          Expanded(child: _statBox('${_clients.length - _premiumCount}', 'Standard', f.textSecondary)),
+        ]),
+        const SizedBox(height: 14),
+        Container(
+          decoration: BoxDecoration(color: f.card, borderRadius: BorderRadius.circular(14), border: Border.all(color: f.border)),
+          child: TextField(
+            controller: _searchCtrl,
+            onChanged: (v) => setState(() => _query = v),
+            style: TextStyle(color: cs.onSurface, fontSize: 14),
+            decoration: InputDecoration(
+              hintText: 'Search clients...',
+              hintStyle: TextStyle(color: f.textMuted, fontSize: 14),
+              prefixIcon: Icon(Icons.search_rounded, color: f.textMuted, size: 20),
+              suffixIcon: _isSearching
+                  ? GestureDetector(
+                      onTap: () {
+                        _searchCtrl.clear();
+                        setState(() => _query = '');
+                      },
+                      child: Icon(Icons.close_rounded, color: f.textMuted, size: 18),
+                    )
+                  : null,
+              border: InputBorder.none,
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            ),
+          ),
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: ['All', 'Premium', 'Standard'].map((filter) {
+            final sel = _filter == filter;
+            return GestureDetector(
+              onTap: () => setState(() => _filter = filter),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                margin: const EdgeInsets.only(right: 8),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
                 decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: (c['isPremium'] == 1 || c['isPremium'] == true)
-                        ? const Color(0xFFA3FF12).withOpacity(0.5)
-                        : Colors.white.withOpacity(0.1),
-                    width: 2,
-                  ),
+                  color: sel ? cs.primary : f.card,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: sel ? cs.primary : f.border),
                 ),
-                child: ClipOval(
-                  child: c['avatarUrl'] != null
-                      ? Image.network(c['avatarUrl'], fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => const Icon(Icons.person, color: Colors.white54, size: 32))
-                      : const Icon(Icons.person, color: Colors.white54, size: 32),
-                ),
+                child: Text(filter,
+                    style: TextStyle(
+                        color: sel ? cs.onPrimary : f.textSecondary,
+                        fontSize: 12,
+                        fontWeight: sel ? FontWeight.w700 : FontWeight.w500)),
               ),
-              const SizedBox(height: 16),
-              // Nom
-              Text(
-                '${c['firstName']} ${c['lastName']}',
-                style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w700),
+            );
+          }).toList(),
+        ),
+      ]),
+    );
+  }
+
+  Widget _buildSortButton() {
+    final cs = Theme.of(context).colorScheme;
+    final f = context.fitlek;
+    return PopupMenuButton<_ClientSort>(
+      tooltip: 'Sort',
+      color: f.card,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      onSelected: (v) => setState(() => _sort = v),
+      itemBuilder: (ctx) => [
+        _sortItem(_ClientSort.az, 'Name A–Z'),
+        _sortItem(_ClientSort.za, 'Name Z–A'),
+        _sortItem(_ClientSort.newest, 'Newest connected'),
+      ],
+      child: Container(
+        padding: const EdgeInsets.all(9),
+        decoration: BoxDecoration(color: f.card, borderRadius: BorderRadius.circular(12), border: Border.all(color: f.border)),
+        child: Icon(Icons.sort_rounded, color: cs.onSurface, size: 20),
+      ),
+    );
+  }
+
+  PopupMenuItem<_ClientSort> _sortItem(_ClientSort value, String label) {
+    final cs = Theme.of(context).colorScheme;
+    final selected = _sort == value;
+    return PopupMenuItem<_ClientSort>(
+      value: value,
+      child: Row(children: [
+        Icon(selected ? Icons.check_rounded : Icons.sort_rounded,
+            size: 18, color: selected ? cs.primary : context.fitlek.textMuted),
+        const SizedBox(width: 10),
+        Text(label,
+            style: TextStyle(color: cs.onSurface, fontSize: 13.5, fontWeight: selected ? FontWeight.w700 : FontWeight.w500)),
+      ]),
+    );
+  }
+
+  Widget _statBox(String value, String label, Color color) {
+    final f = context.fitlek;
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      decoration: BoxDecoration(color: f.card, borderRadius: BorderRadius.circular(12)),
+      child: Column(children: [
+        Text(value, style: TextStyle(color: color, fontSize: 22, fontWeight: FontWeight.w800)),
+        const SizedBox(height: 2),
+        Text(label, style: TextStyle(color: f.textMuted, fontSize: 11, fontWeight: FontWeight.w500)),
+      ]),
+    );
+  }
+
+  Widget _buildClientCard(dynamic c) {
+    final cs = Theme.of(context).colorScheme;
+    final f = context.fitlek;
+    final isPremium = _premiumOf(c);
+    final avatar = c['avatarUrl']?.toString();
+    return GestureDetector(
+      onTap: () => _openDetail(c),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 10),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: f.card,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: isPremium ? cs.primary.withValues(alpha: 0.15) : f.border),
+        ),
+        child: Row(children: [
+          Stack(children: [
+            Container(
+              width: 50,
+              height: 50,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(color: isPremium ? cs.primary.withValues(alpha: 0.5) : f.border, width: 1.5),
               ),
-              const SizedBox(height: 4),
-              // Email
-              Text(
-                c['email'] ?? '',
-                style: TextStyle(color: Colors.white.withOpacity(0.4), fontSize: 13),
+              child: ClipOval(
+                child: (avatar != null && avatar.isNotEmpty)
+                    ? Image.network(avatar, fit: BoxFit.cover, errorBuilder: (_, __, ___) => Icon(Icons.person, color: f.textMuted, size: 24))
+                    : Icon(Icons.person, color: f.textMuted, size: 24),
               ),
-              const SizedBox(height: 20),
-              // Stats row
-              Row(
-                children: [
-                  Expanded(
-                    child: _infoStatBox(
-                      icon: Icons.calendar_month_rounded,
-                      value: '$reservationCount',
-                      label: 'Reservations',
-                      color: const Color(0xFFA3FF12),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: _infoStatBox(
-                      icon: (c['isPremium'] == 1 || c['isPremium'] == true)
-                          ? Icons.star_rounded
-                          : Icons.person_outline_rounded,
-                      value: (c['isPremium'] == 1 || c['isPremium'] == true) ? 'Premium' : 'Standard',
-                      label: 'Abonnement',
-                      color: (c['isPremium'] == 1 || c['isPremium'] == true)
-                          ? const Color(0xFFA3FF12)
-                          : Colors.white.withOpacity(0.5),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 20),
-              // Details supplementaires
-              if (c['gender'] != null)
-                _detailRow(Icons.wc_rounded, 'Genre', c['gender']),
-              if (c['height'] != null)
-                _detailRow(Icons.height_rounded, 'Taille', '${c['height']} cm'),
-              if (c['createdAt'] != null)
-                _detailRow(Icons.calendar_today_rounded, 'Inscrit le', _formatDate(c['createdAt'])),
-              const SizedBox(height: 24),
-              // Bouton fermer
-              GestureDetector(
-                onTap: () => Navigator.pop(ctx),
+            ),
+            if (isPremium)
+              Positioned(
+                right: 0,
+                bottom: 0,
                 child: Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF1A1A1A),
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: Colors.white.withOpacity(0.08)),
-                  ),
-                  child: const Center(
-                    child: Text(
-                      'Fermer',
-                      style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600),
-                    ),
-                  ),
+                  width: 18,
+                  height: 18,
+                  decoration: BoxDecoration(color: cs.primary, shape: BoxShape.circle),
+                  child: Icon(Icons.star_rounded, color: cs.onPrimary, size: 11),
                 ),
               ),
-            ],
+          ]),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text('${c['firstName'] ?? ''} ${c['lastName'] ?? ''}'.trim(),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(color: cs.onSurface, fontSize: 14, fontWeight: FontWeight.w600)),
+              const SizedBox(height: 3),
+              Text((c['email'] ?? '').toString(),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(color: f.textMuted, fontSize: 12)),
+            ]),
+          ),
+          const SizedBox(width: 8),
+          Icon(Icons.chevron_right_rounded, color: f.textMuted, size: 20),
+        ]),
+      ),
+    );
+  }
+
+  Widget _buildError() {
+    final cs = Theme.of(context).colorScheme;
+    final f = context.fitlek;
+    return Center(
+      child: Column(mainAxisSize: MainAxisSize.min, children: [
+        Icon(Icons.wifi_off_rounded, color: f.textMuted, size: 52),
+        const SizedBox(height: 12),
+        Text('Unable to load clients', style: TextStyle(color: f.textMuted, fontSize: 15)),
+        const SizedBox(height: 20),
+        GestureDetector(
+          onTap: _load,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 26, vertical: 12),
+            decoration: BoxDecoration(color: cs.primary, borderRadius: BorderRadius.circular(14)),
+            child: Text('Retry', style: TextStyle(color: cs.onPrimary, fontWeight: FontWeight.w800, fontSize: 13)),
+          ),
+        ),
+      ]),
+    );
+  }
+
+  Widget _buildEmpty() {
+    final f = context.fitlek;
+    final cs = Theme.of(context).colorScheme;
+    return LayoutBuilder(
+      builder: (context, constraints) => SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: constraints.maxHeight),
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.all(32),
+              child: Column(mainAxisSize: MainAxisSize.min, children: [
+                Icon(Icons.people_outline_rounded, color: f.textMuted, size: 60),
+                const SizedBox(height: 14),
+                Text('No clients yet.',
+                    style: TextStyle(color: cs.onSurface, fontSize: 16, fontWeight: FontWeight.w700)),
+                const SizedBox(height: 6),
+                Text('Clients connected to you will appear here.',
+                    textAlign: TextAlign.center, style: TextStyle(color: f.textMuted, fontSize: 13)),
+                const SizedBox(height: 22),
+                GestureDetector(
+                  onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const CoachInviteClients())),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: cs.primary.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: cs.primary.withValues(alpha: 0.3)),
+                    ),
+                    child: Row(mainAxisSize: MainAxisSize.min, children: [
+                      Icon(Icons.person_add_rounded, color: cs.primary, size: 17),
+                      const SizedBox(width: 8),
+                      Text('Invite clients', style: TextStyle(color: cs.primary, fontSize: 13.5, fontWeight: FontWeight.w700)),
+                    ]),
+                  ),
+                ),
+              ]),
+            ),
           ),
         ),
       ),
     );
   }
 
-  Widget _infoStatBox({required IconData icon, required String value, required String label, required Color color}) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 16),
-      decoration: BoxDecoration(
-        color: const Color(0xFF0E0E0E),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withOpacity(0.04)),
-      ),
-      child: Column(
-        children: [
-          Icon(icon, color: color, size: 24),
-          const SizedBox(height: 8),
-          Text(value, style: TextStyle(color: color, fontSize: 18, fontWeight: FontWeight.w800)),
-          const SizedBox(height: 2),
-          Text(label, style: TextStyle(color: Colors.white.withOpacity(0.35), fontSize: 11)),
-        ],
-      ),
-    );
-  }
-
-  Widget _detailRow(IconData icon, String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: Row(
-        children: [
-          Icon(icon, color: Colors.white.withOpacity(0.3), size: 18),
-          const SizedBox(width: 10),
-          Text(label, style: TextStyle(color: Colors.white.withOpacity(0.4), fontSize: 13)),
-          const Spacer(),
-          Text(value, style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600)),
-        ],
-      ),
-    );
-  }
-
-  String _formatDate(String dateStr) {
-    try {
-      final date = DateTime.parse(dateStr);
-      return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
-    } catch (_) {
-      return dateStr;
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.black,
-      body: Column(children: [
-        _buildTopBar(),
-        Expanded(child: _loading
-            ? const Center(child: CircularProgressIndicator(color: Color(0xFFA3FF12)))
-            : _filtered.isEmpty ? _buildEmpty()
-            : RefreshIndicator(color: const Color(0xFFA3FF12), backgroundColor: const Color(0xFF111111), onRefresh: _load,
-                child: ListView.builder(padding: const EdgeInsets.symmetric(horizontal: 20),
-                  itemCount: _filtered.length,
-                  itemBuilder: (_, i) => _buildClientCard(_filtered[i])))),
-      ]),
-    );
-  }
-
-  Widget _buildTopBar() => Padding(
-    padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
-    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Row(children: [
-        const Text('Clients', style: TextStyle(color: Colors.white, fontSize: 26, fontWeight: FontWeight.w800, letterSpacing: -0.5)),
-        const Spacer(),
-        GestureDetector(onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const CoachInviteClients())),
-          child: Container(padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-            decoration: BoxDecoration(color: const Color(0xFFA3FF12), borderRadius: BorderRadius.circular(12)),
-            child: const Row(mainAxisSize: MainAxisSize.min, children: [
-              Icon(Icons.person_add_rounded, color: Colors.black, size: 16), SizedBox(width: 6),
-              Text('Invite', style: TextStyle(color: Colors.black, fontSize: 13, fontWeight: FontWeight.w700)),
-            ]))),
-      ]),
-      const SizedBox(height: 14),
-      Row(children: [
-        Expanded(child: _statBox('${_clients.length}', 'Total', Colors.white)),
-        const SizedBox(width: 10),
-        Expanded(child: _statBox('$_premiumCount', 'Premium', const Color(0xFFA3FF12))),
-        const SizedBox(width: 10),
-        Expanded(child: _statBox('${_clients.length - _premiumCount}', 'Standard', Colors.white.withOpacity(0.6))),
-      ]),
-      const SizedBox(height: 14),
-      Container(decoration: BoxDecoration(color: const Color(0xFF111111), borderRadius: BorderRadius.circular(14), border: Border.all(color: Colors.white.withOpacity(0.06))),
-        child: TextField(controller: _searchCtrl, onChanged: (v) => setState(() => _query = v),
-          style: const TextStyle(color: Colors.white, fontSize: 14),
-          decoration: InputDecoration(hintText: 'Search clients...', hintStyle: TextStyle(color: Colors.white.withOpacity(0.3), fontSize: 14),
-            prefixIcon: Icon(Icons.search_rounded, color: Colors.white.withOpacity(0.3), size: 20),
-            border: InputBorder.none, contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14)))),
-      const SizedBox(height: 12),
-      Row(children: ['All', 'Premium', 'Standard'].map((f) {
-        final sel = _filter == f;
-        return GestureDetector(onTap: () => setState(() => _filter = f),
-          child: AnimatedContainer(duration: const Duration(milliseconds: 200),
-            margin: const EdgeInsets.only(right: 8),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
-            decoration: BoxDecoration(color: sel ? const Color(0xFFA3FF12) : const Color(0xFF111111), borderRadius: BorderRadius.circular(20), border: Border.all(color: sel ? const Color(0xFFA3FF12) : Colors.white.withOpacity(0.1))),
-            child: Text(f, style: TextStyle(color: sel ? Colors.black : Colors.white.withOpacity(0.6), fontSize: 12, fontWeight: sel ? FontWeight.w700 : FontWeight.w500))));
-      }).toList()),
-    ]),
-  );
-
-  Widget _statBox(String value, String label, Color color) => Container(
-    padding: const EdgeInsets.symmetric(vertical: 12),
-    decoration: BoxDecoration(color: const Color(0xFF0E0E0E), borderRadius: BorderRadius.circular(12)),
-    child: Column(children: [
-      Text(value, style: TextStyle(color: color, fontSize: 22, fontWeight: FontWeight.w800)),
-      const SizedBox(height: 2),
-      Text(label, style: TextStyle(color: Colors.white.withOpacity(0.35), fontSize: 11, fontWeight: FontWeight.w500)),
-    ]));
-
-  Widget _buildClientCard(dynamic c) {
-    final isPremium = c['isPremium'] == 1 || c['isPremium'] == true;
-    return GestureDetector(
-      // CLIQUE SUR LA CARTE = POPUP INFO
-      onTap: () => _showClientInfoDialog(c),
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 10),
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(color: const Color(0xFF0E0E0E), borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: isPremium ? const Color(0xFFA3FF12).withOpacity(0.15) : Colors.white.withOpacity(0.04))),
-        child: Row(children: [
-          Stack(children: [
-            Container(width: 50, height: 50,
-              decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: isPremium ? const Color(0xFFA3FF12).withOpacity(0.5) : Colors.white.withOpacity(0.08), width: 1.5)),
-              child: ClipOval(child: c['avatarUrl'] != null
-                  ? Image.network(c['avatarUrl'], fit: BoxFit.cover, errorBuilder: (_, __, ___) => const Icon(Icons.person, color: Colors.white54, size: 24))
-                  : const Icon(Icons.person, color: Colors.white54, size: 24))),
-            if (isPremium) Positioned(right: 0, bottom: 0, child: Container(width: 18, height: 18,
-              decoration: const BoxDecoration(color: Color(0xFFA3FF12), shape: BoxShape.circle),
-              child: const Icon(Icons.star_rounded, color: Colors.black, size: 11))),
-          ]),
-          const SizedBox(width: 14),
-          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text('${c['firstName']} ${c['lastName']}', style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600)),
-            const SizedBox(height: 3),
-            Text(c['email'] ?? '', style: TextStyle(color: Colors.white.withOpacity(0.35), fontSize: 12)),
-          ])),
-          if (!isPremium)
-            GestureDetector(
-              // Stop propagation pour ne pas ouvrir la popup quand on clique sur le bouton Premium
-              onTap: () => _showInvitePremiumDialog(c),
-              child: Container(padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-                decoration: BoxDecoration(color: const Color(0xFF1A3008), borderRadius: BorderRadius.circular(10), border: Border.all(color: const Color(0xFFA3FF12).withOpacity(0.3))),
-                child: const Row(mainAxisSize: MainAxisSize.min, children: [
-                  Icon(Icons.star_rounded, color: Color(0xFFA3FF12), size: 14), SizedBox(width: 4),
-                  Text('Premium', style: TextStyle(color: Color(0xFFA3FF12), fontSize: 11, fontWeight: FontWeight.w700)),
-                ])))
-          else
-            Container(padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-              decoration: BoxDecoration(color: const Color(0xFF1A3008), borderRadius: BorderRadius.circular(10)),
-              child: const Text('Premium', style: TextStyle(color: Color(0xFFA3FF12), fontSize: 11, fontWeight: FontWeight.w700))),
+  Widget _buildNoResults() {
+    final f = context.fitlek;
+    final cs = Theme.of(context).colorScheme;
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          Icon(Icons.search_off_rounded, color: f.textMuted, size: 52),
+          const SizedBox(height: 12),
+          Text(_isSearching ? 'No clients match your search.' : 'No clients match this filter.',
+              textAlign: TextAlign.center, style: TextStyle(color: cs.onSurface, fontSize: 14.5, fontWeight: FontWeight.w600)),
         ]),
       ),
     );
   }
-
-  Widget _buildEmpty() => Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-    Icon(Icons.people_outline_rounded, color: Colors.white.withOpacity(0.15), size: 56), const SizedBox(height: 12),
-    Text('No clients found', style: TextStyle(color: Colors.white.withOpacity(0.3), fontSize: 15)),
-  ]));
 }
