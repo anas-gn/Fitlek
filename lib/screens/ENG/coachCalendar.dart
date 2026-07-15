@@ -50,6 +50,7 @@ class _CoachCalendarState extends State<CoachCalendar>
                   clientPhotoUrl: r['avatarUrl'] ?? '',
                   date: DateTime.parse(r['reservedDate']),
                   time: (r['reservedTime'] as String?)?.substring(0, 5) ?? '',
+                  location: r['location']?.toString(),
                   status: r['status'] == 'confirmed'
                       ? ReservationStatus.confirmed
                       : ReservationStatus.pending,
@@ -459,11 +460,23 @@ class _CoachCalendarState extends State<CoachCalendar>
                         color: cs.onSurface,
                         fontSize: 15,
                         fontWeight: FontWeight.w600)),
+                const SizedBox(height: 2),
                 Row(children: [
                   Icon(Icons.access_time_rounded, size: 13, color: f.textMuted),
                   const SizedBox(width: 4),
                   Text(reservation.time,
                       style: TextStyle(color: f.textMuted, fontSize: 13))
+                ]),
+                const SizedBox(height: 3),
+                Row(children: [
+                  Icon(Icons.location_on_rounded, size: 13, color: f.textMuted),
+                  const SizedBox(width: 4),
+                  Flexible(
+                      child: Text(reservation.locationLabel,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style:
+                              TextStyle(color: f.textMuted, fontSize: 13)))
                 ]),
               ])),
           Container(

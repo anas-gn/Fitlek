@@ -20,6 +20,79 @@ export async function ensureReferralSchema() {
   `);
 }
 
+// Idempotently adds the Coach profile editor fields to coachprofiles.
+// Additive only — never drops data and
+// safe to run on every startup. See backend/migrations/2026_coach_profile_fields.sql.
+export async function ensureCoachProfileColumns() {
+  const [cols] = await pool.query(
+    `SELECT COLUMN_NAME FROM information_schema.COLUMNS
+      WHERE TABLE_SCHEMA = DATABASE()
+        AND TABLE_NAME = 'coachprofiles'
+        AND COLUMN_NAME IN (
+          'specialty', 'experience', 'professionalTitle', 'certifications',
+          'specialties', 'publicProfile', 'directMessaging'
+        )`
+  );
+  const existing = new Set(cols.map((c) => c.COLUMN_NAME));
+  if (!existing.has('specialty')) {
+    await pool.query(
+      `ALTER TABLE coachprofiles ADD COLUMN specialty VARCHAR(150) NOT NULL DEFAULT '' AFTER bio`
+    );
+  }
+  if (!existing.has('experience')) {
+    await pool.query(
+      `ALTER TABLE coachprofiles ADD COLUMN experience VARCHAR(200) NOT NULL DEFAULT '' AFTER specialty`
+    );
+  }
+  if (!existing.has('professionalTitle')) {
+    await pool.query(
+      `ALTER TABLE coachprofiles ADD COLUMN professionalTitle VARCHAR(150) NOT NULL DEFAULT '' AFTER experience`
+    );
+  }
+  if (!existing.has('certifications')) {
+    await pool.query(
+      `ALTER TABLE coachprofiles ADD COLUMN certifications TEXT NULL AFTER professionalTitle`
+    );
+  }
+  if (!existing.has('specialties')) {
+    await pool.query(
+      `ALTER TABLE coachprofiles ADD COLUMN specialties TEXT NULL AFTER certifications`
+    );
+  }
+  if (!existing.has('publicProfile')) {
+    await pool.query(
+      `ALTER TABLE coachprofiles ADD COLUMN publicProfile TINYINT(1) NOT NULL DEFAULT 1 AFTER specialties`
+    );
+  }
+  if (!existing.has('directMessaging')) {
+    await pool.query(
+      `ALTER TABLE coachprofiles ADD COLUMN directMessaging TINYINT(1) NOT NULL DEFAULT 1 AFTER publicProfile`
+    );
+  }
+
+  // Price is no longer used in the coach app (subscription later).
+  // Column type in this DB is TEXT NOT NULL — make it nullable so profile
+  // edits never fail with: Column 'price' cannot be null.
+  const [priceCols] = await pool.query(
+    `SELECT IS_NULLABLE, DATA_TYPE, COLUMN_TYPE
+       FROM information_schema.COLUMNS
+      WHERE TABLE_SCHEMA = DATABASE()
+        AND TABLE_NAME = 'coachprofiles'
+        AND COLUMN_NAME = 'price'
+      LIMIT 1`
+  );
+  if (priceCols.length && priceCols[0].IS_NULLABLE === 'NO') {
+    const dataType = String(priceCols[0].DATA_TYPE || '').toLowerCase();
+    if (dataType === 'text' || dataType === 'varchar' || dataType === 'char') {
+      await pool.query(`ALTER TABLE coachprofiles MODIFY COLUMN price TEXT NULL`);
+    } else {
+      await pool.query(
+        `ALTER TABLE coachprofiles MODIFY COLUMN price DECIMAL(10,2) NULL DEFAULT NULL`
+      );
+    }
+  }
+}
+
 // Durable in-app notifications (messages, reservations, session reminders).
 // uniqueKey enforces once-only creation across retries / repeated jobs.
 // Additive only — see backend/migrations/2026_notifications.sql.

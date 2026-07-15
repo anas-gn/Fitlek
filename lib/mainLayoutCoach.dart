@@ -33,7 +33,7 @@ class _MainLayoutCoachState extends State<MainLayoutCoach> with WidgetsBindingOb
   int _unreadCount = 0;
   Timer? _pollTimer;
 
-  bool get _showHeader => _currentIndex != 4;
+  bool get _showHeader => true;
 
   @override
   void initState() {
@@ -162,7 +162,10 @@ class _MainLayoutCoachState extends State<MainLayoutCoach> with WidgetsBindingOb
     }
 
     final screens = [
-      const CoachDashboard(),
+      CoachDashboard(
+        onViewCalendar: () => setState(() => _currentIndex = 1),
+        onViewNotifications: _openNotifications,
+      ),
       const CoachCalendar(),
       const CoachConversations(),
       const CoachClients(),

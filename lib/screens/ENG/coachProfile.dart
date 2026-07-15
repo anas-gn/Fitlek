@@ -1,16 +1,18 @@
 import 'dart:convert';
-import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../../services/apiService.dart';
 import 'coachEditProfile.dart';
+import 'coachNotifications.dart';
 import 'login.dart';
 
 import '../../components/theme_selector.dart';
+import '../../services/theme_service.dart';
+import '../../constants/app_colors.dart';
 import '../../theme/fitlek_theme_extension.dart';
+
 class ApiConfig {
   static const String baseUrl = 'http://localhost:3000/api';
 }
@@ -24,11 +26,19 @@ class CoachProfileData {
   final String? avatarUrl;
   final int? advisorID;
   final String bio;
+  final String specialty;
+  final String experience;
+  final String professionalTitle;
+  final List<String> certifications;
+  final List<String> specialties;
+  final bool publicProfile;
+  final bool directMessaging;
   final String instagramPage;
   final String? certificateUrl;
   final String invitationCode;
   final int totalInvitations;
   final int earnedPoints;
+  final int referralReward;
   final String tel;
   final String ville;
   final double? price;
@@ -42,17 +52,52 @@ class CoachProfileData {
     this.avatarUrl,
     this.advisorID,
     required this.bio,
+    required this.specialty,
+    required this.experience,
+    required this.professionalTitle,
+    required this.certifications,
+    required this.specialties,
+    required this.publicProfile,
+    required this.directMessaging,
     required this.instagramPage,
     this.certificateUrl,
     required this.invitationCode,
     required this.totalInvitations,
     required this.earnedPoints,
+    required this.referralReward,
     required this.tel,
     required this.ville,
     this.price,
   });
 
-  bool get hasCertificate => certificateUrl != null && certificateUrl!.isNotEmpty;
+  bool get hasProfessionalInfo =>
+      specialty.isNotEmpty ||
+      experience.isNotEmpty ||
+      professionalTitle.isNotEmpty ||
+      specialties.isNotEmpty ||
+      bio.isNotEmpty ||
+      ville.isNotEmpty;
+
+  static List<String> _parseStringList(dynamic value) {
+    if (value is List) {
+      return value
+          .map((e) => e?.toString().trim() ?? '')
+          .where((e) => e.isNotEmpty)
+          .toList();
+    }
+    if (value is String && value.trim().isNotEmpty) {
+      try {
+        final decoded = jsonDecode(value);
+        if (decoded is List) {
+          return decoded
+              .map((e) => e?.toString().trim() ?? '')
+              .where((e) => e.isNotEmpty)
+              .toList();
+        }
+      } catch (_) {}
+    }
+    return const [];
+  }
 
   factory CoachProfileData.fromJson(Map<String, dynamic> json) {
     double? parsedPrice;
@@ -68,11 +113,23 @@ class CoachProfileData {
       avatarUrl: json['avatarUrl']?.toString(),
       advisorID: json['advisorID'] != null ? int.tryParse(json['advisorID'].toString()) : null,
       bio: json['bio'] ?? '',
+      specialty: json['specialty']?.toString() ?? '',
+      experience: json['experience']?.toString() ?? '',
+      professionalTitle: json['professionalTitle']?.toString() ?? '',
+      certifications: _parseStringList(json['certifications']),
+      specialties: _parseStringList(json['specialties']),
+      publicProfile: json['publicProfile'] == null
+          ? true
+          : (json['publicProfile'] == true || json['publicProfile'] == 1),
+      directMessaging: json['directMessaging'] == null
+          ? true
+          : (json['directMessaging'] == true || json['directMessaging'] == 1),
       instagramPage: json['instagramPage'] ?? '',
       certificateUrl: json['certificateUrl'],
       invitationCode: json['invitationCode'] ?? '',
       totalInvitations: int.tryParse(json['totalInvitations'].toString()) ?? 0,
       earnedPoints: int.tryParse(json['earnedPoints'].toString()) ?? 0,
+      referralReward: int.tryParse(json['referralReward'].toString()) ?? 20,
       tel: json['tel']?.toString() ?? '',
       ville: json['ville']?.toString() ?? '',
       price: parsedPrice,
@@ -80,248 +137,27 @@ class CoachProfileData {
   }
 }
 
-class RecentActivityItem {
-  final String firstName;
-  final String lastName;
-  final String? avatarUrl;
-  final DateTime? createdAt;
-
-  RecentActivityItem({
-    required this.firstName,
-    required this.lastName,
-    this.avatarUrl,
-    this.createdAt,
-  });
-
-  factory RecentActivityItem.fromJson(Map<String, dynamic> json) {
-    return RecentActivityItem(
-      firstName: json['firstName'] ?? '',
-      lastName: json['lastName'] ?? '',
-      avatarUrl: json['avatarUrl'],
-      createdAt: json['createdAt'] != null ? DateTime.tryParse(json['createdAt'].toString()) : null,
-    );
-  }
-}
-
 class DashboardStats {
   final int totalReservations;
-  final int pendingReservations;
-  final int confirmedReservations;
   final int totalClients;
   final int invitationPoints;
-  final int totalInvitations;
-  final List<RecentActivityItem> recentActivity;
 
   DashboardStats({
     required this.totalReservations,
-    required this.pendingReservations,
-    required this.confirmedReservations,
     required this.totalClients,
     required this.invitationPoints,
-    required this.totalInvitations,
-    required this.recentActivity,
   });
 
   factory DashboardStats.fromJson(Map<String, dynamic> json) {
     return DashboardStats(
       totalReservations: int.tryParse(json['totalReservations'].toString()) ?? 0,
-      pendingReservations: int.tryParse(json['pendingReservations'].toString()) ?? 0,
-      confirmedReservations: int.tryParse(json['confirmedReservations'].toString()) ?? 0,
       totalClients: int.tryParse(json['totalClients'].toString()) ?? 0,
       invitationPoints: int.tryParse(json['invitationPoints'].toString()) ?? 0,
-      totalInvitations: int.tryParse(json['totalInvitations'].toString()) ?? 0,
-      recentActivity: (json['recentActivity'] as List<dynamic>? ?? [])
-          .map((e) => RecentActivityItem.fromJson(e as Map<String, dynamic>))
-          .toList(),
     );
   }
 
-  factory DashboardStats.empty() => DashboardStats(
-        totalReservations: 0,
-        pendingReservations: 0,
-        confirmedReservations: 0,
-        totalClients: 0,
-        invitationPoints: 0,
-        totalInvitations: 0,
-        recentActivity: [],
-      );
-}
-
-class CoachClientItem {
-  final int id;
-  final String firstName;
-  final String lastName;
-  final String? email;
-  final String? avatarUrl;
-  final bool isPremium;
-
-  CoachClientItem({
-    required this.id,
-    required this.firstName,
-    required this.lastName,
-    this.email,
-    this.avatarUrl,
-    required this.isPremium,
-  });
-
-  factory CoachClientItem.fromJson(Map<String, dynamic> json) {
-    return CoachClientItem(
-      id: int.tryParse(json['id'].toString()) ?? 0,
-      firstName: json['firstName'] ?? '',
-      lastName: json['lastName'] ?? '',
-      email: json['email'],
-      avatarUrl: json['avatarUrl'],
-      isPremium: json['isPremium'] == 1 || json['isPremium'] == true,
-    );
-  }
-}
-
-class GlassCard extends StatelessWidget {
-  final Widget child;
-  final EdgeInsets padding;
-  final EdgeInsets margin;
-  final double radius;
-  final Color? borderColor;
-  final Gradient? gradient;
-
-  const GlassCard({
-    super.key,
-    required this.child,
-    this.padding = const EdgeInsets.all(20),
-    this.margin = const EdgeInsets.fromLTRB(16, 16, 16, 0),
-    this.radius = 24,
-    this.borderColor,
-    this.gradient,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: margin,
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(radius),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
-          child: Container(
-            padding: padding,
-            decoration: BoxDecoration(
-              color: gradient == null ? context.fitlek.card.withValues(alpha: 0.75) : null,
-              gradient: gradient,
-              borderRadius: BorderRadius.circular(radius),
-              border: Border.all(color: borderColor ?? context.fitlek.border),
-            ),
-            child: child,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class RingProgress extends StatelessWidget {
-  final double percentage;
-  final Color color;
-  final String label;
-  final String sublabel;
-  final String centerText;
-  final double size;
-
-  const RingProgress({
-    super.key,
-    required this.percentage,
-    required this.color,
-    required this.label,
-    required this.sublabel,
-    required this.centerText,
-    this.size = 78,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        SizedBox(
-          width: size,
-          height: size,
-          child: TweenAnimationBuilder<double>(
-            tween: Tween(begin: 0, end: percentage.clamp(0, 1)),
-            duration: const Duration(milliseconds: 1100),
-            curve: Curves.easeOutCubic,
-            builder: (context, value, child) {
-              return CustomPaint(
-                painter: _RingPainter(progress: value, color: color, bg: context.fitlek.border),
-                child: Center(
-                  child: Text(centerText,
-                      style: TextStyle(color: color, fontSize: 15, fontWeight: FontWeight.w900)),
-                ),
-              );
-            },
-          ),
-        ),
-        const SizedBox(height: 10),
-        Text(label, style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 12, fontWeight: FontWeight.w700)),
-        const SizedBox(height: 2),
-        Text(sublabel, style: TextStyle(color: context.fitlek.textMuted, fontSize: 10, fontWeight: FontWeight.w500)),
-      ],
-    );
-  }
-}
-
-class _RingPainter extends CustomPainter {
-  final double progress;
-  final Color color;
-  final Color bg;
-  _RingPainter({required this.progress, required this.color, required this.bg});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final center = Offset(size.width / 2, size.height / 2);
-    final radius = (size.width - 8) / 2;
-    final bgPaint = Paint()
-      ..color = bg
-      ..strokeWidth = 8
-      ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.round;
-    canvas.drawCircle(center, radius, bgPaint);
-    final fgPaint = Paint()
-      ..shader = SweepGradient(colors: [color.withValues(alpha: 0.4), color]).createShader(Rect.fromCircle(center: center, radius: radius))
-      ..strokeWidth = 8
-      ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.round;
-    canvas.drawArc(Rect.fromCircle(center: center, radius: radius), -1.5708, 6.2832 * progress, false, fgPaint);
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
-}
-
-class DashedRectPainter extends CustomPainter {
-  final Color color;
-  final double radius;
-  DashedRectPainter({required this.color, this.radius = 20});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = color
-      ..strokeWidth = 1.4
-      ..style = PaintingStyle.stroke;
-    const dashWidth = 8.0;
-    const dashSpace = 6.0;
-    final rrect = RRect.fromRectAndRadius(Offset.zero & size, Radius.circular(radius));
-    final path = Path()..addRRect(rrect);
-    for (final metric in path.computeMetrics()) {
-      double distance = 0;
-      while (distance < metric.length) {
-        final next = distance + dashWidth;
-        canvas.drawPath(metric.extractPath(distance, next.clamp(0, metric.length)), paint);
-        distance = next + dashSpace;
-      }
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  factory DashboardStats.empty() =>
+      DashboardStats(totalReservations: 0, totalClients: 0, invitationPoints: 0);
 }
 
 class CoachProfile extends StatefulWidget {
@@ -359,7 +195,6 @@ class _CoachProfileState extends State<CoachProfile> with SingleTickerProviderSt
   bool _uploadingAvatar = false;
   CoachProfileData? _profile;
   DashboardStats _stats = DashboardStats.empty();
-  List<CoachClientItem> _clients = [];
   late AnimationController _animCtrl;
 
   // Identity prefers the freshly loaded backend profile, falling back to the
@@ -384,7 +219,7 @@ class _CoachProfileState extends State<CoachProfile> with SingleTickerProviderSt
   @override
   void initState() {
     super.initState();
-    _animCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 1000));
+    _animCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 900));
     _loadAll();
   }
 
@@ -403,14 +238,12 @@ class _CoachProfileState extends State<CoachProfile> with SingleTickerProviderSt
       final results = await Future.wait([
         http.get(Uri.parse('${ApiConfig.baseUrl}/coach/profile'), headers: _authHeaders),
         http.get(Uri.parse('${ApiConfig.baseUrl}/coach/dashboard'), headers: _authHeaders),
-        http.get(Uri.parse('${ApiConfig.baseUrl}/coach/clients'), headers: _authHeaders),
       ]);
 
       if (!mounted) return;
 
       final profileRes = results[0];
       final dashRes = results[1];
-      final clientsRes = results[2];
 
       if (profileRes.statusCode != 200) {
         setState(() {
@@ -427,16 +260,9 @@ class _CoachProfileState extends State<CoachProfile> with SingleTickerProviderSt
         stats = DashboardStats.fromJson(jsonDecode(dashRes.body));
       }
 
-      List<CoachClientItem> clients = [];
-      if (clientsRes.statusCode == 200) {
-        final list = jsonDecode(clientsRes.body) as List<dynamic>;
-        clients = list.map((e) => CoachClientItem.fromJson(e as Map<String, dynamic>)).toList();
-      }
-
       setState(() {
         _profile = profileData;
         _stats = stats;
-        _clients = clients;
         _loading = false;
       });
       _animCtrl.forward(from: 0);
@@ -449,39 +275,6 @@ class _CoachProfileState extends State<CoachProfile> with SingleTickerProviderSt
     }
   }
 
-  int _monthlyGoal(int points) {
-    if (points < 1000) return 1000;
-    if (points < 2500) return 2500;
-    if (points < 5000) return 5000;
-    if (points < 10000) return 10000;
-    return ((points ~/ 5000) + 1) * 5000;
-  }
-
-  Future<void> _openUrl(String rawUrl) async {
-    var url = rawUrl.trim();
-    if (url.isEmpty) return;
-    if (!url.startsWith('http://') && !url.startsWith('https://')) url = 'https://$url';
-    final uri = Uri.tryParse(url);
-    if (uri == null) {
-      _showSnack('Invalid link', isError: true);
-      return;
-    }
-    final ok = await launchUrl(uri, mode: LaunchMode.externalApplication);
-    if (!ok && mounted) _showSnack('Unable to open link', isError: true);
-  }
-
-  Future<void> _callPhone(String phone) async {
-    final uri = Uri(scheme: 'tel', path: phone);
-    final ok = await launchUrl(uri);
-    if (!ok && mounted) _showSnack('Unable to start the call', isError: true);
-  }
-
-  Future<void> _sendEmail(String email) async {
-    final uri = Uri(scheme: 'mailto', path: email);
-    final ok = await launchUrl(uri);
-    if (!ok && mounted) _showSnack('Unable to open email', isError: true);
-  }
-
   void _copyToClipboard(String value, String label) {
     Clipboard.setData(ClipboardData(text: value));
     _showSnack('$label copied to clipboard');
@@ -491,7 +284,11 @@ class _CoachProfileState extends State<CoachProfile> with SingleTickerProviderSt
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(msg, style: TextStyle(color: isError ? Theme.of(context).colorScheme.onError : Theme.of(context).colorScheme.onPrimary, fontWeight: FontWeight.w700, fontSize: 13)),
+        content: Text(msg,
+            style: TextStyle(
+                color: isError ? Theme.of(context).colorScheme.onError : Theme.of(context).colorScheme.onPrimary,
+                fontWeight: FontWeight.w700,
+                fontSize: 13)),
         backgroundColor: isError ? context.fitlek.error : Theme.of(context).colorScheme.primary,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
@@ -599,6 +396,12 @@ class _CoachProfileState extends State<CoachProfile> with SingleTickerProviderSt
     }
   }
 
+  Future<void> _openNotifications() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute(builder: (_) => const CoachNotifications()),
+    );
+  }
+
   Future<void> _pickAndUploadAvatar() async {
     final p = _profile;
     if (p == null || _uploadingAvatar) return;
@@ -646,6 +449,13 @@ class _CoachProfileState extends State<CoachProfile> with SingleTickerProviderSt
         'lastName': p.lastName,
         'gender': p.gender,
         'bio': p.bio,
+        'specialty': p.specialty,
+        'experience': p.experience,
+        'professionalTitle': p.professionalTitle,
+        'certifications': p.certifications,
+        'specialties': p.specialties,
+        'publicProfile': p.publicProfile,
+        'directMessaging': p.directMessaging,
         'instagramPage': p.instagramPage,
         'avatarUrl': newUrl,
         'tel': p.tel,
@@ -658,7 +468,7 @@ class _CoachProfileState extends State<CoachProfile> with SingleTickerProviderSt
 
       await _loadAll();
       widget.onProfileUpdated?.call();
-      if (mounted) _showSnack('Profile photo updated ✓');
+      if (mounted) _showSnack('Profile photo updated');
     } catch (e) {
       if (mounted) _showSnack('Error: $e', isError: true);
     } finally {
@@ -667,13 +477,13 @@ class _CoachProfileState extends State<CoachProfile> with SingleTickerProviderSt
   }
 
   Widget _staggered(int index, Widget child) {
-    final start = (index * 0.07).clamp(0.0, 0.6);
+    final start = (index * 0.08).clamp(0.0, 0.6);
     final end = (start + 0.4).clamp(0.0, 1.0);
     final anim = CurvedAnimation(parent: _animCtrl, curve: Interval(start, end, curve: Curves.easeOutCubic));
     return FadeTransition(
       opacity: anim,
       child: SlideTransition(
-        position: Tween<Offset>(begin: const Offset(0, 0.08), end: Offset.zero).animate(anim),
+        position: Tween<Offset>(begin: const Offset(0, 0.06), end: Offset.zero).animate(anim),
         child: child,
       ),
     );
@@ -752,228 +562,139 @@ class _CoachProfileState extends State<CoachProfile> with SingleTickerProviderSt
     final p = _profile!;
     final s = _stats;
 
-    final monthlyGoal = _monthlyGoal(s.invitationPoints);
-    final goalProgress = monthlyGoal == 0 ? 0.0 : (s.invitationPoints / monthlyGoal).clamp(0.0, 1.0);
-    final confirmRate = s.totalReservations == 0 ? 0.0 : (s.confirmedReservations / s.totalReservations).clamp(0.0, 1.0);
-
-    final contactEntries = <Map<String, dynamic>>[];
-    if (p.tel.isNotEmpty) {
-      contactEntries.add({'icon': Icons.call_rounded, 'label': 'Call', 'color': context.fitlek.success, 'action': () => _callPhone(p.tel)});
-    }
-    final email = _email;
-    if (email != null && email.isNotEmpty) {
-      contactEntries.add({'icon': Icons.mail_rounded, 'label': 'Email', 'color': context.fitlek.info, 'action': () => _sendEmail(email)});
-    }
-    if (p.instagramPage.isNotEmpty) {
-      contactEntries.add({
-        'icon': Icons.camera_alt_rounded,
-        'label': 'Instagram',
-        'color': context.fitlek.instagram,
-        'action': () => _openUrl(p.instagramPage.startsWith('http') ? p.instagramPage : 'https://instagram.com/${p.instagramPage}'),
-      });
-    }
-    if (p.tel.isNotEmpty) {
-      contactEntries.add({'icon': Icons.copy_rounded, 'label': 'Copy number', 'color': context.fitlek.violet, 'action': () => _copyToClipboard(p.tel, 'Number')});
-    }
-
     return CustomScrollView(
       physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
       slivers: [
-        SliverToBoxAdapter(child: _staggered(0, _buildHeader(p, s))),
-        SliverToBoxAdapter(child: _staggered(1, _buildKpiGrid(p, s))),
-        SliverToBoxAdapter(child: _staggered(2, _buildReservationsCard(s, confirmRate))),
-        SliverToBoxAdapter(child: _staggered(3, _buildProgressSection(goalProgress, confirmRate))),
-        if (_clients.isNotEmpty) SliverToBoxAdapter(child: _staggered(4, _buildClientsRow())),
-        if (s.recentActivity.isNotEmpty) SliverToBoxAdapter(child: _staggered(5, _buildRecentActivity(s))),
-        if (contactEntries.isNotEmpty) SliverToBoxAdapter(child: _staggered(6, _buildContactRow(contactEntries))),
-        if (p.bio.isNotEmpty) SliverToBoxAdapter(child: _staggered(7, _buildBioCard(p))),
-        if (p.ville.isNotEmpty) SliverToBoxAdapter(child: _staggered(8, _buildLocationCard(p))),
-        if (p.hasCertificate) SliverToBoxAdapter(child: _staggered(9, _buildCertificateCard(p))),
-        SliverToBoxAdapter(child: _staggered(10, _buildInvitationTicket(p))),
-        SliverToBoxAdapter(child: _staggered(11, _buildEditButton())),
-        SliverPadding(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-          sliver: SliverToBoxAdapter(child: _staggered(12, ThemeSelectorTile(controller: ThemeControllerScope.of(context)))),
-        ),
-        if (p.advisorID != null) SliverToBoxAdapter(child: _staggered(13, _buildAdvisorBanner(p))),
-        SliverToBoxAdapter(child: _staggered(14, _buildLogoutButton())),
-        const SliverToBoxAdapter(child: SizedBox(height: 36)),
+        const SliverToBoxAdapter(child: SizedBox(height: 16)),
+        SliverToBoxAdapter(child: _staggered(0, _buildProfileCard(p))),
+        SliverToBoxAdapter(child: _staggered(1, _buildStatsRow(s))),
+        SliverToBoxAdapter(child: _staggered(2, _buildProfessionalInfo(p))),
+        SliverToBoxAdapter(child: _staggered(3, _buildReferralCard(p))),
+        SliverToBoxAdapter(child: _staggered(4, _buildSettings())),
+        SliverToBoxAdapter(child: _staggered(5, _buildFooter())),
+        const SliverToBoxAdapter(child: SizedBox(height: 28)),
       ],
     );
   }
 
-  Widget _buildHeader(CoachProfileData p, DashboardStats s) {
+  // ── Profile identity card ──────────────────────────────────────────────
+  Widget _buildProfileCard(CoachProfileData p) {
+    final cs = Theme.of(context).colorScheme;
+    final f = context.fitlek;
     return Container(
-      margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-      padding: const EdgeInsets.fromLTRB(22, 22, 22, 26),
+      margin: const EdgeInsets.fromLTRB(16, 0, 16, 14),
+      padding: const EdgeInsets.fromLTRB(20, 26, 20, 22),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(30),
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            Theme.of(context).colorScheme.primary.withValues(alpha: 0.14),
-            Theme.of(context).colorScheme.primary.withValues(alpha: 0.04),
-            Theme.of(context).scaffoldBackgroundColor,
-          ],
-        ),
-        border: Border.all(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.16)),
+        color: f.card,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: f.border),
       ),
-      child: Stack(
-        clipBehavior: Clip.none,
+      child: Column(
         children: [
-          Positioned(
-            top: -70,
-            right: -55,
-            child: Container(
-              width: 180,
-              height: 180,
-              decoration: BoxDecoration(shape: BoxShape.circle, color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.07)),
-            ),
-          ),
-          Positioned(
-            bottom: -40,
-            left: -30,
-            child: Container(
-              width: 120,
-              height: 120,
-              decoration: BoxDecoration(shape: BoxShape.circle, color: context.fitlek.violet.withValues(alpha: 0.06)),
-            ),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          Stack(
+            clipBehavior: Clip.none,
             children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                    decoration: BoxDecoration(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(20)),
-                    child: Text('MY PROFILE',
-                        style: TextStyle(color: context.fitlek.textSecondary, fontSize: 10.5, fontWeight: FontWeight.w800, letterSpacing: 1)),
+              Container(
+                width: 104,
+                height: 104,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: LinearGradient(colors: [cs.primary, f.primaryDim]),
+                  boxShadow: [BoxShadow(color: cs.primary.withValues(alpha: 0.22), blurRadius: 22, spreadRadius: 1)],
+                ),
+                padding: const EdgeInsets.all(3.5),
+                child: ClipOval(
+                  child: Container(
+                    color: f.card2,
+                    child: (_avatar != null && _avatar!.isNotEmpty)
+                        ? Image.network(_avatar!, fit: BoxFit.cover, errorBuilder: (_, __, ___) => _initialsAvatar())
+                        : _initialsAvatar(),
                   ),
-                  const Spacer(),
-                  GestureDetector(
-                    onTap: _openEditProfile,
-                    child: Container(
-                      padding: const EdgeInsets.all(9),
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.12),
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3)),
-                      ),
-                      child: Icon(Icons.edit_rounded, size: 16, color: Theme.of(context).colorScheme.primary),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  GestureDetector(
-                    onTap: _showLogoutDialog,
-                    child: Container(
-                      padding: const EdgeInsets.all(9),
-                      decoration: BoxDecoration(
-                        color: context.fitlek.card2,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: context.fitlek.border),
-                      ),
-                      child: Icon(Icons.logout_rounded, size: 17, color: context.fitlek.textSecondary),
-                    ),
-                  ),
-                ],
+                ),
               ),
-              const SizedBox(height: 22),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  Stack(
-                    clipBehavior: Clip.none,
-                    children: [
-                      Container(
-                        width: 92,
-                        height: 92,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          gradient: LinearGradient(colors: [Theme.of(context).colorScheme.primary, context.fitlek.primaryDim]),
-                          boxShadow: [BoxShadow(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.25), blurRadius: 26, spreadRadius: 2)],
-                        ),
-                        padding: const EdgeInsets.all(3),
-                        child: ClipOval(
-                          child: Container(
-                            color: context.fitlek.card,
-                            child: (_avatar != null && _avatar!.isNotEmpty)
-                                ? Image.network(_avatar!, fit: BoxFit.cover, errorBuilder: (_, __, ___) => _initialsAvatar())
-                                : _initialsAvatar(),
-                          ),
-                        ),
-                      ),
-                      Positioned(
-                        right: -2,
-                        bottom: -2,
-                        child: GestureDetector(
-                          onTap: _uploadingAvatar ? null : _pickAndUploadAvatar,
-                          child: Container(
-                            width: 30,
-                            height: 30,
-                            decoration: BoxDecoration(
-                              color: Theme.of(context).colorScheme.primary,
-                              shape: BoxShape.circle,
-                              border: Border.all(color: Theme.of(context).scaffoldBackgroundColor, width: 2.5),
-                            ),
-                            child: _uploadingAvatar
-                                ? Padding(
-                                    padding: const EdgeInsets.all(7),
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      valueColor: AlwaysStoppedAnimation<Color>(Theme.of(context).colorScheme.onPrimary),
-                                    ),
-                                  )
-                                : Icon(Icons.camera_alt_rounded, size: 15, color: Theme.of(context).colorScheme.onPrimary),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(width: 18),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(_fullName,
-                            style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 22, fontWeight: FontWeight.w800, height: 1.1),
-                            maxLines: 2, overflow: TextOverflow.ellipsis),
-                        const SizedBox(height: 8),
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-                              decoration: BoxDecoration(
-                                color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.12),
-                                borderRadius: BorderRadius.circular(20),
-                                border: Border.all(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3)),
-                              ),
-                              child: Row(mainAxisSize: MainAxisSize.min, children: [
-                                Icon(Icons.verified_rounded, size: 14, color: Theme.of(context).colorScheme.primary),
-                                const SizedBox(width: 5),
-                                Text('Coach SIRVYA', style: TextStyle(color: Theme.of(context).colorScheme.primary, fontSize: 11, fontWeight: FontWeight.w700)),
-                              ]),
-                            ),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-                              decoration: BoxDecoration(
-                                color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.08),
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                              child: Text('${s.totalClients} clients',
-                                  style: TextStyle(color: context.fitlek.textSecondary, fontSize: 11, fontWeight: FontWeight.w700)),
-                            ),
-                          ],
-                        ),
-                      ],
+              Positioned(
+                right: -2,
+                bottom: -2,
+                child: GestureDetector(
+                  onTap: _uploadingAvatar ? null : _pickAndUploadAvatar,
+                  child: Container(
+                    width: 34,
+                    height: 34,
+                    decoration: BoxDecoration(
+                      color: cs.primary,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: f.card, width: 3),
                     ),
+                    child: _uploadingAvatar
+                        ? Padding(
+                            padding: const EdgeInsets.all(8),
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(cs.onPrimary),
+                            ),
+                          )
+                        : Icon(Icons.camera_alt_rounded, size: 16, color: cs.onPrimary),
                   ),
-                ],
+                ),
               ),
             ],
+          ),
+          const SizedBox(height: 16),
+          Text(
+            _fullName.isNotEmpty ? _fullName : 'Coach',
+            textAlign: TextAlign.center,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(color: cs.onSurface, fontSize: 22, fontWeight: FontWeight.w800, height: 1.15),
+          ),
+          const SizedBox(height: 10),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 4),
+                decoration: BoxDecoration(
+                  color: cs.primary.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text('Coach',
+                    style: TextStyle(color: cs.primary, fontSize: 11.5, fontWeight: FontWeight.w800)),
+              ),
+              if ((_email ?? '').isNotEmpty) ...[
+                const SizedBox(width: 10),
+                Flexible(
+                  child: Text(
+                    _email!,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(color: f.textMuted, fontSize: 12.5, fontWeight: FontWeight.w500),
+                  ),
+                ),
+              ],
+            ],
+          ),
+          const SizedBox(height: 18),
+          GestureDetector(
+            onTap: _openEditProfile,
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 15),
+              decoration: BoxDecoration(
+                color: cs.primary,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [BoxShadow(color: cs.primary.withValues(alpha: 0.22), blurRadius: 16, offset: const Offset(0, 6))],
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.edit_rounded, size: 17, color: cs.onPrimary),
+                  const SizedBox(width: 9),
+                  Text('Edit Profile',
+                      style: TextStyle(color: cs.onPrimary, fontWeight: FontWeight.w800, fontSize: 14)),
+                ],
+              ),
+            ),
           ),
         ],
       ),
@@ -982,194 +703,121 @@ class _CoachProfileState extends State<CoachProfile> with SingleTickerProviderSt
 
   Widget _initialsAvatar() => Center(
         child: Text(_initials.isEmpty ? '?' : _initials,
-            style: TextStyle(color: Theme.of(context).colorScheme.primary, fontSize: 28, fontWeight: FontWeight.w800)),
+            style: TextStyle(color: Theme.of(context).colorScheme.primary, fontSize: 30, fontWeight: FontWeight.w800)),
       );
 
-  Widget _buildKpiGrid(CoachProfileData p, DashboardStats s) {
+  // ── Stats row: Clients / Bookings / Points ─────────────────────────────
+  Widget _buildStatsRow(DashboardStats s) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 14),
       child: Row(
         children: [
-          Expanded(
-            flex: 3,
-            child: _bentoTile(
-              icon: Icons.emoji_events_rounded,
-              value: '${s.invitationPoints}',
-              label: 'Points earned',
-              color: Theme.of(context).colorScheme.primary,
-              big: true,
-            ),
-          ),
+          Expanded(child: _statCard('${s.totalClients}', 'Clients')),
           const SizedBox(width: 12),
-          Expanded(
-            flex: 2,
-            child: _bentoTile(
-              icon: Icons.group_add_rounded,
-              value: '${s.totalInvitations}',
-              label: 'Invitations',
-              color: context.fitlek.info,
-              big: true,
-            ),
-          ),
+          Expanded(child: _statCard('${s.totalReservations}', 'Bookings')),
+          const SizedBox(width: 12),
+          Expanded(child: _statCard('${s.invitationPoints}', 'Points')),
         ],
       ),
     );
   }
 
-  Widget _bentoTile({required IconData icon, required String value, required String label, required Color color, required bool big}) {
+  Widget _statCard(String value, String label) {
+    final cs = Theme.of(context).colorScheme;
+    final f = context.fitlek;
     return Container(
-      height: big ? 176 : 80,
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(vertical: 18),
       decoration: BoxDecoration(
-        color: context.fitlek.card,
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: context.fitlek.border),
+        color: f.card,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: f.border),
       ),
-      child: Stack(
+      child: Column(
         children: [
-          Positioned(
-            right: -10,
-            top: -10,
-            child: Opacity(
-              opacity: 0.05,
-              child: Icon(icon, color: color, size: big ? 100 : 60),
-            ),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: big ? MainAxisAlignment.spaceBetween : MainAxisAlignment.center,
-            children: [
-              if (big)
-                Container(
-                  width: 38,
-                  height: 38,
-                  decoration: BoxDecoration(color: color.withValues(alpha: 0.14), borderRadius: BorderRadius.circular(11)),
-                  child: Icon(icon, color: color, size: 19),
-                ),
-              if (!big)
-                Row(
-                  children: [
-                    Container(
-                      width: 32,
-                      height: 32,
-                      decoration: BoxDecoration(color: color.withValues(alpha: 0.14), borderRadius: BorderRadius.circular(9)),
-                      child: Icon(icon, color: color, size: 16),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(value,
-                          style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 16, fontWeight: FontWeight.w900),
-                          maxLines: 1, overflow: TextOverflow.ellipsis),
-                    ),
-                  ],
-                ),
-              if (big) ...[
-                Text(value, style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 34, fontWeight: FontWeight.w900, height: 1)),
-                const SizedBox(height: 2),
-                Text(label, style: TextStyle(color: context.fitlek.textMuted, fontSize: 12, fontWeight: FontWeight.w500)),
-              ] else
-                Padding(
-                  padding: const EdgeInsets.only(left: 40, top: 2),
-                  child: Text(label, style: TextStyle(color: context.fitlek.textMuted, fontSize: 10, fontWeight: FontWeight.w500)),
-                ),
-            ],
-          ),
+          Text(value, style: TextStyle(color: cs.onSurface, fontSize: 24, fontWeight: FontWeight.w900, height: 1)),
+          const SizedBox(height: 6),
+          Text(label, style: TextStyle(color: f.textMuted, fontSize: 12, fontWeight: FontWeight.w600)),
         ],
       ),
     );
   }
 
-  Widget _buildReservationsCard(DashboardStats s, double confirmRate) {
-    return GlassCard(
+  // ── Professional information ───────────────────────────────────────────
+  Widget _buildProfessionalInfo(CoachProfileData p) {
+    final f = context.fitlek;
+    final specialtyText = p.specialties.isNotEmpty
+        ? p.specialties.join(', ')
+        : p.specialty;
+    final titleText = p.professionalTitle.isNotEmpty ? p.professionalTitle : p.experience;
+    final rows = <Widget>[];
+    if (titleText.isNotEmpty) {
+      rows.add(_infoRow(Icons.workspace_premium_rounded, 'Professional Title', titleText));
+    }
+    if (specialtyText.isNotEmpty) {
+      rows.add(_infoRow(Icons.fitness_center_rounded, 'Specialties', specialtyText));
+    }
+    if (p.certifications.isNotEmpty) {
+      rows.add(_infoRow(Icons.verified_rounded, 'Certifications', p.certifications.join(', ')));
+    }
+    if (p.bio.isNotEmpty) {
+      rows.add(_infoRow(Icons.description_rounded, 'Bio', p.bio));
+    }
+    if (p.ville.isNotEmpty) {
+      rows.add(_infoRow(Icons.location_on_rounded, 'Location', p.ville));
+    }
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 0, 16, 14),
+      padding: const EdgeInsets.fromLTRB(18, 18, 18, 6),
+      decoration: BoxDecoration(
+        color: f.card,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: f.border),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Icon(Icons.event_available_rounded, size: 18, color: context.fitlek.warning),
-              const SizedBox(width: 8),
-              Text('Reservations', style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 14.5, fontWeight: FontWeight.w800)),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              _statBlock('${s.totalReservations}', 'Total', Theme.of(context).colorScheme.onSurface),
-              _statDivider(),
-              _statBlock('${s.confirmedReservations}', 'Confirmed', context.fitlek.success),
-              _statDivider(),
-              _statBlock('${s.pendingReservations}', 'Pending', context.fitlek.warning),
-            ],
-          ),
-          const SizedBox(height: 16),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(6),
-            child: TweenAnimationBuilder<double>(
-              tween: Tween(begin: 0, end: confirmRate),
-              duration: const Duration(milliseconds: 1000),
-              curve: Curves.easeOutCubic,
-              builder: (context, value, _) {
-                return LinearProgressIndicator(
-                  value: value,
-                  backgroundColor: context.fitlek.border,
-                  valueColor: AlwaysStoppedAnimation<Color>(context.fitlek.success),
-                  minHeight: 8,
-                );
-              },
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text('${(confirmRate * 100).toStringAsFixed(0)}% confirmation rate',
-              style: TextStyle(color: context.fitlek.textMuted, fontSize: 11, fontWeight: FontWeight.w600)),
+          Text('PROFESSIONAL INFORMATION',
+              style: TextStyle(color: Theme.of(context).colorScheme.primary, fontSize: 12, fontWeight: FontWeight.w800, letterSpacing: 0.8)),
+          const SizedBox(height: 14),
+          if (rows.isEmpty)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 14),
+              child: Text(
+                'Add your professional details from Edit Profile.',
+                style: TextStyle(color: f.textMuted, fontSize: 13, height: 1.5),
+              ),
+            )
+          else
+            ...rows,
         ],
       ),
     );
   }
 
-  Widget _statBlock(String value, String label, Color color) {
-    return Expanded(
-      child: Column(
-        children: [
-          Text(value, style: TextStyle(color: color, fontSize: 22, fontWeight: FontWeight.w900)),
-          const SizedBox(height: 4),
-          Text(label, style: TextStyle(color: context.fitlek.textMuted, fontSize: 10.5, fontWeight: FontWeight.w600)),
-        ],
-      ),
-    );
-  }
-
-  Widget _statDivider() => Container(width: 1, height: 34, color: context.fitlek.border);
-
-  Widget _buildProgressSection(double goalProgress, double confirmRate) {
+  Widget _infoRow(IconData icon, String label, String value) {
+    final cs = Theme.of(context).colorScheme;
+    final f = context.fitlek;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+      padding: const EdgeInsets.only(bottom: 16),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            child: Container(
-              padding: const EdgeInsets.all(18),
-              decoration: BoxDecoration(color: context.fitlek.card, borderRadius: BorderRadius.circular(22), border: Border.all(color: context.fitlek.border)),
-              child: RingProgress(
-                percentage: goalProgress,
-                color: Theme.of(context).colorScheme.primary,
-                label: 'Goal',
-                sublabel: 'Monthly points',
-                centerText: '${(goalProgress * 100).toInt()}%',
-              ),
-            ),
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(color: f.card2, borderRadius: BorderRadius.circular(12), border: Border.all(color: f.border)),
+            child: Icon(icon, size: 19, color: cs.primary),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 14),
           Expanded(
-            child: Container(
-              padding: const EdgeInsets.all(18),
-              decoration: BoxDecoration(color: context.fitlek.card, borderRadius: BorderRadius.circular(22), border: Border.all(color: context.fitlek.border)),
-              child: RingProgress(
-                percentage: confirmRate,
-                color: context.fitlek.violet,
-                label: 'Confirmations',
-                sublabel: 'Validated sessions',
-                centerText: '${(confirmRate * 100).toInt()}%',
-              ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label, style: TextStyle(color: f.textMuted, fontSize: 11.5, fontWeight: FontWeight.w600)),
+                const SizedBox(height: 3),
+                Text(value, style: TextStyle(color: cs.onSurface, fontSize: 14.5, fontWeight: FontWeight.w600, height: 1.45)),
+              ],
             ),
           ),
         ],
@@ -1177,224 +825,193 @@ class _CoachProfileState extends State<CoachProfile> with SingleTickerProviderSt
     );
   }
 
-  Widget _buildClientsRow() {
-    return GlassCard(
-      padding: const EdgeInsets.fromLTRB(20, 18, 20, 18),
+  // ── Coach referral card (dark) ─────────────────────────────────────────
+  Widget _buildReferralCard(CoachProfileData p) {
+    final code = p.invitationCode.isNotEmpty ? p.invitationCode : '—';
+    const onDark = AppColors.sand;
+    final onDarkMuted = AppColors.sand.withValues(alpha: 0.62);
+    final accent = context.fitlek.success;
+
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 0, 16, 14),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(24),
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [AppColors.cyprus, AppColors.primaryDim],
+        ),
+        boxShadow: [BoxShadow(color: AppColors.cyprus.withValues(alpha: 0.3), blurRadius: 20, offset: const Offset(0, 8))],
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              Icon(Icons.groups_rounded, size: 18, color: context.fitlek.info),
-              const SizedBox(width: 8),
-              Text('My clients', style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 14.5, fontWeight: FontWeight.w800)),
-              const Spacer(),
-              Text('${_clients.length}', style: TextStyle(color: context.fitlek.textMuted, fontSize: 12, fontWeight: FontWeight.w700)),
+              const Expanded(
+                child: Text('Coach Referral',
+                    style: TextStyle(color: onDark, fontSize: 18, fontWeight: FontWeight.w800)),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(color: AppColors.sand.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(20)),
+                child: Row(mainAxisSize: MainAxisSize.min, children: [
+                  Icon(Icons.monetization_on_rounded, size: 14, color: accent),
+                  const SizedBox(width: 5),
+                  Text('${p.earnedPoints}', style: const TextStyle(color: onDark, fontSize: 12.5, fontWeight: FontWeight.w800)),
+                ]),
+              ),
             ],
+          ),
+          const SizedBox(height: 4),
+          Text('Invite friends and earn rewards', style: TextStyle(color: accent, fontSize: 12.5, fontWeight: FontWeight.w600)),
+          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.fromLTRB(16, 12, 12, 12),
+            decoration: BoxDecoration(
+              color: Colors.black.withValues(alpha: 0.22),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: AppColors.sand.withValues(alpha: 0.14)),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(code,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(color: onDark, fontSize: 20, fontWeight: FontWeight.w900, letterSpacing: 2)),
+                ),
+                GestureDetector(
+                  onTap: () => _copyToClipboard(p.invitationCode, 'Code'),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
+                    decoration: BoxDecoration(color: onDark, borderRadius: BorderRadius.circular(10)),
+                    child: const Text('Copy', style: TextStyle(color: AppColors.cyprus, fontSize: 13, fontWeight: FontWeight.w800)),
+                  ),
+                ),
+              ],
+            ),
           ),
           const SizedBox(height: 14),
-          SizedBox(
-            height: 76,
-            child: ListView.separated(
-              scrollDirection: Axis.horizontal,
-              itemCount: _clients.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 12),
-              itemBuilder: (context, index) {
-                final c = _clients[index];
-                final initials = ((c.firstName.isNotEmpty ? c.firstName[0] : '') + (c.lastName.isNotEmpty ? c.lastName[0] : '')).toUpperCase();
-                return Column(
-                  children: [
-                    Stack(
-                      children: [
-                        Container(
-                          width: 50,
-                          height: 50,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: context.fitlek.card2,
-                            border: Border.all(color: context.fitlek.border),
-                          ),
-                          child: ClipOval(
-                            child: c.avatarUrl != null && c.avatarUrl!.isNotEmpty
-                                ? Image.network(c.avatarUrl!, fit: BoxFit.cover,
-                                    errorBuilder: (_, __, ___) => Center(child: Text(initials, style: TextStyle(color: Theme.of(context).colorScheme.primary, fontSize: 13, fontWeight: FontWeight.w800))))
-                                : Center(child: Text(initials, style: TextStyle(color: Theme.of(context).colorScheme.primary, fontSize: 13, fontWeight: FontWeight.w800))),
-                          ),
-                        ),
-                        if (c.isPremium)
-                          Positioned(
-                            right: 0,
-                            bottom: 0,
-                            child: Container(
-                              width: 16,
-                              height: 16,
-                              decoration: BoxDecoration(color: Theme.of(context).colorScheme.primary, shape: BoxShape.circle, border: Border.all(color: context.fitlek.card, width: 2)),
-                              child: Icon(Icons.star_rounded, size: 10, color: Theme.of(context).colorScheme.onPrimary),
-                            ),
-                          ),
-                      ],
-                    ),
-                    const SizedBox(height: 6),
-                    SizedBox(
-                      width: 56,
-                      child: Text(c.firstName, textAlign: TextAlign.center, maxLines: 1, overflow: TextOverflow.ellipsis,
-                          style: TextStyle(color: context.fitlek.textSecondary, fontSize: 10, fontWeight: FontWeight.w600)),
-                    ),
-                  ],
-                );
-              },
+          Text(
+            'Earn ${p.referralReward} bonus points for every professional coach you onboard to the SIRVYA ecosystem.',
+            style: TextStyle(color: onDarkMuted, fontSize: 11.5, height: 1.5, fontStyle: FontStyle.italic),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── Settings group: Appearance / Notifications / Logout ─────────────────
+  Widget _buildSettings() {
+    final f = context.fitlek;
+    final cs = Theme.of(context).colorScheme;
+    final controller = ThemeControllerScope.of(context);
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 0, 16, 14),
+      decoration: BoxDecoration(
+        color: f.card,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: f.border),
+      ),
+      child: Column(
+        children: [
+          ListenableBuilder(
+            listenable: controller,
+            builder: (context, _) => _settingsRow(
+              icon: Icons.brightness_6_rounded,
+              iconColor: cs.primary,
+              label: 'Appearance',
+              trailingText: ThemeService.label(controller.mode),
+              onTap: () => _showThemeSheet(controller),
             ),
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildRecentActivity(DashboardStats s) {
-    return GlassCard(
-      padding: const EdgeInsets.fromLTRB(20, 18, 20, 10),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.history_rounded, size: 18, color: Theme.of(context).colorScheme.primary),
-              const SizedBox(width: 8),
-              Text('Recent activity', style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 14.5, fontWeight: FontWeight.w800)),
-            ],
+          _settingsDivider(),
+          _settingsRow(
+            icon: Icons.notifications_none_rounded,
+            iconColor: cs.primary,
+            label: 'Notifications',
+            onTap: _openNotifications,
           ),
-          const SizedBox(height: 8),
-          ...s.recentActivity.map((a) {
-            final initials = ((a.firstName.isNotEmpty ? a.firstName[0] : '') + (a.lastName.isNotEmpty ? a.lastName[0] : '')).toUpperCase();
-            final dateLabel = a.createdAt != null ? '${a.createdAt!.day}/${a.createdAt!.month}/${a.createdAt!.year}' : '';
-            return Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              child: Row(
-                children: [
-                  Container(
-                    width: 38,
-                    height: 38,
-                    decoration: BoxDecoration(shape: BoxShape.circle, color: context.fitlek.card2, border: Border.all(color: context.fitlek.border)),
-                    child: ClipOval(
-                      child: a.avatarUrl != null && a.avatarUrl!.isNotEmpty
-                          ? Image.network(a.avatarUrl!, fit: BoxFit.cover, errorBuilder: (_, __, ___) => Center(child: Text(initials, style: TextStyle(color: Theme.of(context).colorScheme.primary, fontSize: 11, fontWeight: FontWeight.w800))))
-                          : Center(child: Text(initials, style: TextStyle(color: Theme.of(context).colorScheme.primary, fontSize: 11, fontWeight: FontWeight.w800))),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text('${a.firstName} ${a.lastName}'.trim(),
-                        style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 13, fontWeight: FontWeight.w600),
-                        maxLines: 1, overflow: TextOverflow.ellipsis),
-                  ),
-                  Text(dateLabel, style: TextStyle(color: context.fitlek.textMuted, fontSize: 11, fontWeight: FontWeight.w500)),
-                ],
-              ),
-            );
-          }),
-          const SizedBox(height: 8),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildContactRow(List<Map<String, dynamic>> entries) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 12),
-        decoration: BoxDecoration(color: context.fitlek.card, borderRadius: BorderRadius.circular(22), border: Border.all(color: context.fitlek.border)),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: entries.map((e) {
-            return GestureDetector(
-              onTap: e['action'] as VoidCallback,
-              child: Column(
-                children: [
-                  Container(
-                    width: 50,
-                    height: 50,
-                    decoration: BoxDecoration(
-                      color: (e['color'] as Color).withValues(alpha: 0.1),
-                      shape: BoxShape.circle,
-                      border: Border.all(color: (e['color'] as Color).withValues(alpha: 0.25)),
-                    ),
-                    child: Icon(e['icon'] as IconData, color: e['color'] as Color, size: 20),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(e['label'] as String, style: TextStyle(color: context.fitlek.textMuted, fontSize: 10.5, fontWeight: FontWeight.w600)),
-                ],
-              ),
-            );
-          }).toList(),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildBioCard(CoachProfileData p) {
-    return GlassCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.chat_bubble_rounded, size: 18, color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.7)),
-              const SizedBox(width: 8),
-              Text('About', style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 14.5, fontWeight: FontWeight.w800)),
-            ],
+          _settingsDivider(),
+          _settingsRow(
+            icon: Icons.logout_rounded,
+            iconColor: f.error,
+            label: 'Logout',
+            labelColor: f.error,
+            showChevron: false,
+            onTap: _showLogoutDialog,
           ),
-          const SizedBox(height: 12),
-          Text(p.bio, style: TextStyle(color: context.fitlek.textSecondary, fontSize: 13.5, height: 1.75)),
         ],
       ),
     );
   }
 
-  Widget _buildCertificateCard(CoachProfileData p) {
-    final url = p.certificateUrl!;
-    final isImage = url.toLowerCase().endsWith('.jpg') || url.toLowerCase().endsWith('.jpeg') || url.toLowerCase().endsWith('.png') || url.toLowerCase().endsWith('.webp');
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(22),
-        child: Container(
-          decoration: BoxDecoration(border: Border.all(color: context.fitlek.border), borderRadius: BorderRadius.circular(22)),
-          child: Stack(
+  void _showThemeSheet(ThemeController controller) {
+    final cs = Theme.of(context).colorScheme;
+    final f = context.fitlek;
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => ListenableBuilder(
+        listenable: controller,
+        builder: (ctx, _) => Container(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
+          decoration: BoxDecoration(
+            color: f.card,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(22)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              if (isImage)
-                Image.network(url, height: 190, width: double.infinity, fit: BoxFit.cover, errorBuilder: (_, __, ___) => _certificateFallback())
-              else
-                _certificateFallback(),
-              Positioned(
-                left: 0,
-                right: 0,
-                bottom: 0,
+              Center(
                 child: Container(
-                  padding: const EdgeInsets.fromLTRB(16, 40, 16, 14),
-                  decoration: const BoxDecoration(
-                    gradient: LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Colors.transparent, Color(0xE6000000)]),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(Icons.workspace_premium_rounded, size: 18, color: Theme.of(context).colorScheme.primary),
-                      const SizedBox(width: 8),
-                      const Expanded(
-                        child: Text('Verified certificate', style: TextStyle(color: Colors.white, fontSize: 13.5, fontWeight: FontWeight.w700)),
-                      ),
-                      GestureDetector(
-                        onTap: () => _openUrl(url),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
-                          decoration: BoxDecoration(color: Theme.of(context).colorScheme.primary, borderRadius: BorderRadius.circular(20)),
-                          child: Text('VIEW', style: TextStyle(color: Theme.of(context).colorScheme.onPrimary, fontSize: 10.5, fontWeight: FontWeight.w900, letterSpacing: 0.5)),
-                        ),
-                      ),
-                    ],
-                  ),
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(color: f.border, borderRadius: BorderRadius.circular(2)),
                 ),
               ),
+              const SizedBox(height: 16),
+              Text('Appearance', style: TextStyle(color: cs.onSurface, fontSize: 16, fontWeight: FontWeight.w800)),
+              const SizedBox(height: 6),
+              Text('Choose the app theme', style: TextStyle(color: f.textMuted, fontSize: 12)),
+              const SizedBox(height: 16),
+              ...AppThemeMode.values.map((mode) {
+                final selected = controller.mode == mode;
+                final icon = mode == AppThemeMode.light
+                    ? Icons.light_mode_rounded
+                    : mode == AppThemeMode.dark
+                        ? Icons.dark_mode_rounded
+                        : Icons.brightness_auto_rounded;
+                return GestureDetector(
+                  onTap: () {
+                    controller.setMode(mode);
+                    Navigator.pop(ctx);
+                  },
+                  child: Container(
+                    margin: const EdgeInsets.only(bottom: 8),
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                    decoration: BoxDecoration(
+                      color: selected ? cs.primary.withValues(alpha: 0.1) : f.card2,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: selected ? cs.primary.withValues(alpha: 0.4) : f.border),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(icon, color: selected ? cs.primary : f.textMuted, size: 20),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(ThemeService.label(mode),
+                              style: TextStyle(color: cs.onSurface, fontSize: 14, fontWeight: selected ? FontWeight.w700 : FontWeight.w500)),
+                        ),
+                        if (selected) Icon(Icons.check_circle_rounded, color: cs.primary, size: 20),
+                      ],
+                    ),
+                  ),
+                );
+              }),
             ],
           ),
         ),
@@ -1402,175 +1019,63 @@ class _CoachProfileState extends State<CoachProfile> with SingleTickerProviderSt
     );
   }
 
-  Widget _certificateFallback() {
-    return Container(
-      height: 190,
-      width: double.infinity,
-      color: context.fitlek.card2,
-      child: Center(child: Icon(Icons.description_rounded, size: 40, color: context.fitlek.textMuted.withValues(alpha: 0.4))),
-    );
-  }
+  Widget _settingsDivider() => Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 14),
+        child: Divider(height: 1, thickness: 1, color: context.fitlek.border.withValues(alpha: 0.6)),
+      );
 
-  Widget _buildInvitationTicket(CoachProfileData p) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-      child: GestureDetector(
-        onTap: () => _copyToClipboard(p.invitationCode, 'Code'),
-        child: Container(
-          padding: const EdgeInsets.all(4),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(22),
-            gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [Theme.of(context).colorScheme.primary.withValues(alpha: 0.1), Theme.of(context).scaffoldBackgroundColor]),
-          ),
-          child: CustomPaint(
-            painter: DashedRectPainter(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.35), radius: 22),
-            child: Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Container(
-                        width: 36,
-                        height: 36,
-                        decoration: BoxDecoration(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.14), borderRadius: BorderRadius.circular(10)),
-                        child: Icon(Icons.confirmation_number_rounded, size: 18, color: Theme.of(context).colorScheme.primary),
-                      ),
-                      const SizedBox(width: 10),
-                      Text('Invitation code', style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 14, fontWeight: FontWeight.w800)),
-                      const Spacer(),
-                      Icon(Icons.copy_rounded, size: 18, color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.8)),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    p.invitationCode.isNotEmpty ? p.invitationCode : '—',
-                    style: TextStyle(color: Theme.of(context).colorScheme.primary, fontSize: 26, fontWeight: FontWeight.w900, letterSpacing: 4, fontFamily: 'Courier'),
-                  ),
-                  const SizedBox(height: 10),
-                  Text('Share this code to invite new clients and earn points',
-                      style: TextStyle(color: context.fitlek.textMuted.withValues(alpha: 0.85), fontSize: 11.5, height: 1.5)),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildAdvisorBanner(CoachProfileData p) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        decoration: BoxDecoration(color: context.fitlek.card, borderRadius: BorderRadius.circular(18), border: Border.all(color: context.fitlek.border)),
+  Widget _settingsRow({
+    required IconData icon,
+    required Color iconColor,
+    required String label,
+    Color? labelColor,
+    String? trailingText,
+    bool showChevron = true,
+    required VoidCallback onTap,
+  }) {
+    final f = context.fitlek;
+    final cs = Theme.of(context).colorScheme;
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         child: Row(
           children: [
             Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(color: context.fitlek.violet.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(11)),
-              child: Icon(Icons.support_agent_rounded, size: 18, color: context.fitlek.violet),
+              width: 32,
+              height: 32,
+              decoration: BoxDecoration(color: iconColor.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(9)),
+              child: Icon(icon, color: iconColor, size: 17),
             ),
             const SizedBox(width: 14),
             Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Linked advisor', style: TextStyle(color: context.fitlek.textMuted, fontSize: 10.5, fontWeight: FontWeight.w600)),
-                  const SizedBox(height: 2),
-                  Text('#${p.advisorID}', style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 14, fontWeight: FontWeight.w700)),
-                ],
-              ),
+              child: Text(label,
+                  style: TextStyle(color: labelColor ?? cs.onSurface, fontSize: 14, fontWeight: FontWeight.w600)),
             ),
+            if (trailingText != null)
+              Text(trailingText, style: TextStyle(color: f.textMuted, fontSize: 12.5, fontWeight: FontWeight.w500)),
+            if (showChevron) ...[
+              const SizedBox(width: 6),
+              Icon(Icons.chevron_right_rounded, color: f.textMuted, size: 18),
+            ],
           ],
         ),
       ),
     );
   }
 
-  Widget _buildLocationCard(CoachProfileData p) {
+  Widget _buildFooter() {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        decoration: BoxDecoration(color: context.fitlek.card, borderRadius: BorderRadius.circular(18), border: Border.all(color: context.fitlek.border)),
-        child: Row(
-          children: [
-            Container(
-              width: 40,
-              height: 40,
-              decoration: BoxDecoration(color: context.fitlek.info.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(11)),
-              child: Icon(Icons.location_on_rounded, size: 18, color: context.fitlek.info),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Location', style: TextStyle(color: context.fitlek.textMuted, fontSize: 10.5, fontWeight: FontWeight.w600)),
-                  const SizedBox(height: 2),
-                  Text(p.ville,
-                      style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 14, fontWeight: FontWeight.w700),
-                      maxLines: 2, overflow: TextOverflow.ellipsis),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildEditButton() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-      child: GestureDetector(
-        onTap: _openEditProfile,
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 15),
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.primary,
-            borderRadius: BorderRadius.circular(18),
-            boxShadow: [BoxShadow(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.25), blurRadius: 18, offset: const Offset(0, 6))],
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.edit_rounded, size: 18, color: Theme.of(context).colorScheme.onPrimary),
-              const SizedBox(width: 10),
-              Text('Edit my profile',
-                  style: TextStyle(color: Theme.of(context).colorScheme.onPrimary, fontWeight: FontWeight.w800, fontSize: 14)),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildLogoutButton() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 20, 16, 0),
-      child: GestureDetector(
-        onTap: _showLogoutDialog,
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 15),
-          decoration: BoxDecoration(
-            color: context.fitlek.error.withValues(alpha: 0.06),
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: context.fitlek.error.withValues(alpha: 0.15)),
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.logout_rounded, size: 18, color: context.fitlek.error),
-              const SizedBox(width: 10),
-              Text('Log out', style: TextStyle(color: context.fitlek.error, fontWeight: FontWeight.w700, fontSize: 14)),
-            ],
-          ),
-        ),
+      padding: const EdgeInsets.fromLTRB(16, 6, 16, 0),
+      child: Center(
+        child: Text('CRAFTED BY SIRVYA SYSTEMS',
+            style: TextStyle(
+              color: context.fitlek.textMuted.withValues(alpha: 0.7),
+              fontSize: 10.5,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 1.5,
+            )),
       ),
     );
   }

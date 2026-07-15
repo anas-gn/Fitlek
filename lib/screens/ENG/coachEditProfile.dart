@@ -1,14 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../services/apiService.dart';
 import '../../theme/fitlek_theme_extension.dart';
 import 'coachProfile.dart' show CoachProfileData;
 
-/// Coach Edit Profile — a safe form pre-filled with the coach's real backend
-/// values. Only fields supported by the secure `/coach/profile/edit` endpoint
-/// are editable. Read-only fields (email, invitation code, points…) are shown
-/// for context but never submitted.
+/// Coach Edit Profile — redesign matching the coach mockups.
+/// All editable values are loaded from and saved to the secure coach backend.
+/// Price is intentionally not editable (subscription model later).
 class CoachEditProfile extends StatefulWidget {
   final CoachProfileData profile;
   final String token;
@@ -21,14 +19,18 @@ class CoachEditProfile extends StatefulWidget {
 
 class _CoachEditProfileState extends State<CoachEditProfile> {
   final _formKey = GlobalKey<FormState>();
+  final _fullNameCtrl = TextEditingController();
+  final _emailCtrl = TextEditingController();
+  final _titleCtrl = TextEditingController();
+  final _bioCtrl = TextEditingController();
+  final _telCtrl = TextEditingController();
+  final _villeCtrl = TextEditingController();
+  final _instagramCtrl = TextEditingController();
 
-  late final TextEditingController _firstNameCtrl;
-  late final TextEditingController _lastNameCtrl;
-  late final TextEditingController _bioCtrl;
-  late final TextEditingController _instagramCtrl;
-  late final TextEditingController _telCtrl;
-  late final TextEditingController _villeCtrl;
-
+  late List<String> _certifications;
+  late List<String> _specialties;
+  late bool _publicProfile;
+  late bool _directMessaging;
   late String _gender;
   String? _avatarUrl;
 
@@ -41,33 +43,59 @@ class _CoachEditProfileState extends State<CoachEditProfile> {
   void initState() {
     super.initState();
     final p = widget.profile;
-    _firstNameCtrl = TextEditingController(text: p.firstName);
-    _lastNameCtrl = TextEditingController(text: p.lastName);
-    _bioCtrl = TextEditingController(text: p.bio);
-    _instagramCtrl = TextEditingController(text: p.instagramPage);
-    _telCtrl = TextEditingController(text: p.tel);
-    _villeCtrl = TextEditingController(text: p.ville);
-    _gender = _genders.contains(p.gender) ? p.gender : 'Other';
+    _fullNameCtrl.text = '${p.firstName} ${p.lastName}'.trim();
+    _emailCtrl.text = p.email;
+    _titleCtrl.text = p.professionalTitle.isNotEmpty ? p.professionalTitle : p.experience;
+    _bioCtrl.text = p.bio;
+    _telCtrl.text = p.tel;
+    _villeCtrl.text = p.ville;
+    _instagramCtrl.text = p.instagramPage;
+    _certifications = List<String>.from(p.certifications);
+    _specialties = p.specialties.isNotEmpty
+        ? List<String>.from(p.specialties)
+        : (p.specialty.isNotEmpty ? [p.specialty] : <String>[]);
+    _publicProfile = p.publicProfile;
+    _directMessaging = p.directMessaging;
+    _gender = _normalizeGender(p.gender);
+  }
+
+  String _normalizeGender(String raw) {
+    final v = raw.trim().toLowerCase();
+    if (v == 'male' || v == 'm' || v == 'homme') return 'Male';
+    if (v == 'female' || v == 'f' || v == 'femme') return 'Female';
+    if (v.isEmpty) return 'Other';
+    // Keep custom values if already one of the known labels.
+    for (final g in _genders) {
+      if (g.toLowerCase() == v) return g;
+    }
+    return 'Other';
   }
 
   @override
   void dispose() {
-    _firstNameCtrl.dispose();
-    _lastNameCtrl.dispose();
+    _fullNameCtrl.dispose();
+    _emailCtrl.dispose();
+    _titleCtrl.dispose();
     _bioCtrl.dispose();
-    _instagramCtrl.dispose();
     _telCtrl.dispose();
     _villeCtrl.dispose();
+    _instagramCtrl.dispose();
     super.dispose();
   }
 
   String get _initials {
-    final f = _firstNameCtrl.text.trim();
-    final l = _lastNameCtrl.text.trim();
-    final a = f.isNotEmpty ? f[0] : '';
-    final b = l.isNotEmpty ? l[0] : '';
-    final res = (a + b).toUpperCase();
-    return res.isEmpty ? '?' : res;
+    final parts = _fullNameCtrl.text.trim().split(RegExp(r'\s+')).where((e) => e.isNotEmpty).toList();
+    if (parts.isEmpty) return '?';
+    final first = parts.first[0];
+    final last = parts.length > 1 ? parts.last[0] : '';
+    return (first + last).toUpperCase();
+  }
+
+  (String firstName, String lastName) _splitName(String fullName) {
+    final parts = fullName.trim().split(RegExp(r'\s+')).where((e) => e.isNotEmpty).toList();
+    if (parts.isEmpty) return ('', '');
+    if (parts.length == 1) return (parts.first, parts.first);
+    return (parts.first, parts.sublist(1).join(' '));
   }
 
   void _showSnack(String msg, {bool isError = false}) {
@@ -136,40 +164,120 @@ class _CoachEditProfileState extends State<CoachEditProfile> {
     }
   }
 
-  bool get _isDirty {
-    final p = widget.profile;
-    return _firstNameCtrl.text.trim() != p.firstName ||
-        _lastNameCtrl.text.trim() != p.lastName ||
-        _bioCtrl.text.trim() != p.bio ||
-        _instagramCtrl.text.trim() != p.instagramPage ||
-        _telCtrl.text.trim() != p.tel ||
-        _villeCtrl.text.trim() != p.ville ||
-        _gender != p.gender ||
-        (_avatarUrl != null && _avatarUrl != p.avatarUrl);
+  Future<String?> _promptText({
+    required String title,
+    required String hint,
+    int maxLength = 120,
+  }) async {
+    final ctrl = TextEditingController();
+    final result = await showDialog<String>(
+      context: context,
+      builder: (ctx) {
+        final cs = Theme.of(ctx).colorScheme;
+        final f = ctx.fitlek;
+        return AlertDialog(
+          backgroundColor: f.card,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+          title: Text(title, style: TextStyle(color: cs.onSurface, fontWeight: FontWeight.w800, fontSize: 16)),
+          content: TextField(
+            controller: ctrl,
+            autofocus: true,
+            maxLength: maxLength,
+            textCapitalization: TextCapitalization.words,
+            style: TextStyle(color: cs.onSurface, fontWeight: FontWeight.w600),
+            decoration: InputDecoration(
+              hintText: hint,
+              hintStyle: TextStyle(color: f.textMuted),
+              filled: true,
+              fillColor: f.inputFill,
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: f.border)),
+              enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: f.border)),
+              focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: cs.primary, width: 1.5)),
+            ),
+            onSubmitted: (v) => Navigator.pop(ctx, v.trim()),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: Text('Cancel', style: TextStyle(color: f.textMuted, fontWeight: FontWeight.w600)),
+            ),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, ctrl.text.trim()),
+              child: Text('Add', style: TextStyle(color: cs.primary, fontWeight: FontWeight.w800)),
+            ),
+          ],
+        );
+      },
+    );
+    ctrl.dispose();
+    if (result == null || result.isEmpty) return null;
+    return result;
+  }
+
+  Future<void> _addCertification() async {
+    final value = await _promptText(title: 'Add Certification', hint: 'e.g. NASM Master Trainer');
+    if (value == null) return;
+    final exists = _certifications.any((c) => c.toLowerCase() == value.toLowerCase());
+    if (exists) {
+      _showSnack('This certification is already added', isError: true);
+      return;
+    }
+    if (_certifications.length >= 10) {
+      _showSnack('Maximum 10 certifications', isError: true);
+      return;
+    }
+    setState(() => _certifications.add(value));
+  }
+
+  Future<void> _addSpecialty() async {
+    final value = await _promptText(title: 'Add Specialty', hint: 'e.g. Hypertrophy', maxLength: 60);
+    if (value == null) return;
+    final exists = _specialties.any((c) => c.toLowerCase() == value.toLowerCase());
+    if (exists) {
+      _showSnack('This specialty is already added', isError: true);
+      return;
+    }
+    if (_specialties.length >= 10) {
+      _showSnack('Maximum 10 specialties', isError: true);
+      return;
+    }
+    setState(() => _specialties.add(value));
   }
 
   Future<void> _save() async {
     if (_saving) return;
     if (!(_formKey.currentState?.validate() ?? false)) return;
 
-    if (!_isDirty) {
-      _showSnack('No changes to save.');
+    final (firstName, lastName) = _splitName(_fullNameCtrl.text);
+    if (firstName.isEmpty || lastName.isEmpty) {
+      _showSnack('Please enter your full name', isError: true);
       return;
     }
 
     setState(() => _saving = true);
     try {
+      final p = widget.profile;
+      final title = _titleCtrl.text.trim();
       final body = <String, dynamic>{
-        'firstName': _firstNameCtrl.text.trim(),
-        'lastName': _lastNameCtrl.text.trim(),
+        'firstName': firstName,
+        'lastName': lastName,
+        'email': _emailCtrl.text.trim(),
         'gender': _gender,
         'bio': _bioCtrl.text.trim(),
+        'professionalTitle': title,
+        // Keep legacy fields in sync for any older readers.
+        'experience': title,
+        'specialty': _specialties.isNotEmpty ? _specialties.first : '',
+        'certifications': _certifications,
+        'specialties': _specialties,
+        'publicProfile': _publicProfile,
+        'directMessaging': _directMessaging,
         'instagramPage': _instagramCtrl.text.trim(),
         'tel': _telCtrl.text.trim(),
         'ville': _villeCtrl.text.trim(),
+        // Never send price — coaches do not set a session price in the app.
       };
-      // Only send avatarUrl when it changed, to avoid unnecessary writes.
-      if (_avatarUrl != null && _avatarUrl != widget.profile.avatarUrl) {
+      if (_avatarUrl != null && _avatarUrl != p.avatarUrl) {
         body['avatarUrl'] = _avatarUrl;
       }
 
@@ -177,7 +285,7 @@ class _CoachEditProfileState extends State<CoachEditProfile> {
       if (!mounted) return;
 
       if (res['ok'] == true) {
-        _showSnack('Profile updated ✓');
+        _showSnack('Profile updated');
         Navigator.of(context).pop(true);
       } else {
         _showSnack(res['message']?.toString() ?? 'Error while updating', isError: true);
@@ -200,9 +308,8 @@ class _CoachEditProfileState extends State<CoachEditProfile> {
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         surfaceTintColor: Colors.transparent,
         elevation: 0,
-        centerTitle: true,
-        title: Text('Edit profile',
-            style: TextStyle(color: cs.onSurface, fontSize: 17, fontWeight: FontWeight.w800)),
+        centerTitle: false,
+        title: Text('Edit Profile', style: TextStyle(color: cs.onSurface, fontSize: 17, fontWeight: FontWeight.w800)),
         iconTheme: IconThemeData(color: cs.onSurface),
       ),
       body: SafeArea(
@@ -213,88 +320,32 @@ class _CoachEditProfileState extends State<CoachEditProfile> {
             child: Form(
               key: _formKey,
               child: ListView(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
+                padding: const EdgeInsets.fromLTRB(16, 4, 16, 32),
                 children: [
                   _buildAvatarPicker(cs, f),
-                  const SizedBox(height: 24),
-                  _sectionTitle('Identity'),
-                  const SizedBox(height: 12),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(
-                        child: _field(
-                          controller: _firstNameCtrl,
-                          label: 'First name',
-                          icon: Icons.person_outline_rounded,
-                          textCapitalization: TextCapitalization.words,
-                          validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _field(
-                          controller: _lastNameCtrl,
-                          label: 'Last name',
-                          icon: Icons.badge_outlined,
-                          textCapitalization: TextCapitalization.words,
-                          validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
-                        ),
-                      ),
-                    ],
+                  const SizedBox(height: 16),
+                  Text(
+                    'Edit Profile',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: cs.primary, fontSize: 28, fontWeight: FontWeight.w900, height: 1.1),
                   ),
-                  const SizedBox(height: 14),
-                  _buildGenderSelector(cs, f),
-                  const SizedBox(height: 24),
-                  _sectionTitle('Professional information'),
-                  const SizedBox(height: 12),
-                  _field(
-                    controller: _bioCtrl,
-                    label: 'Biography',
-                    icon: Icons.chat_bubble_outline_rounded,
-                    maxLines: 4,
-                    textCapitalization: TextCapitalization.sentences,
-                    validator: (v) => (v == null || v.trim().isEmpty) ? 'Biography is required' : null,
+                  const SizedBox(height: 6),
+                  Text(
+                    'Update your professional details',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: f.textMuted, fontSize: 13.5, fontWeight: FontWeight.w500),
                   ),
-                  const SizedBox(height: 14),
-                  _field(
-                    controller: _instagramCtrl,
-                    label: 'Instagram page',
-                    icon: Icons.camera_alt_outlined,
-                    keyboardType: TextInputType.url,
-                    validator: (v) => (v == null || v.trim().isEmpty) ? 'Instagram page is required' : null,
-                  ),
-                  const SizedBox(height: 14),
-                  _field(
-                    controller: _telCtrl,
-                    label: 'Phone (optional)',
-                    icon: Icons.call_outlined,
-                    keyboardType: TextInputType.phone,
-                    inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'[0-9+\s()-]'))],
-                    validator: (v) {
-                      final t = v?.trim() ?? '';
-                      if (t.isEmpty) return null;
-                      final digits = t.replaceAll(RegExp(r'[^0-9]'), '');
-                      if (digits.length < 6 || digits.length > 15) return 'Invalid number';
-                      return null;
-                    },
-                  ),
-                  const SizedBox(height: 14),
-                  _field(
-                    controller: _villeCtrl,
-                    label: 'City (optional)',
-                    icon: Icons.location_on_outlined,
-                    textCapitalization: TextCapitalization.words,
-                  ),
-                  const SizedBox(height: 24),
-                  _sectionTitle('Account (read-only)'),
-                  const SizedBox(height: 12),
-                  _readOnlyRow(Icons.mail_outline_rounded, 'Email', widget.profile.email.isNotEmpty ? widget.profile.email : 'Not provided', f, cs),
-                  _readOnlyRow(Icons.confirmation_number_outlined, 'Invitation code',
-                      widget.profile.invitationCode.isNotEmpty ? widget.profile.invitationCode : '—', f, cs),
-                  _readOnlyRow(Icons.emoji_events_outlined, 'Points earned', '${widget.profile.earnedPoints}', f, cs),
-                  _readOnlyRow(Icons.group_add_outlined, 'Total invitations', '${widget.profile.totalInvitations}', f, cs),
-                  const SizedBox(height: 28),
+                  const SizedBox(height: 22),
+                  _buildBasicInformation(cs, f),
+                  const SizedBox(height: 18),
+                  _buildContactInformation(cs, f),
+                  const SizedBox(height: 18),
+                  _buildCertifications(cs, f),
+                  const SizedBox(height: 18),
+                  _buildSpecialties(cs, f),
+                  const SizedBox(height: 18),
+                  _buildAccountSettings(cs, f),
+                  const SizedBox(height: 22),
                   _buildSaveButton(cs),
                 ],
               ),
@@ -312,16 +363,15 @@ class _CoachEditProfileState extends State<CoachEditProfile> {
         clipBehavior: Clip.none,
         children: [
           Container(
-            width: 104,
-            height: 104,
+            width: 110,
+            height: 110,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              gradient: LinearGradient(colors: [cs.primary, f.primaryDim]),
+              border: Border.all(color: cs.primary.withValues(alpha: 0.35), width: 2),
             ),
-            padding: const EdgeInsets.all(3),
             child: ClipOval(
               child: Container(
-                color: f.card,
+                color: f.card2,
                 child: (url != null && url.isNotEmpty)
                     ? Image.network(url, fit: BoxFit.cover, errorBuilder: (_, __, ___) => _avatarFallback(cs))
                     : _avatarFallback(cs),
@@ -329,8 +379,8 @@ class _CoachEditProfileState extends State<CoachEditProfile> {
             ),
           ),
           Positioned(
-            right: -2,
-            bottom: -2,
+            right: 0,
+            bottom: 0,
             child: GestureDetector(
               onTap: _uploadingAvatar ? null : _pickAndUploadAvatar,
               child: Container(
@@ -359,143 +409,345 @@ class _CoachEditProfileState extends State<CoachEditProfile> {
   }
 
   Widget _avatarFallback(ColorScheme cs) => Center(
-        child: Text(_initials, style: TextStyle(color: cs.primary, fontSize: 32, fontWeight: FontWeight.w800)),
+        child: Text(_initials, style: TextStyle(color: cs.primary, fontSize: 34, fontWeight: FontWeight.w800)),
       );
 
-  Widget _sectionTitle(String text) {
-    return Text(text,
-        style: TextStyle(
-          color: context.fitlek.textMuted,
-          fontSize: 12,
-          fontWeight: FontWeight.w800,
-          letterSpacing: 0.6,
-        ));
-  }
-
-  Widget _field({
-    required TextEditingController controller,
-    required String label,
-    required IconData icon,
-    int maxLines = 1,
-    TextInputType? keyboardType,
-    TextCapitalization textCapitalization = TextCapitalization.none,
-    List<TextInputFormatter>? inputFormatters,
-    String? Function(String?)? validator,
-  }) {
+  Widget _sectionHeader(String title, {IconData? icon}) {
     final cs = Theme.of(context).colorScheme;
-    final f = context.fitlek;
-    return TextFormField(
-      controller: controller,
-      maxLines: maxLines,
-      keyboardType: keyboardType,
-      textCapitalization: textCapitalization,
-      inputFormatters: inputFormatters,
-      validator: validator,
-      style: TextStyle(color: cs.onSurface, fontSize: 14, fontWeight: FontWeight.w600),
-      decoration: InputDecoration(
-        labelText: label,
-        labelStyle: TextStyle(color: f.textMuted, fontSize: 13),
-        prefixIcon: Icon(icon, size: 19, color: cs.primary),
-        filled: true,
-        fillColor: f.inputFill,
-        errorStyle: TextStyle(color: f.error, fontSize: 11.5, fontWeight: FontWeight.w600),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: BorderSide(color: f.border),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: BorderSide(color: f.border),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: BorderSide(color: cs.primary, width: 1.6),
-        ),
-        errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: BorderSide(color: f.error),
-        ),
-        focusedErrorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
-          borderSide: BorderSide(color: f.error, width: 1.6),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildGenderSelector(ColorScheme cs, FitlekColors f) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    return Row(
       children: [
-        Padding(
-          padding: const EdgeInsets.only(left: 4, bottom: 8),
-          child: Text('Gender', style: TextStyle(color: f.textMuted, fontSize: 13)),
-        ),
-        Row(
-          children: _genders.map((g) {
-            final selected = g == _gender;
-            final label = g == 'Male'
-                ? 'Male'
-                : g == 'Female'
-                    ? 'Female'
-                    : 'Other';
-            return Expanded(
-              child: Padding(
-                padding: EdgeInsets.only(right: g == _genders.last ? 0 : 10),
-                child: GestureDetector(
-                  onTap: () => setState(() => _gender = g),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(vertical: 13),
-                    decoration: BoxDecoration(
-                      color: selected ? cs.primary.withValues(alpha: 0.12) : f.card,
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: selected ? cs.primary.withValues(alpha: 0.5) : f.border),
-                    ),
-                    child: Center(
-                      child: Text(label,
-                          style: TextStyle(
-                            color: selected ? cs.primary : cs.onSurface,
-                            fontSize: 13.5,
-                            fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
-                          )),
-                    ),
-                  ),
-                ),
-              ),
-            );
-          }).toList(),
+        if (icon != null) ...[
+          Icon(icon, size: 16, color: cs.primary),
+          const SizedBox(width: 8),
+        ],
+        Text(
+          title,
+          style: TextStyle(
+            color: cs.primary,
+            fontSize: 12,
+            fontWeight: FontWeight.w800,
+            letterSpacing: 0.9,
+          ),
         ),
       ],
     );
   }
 
-  Widget _readOnlyRow(IconData icon, String label, String value, FitlekColors f, ColorScheme cs) {
+  Widget _card({required List<Widget> children}) {
+    final f = context.fitlek;
     return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
       decoration: BoxDecoration(
-        color: f.card2,
-        borderRadius: BorderRadius.circular(14),
+        color: f.card,
+        borderRadius: BorderRadius.circular(20),
         border: Border.all(color: f.border),
       ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: children),
+    );
+  }
+
+  Widget _buildBasicInformation(ColorScheme cs, FitlekColors f) {
+    return _card(
+      children: [
+        _sectionHeader('BASIC INFORMATION'),
+        const SizedBox(height: 16),
+        _labeledField(
+          label: 'Full Name',
+          child: TextFormField(
+            controller: _fullNameCtrl,
+            textCapitalization: TextCapitalization.words,
+            validator: (v) => (v == null || v.trim().split(RegExp(r'\s+')).where((e) => e.isNotEmpty).length < 2)
+                ? 'Enter first and last name'
+                : null,
+            style: TextStyle(color: cs.onSurface, fontSize: 14.5, fontWeight: FontWeight.w600),
+            decoration: _inputDecoration(f, cs),
+          ),
+        ),
+        const SizedBox(height: 14),
+        _labeledField(
+          label: 'Email',
+          child: TextFormField(
+            controller: _emailCtrl,
+            keyboardType: TextInputType.emailAddress,
+            autofillHints: const [AutofillHints.email],
+            validator: (v) {
+              final value = (v ?? '').trim();
+              if (value.isEmpty) return 'Email is required';
+              if (!RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$').hasMatch(value)) {
+                return 'Enter a valid email';
+              }
+              return null;
+            },
+            style: TextStyle(color: cs.onSurface, fontSize: 14.5, fontWeight: FontWeight.w600),
+            decoration: _inputDecoration(f, cs, hint: 'you@example.com'),
+          ),
+        ),
+        const SizedBox(height: 14),
+        _labeledField(
+          label: 'Gender',
+          child: DropdownButtonFormField<String>(
+            initialValue: _gender,
+            items: _genders
+                .map((g) => DropdownMenuItem(value: g, child: Text(g)))
+                .toList(),
+            onChanged: (v) {
+              if (v != null) setState(() => _gender = v);
+            },
+            style: TextStyle(color: cs.onSurface, fontSize: 14.5, fontWeight: FontWeight.w600),
+            dropdownColor: f.card,
+            decoration: _inputDecoration(f, cs),
+          ),
+        ),
+        const SizedBox(height: 14),
+        _labeledField(
+          label: 'Professional Title',
+          child: TextFormField(
+            controller: _titleCtrl,
+            textCapitalization: TextCapitalization.words,
+            style: TextStyle(color: cs.onSurface, fontSize: 14.5, fontWeight: FontWeight.w600),
+            decoration: _inputDecoration(f, cs, hint: 'e.g. Elite Performance Specialist'),
+          ),
+        ),
+        const SizedBox(height: 14),
+        _labeledField(
+          label: 'Bio',
+          child: TextFormField(
+            controller: _bioCtrl,
+            maxLines: 5,
+            textCapitalization: TextCapitalization.sentences,
+            validator: (v) => (v == null || v.trim().isEmpty) ? 'Bio is required' : null,
+            style: TextStyle(color: cs.onSurface, fontSize: 14.5, fontWeight: FontWeight.w500, height: 1.45),
+            decoration: _inputDecoration(f, cs),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildContactInformation(ColorScheme cs, FitlekColors f) {
+    return _card(
+      children: [
+        _sectionHeader('CONTACT & LOCATION', icon: Icons.contact_mail_rounded),
+        const SizedBox(height: 16),
+        _labeledField(
+          label: 'Phone',
+          child: TextFormField(
+            controller: _telCtrl,
+            keyboardType: TextInputType.phone,
+            style: TextStyle(color: cs.onSurface, fontSize: 14.5, fontWeight: FontWeight.w600),
+            decoration: _inputDecoration(f, cs, hint: '+212 6XX XXX XXX'),
+          ),
+        ),
+        const SizedBox(height: 14),
+        _labeledField(
+          label: 'City',
+          child: TextFormField(
+            controller: _villeCtrl,
+            textCapitalization: TextCapitalization.words,
+            style: TextStyle(color: cs.onSurface, fontSize: 14.5, fontWeight: FontWeight.w600),
+            decoration: _inputDecoration(f, cs, hint: 'e.g. Casablanca'),
+          ),
+        ),
+        const SizedBox(height: 14),
+        _labeledField(
+          label: 'Instagram',
+          child: TextFormField(
+            controller: _instagramCtrl,
+            style: TextStyle(color: cs.onSurface, fontSize: 14.5, fontWeight: FontWeight.w600),
+            decoration: _inputDecoration(f, cs, hint: '@yourhandle'),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCertifications(ColorScheme cs, FitlekColors f) {
+    return _card(
+      children: [
+        _sectionHeader('CERTIFICATIONS', icon: Icons.verified_rounded),
+        const SizedBox(height: 14),
+        if (_certifications.isEmpty)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: Text('No certifications yet.', style: TextStyle(color: f.textMuted, fontSize: 13)),
+          ),
+        ..._certifications.asMap().entries.map((entry) {
+          final index = entry.key;
+          final value = entry.value;
+          return Container(
+            margin: const EdgeInsets.only(bottom: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+            decoration: BoxDecoration(
+              color: f.card2,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: f.border),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(value, style: TextStyle(color: cs.onSurface, fontSize: 14, fontWeight: FontWeight.w600)),
+                ),
+                GestureDetector(
+                  onTap: () => setState(() => _certifications.removeAt(index)),
+                  child: Icon(Icons.close_rounded, size: 18, color: f.textMuted),
+                ),
+              ],
+            ),
+          );
+        }),
+        const SizedBox(height: 2),
+        GestureDetector(
+          onTap: _addCertification,
+          child: CustomPaint(
+            painter: _DashedBorderPainter(color: cs.primary.withValues(alpha: 0.45), radius: 14),
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              child: Center(
+                child: Text('+ Add Certification',
+                    style: TextStyle(color: cs.primary, fontSize: 13.5, fontWeight: FontWeight.w700)),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSpecialties(ColorScheme cs, FitlekColors f) {
+    return _card(
+      children: [
+        _sectionHeader('SPECIALTIES', icon: Icons.open_with_rounded),
+        const SizedBox(height: 14),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            ..._specialties.asMap().entries.map((entry) {
+              final index = entry.key;
+              final value = entry.value;
+              return Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: cs.primary.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: cs.primary.withValues(alpha: 0.28)),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(value, style: TextStyle(color: cs.primary, fontSize: 12.5, fontWeight: FontWeight.w700)),
+                    const SizedBox(width: 6),
+                    GestureDetector(
+                      onTap: () => setState(() => _specialties.removeAt(index)),
+                      child: Icon(Icons.close_rounded, size: 14, color: cs.primary),
+                    ),
+                  ],
+                ),
+              );
+            }),
+            GestureDetector(
+              onTap: _addSpecialty,
+              child: Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: f.card2,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: f.border),
+                ),
+                child: Icon(Icons.add_rounded, size: 18, color: cs.primary),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAccountSettings(ColorScheme cs, FitlekColors f) {
+    return _card(
+      children: [
+        _sectionHeader('ACCOUNT SETTINGS'),
+        const SizedBox(height: 8),
+        _toggleRow(
+          title: 'Public Profile',
+          subtitle: 'Allow potential clients to find you',
+          value: _publicProfile,
+          onChanged: (v) => setState(() => _publicProfile = v),
+          cs: cs,
+          f: f,
+        ),
+        Divider(height: 1, color: f.border.withValues(alpha: 0.7)),
+        _toggleRow(
+          title: 'Direct Messaging',
+          subtitle: 'Enable instant chat with clients',
+          value: _directMessaging,
+          onChanged: (v) => setState(() => _directMessaging = v),
+          cs: cs,
+          f: f,
+        ),
+      ],
+    );
+  }
+
+  Widget _toggleRow({
+    required String title,
+    required String subtitle,
+    required bool value,
+    required ValueChanged<bool> onChanged,
+    required ColorScheme cs,
+    required FitlekColors f,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 10),
       child: Row(
         children: [
-          Icon(icon, size: 18, color: f.textMuted),
-          const SizedBox(width: 12),
-          Text(label, style: TextStyle(color: f.textMuted, fontSize: 12.5, fontWeight: FontWeight.w600)),
-          const SizedBox(width: 12),
           Expanded(
-            child: Text(value,
-                textAlign: TextAlign.right,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(color: cs.onSurface, fontSize: 13, fontWeight: FontWeight.w700)),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: TextStyle(color: cs.onSurface, fontSize: 14.5, fontWeight: FontWeight.w700)),
+                const SizedBox(height: 3),
+                Text(subtitle, style: TextStyle(color: f.textMuted, fontSize: 12)),
+              ],
+            ),
           ),
-          const SizedBox(width: 6),
-          Icon(Icons.lock_outline_rounded, size: 14, color: f.textMuted.withValues(alpha: 0.6)),
+          Switch.adaptive(
+            value: value,
+            onChanged: onChanged,
+            activeTrackColor: cs.primary,
+            activeThumbColor: cs.onPrimary,
+          ),
         ],
       ),
+    );
+  }
+
+  Widget _labeledField({required String label, required Widget child}) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: TextStyle(color: context.fitlek.textMuted, fontSize: 12, fontWeight: FontWeight.w600)),
+        const SizedBox(height: 7),
+        child,
+      ],
+    );
+  }
+
+  InputDecoration _inputDecoration(FitlekColors f, ColorScheme cs, {String? hint}) {
+    return InputDecoration(
+      hintText: hint,
+      hintStyle: TextStyle(color: f.textMuted.withValues(alpha: 0.8), fontSize: 13.5),
+      filled: true,
+      fillColor: f.inputFill,
+      errorStyle: TextStyle(color: f.error, fontSize: 11.5, fontWeight: FontWeight.w600),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: f.border)),
+      enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: f.border)),
+      focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: cs.primary, width: 1.5)),
+      errorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: f.error)),
+      focusedErrorBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide(color: f.error, width: 1.5)),
     );
   }
 
@@ -503,13 +755,13 @@ class _CoachEditProfileState extends State<CoachEditProfile> {
     return GestureDetector(
       onTap: _saving ? null : _save,
       child: Container(
-        height: 52,
+        height: 54,
         decoration: BoxDecoration(
           color: _saving ? cs.primary.withValues(alpha: 0.6) : cs.primary,
           borderRadius: BorderRadius.circular(16),
           boxShadow: _saving
               ? null
-              : [BoxShadow(color: cs.primary.withValues(alpha: 0.3), blurRadius: 18, offset: const Offset(0, 6))],
+              : [BoxShadow(color: cs.primary.withValues(alpha: 0.28), blurRadius: 18, offset: const Offset(0, 6))],
         ),
         child: Center(
           child: _saving
@@ -521,13 +773,43 @@ class _CoachEditProfileState extends State<CoachEditProfile> {
               : Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.check_rounded, size: 20, color: cs.onPrimary),
+                    Icon(Icons.save_rounded, size: 18, color: cs.onPrimary),
                     const SizedBox(width: 8),
-                    Text('Save', style: TextStyle(color: cs.onPrimary, fontSize: 15, fontWeight: FontWeight.w800)),
+                    Text('Save Profile Changes',
+                        style: TextStyle(color: cs.onPrimary, fontSize: 15, fontWeight: FontWeight.w800)),
                   ],
                 ),
         ),
       ),
     );
   }
+}
+
+class _DashedBorderPainter extends CustomPainter {
+  final Color color;
+  final double radius;
+  _DashedBorderPainter({required this.color, this.radius = 14});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = 1.4
+      ..style = PaintingStyle.stroke;
+    const dashWidth = 7.0;
+    const dashSpace = 5.0;
+    final rrect = RRect.fromRectAndRadius(Offset.zero & size, Radius.circular(radius));
+    final path = Path()..addRRect(rrect);
+    for (final metric in path.computeMetrics()) {
+      double distance = 0;
+      while (distance < metric.length) {
+        final next = distance + dashWidth;
+        canvas.drawPath(metric.extractPath(distance, next.clamp(0, metric.length)), paint);
+        distance = next + dashSpace;
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

@@ -58,40 +58,13 @@ class CoachHeader extends StatelessWidget {
           // ── Brand area (SIRVYA logo) ──
           const SirvyaLogo(variant: SirvyaLogoVariant.wordmark, height: 28),
 
-          // ── Coach identity (flexible, truncates long names) ──
-          Expanded(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    'Coach',
-                    style: TextStyle(color: f.textMuted, fontSize: 11),
-                  ),
-                  Text(
-                    coachName.isNotEmpty ? coachName : 'SIRVYA',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    textAlign: TextAlign.end,
-                    style: TextStyle(
-                      color: cs.onSurface,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 0.2,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
+          const Spacer(),
 
-          // ── Notification button ──
+          // ── Notification button (real unread badge) ──
           _buildNotificationButton(context, cs, f),
           const SizedBox(width: 12),
 
-          // ── Coach avatar ──
+          // ── Coach avatar (real backend photo) ──
           _buildAvatar(context, cs, f),
         ],
       ),
@@ -164,27 +137,48 @@ class CoachHeader extends StatelessWidget {
       label: 'Open Coach Profile',
       child: GestureDetector(
         onTap: onAvatarTap,
-        child: Container(
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            border: Border.all(color: cs.primary, width: 2),
-          ),
-          child: CircleAvatar(
-            radius: 20,
-            backgroundColor: f.card2,
-            backgroundImage:
-                avatarUrl.isNotEmpty ? NetworkImage(avatarUrl) : null,
-            child: avatarUrl.isEmpty
-                ? Text(
-                    _initial,
-                    style: TextStyle(
-                      color: cs.primary,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  )
-                : null,
-          ),
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Container(
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(color: cs.primary, width: 2),
+              ),
+              child: CircleAvatar(
+                radius: 20,
+                backgroundColor: f.card2,
+                backgroundImage:
+                    avatarUrl.isNotEmpty ? NetworkImage(avatarUrl) : null,
+                child: avatarUrl.isEmpty
+                    ? Text(
+                        _initial,
+                        style: TextStyle(
+                          color: cs.primary,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      )
+                    : null,
+              ),
+            ),
+            Positioned(
+              right: 0,
+              bottom: 0,
+              child: Container(
+                width: 12,
+                height: 12,
+                decoration: BoxDecoration(
+                  color: f.success,
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: Theme.of(context).scaffoldBackgroundColor,
+                    width: 2,
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );

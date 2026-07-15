@@ -8,7 +8,7 @@ router.get('/reservations', requireAuth, requireRole('coach'), async (req, res) 
   const coachID = req.user.id;
   try {
     const [rows] = await pool.query(
-      `SELECT r.id, r.reservedDate, r.reservedTime, r.status,
+      `SELECT r.id, r.reservedDate, r.reservedTime, r.status, r.location,
               u.firstName, u.lastName, u.avatarUrl
        FROM reservations r
        JOIN users u ON u.id = r.clientID

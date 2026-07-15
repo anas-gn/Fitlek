@@ -46,11 +46,28 @@ import uploadRoutes from './routes/anas/upload.js';
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import { ensureReferralSchema, ensureNotificationSchema } from './config/ensureSchema.js';
+import { ensureReferralSchema, ensureNotificationSchema, ensureCoachProfileColumns } from './config/ensureSchema.js';
 dotenv.config();
 
-ensureReferralSchema().catch((e) => console.error('❌ Referral schema ensure failed:', e.message));
-ensureNotificationSchema().catch((e) => console.error('❌ Notification schema ensure failed:', e.message));
+// Run schema ensures sequentially — Clever Cloud allows only ~5 MySQL
+// connections; parallel ensure* calls race the pool and cause ECONNRESET.
+(async () => {
+  try {
+    await ensureReferralSchema();
+  } catch (e) {
+    console.error('❌ Referral schema ensure failed:', e.message);
+  }
+  try {
+    await ensureNotificationSchema();
+  } catch (e) {
+    console.error('❌ Notification schema ensure failed:', e.message);
+  }
+  try {
+    await ensureCoachProfileColumns();
+  } catch (e) {
+    console.error('❌ Coach profile columns ensure failed:', e.message);
+  }
+})();
 
 const app = express();
 

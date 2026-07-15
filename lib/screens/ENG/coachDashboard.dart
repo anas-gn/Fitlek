@@ -12,7 +12,14 @@ import '../../theme/fitlek_theme_extension.dart';
 /// The shared Coach Header owns the logo / avatar / name / notification, so
 /// none of those are repeated here.
 class CoachDashboard extends StatefulWidget {
-  const CoachDashboard({super.key});
+  final VoidCallback? onViewCalendar;
+  final VoidCallback? onViewNotifications;
+
+  const CoachDashboard({
+    super.key,
+    this.onViewCalendar,
+    this.onViewNotifications,
+  });
 
   @override
   State<CoachDashboard> createState() => _CoachDashboardState();
@@ -29,7 +36,13 @@ class _CoachDashboardState extends State<CoachDashboard> {
   int _totalClients = 0;
   int _invitationPoints = 0;
   int _totalInvitations = 0;
-  List<Map<String, dynamic>> _recentActivity = [];
+  int _invitationsThisWeek = 0;
+  int _currentTier = 1;
+  int _nextTier = 2;
+  int _tierProgress = 0;
+  int _pointsRemaining = 0;
+  List<Map<String, dynamic>> _recentReservations = [];
+  List<Map<String, dynamic>> _notifications = [];
 
   @override
   void initState() {
@@ -59,7 +72,19 @@ class _CoachDashboardState extends State<CoachDashboard> {
         _totalClients = _asInt(result['totalClients']);
         _invitationPoints = _asInt(result['invitationPoints']);
         _totalInvitations = _asInt(result['totalInvitations']);
-        _recentActivity = ((result['recentActivity'] as List?) ?? [])
+        _invitationsThisWeek = _asInt(result['invitationsThisWeek']);
+        final tier = result['pointsTier'] is Map
+            ? Map<String, dynamic>.from(result['pointsTier'] as Map)
+            : <String, dynamic>{};
+        _currentTier = _asInt(tier['current']).clamp(1, 999);
+        _nextTier = _asInt(tier['next']).clamp(2, 1000);
+        _tierProgress = _asInt(tier['progress']).clamp(0, 100);
+        _pointsRemaining = _asInt(tier['pointsRemaining']);
+        _recentReservations = ((result['recentReservations'] as List?) ?? [])
+            .whereType<Map>()
+            .map((e) => Map<String, dynamic>.from(e))
+            .toList();
+        _notifications = ((result['notifications'] as List?) ?? [])
             .whereType<Map>()
             .map((e) => Map<String, dynamic>.from(e))
             .toList();
@@ -104,17 +129,19 @@ class _CoachDashboardState extends State<CoachDashboard> {
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 900),
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _buildIntro(cs, f),
+                  const SizedBox(height: 18),
+                  _buildClientsOverview(cs, f),
+                  const SizedBox(height: 16),
+                  _buildRewardCards(cs, f),
                   const SizedBox(height: 22),
-                  _buildStatsGrid(context, cs, f),
-                  const SizedBox(height: 28),
-                  _buildInvitations(context, cs, f),
-                  const SizedBox(height: 28),
-                  _buildActivitySection(cs, f),
+                  _buildRecentReservations(cs, f),
+                  const SizedBox(height: 22),
+                  _buildNotifications(cs, f),
                 ],
               ),
             ),
@@ -140,95 +167,325 @@ class _CoachDashboardState extends State<CoachDashboard> {
         ),
         const SizedBox(height: 6),
         Text(
-          'An overview of your coaching activity',
+          'Your coaching activity at a glance',
           style: TextStyle(color: f.textSecondary, fontSize: 14, height: 1.4),
         ),
       ],
     );
   }
 
-  // ─────────────────────────────── STATS ─────────────────────────────────
-
-  Widget _buildStatsGrid(BuildContext context, ColorScheme cs, FitlekColors f) {
-    final stats = <_StatData>[
-      _StatData('Clients', _totalClients, Icons.groups_rounded, cs.primary),
-      _StatData('Reservations', _totalReservations, Icons.event_note_rounded, f.info),
-      _StatData('Confirmed', _confirmedReservations, Icons.check_circle_rounded, f.success),
-      _StatData('Pending', _pendingReservations, Icons.hourglass_top_rounded, f.warning),
-    ];
-
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        // 4 per row on wide screens, 2 per row on phones.
-        final wide = constraints.maxWidth >= 640;
-        final crossAxisCount = wide ? 4 : 2;
-        final aspect = wide ? 1.15 : 1.5;
-        return GridView.count(
-          crossAxisCount: crossAxisCount,
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          mainAxisSpacing: 12,
-          crossAxisSpacing: 12,
-          childAspectRatio: aspect,
-          children: stats.map((s) => _StatCard(data: s)).toList(),
-        );
-      },
-    );
-  }
-
-  // ──────────────────────────── INVITATIONS ──────────────────────────────
-
-  Widget _buildInvitations(BuildContext context, ColorScheme cs, FitlekColors f) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _sectionTitle('INVITATIONS', cs),
-        const SizedBox(height: 14),
-        Row(
-          children: [
-            Expanded(
-              child: _InvitationCard(
-                label: 'Points earned',
-                value: _invitationPoints,
-                icon: Icons.star_rounded,
-                color: f.violet,
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _InvitationCard(
-                label: 'Invitations',
-                value: _totalInvitations,
-                icon: Icons.group_add_rounded,
-                color: cs.primary,
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-
-  // ────────────────────────── RECENT ACTIVITY ────────────────────────────
-
-  Widget _buildActivitySection(ColorScheme cs, FitlekColors f) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _sectionTitle('RECENT ACTIVITY', cs),
-        const SizedBox(height: 14),
-        if (_recentActivity.isEmpty)
-          _buildActivityEmpty(f)
-        else
-          ..._recentActivity.map((item) => _ActivityTile(item: item)),
-      ],
-    );
-  }
-
-  Widget _buildActivityEmpty(FitlekColors f) {
+  Widget _buildClientsOverview(ColorScheme cs, FitlekColors f) {
+    final onPrimary = cs.onPrimary;
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(vertical: 36, horizontal: 20),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: cs.primary,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: cs.primary.withValues(alpha: 0.22),
+            blurRadius: 18,
+            offset: const Offset(0, 7),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Total Clients',
+                      style: TextStyle(
+                        color: onPrimary.withValues(alpha: 0.68),
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(height: 5),
+                    Text(
+                      '$_totalClients',
+                      style: TextStyle(
+                        color: onPrimary,
+                        fontSize: 38,
+                        fontWeight: FontWeight.w900,
+                        height: 1,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(
+                Icons.trending_up_rounded,
+                color: onPrimary.withValues(alpha: 0.62),
+                size: 26,
+              ),
+            ],
+          ),
+          const SizedBox(height: 38),
+          Divider(color: onPrimary.withValues(alpha: 0.13), height: 1),
+          const SizedBox(height: 15),
+          Row(
+            children: [
+              _heroStat('Reservations', _totalReservations, onPrimary),
+              _heroStat('Confirmed', _confirmedReservations, onPrimary),
+              _heroStat('Pending', _pendingReservations, onPrimary),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _heroStat(String label, int value, Color color) {
+    return Expanded(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: color.withValues(alpha: 0.58),
+              fontSize: 11.5,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            '$value',
+            style: TextStyle(color: color, fontSize: 14, fontWeight: FontWeight.w800),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRewardCards(ColorScheme cs, FitlekColors f) {
+    // Do NOT use CrossAxisAlignment.stretch here: this Row lives inside a
+    // scrollable Column (unbounded height) and stretch causes a layout crash
+    // that leaves the whole dashboard blank on web.
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(
+            flex: 3,
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: f.card,
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: f.border),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.stars_rounded, color: cs.primary, size: 16),
+                      const SizedBox(width: 7),
+                      Expanded(
+                        child: Text(
+                          'Invitation Points',
+                          style: TextStyle(
+                            color: cs.onSurface,
+                            fontSize: 12.5,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 13),
+                  Text(
+                    '$_invitationPoints',
+                    style: TextStyle(
+                      color: cs.onSurface,
+                      fontSize: 26,
+                      fontWeight: FontWeight.w900,
+                      height: 1,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(4),
+                    child: LinearProgressIndicator(
+                      value: _tierProgress / 100,
+                      minHeight: 5,
+                      backgroundColor: f.border,
+                      valueColor: AlwaysStoppedAnimation<Color>(cs.primary),
+                    ),
+                  ),
+                  const SizedBox(height: 7),
+                  Text(
+                    'Tier $_currentTier · $_tierProgress% to Tier $_nextTier · $_pointsRemaining points left',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(color: f.textMuted, fontSize: 10.5),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            flex: 2,
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: f.card2,
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: f.border),
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    'Invitations',
+                    style: TextStyle(color: cs.onSurface, fontSize: 12, fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    '$_totalInvitations',
+                    style: TextStyle(
+                      color: cs.onSurface,
+                      fontSize: 30,
+                      fontWeight: FontWeight.w900,
+                      height: 1,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    '+$_invitationsThisWeek this week',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: f.textSecondary, fontSize: 10.5),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRecentReservations(ColorScheme cs, FitlekColors f) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _sectionHeader(
+          'Recent Reservations',
+          action: widget.onViewCalendar == null ? null : 'View all',
+          onAction: widget.onViewCalendar,
+          cs: cs,
+        ),
+        const SizedBox(height: 12),
+        if (_recentReservations.isEmpty)
+          _emptyCard(
+            icon: Icons.event_busy_rounded,
+            title: 'No upcoming reservations',
+            subtitle: 'New reservations will appear here.',
+            f: f,
+          )
+        else
+          ..._recentReservations.map(
+            (item) => _ReservationTile(
+              item: item,
+              onTap: widget.onViewCalendar,
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildNotifications(ColorScheme cs, FitlekColors f) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _sectionHeader(
+          'Notifications',
+          action: widget.onViewNotifications == null ? null : 'View all',
+          onAction: widget.onViewNotifications,
+          cs: cs,
+        ),
+        const SizedBox(height: 12),
+        if (_notifications.isEmpty)
+          _emptyCard(
+            icon: Icons.notifications_none_rounded,
+            title: 'No notifications',
+            subtitle: 'You are all caught up.',
+            f: f,
+          )
+        else
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 5),
+            decoration: BoxDecoration(
+              color: f.card,
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: f.border),
+            ),
+            child: Column(
+              children: _notifications
+                  .map(
+                    (item) => _NotificationTile(
+                      item: item,
+                      onTap: widget.onViewNotifications,
+                    ),
+                  )
+                  .toList(),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _sectionHeader(
+    String title, {
+    String? action,
+    VoidCallback? onAction,
+    required ColorScheme cs,
+  }) {
+    return Row(
+      children: [
+        Expanded(
+          child: Text(
+            title,
+            style: TextStyle(
+              color: cs.onSurface,
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+        if (action != null)
+          GestureDetector(
+            onTap: onAction,
+            child: Text(
+              action,
+              style: TextStyle(color: cs.primary, fontSize: 12.5, fontWeight: FontWeight.w600),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _emptyCard({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required FitlekColors f,
+  }) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 28, horizontal: 20),
       decoration: BoxDecoration(
         color: f.card,
         borderRadius: BorderRadius.circular(18),
@@ -236,32 +493,19 @@ class _CoachDashboardState extends State<CoachDashboard> {
       ),
       child: Column(
         children: [
-          Icon(Icons.inbox_rounded, color: f.textMuted, size: 32),
-          const SizedBox(height: 12),
+          Icon(icon, color: f.textMuted, size: 28),
+          const SizedBox(height: 10),
           Text(
-            'No recent activity yet.',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: f.textSecondary, fontSize: 14, fontWeight: FontWeight.w600),
+            title,
+            style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurface,
+              fontSize: 13.5,
+              fontWeight: FontWeight.w700,
+            ),
           ),
           const SizedBox(height: 4),
-          Text(
-            'New reservations will appear here.',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: f.textMuted, fontSize: 12.5),
-          ),
+          Text(subtitle, style: TextStyle(color: f.textMuted, fontSize: 12)),
         ],
-      ),
-    );
-  }
-
-  Widget _sectionTitle(String text, ColorScheme cs) {
-    return Text(
-      text,
-      style: TextStyle(
-        color: cs.primary,
-        fontSize: 12,
-        fontWeight: FontWeight.w800,
-        letterSpacing: 1.2,
       ),
     );
   }
@@ -396,147 +640,11 @@ class _CoachDashboardState extends State<CoachDashboard> {
   }
 }
 
-// ═══════════════════════════════ WIDGETS ═══════════════════════════════════
-
-class _StatData {
-  final String label;
-  final int value;
-  final IconData icon;
-  final Color color;
-  _StatData(this.label, this.value, this.icon, this.color);
-}
-
-class _StatCard extends StatelessWidget {
-  final _StatData data;
-  const _StatCard({required this.data});
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final f = context.fitlek;
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: f.card,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: f.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: data.color.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(11),
-            ),
-            child: Icon(data.icon, color: data.color, size: 19),
-          ),
-          const SizedBox(height: 10),
-          FittedBox(
-            fit: BoxFit.scaleDown,
-            alignment: Alignment.centerLeft,
-            child: Text(
-              '${data.value}',
-              style: TextStyle(
-                color: cs.onSurface,
-                fontSize: 26,
-                fontWeight: FontWeight.w800,
-                height: 1,
-              ),
-            ),
-          ),
-          const SizedBox(height: 3),
-          Text(
-            data.label.toUpperCase(),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              color: f.textMuted,
-              fontSize: 10,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 0.8,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _InvitationCard extends StatelessWidget {
-  final String label;
-  final int value;
-  final IconData icon;
-  final Color color;
-  const _InvitationCard({
-    required this.label,
-    required this.value,
-    required this.icon,
-    required this.color,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    final f = context.fitlek;
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: f.card,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: f.border),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(13),
-            ),
-            child: Icon(icon, color: color, size: 22),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                FittedBox(
-                  fit: BoxFit.scaleDown,
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    '$value',
-                    style: TextStyle(
-                      color: cs.onSurface,
-                      fontSize: 24,
-                      fontWeight: FontWeight.w800,
-                      height: 1,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  label,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(color: f.textMuted, fontSize: 11.5, fontWeight: FontWeight.w600),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _ActivityTile extends StatelessWidget {
+class _ReservationTile extends StatelessWidget {
   final Map<String, dynamic> item;
-  const _ActivityTile({required this.item});
+  final VoidCallback? onTap;
+
+  const _ReservationTile({required this.item, this.onTap});
 
   String get _firstName => (item['firstName'] ?? '').toString().trim();
   String get _lastName => (item['lastName'] ?? '').toString().trim();
@@ -549,18 +657,37 @@ class _ActivityTile extends StatelessWidget {
     return res.isNotEmpty ? res : '?';
   }
 
-  String _formatDate() {
-    final raw = item['createdAt']?.toString();
-    if (raw == null || raw.isEmpty) return '';
-    final d = DateTime.tryParse(raw);
-    if (d == null) return '';
-    final diff = DateTime.now().difference(d);
-    if (diff.inMinutes < 1) return 'Just now';
-    if (diff.inMinutes < 60) return '${diff.inMinutes} min ago';
-    if (diff.inHours < 24) return '${diff.inHours} h ago';
-    if (diff.inDays == 1) return 'Yesterday';
-    if (diff.inDays < 7) return '${diff.inDays} d ago';
-    return '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
+  DateTime? _dateTime() {
+    final dateRaw = item['reservedDate']?.toString();
+    final timeRaw = item['reservedTime']?.toString();
+    if (dateRaw == null || dateRaw.isEmpty) return null;
+    final datePart = dateRaw.length >= 10 ? dateRaw.substring(0, 10) : dateRaw;
+    final timePart = (timeRaw == null || timeRaw.isEmpty)
+        ? '00:00:00'
+        : (timeRaw.length >= 8 ? timeRaw.substring(0, 8) : timeRaw);
+    return DateTime.tryParse('${datePart}T$timePart');
+  }
+
+  String _dateLabel() {
+    final date = _dateTime();
+    if (date == null) return '';
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final day = DateTime(date.year, date.month, date.day);
+    final difference = day.difference(today).inDays;
+    if (difference == 0) return 'Today';
+    if (difference == 1) return 'Tomorrow';
+    const months = [
+      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+    ];
+    return '${months[date.month - 1]} ${date.day}';
+  }
+
+  String _timeLabel() {
+    final date = _dateTime();
+    if (date == null) return '';
+    return '${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
   }
 
   @override
@@ -569,67 +696,86 @@ class _ActivityTile extends StatelessWidget {
     final f = context.fitlek;
     final avatarUrl = (item['avatarUrl'] as String?)?.trim();
     final hasAvatar = avatarUrl != null && avatarUrl.isNotEmpty;
-    final date = _formatDate();
+    final status = (item['status'] ?? '').toString().toLowerCase();
+    final confirmed = status == 'confirmed';
+    final statusColor = confirmed ? cs.primary : f.warning;
+    final statusLabel = status.isEmpty
+        ? 'Unknown'
+        : '${status[0].toUpperCase()}${status.substring(1)}';
+    final date = _dateLabel();
+    final time = _timeLabel();
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      decoration: BoxDecoration(
-        color: f.card,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: f.border),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: f.card2,
-              border: Border.all(color: cs.primary.withValues(alpha: 0.35), width: 1.4),
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+        decoration: BoxDecoration(
+          color: f.card,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: f.border),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 46,
+              height: 46,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: f.card2,
+                border: Border.all(color: f.border),
+              ),
+              child: ClipOval(
+                child: hasAvatar
+                    ? Image.network(
+                        avatarUrl,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => _fallbackAvatar(cs),
+                      )
+                    : _fallbackAvatar(cs),
+              ),
             ),
-            child: ClipOval(
-              child: hasAvatar
-                  ? Image.network(
-                      avatarUrl,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => _fallbackAvatar(cs),
-                    )
-                  : _fallbackAvatar(cs),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  _fullName.isNotEmpty ? _fullName : 'Client',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    color: cs.onSurface,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
+            const SizedBox(width: 11),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    _fullName.isNotEmpty ? _fullName : 'Client',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: cs.onSurface,
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  'New reservation',
-                  style: TextStyle(color: f.textMuted, fontSize: 12),
-                ),
-              ],
+                  const SizedBox(height: 3),
+                  Text(
+                    [date, time].where((value) => value.isNotEmpty).join(' · '),
+                    style: TextStyle(color: f.textSecondary, fontSize: 11.5),
+                  ),
+                ],
+              ),
             ),
-          ),
-          if (date.isNotEmpty) ...[
             const SizedBox(width: 8),
-            Text(
-              date,
-              style: TextStyle(color: f.textMuted, fontSize: 11, fontWeight: FontWeight.w500),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
+              decoration: BoxDecoration(
+                color: statusColor.withValues(alpha: confirmed ? 0.16 : 0.12),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Text(
+                statusLabel,
+                style: TextStyle(
+                  color: statusColor,
+                  fontSize: 10.5,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
             ),
           ],
-        ],
+        ),
       ),
     );
   }
@@ -640,8 +786,124 @@ class _ActivityTile extends StatelessWidget {
         _initials,
         style: TextStyle(
           color: cs.primary,
-          fontSize: 15,
+          fontSize: 14,
           fontWeight: FontWeight.w800,
+        ),
+      ),
+    );
+  }
+}
+
+class _NotificationTile extends StatelessWidget {
+  final Map<String, dynamic> item;
+  final VoidCallback? onTap;
+
+  const _NotificationTile({required this.item, this.onTap});
+
+  ({IconData icon, Color color}) _typeStyle(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final f = context.fitlek;
+    switch (item['type']?.toString()) {
+      case 'new_message':
+        return (icon: Icons.chat_bubble_outline_rounded, color: cs.primary);
+      case 'new_reservation':
+        return (icon: Icons.event_available_rounded, color: f.info);
+      case 'upcoming_session':
+        return (icon: Icons.notifications_active_outlined, color: f.warning);
+      case 'new_client':
+        return (icon: Icons.groups_rounded, color: f.success);
+      case 'point_achievement':
+        return (icon: Icons.workspace_premium_outlined, color: f.violet);
+      default:
+        return (icon: Icons.notifications_none_rounded, color: f.textMuted);
+    }
+  }
+
+  String _timeAgo() {
+    final raw = item['createdAt']?.toString();
+    if (raw == null || raw.isEmpty) return '';
+    final date = DateTime.tryParse(raw);
+    if (date == null) return '';
+    final difference = DateTime.now().difference(date);
+    if (difference.isNegative || difference.inMinutes < 1) return 'Just now';
+    if (difference.inMinutes < 60) return '${difference.inMinutes} mins ago';
+    if (difference.inHours < 24) return '${difference.inHours} hours ago';
+    if (difference.inDays == 1) return 'Yesterday';
+    if (difference.inDays < 7) return '${difference.inDays} days ago';
+    return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final f = context.fitlek;
+    final style = _typeStyle(context);
+    final isUnread = item['isRead'] == false || item['isRead'] == 0;
+    final title = item['title']?.toString().trim() ?? '';
+    final body = item['body']?.toString().trim() ?? '';
+    final time = _timeAgo();
+
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(13, 11, 13, 11),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              width: 38,
+              height: 38,
+              decoration: BoxDecoration(
+                color: style.color.withValues(alpha: 0.13),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(style.icon, color: style.color, size: 18),
+            ),
+            const SizedBox(width: 11),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          title.isNotEmpty ? title : 'Notification',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: cs.onSurface,
+                            fontSize: 13.5,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                      if (isUnread)
+                        Container(
+                          width: 6,
+                          height: 6,
+                          decoration: BoxDecoration(color: cs.primary, shape: BoxShape.circle),
+                        ),
+                    ],
+                  ),
+                  if (body.isNotEmpty) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      body,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(color: f.textSecondary, fontSize: 11.5, height: 1.35),
+                    ),
+                  ],
+                  if (time.isNotEmpty) ...[
+                    const SizedBox(height: 3),
+                    Text(time, style: TextStyle(color: f.textMuted, fontSize: 10.5)),
+                  ],
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );

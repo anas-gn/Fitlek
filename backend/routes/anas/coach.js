@@ -101,8 +101,8 @@ router.put('/me/profile', async (req, res) => {
     }
 
     await db.query(
-      'UPDATE coachprofiles SET bio=?, instagramPage=?, certificateUrl=?, tel=?, price=?, ville=? WHERE userID=?',
-      [bio, instagramPage, certificateUrl, tel, price, ville || null, userID]
+      'UPDATE coachprofiles SET bio=?, instagramPage=?, certificateUrl=?, tel=?, price=COALESCE(?, price), ville=? WHERE userID=?',
+      [bio, instagramPage, certificateUrl, tel, price ?? null, ville || null, userID]
     );
 
     res.json({ message: 'Profile updated' });
