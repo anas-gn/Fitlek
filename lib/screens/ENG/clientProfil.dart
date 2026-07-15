@@ -836,14 +836,8 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            const SirvyaLogo(variant: SirvyaLogoVariant.wordmark, height: 28),
+            const SirvyaLogo(variant: SirvyaLogoVariant.wordmark, height: 55),
             const SizedBox(width: 10),
-            Text('My profile',
-                style: TextStyle(
-                    color: context.fitlek.textSecondary,
-                    fontSize: 13,
-                    letterSpacing: 0.5,
-                    fontWeight: FontWeight.w600)),
             const Spacer(),
             if (_isPremium)
               Container(

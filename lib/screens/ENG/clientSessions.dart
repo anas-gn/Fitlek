@@ -137,14 +137,9 @@ class _SessionsScreenState extends State<SessionsScreen>
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          const SirvyaLogo(variant: SirvyaLogoVariant.wordmark, height: 28),
+          const SirvyaLogo(variant: SirvyaLogoVariant.wordmark, height: 55),
           const SizedBox(width: 10),
-          Text('My sessions',
-              style: TextStyle(
-                  color: context.fitlek.textMuted,
-                  fontSize: 13,
-                  letterSpacing: 0.5,
-                  fontWeight: FontWeight.w600)),
+          
           const Spacer(),
           if (!_loading && _error == null)
             Container(

@@ -37,7 +37,8 @@ router.get('/:id', async (req, res) => {
   try {
     const [rows] = await db.query(
       `SELECT u.id, u.firstName, u.lastName, u.avatarUrl, u.isPremium,
-              cp.bio, cp.instagramPage, cp.invitationCode, cp.totalInvitations, cp.earnedPoints, cp.tel, cp.price , cp.ville
+              cp.bio, cp.instagramPage, cp.invitationCode, cp.totalInvitations, 
+              cp.earnedPoints, cp.tel, cp.price, cp.ville   
        FROM users u JOIN coachprofiles cp ON cp.userID = u.id
        WHERE u.id=? AND u.role='coach' AND u.isApproved=1`,
       [req.params.id]

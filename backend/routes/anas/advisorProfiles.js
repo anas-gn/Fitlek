@@ -112,7 +112,7 @@ router.get('/', async (req, res) => {
   try {
     const [rows] = await db.query(
       `SELECT u.id, u.firstName, u.lastName, u.email, u.avatarUrl,
-              ap.specialty, ap.location, ap.companyName, ap.createdAt
+              ap.specialty, ap.location, ap.companyName, ap.createdAt,ap.ville
        FROM users u JOIN advisorprofiles ap ON ap.userID = u.id
        WHERE u.role='advisor' ORDER BY u.createdAt DESC`
     );

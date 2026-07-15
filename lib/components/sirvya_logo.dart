@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 
 /// The two ways the SIRVYA brand is displayed.
 enum SirvyaLogoVariant {
@@ -12,27 +11,31 @@ enum SirvyaLogoVariant {
 
 /// The single source of truth for the SIRVYA brand logo across the app.
 ///
-/// The mark is a recolorable monochrome SVG (`assets/branding/sirvya_mark.svg`)
-/// and the wordmark text is rendered with Flutter typography so it stays crisp
-/// and theme-accurate at every size.
+/// * `wordmark` uses the pre-rendered raster assets:
+///   - `assets/branding/logo_light.png` — light theme.
+///   - `assets/branding/logo_dark.png`  — dark theme.
+/// * `mark` uses the recolorable PNG symbol only
+///   (`assets/branding/icon_app.png`).
 ///
 /// Coloring:
-/// * Provide [color] to force a color (e.g. `Sand`/white over a dark photo).
-/// * Otherwise the logo follows the theme via `colorScheme.primary`
-///   (Cyprus in light mode, Sand in dark mode).
+/// * Provide [color] to force a color (e.g. white over a dark photo) —
+///   this only affects the `mark` variant, since the wordmark PNGs are
+///   pre-colored per theme.
+/// * Otherwise the logo follows the theme automatically.
 class SirvyaLogo extends StatelessWidget {
-  static const String _markAsset = 'assets/branding/sirvya_mark.svg';
+  static const String _lightAsset = 'assets/branding/logo_light.png';
+  static const String _darkAsset = 'assets/branding/logo_dark.png';
+  static const String _markAsset = 'assets/branding/icon_app.png';
 
   final SirvyaLogoVariant variant;
 
-  /// Overall height of the artwork in logical pixels (drives the mark size and,
-  /// for the wordmark, the text size and spacing).
+  /// Overall height of the artwork in logical pixels.
   final double height;
 
   /// Optional fixed width. When null, width follows the content's natural ratio.
   final double? width;
 
-  /// Explicit color override. When null the logo follows the current theme.
+  /// Explicit color override (applies to the `mark` variant only).
   final Color? color;
 
   /// Accessibility label announced by screen readers.
@@ -41,22 +44,17 @@ class SirvyaLogo extends StatelessWidget {
   const SirvyaLogo({
     super.key,
     this.variant = SirvyaLogoVariant.wordmark,
-    this.height = 40,
+    this.height = 60,
     this.width,
     this.color,
     this.semanticLabel,
   });
 
-  Color _resolveColor(BuildContext context) =>
-      color ?? Theme.of(context).colorScheme.primary;
-
   @override
   Widget build(BuildContext context) {
-    final resolved = _resolveColor(context);
-
     final Widget content = switch (variant) {
-      SirvyaLogoVariant.mark => _buildMark(resolved),
-      SirvyaLogoVariant.wordmark => _buildWordmark(resolved),
+      SirvyaLogoVariant.mark => _buildMark(context),
+      SirvyaLogoVariant.wordmark => _buildWordmark(context),
     };
 
     final wrapped =
@@ -69,34 +67,49 @@ class SirvyaLogo extends StatelessWidget {
     );
   }
 
-  Widget _buildMark(Color resolved) {
-    return SvgPicture.asset(
+  /// The "S" symbol only, as a tintable PNG. Width follows the natural
+  /// aspect ratio (no forced square) so it never looks squeezed.
+  Widget _buildMark(BuildContext context) {
+    final resolved = color ?? Theme.of(context).colorScheme.primary;
+    return Image.asset(
       _markAsset,
       height: height,
-      width: height,
-      colorFilter: ColorFilter.mode(resolved, BlendMode.srcIn),
+      color: resolved,
       fit: BoxFit.contain,
+      errorBuilder: (context, error, stackTrace) => _placeholder(context),
     );
   }
 
-  Widget _buildWordmark(Color resolved) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        _buildMark(resolved),
-        SizedBox(width: height * 0.26),
-        Text(
-          'SIRVYA',
+  /// The full "SIRVYA" wordmark, as a pre-rendered themed PNG.
+  Widget _buildWordmark(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Image.asset(
+      isDark ? _darkAsset : _lightAsset,
+      height: height,
+      fit: BoxFit.contain,
+      errorBuilder: (context, error, stackTrace) => _placeholder(context),
+    );
+  }
+
+  /// Fallback placeholder when an asset fails to load.
+  Widget _placeholder(BuildContext context) {
+    return Container(
+      height: height,
+      width: height,
+      decoration: BoxDecoration(
+        color: (color ?? Theme.of(context).colorScheme.primary).withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Center(
+        child: Text(
+          'S',
           style: TextStyle(
-            fontSize: height * 0.60,
-            fontWeight: FontWeight.w800,
-            letterSpacing: height * 0.10,
-            color: resolved,
-            height: 1,
+            color: color ?? Theme.of(context).colorScheme.primary,
+            fontSize: height * 0.5,
+            fontWeight: FontWeight.w900,
           ),
         ),
-      ],
+      ),
     );
   }
 }

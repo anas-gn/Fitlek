@@ -9,6 +9,7 @@ import 'clientCoachDetail.dart';
 import 'clientCompanyDetail.dart';
 
 import '../../theme/fitlek_theme_extension.dart';
+import '../../constants/app_colors.dart';
 
 const _baseUrl = 'http://localhost:3000/api';
 
@@ -17,6 +18,7 @@ class _AdvisorItem {
   final String firstName, lastName, email;
   final String? avatarUrl;
   final String specialty;
+  final String? ville;        // ← AJOUT: champ ville
 
   const _AdvisorItem({
     required this.id,
@@ -25,6 +27,7 @@ class _AdvisorItem {
     required this.email,
     this.avatarUrl,
     required this.specialty,
+    this.ville,               // ← AJOUT
   });
 
   String get fullName => '$firstName $lastName';
@@ -36,6 +39,7 @@ class _AdvisorItem {
         email: j['email'] ?? '',
         avatarUrl: j['avatarUrl'],
         specialty: j['specialty'] ?? j['speciality'] ?? '',
+        ville: j['ville'],     // ← AJOUT: mapping JSON
       );
 }
 
@@ -63,6 +67,7 @@ class _DiscoverScreenState extends State<DiscoverScreen>
   final _searchCtrl = TextEditingController();
   String _query = '';
   String _sortBy = 'points';
+  String? _selectedCity;
   bool _showFilters = false;
 
   Map<String, String> get _headers => {
@@ -101,6 +106,11 @@ class _DiscoverScreenState extends State<DiscoverScreen>
         setState(() {
           _coaches = data.map((j) => CoachModel.fromJson(j)).toList();
           _coachesLoading = false;
+          // Reset the selected city if it no longer exists in the refreshed list.
+          if (_selectedCity != null &&
+              !_availableCities.contains(_selectedCity)) {
+            _selectedCity = null;
+          }
         });
       } else {
         setState(() {
@@ -130,6 +140,11 @@ class _DiscoverScreenState extends State<DiscoverScreen>
         setState(() {
           _advisors = data.map((j) => _AdvisorItem.fromJson(j)).toList();
           _advisorsLoading = false;
+          // ← AJOUT: Reset la ville si elle n'existe plus dans la liste
+          if (_selectedCity != null &&
+              !_availableCities.contains(_selectedCity)) {
+            _selectedCity = null;
+          }
         });
       } else {
         setState(() {
@@ -145,13 +160,43 @@ class _DiscoverScreenState extends State<DiscoverScreen>
     }
   }
 
+  // ← CORRECTION: Combine les villes des coaches ET des advisors
+  List<dynamic> get _availableCities {
+    final cities = <String>{};
+
+    // Villes des coaches
+    for (final c in _coaches) {
+      final city = (c.ville ?? '').trim();
+      if (city.isNotEmpty) cities.add(city);
+    }
+
+    // Villes des advisors
+    for (final a in _advisors) {
+      final city = (a.ville ?? '').trim();
+      if (city.isNotEmpty) cities.add(city);
+    }
+
+    final sorted = cities.toList();
+    sorted.sort();
+    return sorted;
+  }
+
   List<CoachModel> get _filteredCoaches {
     var list = _coaches.where((c) {
-      if (_query.isEmpty) return true;
-      return c.fullName.toLowerCase().contains(_query) ||
+      final matchesQuery = _query.isEmpty ||
+          c.fullName.toLowerCase().contains(_query) ||
           (c.speciality ?? '').toLowerCase().contains(_query) ||
           c.bio.toLowerCase().contains(_query) ||
           c.invitationCode.toLowerCase().contains(_query);
+      if (!matchesQuery) return false;
+
+      if (_selectedCity != null && _selectedCity!.isNotEmpty) {
+        final coachCity = (c.ville ?? '').trim();
+        if (coachCity.toLowerCase() != _selectedCity!.toLowerCase()) {
+          return false;
+        }
+      }
+      return true;
     }).toList();
 
     if (_sortBy == 'name') {
@@ -162,11 +207,23 @@ class _DiscoverScreenState extends State<DiscoverScreen>
     return list;
   }
 
+  // ← CORRECTION: Ajout du filtrage par ville pour les advisors
   List<_AdvisorItem> get _filteredAdvisors {
     return _advisors.where((a) {
-      if (_query.isEmpty) return true;
-      return a.fullName.toLowerCase().contains(_query) ||
+      // Filtre par recherche texte
+      final matchesQuery = _query.isEmpty ||
+          a.fullName.toLowerCase().contains(_query) ||
           a.specialty.toLowerCase().contains(_query);
+      if (!matchesQuery) return false;
+
+      // ← AJOUT: Filtre par ville
+      if (_selectedCity != null && _selectedCity!.isNotEmpty) {
+        final advisorCity = (a.ville ?? '').trim();
+        if (advisorCity.toLowerCase() != _selectedCity!.toLowerCase()) {
+          return false;
+        }
+      }
+      return true;
     }).toList();
   }
 
@@ -174,22 +231,44 @@ class _DiscoverScreenState extends State<DiscoverScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      body: SafeArea(
-        child: Column(children: [
-          _buildSearchBar(),
-          _buildTabBar(),
-          AnimatedSize(
-            duration: const Duration(milliseconds: 250),
-            curve: Curves.easeInOut,
-            child: _showFilters ? _buildFilterPanel() : const SizedBox.shrink(),
-          ),
-          Expanded(
-            child: TabBarView(
-              controller: _tabController,
-              children: [_buildCoachTab(), _buildAdvisorTab()],
+      body: Stack(
+        children: [
+          // Dégradé de marque en fond, doux et localisé en haut de l'écran
+          Positioned.fill(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    AppColors.cyprus.withValues(alpha: 0.16),
+                    AppColors.cyprus.withValues(alpha: 0.05),
+                    Theme.of(context).scaffoldBackgroundColor,
+                  ],
+                  stops: const [0.0, 0.18, 0.42],
+                ),
+              ),
             ),
           ),
-        ]),
+          SafeArea(
+            child: Column(children: [
+              _buildSearchBar(),
+              _buildTabBar(),
+              AnimatedSize(
+                duration: const Duration(milliseconds: 250),
+                curve: Curves.easeInOut,
+                child:
+                    _showFilters ? _buildFilterPanel() : const SizedBox.shrink(),
+              ),
+              Expanded(
+                child: TabBarView(
+                  controller: _tabController,
+                  children: [_buildCoachTab(), _buildAdvisorTab()],
+                ),
+              ),
+            ]),
+          ),
+        ],
       ),
     );
   }
@@ -235,11 +314,28 @@ class _DiscoverScreenState extends State<DiscoverScreen>
                         ? Theme.of(context).colorScheme.primary
                         : Colors.transparent,
                     borderRadius: BorderRadius.circular(10)),
-                child: Icon(Icons.tune_rounded,
-                    color: _showFilters
-                        ? Theme.of(context).colorScheme.onPrimary
-                        : context.fitlek.textMuted,
-                    size: 18),
+                child: Stack(clipBehavior: Clip.none, children: [
+                  Icon(Icons.tune_rounded,
+                      color: _showFilters
+                          ? Theme.of(context).colorScheme.onPrimary
+                          : context.fitlek.textMuted,
+                      size: 18),
+                  if (_selectedCity != null)
+                    Positioned(
+                      top: -2,
+                      right: -2,
+                      child: Container(
+                        width: 7,
+                        height: 7,
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.primary,
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                              color: context.fitlek.card, width: 1.5),
+                        ),
+                      ),
+                    ),
+                ]),
               ),
             ),
             if (_query.isNotEmpty)
@@ -318,6 +414,36 @@ class _DiscoverScreenState extends State<DiscoverScreen>
             const SizedBox(width: 10),
             _sortBtn('Alphabetical', 'name'),
           ]),
+          if (_availableCities.isNotEmpty) ...[
+            const SizedBox(height: 18),
+            Row(children: [
+              Text('CITY',
+                  style: TextStyle(
+                      color: context.fitlek.textMuted,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 1.5)),
+              const Spacer(),
+              if (_selectedCity != null)
+                GestureDetector(
+                  onTap: () => setState(() => _selectedCity = null),
+                  child: Text('Clear',
+                      style: TextStyle(
+                          color: Theme.of(context).colorScheme.primary,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700)),
+                ),
+            ]),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                _cityChip('All', null),
+                ..._availableCities.map((city) => _cityChip(city, city)),
+              ],
+            ),
+          ],
         ]),
       );
 
@@ -348,11 +474,52 @@ class _DiscoverScreenState extends State<DiscoverScreen>
     );
   }
 
+  Widget _cityChip(String label, String? value) {
+    final active = _selectedCity == value;
+    return GestureDetector(
+      onTap: () => setState(() => _selectedCity = value),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+        decoration: BoxDecoration(
+            color: active
+                ? Theme.of(context).colorScheme.primary
+                : context.fitlek.card2,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+                color: active
+                    ? Theme.of(context).colorScheme.primary
+                    : context.fitlek.border)),
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          if (value != null) ...[
+            Icon(Icons.location_on_rounded,
+                size: 12,
+                color: active
+                    ? Theme.of(context).colorScheme.onPrimary
+                    : context.fitlek.textMuted),
+            const SizedBox(width: 4),
+          ],
+          Text(label,
+              style: TextStyle(
+                  color: active
+                      ? Theme.of(context).colorScheme.onPrimary
+                      : context.fitlek.textMuted,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700)),
+        ]),
+      ),
+    );
+  }
+
   Widget _buildCoachTab() {
     if (_coachesLoading) return _shimmerList();
     if (_coachesError != null) return _errorView(_coachesError!, _fetchCoaches);
     final list = _filteredCoaches;
-    if (list.isEmpty) return _emptyView('No coaches found');
+    if (list.isEmpty) {
+      return _emptyView(_selectedCity != null
+          ? 'No coaches found in $_selectedCity'
+          : 'No coaches found');
+    }
 
     return RefreshIndicator(
       onRefresh: _fetchCoaches,
@@ -379,7 +546,12 @@ class _DiscoverScreenState extends State<DiscoverScreen>
       return _errorView(_advisorsError!, _fetchAdvisors);
     }
     final list = _filteredAdvisors;
-    if (list.isEmpty) return _emptyView('No companies found');
+    // ← AJOUT: Message adapté si filtre ville actif
+    if (list.isEmpty) {
+      return _emptyView(_selectedCity != null
+          ? 'No companies found in $_selectedCity'
+          : 'No companies found');
+    }
 
     return RefreshIndicator(
       onRefresh: _fetchAdvisors,
@@ -453,12 +625,14 @@ class _DiscoverScreenState extends State<DiscoverScreen>
               color: context.fitlek.textMuted, size: 52),
           const SizedBox(height: 14),
           Text(msg,
-              style: TextStyle(color: context.fitlek.textMuted, fontSize: 14)),
+              style: TextStyle(color: context.fitlek.textMuted, fontSize: 14),
+              textAlign: TextAlign.center),
           const SizedBox(height: 8),
           GestureDetector(
             onTap: () => setState(() {
               _searchCtrl.clear();
               _query = '';
+              _selectedCity = null;
             }),
             child: Text('Reset',
                 style: TextStyle(
@@ -817,13 +991,47 @@ class _CoachCardState extends State<_CoachCard> {
     final hasTel =
         widget.coach.tel != null && widget.coach.tel!.trim().isNotEmpty;
     final hasCode = widget.coach.invitationCode.trim().isNotEmpty;
+    final hasCity =
+        widget.coach.ville != null && widget.coach.ville!.trim().isNotEmpty;
 
-    if (!hasTel && !hasCode) return const SizedBox.shrink();
+    if (!hasTel && !hasCode && !hasCity) return const SizedBox.shrink();
 
     return Wrap(
       spacing: 8,
       runSpacing: 8,
       children: [
+        if (hasCity)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color:
+                  Theme.of(context).colorScheme.primary.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: Theme.of(context)
+                    .colorScheme
+                    .primary
+                    .withValues(alpha: 0.25),
+                width: 1,
+              ),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.location_on_rounded,
+                    color: Theme.of(context).colorScheme.primary, size: 12),
+                const SizedBox(width: 4),
+                Text(
+                  widget.coach.ville!,
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.primary,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
+          ),
         if (hasCode)
           GestureDetector(
             onTap: () {
@@ -1114,6 +1322,20 @@ class _AdvisorCardState extends State<_AdvisorCard> {
                                   color: context.fitlek.textSecondary,
                                   fontSize: 11))),
                     ]),
+                    // ← AJOUT: Afficher la ville dans la carte advisor
+                    if (widget.advisor.ville != null &&
+                        widget.advisor.ville!.isNotEmpty) ...[
+                      const SizedBox(height: 6),
+                      Row(children: [
+                        Icon(Icons.location_on_rounded,
+                            color: context.fitlek.textMuted, size: 12),
+                        const SizedBox(width: 6),
+                        Text(widget.advisor.ville!,
+                            style: TextStyle(
+                                color: context.fitlek.textSecondary,
+                                fontSize: 11)),
+                      ]),
+                    ],
                     const SizedBox(height: 10),
                     Row(children: [
                       Container(

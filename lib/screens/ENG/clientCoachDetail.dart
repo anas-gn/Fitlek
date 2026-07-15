@@ -1,4 +1,6 @@
+
 import 'dart:convert';
+import 'package:fitlek1/constants/app_colors.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
@@ -452,16 +454,23 @@ class _CoachDetailScreenState extends State<CoachDetailScreen>
                   errorBuilder: (_, __, ___) => _avatarPlaceholder(name))
               : _avatarPlaceholder(name),
         ),
-        const Positioned.fill(
-            child: DecoratedBox(
-          decoration: BoxDecoration(
-              gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Color(0x55000000), Color(0xFF0A0A0A)],
-            stops: [0.0, 1.0],
-          )),
-        )),
+       Positioned.fill(
+  child: DecoratedBox(
+    decoration: BoxDecoration(
+      gradient: LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [
+          Colors.transparent,                                                    // Haut : image visible
+          Theme.of(context).scaffoldBackgroundColor.withValues(alpha: 0.3),      // Transition
+          Theme.of(context).scaffoldBackgroundColor.withValues(alpha: 0.85),   // Fond dominant
+          Theme.of(context).scaffoldBackgroundColor,                            // Bas : opaque
+        ],
+        stops: const [0.0, 0.5, 0.85, 1.0],
+      ),
+    ),
+  ),
+),
         Positioned(
             top: 52,
             left: 16,
@@ -538,6 +547,9 @@ class _CoachDetailScreenState extends State<CoachDetailScreen>
                     color: Colors.white.withValues(alpha: 0.55),
                     fontSize: 14,
                     fontWeight: FontWeight.w500)),
+            // --- AJOUT : Afficher la ville si elle existe ---
+            
+            // --- FIN AJOUT ---
           ]),
         ),
       ]),
@@ -884,6 +896,7 @@ class _CoachDetailScreenState extends State<CoachDetailScreen>
                           .withValues(alpha: 0.5),
               width: 1,
             ),
+            // --- MODIFICATION : Ombre de la couleur de la page au lieu de noir ---
             boxShadow: isDisabled
                 ? null
                 : [
@@ -896,6 +909,7 @@ class _CoachDetailScreenState extends State<CoachDetailScreen>
                       offset: const Offset(0, 6),
                     ),
                   ],
+            // --- FIN MODIFICATION ---
           ),
           child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
             _sendingInvite

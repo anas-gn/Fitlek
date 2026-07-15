@@ -106,7 +106,7 @@ class _SplashScreenState extends State<SplashScreen>
                       ),
                       child: const SirvyaLogo(
                         variant: SirvyaLogoVariant.wordmark,
-                        height: 60,
+                        height: 70,
                       ),
                     ),
                     const SizedBox(height: 20),

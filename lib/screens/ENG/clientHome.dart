@@ -15,6 +15,7 @@ import 'clientProfil.dart';
 
 import '../../theme/fitlek_theme_extension.dart';
 import '../../components/sirvya_logo.dart';
+import '../../constants/app_colors.dart';
 
 const _baseUrl = 'http://localhost:3000/api';
 
@@ -475,16 +476,37 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      body: IndexedStack(
-        index: _navIndex,
+      body: Stack(
         children: [
-          _buildHomeBody(),
-          DiscoverScreen(clientID: widget.clientID, token: widget.token),
-          SessionsScreen(clientID: widget.clientID, token: widget.token),
-          ClientProfileScreen(
-            clientID: widget.clientID, // ← même valeur, nom différent
-            token: widget.token, // ← nouveau paramètre optionnel
-            onLogout: widget.onLogout,
+          // Dégradé de marque en fond, doux et localisé en haut de l'écran
+          Positioned.fill(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    AppColors.cyprus.withValues(alpha: 0.16),
+                    AppColors.cyprus.withValues(alpha: 0.05),
+                    Theme.of(context).scaffoldBackgroundColor,
+                  ],
+                  stops: const [0.0, 0.18, 0.42],
+                ),
+              ),
+            ),
+          ),
+          IndexedStack(
+            index: _navIndex,
+            children: [
+              _buildHomeBody(),
+              DiscoverScreen(clientID: widget.clientID, token: widget.token),
+              SessionsScreen(clientID: widget.clientID, token: widget.token),
+              ClientProfileScreen(
+                clientID: widget.clientID, // ← même valeur, nom différent
+                token: widget.token, // ← nouveau paramètre optionnel
+                onLogout: widget.onLogout,
+              ),
+            ],
           ),
         ],
       ),
@@ -538,7 +560,7 @@ class _HomeScreenState extends State<HomeScreen> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          const SirvyaLogo(variant: SirvyaLogoVariant.wordmark, height: 30),
+          const SirvyaLogo(variant: SirvyaLogoVariant.wordmark, height: 55),
           const Spacer(),
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
@@ -1287,7 +1309,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ],
               ),
               child: const Center(
-                child: SirvyaLogo(variant: SirvyaLogoVariant.mark, height: 40),
+                child: SirvyaLogo(variant: SirvyaLogoVariant.mark, height: 195),
               ),
             ),
           ),

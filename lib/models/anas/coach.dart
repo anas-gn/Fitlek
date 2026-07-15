@@ -10,6 +10,7 @@ class CoachModel {
   final int totalInvitations;
   final int earnedPoints;
   final String? tel;
+  final String? ville;
   final double? price;
   final double? rating;
   final int? totalSessions;
@@ -20,6 +21,7 @@ class CoachModel {
     required this.firstName,
     required this.lastName,
     this.avatarUrl,
+    required this.ville,
     required this.isPremium,
     required this.bio,
     required this.instagramPage,
@@ -44,6 +46,7 @@ class CoachModel {
         bio: json['bio'] ?? '',
         instagramPage: json['instagramPage'] ?? '',
         invitationCode: json['invitationCode'] ?? '',
+        ville: json['ville'] ?? '',
         totalInvitations: json['totalInvitations'] ?? 0,
         earnedPoints: json['earnedPoints'] ?? 0,
         tel: json['tel'],
@@ -60,7 +63,7 @@ class CoachModel {
         speciality: json['speciality'],
       );
 
-  get ville => null;
+
 
   Map<String, dynamic> toJson() => {
         'id': id,
@@ -76,6 +79,7 @@ class CoachModel {
         'tel': tel,           // ✅ AJOUTÉ
         'price': price,       // ✅ AJOUTÉ
         'rating': rating,
+        'ville':ville,
         'totalSessions': totalSessions,
         'speciality': speciality,
       };

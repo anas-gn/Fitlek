@@ -8,66 +8,20 @@ import 'welcome.dart';
 
 import '../../theme/fitlek_theme_extension.dart';
 import '../../components/sirvya_logo.dart';
+import '../../constants/app_colors.dart';
 
 enum _ReferralStatus { idle, checking, valid, invalid }
 
-// ─── Palette ────────────────────────────────────────────────────────────────
+// ─── Semantic status colors (kept for feedback only — not brand accents) ────
 const _orange = Color(0xFFFFB74D);
-const _blue = Color(0xFF64B5F6);
 const _green = Color(0xFF4CAF50);
 const _red = Color(0xFFFF5252);
 
 const _baseUrl = 'http://localhost:3000/api';
 
+// Same background photo family as the login screen, for visual continuity.
 const _bgImageUrl =
-    'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?q=80&w=1400&auto=format&fit=crop';
-
-class _RegisterBackground extends StatelessWidget {
-  const _RegisterBackground();
-
-  @override
-  Widget build(BuildContext context) {
-    return Positioned.fill(
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          Image.network(
-            _bgImageUrl,
-            fit: BoxFit.cover,
-            errorBuilder: (_, __, ___) =>
-                Container(color: Theme.of(context).scaffoldBackgroundColor),
-            loadingBuilder: (context, child, progress) {
-              if (progress == null) return child;
-              return Container(
-                  color: Theme.of(context).scaffoldBackgroundColor);
-            },
-          ),
-          Container(
-              color:
-                  Theme.of(context).scaffoldBackgroundColor.withValues(alpha: 0.55)),
-          DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  const Color(0xCC0A0A0A),
-                  const Color(0xE60A0A0A),
-                  Theme.of(context).scaffoldBackgroundColor,
-                ],
-                stops: const [0.0, 0.45, 1.0],
-              ),
-            ),
-          ),
-          BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 0.3, sigmaY: 0.3),
-            child: Container(color: Colors.transparent),
-          ),
-        ],
-      ),
-    );
-  }
-}
+    'https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?w=1200&q=80';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -296,7 +250,7 @@ class _RegisterScreenState extends State<RegisterScreen>
   void _showSuccess() {
     showModalBottomSheet(
       context: context,
-      backgroundColor: context.fitlek.card,
+      backgroundColor: AppColors.cyprus,
       isDismissible: false,
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
@@ -307,18 +261,18 @@ class _RegisterScreenState extends State<RegisterScreen>
             width: 80,
             height: 80,
             decoration: BoxDecoration(
-              color: _roleColor(_role).withValues(alpha: 0.15),
+              color: AppColors.sand.withValues(alpha: 0.15),
               shape: BoxShape.circle,
             ),
-            child:
-                Icon(Icons.check_rounded, color: _roleColor(_role), size: 40),
+            child: const Icon(Icons.check_rounded,
+                color: AppColors.sand, size: 40),
           ),
           const SizedBox(height: 24),
-          Text('Account created!',
-              style: TextStyle(
-                  color: Theme.of(context).colorScheme.onSurface,
-                  fontSize: 26,
-                  fontWeight: FontWeight.w900)),
+          const Text(
+            'Account created!',
+            style: TextStyle(
+                color: Colors.white, fontSize: 26, fontWeight: FontWeight.w900),
+          ),
           const SizedBox(height: 12),
           RichText(
             textAlign: TextAlign.center,
@@ -326,7 +280,9 @@ class _RegisterScreenState extends State<RegisterScreen>
               TextSpan(
                 text: 'Welcome ${_firstNameCtrl.text.trim()}. ',
                 style: TextStyle(
-                    color: context.fitlek.textMuted, fontSize: 14, height: 1.6),
+                    color: Colors.white.withValues(alpha: 0.65),
+                    fontSize: 14,
+                    height: 1.6),
               ),
               if (_role == 'coach' || _role == 'advisor')
                 const TextSpan(
@@ -337,7 +293,7 @@ class _RegisterScreenState extends State<RegisterScreen>
                 TextSpan(
                   text: 'You can now log in.',
                   style: TextStyle(
-                      color: context.fitlek.textMuted,
+                      color: Colors.white.withValues(alpha: 0.65),
                       fontSize: 14,
                       height: 1.6),
                 ),
@@ -361,23 +317,29 @@ class _RegisterScreenState extends State<RegisterScreen>
               width: double.infinity,
               padding: const EdgeInsets.symmetric(vertical: 16),
               decoration: BoxDecoration(
-                color: _roleColor(_role),
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [AppColors.sand, AppColors.sand.withValues(alpha: 0.85)],
+                ),
                 borderRadius: BorderRadius.circular(14),
                 boxShadow: [
                   BoxShadow(
-                    color: _roleColor(_role).withValues(alpha: 0.3),
+                    color: AppColors.sand.withValues(alpha: 0.3),
                     blurRadius: 16,
                     offset: const Offset(0, 6),
                   ),
                 ],
               ),
-              child: Text('Log in',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                      color: Theme.of(context).scaffoldBackgroundColor,
-                      fontSize: 15,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 0.5)),
+              child: const Text(
+                'Log in',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                    color: AppColors.cyprus,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.5),
+              ),
             ),
           ),
         ]),
@@ -385,24 +347,46 @@ class _RegisterScreenState extends State<RegisterScreen>
     );
   }
 
-  Color _roleColor(String? role) {
-    switch (role) {
-      case 'coach':
-        return Theme.of(context).colorScheme.primary;
-      case 'advisor':
-        return _blue;
-      default:
-        return _green;
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      backgroundColor: AppColors.cyprus,
       body: Stack(
         children: [
-          const _RegisterBackground(),
+          // ── Fond image + flou léger, identique à l'écran de login ──
+          Positioned.fill(
+            child: Image.network(
+              _bgImageUrl,
+              fit: BoxFit.cover,
+              loadingBuilder: (_, child, p) =>
+                  p == null ? child : Container(color: const Color(0xFF111111)),
+            ),
+          ),
+          Positioned.fill(
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 1.2, sigmaY: 1.2),
+              child: Container(color: Colors.black.withValues(alpha: 0.25)),
+            ),
+          ),
+          // ── Dégradé de lisibilité (cyprus), identique au login ──
+          Positioned.fill(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.transparent,
+                    AppColors.cyprus.withValues(alpha: 0.05),
+                    AppColors.cyprus.withValues(alpha: 0.55),
+                    AppColors.cyprus.withValues(alpha: 0.92),
+                    AppColors.cyprus,
+                  ],
+                  stops: const [0.0, 0.28, 0.5, 0.78, 1.0],
+                ),
+              ),
+            ),
+          ),
           SafeArea(
             child: Column(children: [
               _buildTopBar(),
@@ -417,15 +401,15 @@ class _RegisterScreenState extends State<RegisterScreen>
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const SizedBox(height: 32),
+                          const SizedBox(height: 24),
                           _buildStepHeader(),
-                          const SizedBox(height: 32),
+                          const SizedBox(height: 28),
                           _buildStepContent(),
                           if (_errorMsg != null) ...[
                             const SizedBox(height: 16),
                             _buildErrorBanner(),
                           ],
-                          const SizedBox(height: 32),
+                          const SizedBox(height: 28),
                           _buildCTA(),
                           const SizedBox(height: 24),
                         ],
@@ -443,27 +427,17 @@ class _RegisterScreenState extends State<RegisterScreen>
 
   Widget _buildTopBar() {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(8, 16, 24, 0),
+      padding: const EdgeInsets.fromLTRB(8, 12, 24, 0),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           IconButton(
             onPressed: _prevStep,
-            icon: Icon(Icons.arrow_back_ios_new_rounded,
-                size: 18, color: Theme.of(context).colorScheme.onSurface),
+            icon: const Icon(Icons.arrow_back_ios_new_rounded,
+                size: 18, color: Colors.white),
           ),
           const Spacer(),
-          const SirvyaLogo(variant: SirvyaLogoVariant.wordmark, height: 26),
-          const SizedBox(width: 10),
-          Text(
-            'Sign up',
-            style: TextStyle(
-              color: context.fitlek.textMuted,
-              fontSize: 11,
-              letterSpacing: 0.5,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
+          const SirvyaLogo(variant: SirvyaLogoVariant.wordmark, height: 54),
         ],
       ),
     );
@@ -472,7 +446,7 @@ class _RegisterScreenState extends State<RegisterScreen>
   Widget _buildStepper() {
     const total = 4;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
+      padding: const EdgeInsets.fromLTRB(28, 20, 28, 0),
       child: Row(
         children: List.generate(total, (i) {
           final done = i < _step;
@@ -485,10 +459,10 @@ class _RegisterScreenState extends State<RegisterScreen>
                   height: 3,
                   decoration: BoxDecoration(
                     color: done
-                        ? _roleColor(_role)
+                        ? AppColors.sand
                         : active
-                            ? _roleColor(_role).withValues(alpha: 0.4)
-                            : context.fitlek.border,
+                            ? AppColors.sand.withValues(alpha: 0.4)
+                            : Colors.white.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
@@ -522,23 +496,42 @@ class _RegisterScreenState extends State<RegisterScreen>
 
   Widget _buildStepHeader() {
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Text(_stepLabels[_step],
-          style: TextStyle(
-              color: _roleColor(_role),
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 1.8)),
-      const SizedBox(height: 8),
-      Text(_stepTitles[_step],
-          style: TextStyle(
-              color: Theme.of(context).colorScheme.onSurface,
-              fontSize: 36,
-              fontWeight: FontWeight.w900,
-              height: 1.1)),
+      Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        decoration: BoxDecoration(
+          color: AppColors.sand.withValues(alpha: 0.14),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Text(
+          _stepLabels[_step],
+          style: const TextStyle(
+            color: AppColors.sand,
+            fontSize: 11,
+            fontWeight: FontWeight.w800,
+            letterSpacing: 1.6,
+          ),
+        ),
+      ),
+      const SizedBox(height: 16),
+      Text(
+        _stepTitles[_step],
+        style: const TextStyle(
+          fontSize: 34,
+          fontWeight: FontWeight.w900,
+          color: Colors.white,
+          height: 1.08,
+          letterSpacing: -1,
+        ),
+      ),
       const SizedBox(height: 10),
-      Text(_stepSubs[_step],
-          style: TextStyle(
-              color: context.fitlek.textMuted, fontSize: 14, height: 1.5)),
+      Text(
+        _stepSubs[_step],
+        style: TextStyle(
+          fontSize: 14,
+          height: 1.5,
+          color: Colors.white.withValues(alpha: 0.65),
+        ),
+      ),
     ]);
   }
 
@@ -561,11 +554,9 @@ class _RegisterScreenState extends State<RegisterScreen>
   Widget _buildStep0() {
     return Column(children: [
       _RoleTile(
-        role: 'client',
         label: 'Client',
         description: 'Find a coach and book sessions.',
         icon: Icons.person_rounded,
-        color: _green,
         selected: _role == 'client',
         onTap: () => setState(() {
           _role = 'client';
@@ -574,18 +565,15 @@ class _RegisterScreenState extends State<RegisterScreen>
       ),
       const SizedBox(height: 12),
       _RoleTile(
-        role: 'coach',
         label: 'Coach',
         description: 'Manage your clients and grow your business.',
         icon: Icons.fitness_center_rounded,
-        color: Theme.of(context).colorScheme.primary,
         selected: _role == 'coach',
         onTap: () => setState(() {
           _role = 'coach';
           _errorMsg = null;
         }),
       ),
-      const SizedBox(height: 12),
     ]);
   }
 
@@ -594,38 +582,38 @@ class _RegisterScreenState extends State<RegisterScreen>
     return Column(children: [
       Row(children: [
         Expanded(
-          child: _FitField(
+          child: _RegisterField(
             controller: _firstNameCtrl,
             label: 'First name',
             hint: 'Anas',
-            accentColor: _roleColor(_role),
+            icon: Icons.person_rounded,
           ),
         ),
         const SizedBox(width: 12),
         Expanded(
-          child: _FitField(
+          child: _RegisterField(
             controller: _lastNameCtrl,
             label: 'Last name',
             hint: 'Benali',
-            accentColor: _roleColor(_role),
+            icon: Icons.badge_rounded,
           ),
         ),
       ]),
-      const SizedBox(height: 16),
-      _FitField(
+      const SizedBox(height: 14),
+      _RegisterField(
         controller: _emailCtrl,
-        label: 'Email',
+        label: 'Email address',
         hint: 'you@email.ma',
+        icon: Icons.email_rounded,
         keyboardType: TextInputType.emailAddress,
-        accentColor: _roleColor(_role),
       ),
-      const SizedBox(height: 16),
-      _FitField(
+      const SizedBox(height: 14),
+      _RegisterField(
         controller: _heightCtrl,
         label: 'Height (cm)',
         hint: '175',
+        icon: Icons.straighten_rounded,
         keyboardType: TextInputType.number,
-        accentColor: _roleColor(_role),
       ),
     ]);
   }
@@ -633,47 +621,30 @@ class _RegisterScreenState extends State<RegisterScreen>
   // Step 2: Security
   Widget _buildStep2() {
     return Column(children: [
-      _FitField(
+      _RegisterField(
         controller: _passwordCtrl,
         label: 'Password',
         hint: '••••••••',
+        icon: Icons.lock_rounded,
         obscure: _obscurePass,
-        accentColor: _roleColor(_role),
-        suffix: IconButton(
-          onPressed: () => setState(() => _obscurePass = !_obscurePass),
-          icon: Icon(
-            _obscurePass
-                ? Icons.visibility_off_rounded
-                : Icons.visibility_rounded,
-            color: context.fitlek.textMuted,
-            size: 20,
-          ),
-        ),
+        showToggle: true,
+        obscureValue: _obscurePass,
+        onToggle: () => setState(() => _obscurePass = !_obscurePass),
         onChanged: (_) => setState(() {}),
       ),
-      const SizedBox(height: 16),
-      _FitField(
+      const SizedBox(height: 14),
+      _RegisterField(
         controller: _confirmCtrl,
         label: 'Confirm password',
         hint: '••••••••',
+        icon: Icons.lock_outline_rounded,
         obscure: _obscureConf,
-        accentColor: _roleColor(_role),
-        suffix: IconButton(
-          onPressed: () => setState(() => _obscureConf = !_obscureConf),
-          icon: Icon(
-            _obscureConf
-                ? Icons.visibility_off_rounded
-                : Icons.visibility_rounded,
-            color: context.fitlek.textMuted,
-            size: 20,
-          ),
-        ),
+        showToggle: true,
+        obscureValue: _obscureConf,
+        onToggle: () => setState(() => _obscureConf = !_obscureConf),
       ),
       const SizedBox(height: 16),
-      _PasswordStrengthBar(
-        password: _passwordCtrl.text,
-        accentColor: _roleColor(_role),
-      ),
+      _PasswordStrengthBar(password: _passwordCtrl.text),
     ]);
   }
 
@@ -684,7 +655,6 @@ class _RegisterScreenState extends State<RegisterScreen>
         label: 'Male',
         icon: Icons.male_rounded,
         selected: _gender == 'Male',
-        accentColor: _roleColor(_role),
         onTap: () => setState(() => _gender = 'Male'),
       ),
       const SizedBox(height: 12),
@@ -692,7 +662,6 @@ class _RegisterScreenState extends State<RegisterScreen>
         label: 'Female',
         icon: Icons.female_rounded,
         selected: _gender == 'Female',
-        accentColor: _roleColor(_role),
         onTap: () => setState(() => _gender = 'Female'),
       ),
       const SizedBox(height: 12),
@@ -700,39 +669,46 @@ class _RegisterScreenState extends State<RegisterScreen>
         label: 'Other',
         icon: Icons.person_outline_rounded,
         selected: _gender == 'Other',
-        accentColor: _roleColor(_role),
         onTap: () => setState(() => _gender = 'Other'),
       ),
       if (_role == 'coach') ...[
         const SizedBox(height: 20),
-        _FitField(
+        _RegisterField(
           controller: _referralCtrl,
           label: 'Invitation code (optional)',
           hint: 'e.g. A1B2C3D4E5F6',
-          accentColor: _roleColor(_role),
+          icon: Icons.card_giftcard_rounded,
           onChanged: _onReferralChanged,
           suffix: _referralSuffixIcon(),
         ),
         const SizedBox(height: 8),
-        Text(
-          'Enter a Coach referral code if another Coach invited you.',
-          style: TextStyle(
-              color: context.fitlek.textMuted, fontSize: 12, height: 1.4),
+        Padding(
+          padding: const EdgeInsets.only(left: 2),
+          child: Text(
+            'Enter a Coach referral code if another Coach invited you.',
+            style: TextStyle(
+                color: Colors.white.withValues(alpha: 0.55),
+                fontSize: 12,
+                height: 1.4),
+          ),
         ),
         if (_referralStatus == _ReferralStatus.invalid) ...[
           const SizedBox(height: 6),
-          const Text('This code is not recognized.',
-              style: TextStyle(color: _red, fontSize: 12)),
+          const Padding(
+            padding: EdgeInsets.only(left: 2),
+            child: Text('This code is not recognized.',
+                style: TextStyle(color: _red, fontSize: 12)),
+          ),
         ] else if (_referralStatus == _ReferralStatus.valid) ...[
           const SizedBox(height: 6),
-          const Text('Valid coach code',
-              style: TextStyle(color: _green, fontSize: 12)),
+          const Padding(
+            padding: EdgeInsets.only(left: 2),
+            child: Text('Valid coach code',
+                style: TextStyle(color: _green, fontSize: 12)),
+          ),
         ],
         const SizedBox(height: 20),
-        _NoticeBanner(
-          role: _role!,
-          roleColor: _roleColor(_role),
-        ),
+        _NoticeBanner(role: _role!),
       ],
     ]);
   }
@@ -740,60 +716,98 @@ class _RegisterScreenState extends State<RegisterScreen>
   Widget _buildCTA() {
     return Column(children: [
       _loading
-          ? Center(
-              child: CircularProgressIndicator(
-                color: _roleColor(_role),
-                strokeWidth: 2.5,
+          ? const Center(
+              child: SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(
+                  color: AppColors.sand,
+                  strokeWidth: 2.5,
+                ),
               ),
             )
-          : GestureDetector(
+          : _PressableScale(
               onTap: _nextStep,
               child: Container(
                 width: double.infinity,
-                padding: const EdgeInsets.symmetric(vertical: 16),
+                height: 60,
                 decoration: BoxDecoration(
-                  color: _roleColor(_role),
-                  borderRadius: BorderRadius.circular(14),
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      AppColors.sand,
+                      AppColors.sand.withValues(alpha: 0.85),
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(16),
                   boxShadow: [
                     BoxShadow(
-                      color: _roleColor(_role).withValues(alpha: 0.3),
-                      blurRadius: 16,
-                      offset: const Offset(0, 6),
+                      color: AppColors.sand.withValues(alpha: 0.35),
+                      blurRadius: 28,
+                      offset: const Offset(0, 10),
                     ),
                   ],
                 ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      _step < 3 ? 'CONTINUE' : 'CREATE MY ACCOUNT',
-                      style: TextStyle(
-                        color: Theme.of(context).scaffoldBackgroundColor,
-                        fontSize: 15,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: 1.2,
+                child: Center(
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        _step < 3
+                            ? Icons.arrow_forward_rounded
+                            : Icons.check_rounded,
+                        color: AppColors.cyprus,
+                        size: 18,
                       ),
-                    ),
-                    const SizedBox(width: 8),
-                    Icon(
-                      _step < 3
-                          ? Icons.arrow_forward_rounded
-                          : Icons.check_rounded,
-                      color: Theme.of(context).scaffoldBackgroundColor,
-                      size: 18,
-                    ),
-                  ],
+                      const SizedBox(width: 10),
+                      Text(
+                        _step < 3 ? 'CONTINUE' : 'CREATE MY ACCOUNT',
+                        style: const TextStyle(
+                          color: AppColors.cyprus,
+                          fontWeight: FontWeight.w900,
+                          fontSize: 14,
+                          letterSpacing: 1.5,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
-      const SizedBox(height: 16),
-      if (_step == 0)
-        Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-          Text(
-            'Already registered? ',
-            style: TextStyle(color: context.fitlek.textMuted, fontSize: 13),
-          ),
-          GestureDetector(
+      if (_step == 0) ...[
+        const SizedBox(height: 24),
+        Row(
+          children: [
+            Expanded(
+              child: Divider(
+                color: Colors.white.withValues(alpha: 0.15),
+                thickness: 1,
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 14),
+              child: Text(
+                'Already registered?',
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.55),
+                  fontSize: 11,
+                  letterSpacing: 0.5,
+                ),
+              ),
+            ),
+            Expanded(
+              child: Divider(
+                color: Colors.white.withValues(alpha: 0.15),
+                thickness: 1,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        Material(
+          color: Colors.transparent,
+          child: InkWell(
             onTap: () => Navigator.pushReplacement(
               context,
               PageRouteBuilder(
@@ -803,56 +817,132 @@ class _RegisterScreenState extends State<RegisterScreen>
                 transitionDuration: const Duration(milliseconds: 500),
               ),
             ),
-            child: Text(
-              'Log in',
-              style: TextStyle(
-                color: _roleColor(_role),
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
+            borderRadius: BorderRadius.circular(14),
+            splashColor: AppColors.sand.withValues(alpha: 0.15),
+            highlightColor: AppColors.sand.withValues(alpha: 0.08),
+            child: Container(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                  color: AppColors.sand.withValues(alpha: 0.5),
+                  width: 1.5,
+                ),
+              ),
+              child: const Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.login_rounded, color: AppColors.sand, size: 18),
+                  SizedBox(width: 10),
+                  Text(
+                    'LOG IN',
+                    style: TextStyle(
+                      color: AppColors.sand,
+                      fontWeight: FontWeight.w900,
+                      fontSize: 14,
+                      letterSpacing: 1.5,
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
-        ]),
+        ),
+      ],
     ]);
   }
 
   Widget _buildErrorBanner() {
     return Container(
+      width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
-        color: _red.withValues(alpha: 0.1),
-        border: Border.all(color: _red.withValues(alpha: 0.35)),
-        borderRadius: BorderRadius.circular(10),
+        color: context.fitlek.error.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+            color: context.fitlek.error.withValues(alpha: 0.35), width: 1),
       ),
-      child: Row(children: [
-        const Icon(Icons.error_outline_rounded, color: _red, size: 16),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Text(
-            _errorMsg ?? '',
-            style: const TextStyle(color: _red, fontSize: 13),
+      child: Row(
+        children: [
+          Container(
+            width: 32,
+            height: 32,
+            decoration: BoxDecoration(
+              color: context.fitlek.error.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(
+              Icons.error_outline_rounded,
+              color: context.fitlek.error,
+              size: 16,
+            ),
           ),
-        ),
-      ]),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              _errorMsg ?? '',
+              style: TextStyle(
+                color: context.fitlek.error,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
 
-// ─── Role Tile ────────────────────────────────────────────────────────────────
+/// Applique un léger effet d'échelle au tap, pour un feedback tactile
+/// (identique au comportement du bouton CTA de l'écran de login).
+class _PressableScale extends StatefulWidget {
+  final VoidCallback? onTap;
+  final Widget child;
+
+  const _PressableScale({required this.onTap, required this.child});
+
+  @override
+  State<_PressableScale> createState() => _PressableScaleState();
+}
+
+class _PressableScaleState extends State<_PressableScale> {
+  double _scale = 1.0;
+
+  void _setScale(double value) {
+    if (widget.onTap == null) return;
+    setState(() => _scale = value);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: widget.onTap,
+      onTapDown: (_) => _setScale(0.97),
+      onTapUp: (_) => _setScale(1.0),
+      onTapCancel: () => _setScale(1.0),
+      child: AnimatedScale(
+        scale: _scale,
+        duration: const Duration(milliseconds: 120),
+        curve: Curves.easeOut,
+        child: widget.child,
+      ),
+    );
+  }
+}
+
+// ─── Role Tile ────────────────────────────────────────────────────────────
 
 class _RoleTile extends StatelessWidget {
-  final String role, label, description;
+  final String label, description;
   final IconData icon;
-  final Color color;
   final bool selected;
   final VoidCallback onTap;
 
   const _RoleTile({
-    required this.role,
     required this.label,
     required this.description,
     required this.icon,
-    required this.color,
     required this.selected,
     required this.onTap,
   });
@@ -866,10 +956,10 @@ class _RoleTile extends StatelessWidget {
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: selected
-              ? color.withValues(alpha: 0.10)
-              : context.fitlek.card.withValues(alpha: 0.72),
+              ? AppColors.sand.withValues(alpha: 0.10)
+              : AppColors.cyprus.withValues(alpha: 0.45),
           border: Border.all(
-            color: selected ? color : context.fitlek.border,
+            color: selected ? AppColors.sand : Colors.white.withValues(alpha: 0.15),
             width: selected ? 1.5 : 1,
           ),
           borderRadius: BorderRadius.circular(16),
@@ -879,10 +969,10 @@ class _RoleTile extends StatelessWidget {
             width: 52,
             height: 52,
             decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.15),
+              color: AppColors.sand.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Icon(icon, color: color, size: 24),
+            child: Icon(icon, color: AppColors.sand, size: 24),
           ),
           const SizedBox(width: 14),
           Expanded(
@@ -892,12 +982,7 @@ class _RoleTile extends StatelessWidget {
                 Text(
                   label,
                   style: TextStyle(
-                    color: selected
-                        ? Theme.of(context).colorScheme.onSurface
-                        : Theme.of(context)
-                            .colorScheme
-                            .onSurface
-                            .withValues(alpha: 0.8),
+                    color: Colors.white.withValues(alpha: selected ? 1 : 0.85),
                     fontSize: 15,
                     fontWeight: FontWeight.w800,
                   ),
@@ -906,7 +991,7 @@ class _RoleTile extends StatelessWidget {
                 Text(
                   description,
                   style: TextStyle(
-                    color: context.fitlek.textMuted,
+                    color: Colors.white.withValues(alpha: 0.55),
                     fontSize: 12,
                     height: 1.4,
                   ),
@@ -921,15 +1006,14 @@ class _RoleTile extends StatelessWidget {
             height: 22,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: selected ? color : Colors.transparent,
+              color: selected ? AppColors.sand : Colors.transparent,
               border: Border.all(
-                color: selected ? color : context.fitlek.border,
+                color: selected ? AppColors.sand : Colors.white.withValues(alpha: 0.3),
                 width: 1.5,
               ),
             ),
             child: selected
-                ? Icon(Icons.check_rounded,
-                    size: 13, color: Theme.of(context).scaffoldBackgroundColor)
+                ? const Icon(Icons.check_rounded, size: 13, color: AppColors.cyprus)
                 : null,
           ),
         ]),
@@ -938,21 +1022,19 @@ class _RoleTile extends StatelessWidget {
   }
 }
 
-// ─── Gender Tile ───────────────────────────────────────────────────────────────
+// ─── Gender Tile ────────────────────────────────────────────────────────────
 
 class _GenderTile extends StatelessWidget {
   final String label;
   final IconData icon;
   final bool selected;
   final VoidCallback onTap;
-  final Color accentColor;
 
   const _GenderTile({
     required this.label,
     required this.icon,
     required this.selected,
     required this.onTap,
-    required this.accentColor,
   });
 
   @override
@@ -964,25 +1046,23 @@ class _GenderTile extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
         decoration: BoxDecoration(
           color: selected
-              ? accentColor.withValues(alpha: 0.10)
-              : context.fitlek.card.withValues(alpha: 0.72),
+              ? AppColors.sand.withValues(alpha: 0.10)
+              : AppColors.cyprus.withValues(alpha: 0.45),
           border: Border.all(
-            color: selected ? accentColor : context.fitlek.border,
+            color: selected ? AppColors.sand : Colors.white.withValues(alpha: 0.15),
             width: selected ? 1.5 : 1,
           ),
           borderRadius: BorderRadius.circular(14),
         ),
         child: Row(children: [
           Icon(icon,
-              color: selected ? accentColor : context.fitlek.textMuted,
+              color: selected ? AppColors.sand : Colors.white.withValues(alpha: 0.55),
               size: 22),
           const SizedBox(width: 14),
           Text(
             label,
             style: TextStyle(
-              color: selected
-                  ? Theme.of(context).colorScheme.onSurface
-                  : context.fitlek.textMuted,
+              color: selected ? Colors.white : Colors.white.withValues(alpha: 0.55),
               fontSize: 15,
               fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
             ),
@@ -994,15 +1074,14 @@ class _GenderTile extends StatelessWidget {
             height: 20,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: selected ? accentColor : Colors.transparent,
+              color: selected ? AppColors.sand : Colors.transparent,
               border: Border.all(
-                color: selected ? accentColor : context.fitlek.border,
+                color: selected ? AppColors.sand : Colors.white.withValues(alpha: 0.3),
                 width: 1.5,
               ),
             ),
             child: selected
-                ? Icon(Icons.check_rounded,
-                    size: 12, color: Theme.of(context).scaffoldBackgroundColor)
+                ? const Icon(Icons.check_rounded, size: 12, color: AppColors.cyprus)
                 : null,
           ),
         ]),
@@ -1011,16 +1090,12 @@ class _GenderTile extends StatelessWidget {
   }
 }
 
-// ─── Password Strength Bar ────────────────────────────────────────────────────
+// ─── Password Strength Bar ───────────────────────────────────────────────
 
 class _PasswordStrengthBar extends StatelessWidget {
   final String password;
-  final Color accentColor;
 
-  const _PasswordStrengthBar({
-    required this.password,
-    required this.accentColor,
-  });
+  const _PasswordStrengthBar({required this.password});
 
   int get _strength {
     if (password.isEmpty) return 0;
@@ -1033,7 +1108,7 @@ class _PasswordStrengthBar extends StatelessWidget {
     return s.clamp(0, 4);
   }
 
-  Color _strengthColor(BuildContext context) {
+  Color get _strengthColor {
     switch (_strength) {
       case 1:
         return Colors.red.shade400;
@@ -1042,9 +1117,9 @@ class _PasswordStrengthBar extends StatelessWidget {
       case 3:
         return Colors.yellow.shade600;
       case 4:
-        return accentColor;
+        return AppColors.sand;
       default:
-        return context.fitlek.border;
+        return Colors.white.withValues(alpha: 0.15);
     }
   }
 
@@ -1076,9 +1151,7 @@ class _PasswordStrengthBar extends StatelessWidget {
               margin: const EdgeInsets.only(right: 4),
               height: 4,
               decoration: BoxDecoration(
-                color: i < _strength
-                    ? _strengthColor(context)
-                    : context.fitlek.border,
+                color: i < _strength ? _strengthColor : Colors.white.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -1089,7 +1162,7 @@ class _PasswordStrengthBar extends StatelessWidget {
       Text(
         'Security: $_label',
         style: TextStyle(
-          color: _strengthColor(context),
+          color: _strengthColor,
           fontSize: 12,
           fontWeight: FontWeight.w600,
         ),
@@ -1098,80 +1171,162 @@ class _PasswordStrengthBar extends StatelessWidget {
   }
 }
 
-// ─── Form Field ────────────────────────────────────────────────────────────────
+// ─── Form Field (même look que _LoginField de login.dart) ──────────────────
 
-class _FitField extends StatelessWidget {
+class _RegisterField extends StatefulWidget {
   final TextEditingController controller;
   final String label, hint;
-  final bool obscure;
+  final IconData icon;
   final TextInputType keyboardType;
-  final Widget? suffix;
-  final Color accentColor;
+  final bool obscure;
+  final bool showToggle;
+  final bool obscureValue;
+  final VoidCallback? onToggle;
   final void Function(String)? onChanged;
+  final Widget? suffix;
 
-  const _FitField({
+  const _RegisterField({
     required this.controller,
     required this.label,
     required this.hint,
-    this.obscure = false,
+    required this.icon,
     this.keyboardType = TextInputType.text,
-    this.suffix,
-    required this.accentColor,
+    this.obscure = false,
+    this.showToggle = false,
+    this.obscureValue = false,
+    this.onToggle,
     this.onChanged,
+    this.suffix,
   });
 
   @override
+  State<_RegisterField> createState() => _RegisterFieldState();
+}
+
+class _RegisterFieldState extends State<_RegisterField> {
+  final FocusNode _focusNode = FocusNode();
+  bool _isFocused = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _focusNode.addListener(() {
+      setState(() => _isFocused = _focusNode.hasFocus);
+    });
+  }
+
+  @override
+  void dispose() {
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Text(
-        label,
-        style: TextStyle(
-          color: accentColor.withValues(alpha: 0.75),
-          fontSize: 12,
-          fontWeight: FontWeight.w700,
-          letterSpacing: 0.5,
-        ),
-      ),
-      const SizedBox(height: 8),
-      Container(
-        decoration: BoxDecoration(
-          color: context.fitlek.card.withValues(alpha: 0.72),
-          border: Border.all(color: context.fitlek.border),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: TextField(
-          controller: controller,
-          obscureText: obscure,
-          keyboardType: keyboardType,
-          onChanged: onChanged,
-          style: TextStyle(
-              color: Theme.of(context).colorScheme.onSurface, fontSize: 15),
-          decoration: InputDecoration(
-            hintText: hint,
-            hintStyle: TextStyle(color: context.fitlek.textMuted, fontSize: 15),
-            border: InputBorder.none,
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: 14,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(left: 2, bottom: 8),
+          child: Text(
+            widget.label,
+            style: TextStyle(
+              color: _isFocused ? AppColors.sand : Colors.white.withValues(alpha: 0.7),
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.5,
             ),
-            suffixIcon: suffix,
           ),
         ),
-      ),
-    ]);
+        AnimatedContainer(
+          duration: const Duration(milliseconds: 220),
+          curve: Curves.easeOut,
+          decoration: BoxDecoration(
+            color: AppColors.cyprus.withValues(alpha: 0.55),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: _isFocused
+                  ? AppColors.sand.withValues(alpha: 0.75)
+                  : Colors.white.withValues(alpha: 0.18),
+              width: _isFocused ? 1.5 : 1,
+            ),
+            boxShadow: [
+              if (_isFocused)
+                BoxShadow(
+                  color: AppColors.sand.withValues(alpha: 0.18),
+                  blurRadius: 18,
+                  offset: const Offset(0, 4),
+                )
+              else
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.25),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+            ],
+          ),
+          child: TextField(
+            controller: widget.controller,
+            focusNode: _focusNode,
+            keyboardType: widget.keyboardType,
+            obscureText: widget.obscure,
+            onChanged: widget.onChanged,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 15,
+              fontWeight: FontWeight.w500,
+            ),
+            decoration: InputDecoration(
+              hintText: widget.hint,
+              hintStyle: TextStyle(
+                color: Colors.white.withValues(alpha: 0.4),
+                fontSize: 14,
+              ),
+              border: InputBorder.none,
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 16,
+              ),
+              prefixIcon: Container(
+                margin: const EdgeInsets.only(left: 12, right: 8),
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: AppColors.sand.withValues(alpha: _isFocused ? 0.22 : 0.15),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(widget.icon, color: AppColors.sand, size: 18),
+              ),
+              prefixIconConstraints: const BoxConstraints(minWidth: 0),
+              suffixIcon: widget.showToggle
+                  ? GestureDetector(
+                      onTap: widget.onToggle,
+                      child: Padding(
+                        padding: const EdgeInsets.only(right: 12),
+                        child: Icon(
+                          widget.obscureValue
+                              ? Icons.visibility_off_rounded
+                              : Icons.visibility_rounded,
+                          color: Colors.white.withValues(alpha: 0.55),
+                          size: 20,
+                        ),
+                      ),
+                    )
+                  : widget.suffix,
+            ),
+          ),
+        ),
+      ],
+    );
   }
 }
 
-// ─── Notice Banner ────────────────────────────────────────────────────────────
+// ─── Notice Banner ───────────────────────────────────────────────────────
 
 class _NoticeBanner extends StatelessWidget {
   final String role;
-  final Color roleColor;
 
-  const _NoticeBanner({
-    required this.role,
-    required this.roleColor,
-  });
+  const _NoticeBanner({required this.role});
 
   @override
   Widget build(BuildContext context) {
@@ -1203,7 +1358,7 @@ class _NoticeBanner extends StatelessWidget {
                   ? 'Your coach account will be reviewed by an advisor. You can start once approved.'
                   : 'Your advisor account will be activated after verification by the administration.',
               style: TextStyle(
-                color: context.fitlek.textMuted,
+                color: Colors.white.withValues(alpha: 0.6),
                 fontSize: 12,
                 height: 1.5,
               ),

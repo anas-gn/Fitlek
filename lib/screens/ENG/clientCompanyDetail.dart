@@ -23,12 +23,13 @@ class _AdvisorDTO {
   final String? avatarUrl;
   final String  specialty;
   final String? location;
+    final String? ville; 
   final String? companyName;
   final bool    isApproved;
 
   const _AdvisorDTO({
     required this.id, required this.firstName, required this.lastName,
-    required this.email, this.avatarUrl,
+    required this.email, this.avatarUrl,this.ville,
     required this.specialty, this.location, this.companyName,
     required this.isApproved,
   });
@@ -41,6 +42,7 @@ class _AdvisorDTO {
     lastName:   j['lastName']  ?? '',
     email:      j['email']     ?? '',
     avatarUrl:  j['avatarUrl'],
+       ville:      j['ville'] ?? '',
     specialty:  j['specialty'] ?? j['speciality'] ?? '',
     location:   j['location'],
     companyName: j['companyName'],
@@ -482,6 +484,10 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen>
       _infoTile(Icons.email_rounded,          'Email',       a.email),
       const SizedBox(height: 8),
       _infoTile(Icons.fitness_center_rounded, 'Specialty',  a.specialty),
+       if (a.ville != null && a.ville!.isNotEmpty) ...[
+      const SizedBox(height: 8),
+      _infoTile(Icons.location_city_rounded, 'City', a.ville!),
+    ],
       if (a.companyName != null && a.companyName!.isNotEmpty) ...[
         const SizedBox(height: 8),
         _infoTile(Icons.business_rounded, 'Gym name', a.companyName!),
