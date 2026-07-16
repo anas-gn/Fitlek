@@ -126,6 +126,7 @@ app.use('/api/reviews',       reviewsRoutes);
 app.use('/api/weight-history', weightHistoryRoutes);
 app.use('/api/upload',        uploadRoutes);
 
-app.listen(3000, () => console.log('✅ Fitlek API running on port 3000'));
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`✅ Fitlek API running on port ${PORT}`));
 
 export default app;
