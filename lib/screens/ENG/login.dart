@@ -14,7 +14,7 @@ import 'register.dart';
 import '../../theme/fitlek_theme_extension.dart';
 import '../../constants/app_colors.dart';
 
-const _baseUrl = 'http://localhost:3000/api';
+const _baseUrl = 'https://sirvya-550f54069752.herokuapp.com/api';
 
 /// Logo Sirvya (icône + wordmark) vectorisé, intégré en dur pour éviter
 /// de dépendre d'un asset externe. Blanc pur (#FFFFFF), fond transparent.
