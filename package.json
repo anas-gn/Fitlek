@@ -1,0 +1,16 @@
+{
+  "name": "fitlek-backend",
+  "version": "1.0.0",
+  "type": "module",
+  "engines": {
+    "node": "18.x"
+  },
+  "scripts": {
+    "start": "cd backend && node index.js",
+    "dev": "cd backend && nodemon index.js",
+    "install": "cd backend && npm install"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}
