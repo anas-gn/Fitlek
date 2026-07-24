@@ -1,0 +1,11 @@
+{
+  "name": "sirvya-root",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "start": "cd backend && node index.js"
+  },
+  "dependencies": {
+    "firebase-admin": "^14.2.0"
+  }
+}
