@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "256158398727",
+    "project_id": "sirvya-app",
+    "storage_bucket": "sirvya-app.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:256158398727:android:5b036b4132446841d32da2",
+        "android_client_info": {
+          "package_name": "com.sirvya.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCN1OEx0nDomRNL0m4xReD6_jdvm0RD0zs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
