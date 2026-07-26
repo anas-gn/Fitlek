@@ -132,7 +132,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                 children: [
                   SirvyaLogo(
                     variant: SirvyaLogoVariant.wordmark,
-                    height: 25,
+                    height: 22,
                     color: AppColors.sand,
                   ),
                 ],

@@ -50,7 +50,7 @@ class CoachHeader extends StatelessWidget {
       child: Row(
         children: [
           // ── Brand area (SIRVYA logo) ──
-          const SirvyaLogo(variant: SirvyaLogoVariant.wordmark, height: 28),
+          const SirvyaLogo(variant: SirvyaLogoVariant.wordmark, height: 18),
 
           const Spacer(),
 
