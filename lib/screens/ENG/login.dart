@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:ui';
 import 'package:fitlek1/screens/ENG/clientForgot.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -298,19 +297,39 @@ class _LoginScreenState extends State<LoginScreen>
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: Stack(
         children: [
-          // ── Fond image + flou léger pour plus de profondeur ──
+          // ── Static instant background (no network needed) ──
           Positioned.fill(
-            child: Image.network(
-              'https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?w=1200&q=80',
-              fit: BoxFit.cover,
-              loadingBuilder: (_, child, p) =>
-                  p == null ? child : Container(color: const Color(0xFF111111)),
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    const Color(0xFF0D1F1A),
+                    const Color(0xFF0A1612),
+                    AppColors.cyprus,
+                  ],
+                  stops: const [0.0, 0.4, 1.0],
+                ),
+              ),
             ),
           ),
-          Positioned.fill(
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 1.2, sigmaY: 1.2),
-              child: Container(color: Colors.black.withValues(alpha: 0.25)),
+          // ── Subtle radial glow accent ──
+          Positioned(
+            top: -100,
+            right: -80,
+            child: Container(
+              width: 400,
+              height: 400,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: RadialGradient(
+                  colors: [
+                    AppColors.sand.withValues(alpha: 0.07),
+                    Colors.transparent,
+                  ],
+                ),
+              ),
             ),
           ),
           // ── Dégradé de lisibilité, plus doux et progressif ──

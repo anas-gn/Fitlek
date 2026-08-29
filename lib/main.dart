@@ -6,6 +6,8 @@ import 'services/theme_service.dart';
 import 'services/notification_service.dart';
 import 'theme/app_theme.dart';
 import 'sessionRouter.dart';
+import 'components/app_version_checker.dart';
+import 'components/video_splash_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -37,7 +39,9 @@ class Fitlek extends StatelessWidget {
             theme: AppTheme.light,
             darkTheme: AppTheme.dark,
             themeMode: themeController.flutterMode,
-            home: const SessionRouter(), 
+            home: const VideoSplashScreen(
+              nextScreen: AppVersionChecker(child: SessionRouter()),
+            ), 
           );
         },
       ),

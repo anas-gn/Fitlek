@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'services/apiService.dart';
-import 'screens/ENG/splachScreen.dart';
 import 'screens/ENG/welcome.dart';
 import 'screens/ENG/login.dart';
 import 'screens/ENG/clientHome.dart';
@@ -28,8 +27,6 @@ class _SessionRouterState extends State<SessionRouter> {
     // 401/403 réel rencontré pendant l'utilisation de l'app. On ne bloque donc
     // JAMAIS le démarrage sur un appel réseau : ainsi on ne login qu'une seule
     // fois par appareil (un nouvel appareil n'ayant pas de token devra login).
-    final minDelay = Future.delayed(const Duration(milliseconds: 600));
-
     String? role;
     try {
       final localRole = await ApiService.getRole();
@@ -44,8 +41,6 @@ class _SessionRouterState extends State<SessionRouter> {
         // Pas de session locale -> on tente une vérification complète au cas où.
         role = await ApiService.checkSession();
       }
-
-      await minDelay;
     } catch (_) {
       role = await ApiService.getRole();
     }
@@ -76,9 +71,9 @@ class _SessionRouterState extends State<SessionRouter> {
 
   @override
   Widget build(BuildContext context) {
-    // Affiche le splash pendant que la session est vérifiée.
-    // Ce SplashScreen ne navigue plus tout seul (voir splachScreen.dart).
-    return const SplashScreen();
+    // Plain black screen while session resolves — the VideoSplashScreen
+    // already covers the startup experience, so no logo needed here.
+    return const Scaffold(backgroundColor: Colors.black);
   }
 }
 

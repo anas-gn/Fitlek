@@ -1,6 +1,5 @@
 // ─────────────────────────────────────────────
-//  welcome_v2.dart  —  Modern Welcome Screen
-//  Design: Hero image + Direct CTA buttons
+//  welcome.dart  —  Welcome Screen
 // ─────────────────────────────────────────────
 
 import 'package:flutter/material.dart';
@@ -19,28 +18,35 @@ class WelcomeScreen extends StatefulWidget {
 }
 
 class _WelcomeScreenState extends State<WelcomeScreen>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _animCtrl;
-  late final Animation<double> _fadeAnim;
-  late final Animation<Offset> _slideAnim;
+    with TickerProviderStateMixin {
+  late final AnimationController _uiCtrl;
+  late final Animation<double> _uiFade;
+  late final Animation<Offset> _uiSlide;
 
   @override
   void initState() {
     super.initState();
     SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle.light);
 
-    _animCtrl = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 900));
-    _fadeAnim = CurvedAnimation(parent: _animCtrl, curve: Curves.easeOut);
-    _slideAnim = Tween<Offset>(begin: const Offset(0, 0.1), end: Offset.zero)
-        .animate(
-            CurvedAnimation(parent: _animCtrl, curve: Curves.easeOutCubic));
-    _animCtrl.forward();
+    _uiCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
+    );
+    _uiFade = CurvedAnimation(parent: _uiCtrl, curve: Curves.easeOut);
+    _uiSlide =
+        Tween<Offset>(begin: const Offset(0, 0.12), end: Offset.zero).animate(
+      CurvedAnimation(parent: _uiCtrl, curve: Curves.easeOutCubic),
+    );
+
+    // Slide up the CTA buttons shortly after arriving on this screen
+    Future.delayed(const Duration(milliseconds: 200), () {
+      if (mounted) _uiCtrl.forward();
+    });
   }
 
   @override
   void dispose() {
-    _animCtrl.dispose();
+    _uiCtrl.dispose();
     super.dispose();
   }
 
@@ -50,7 +56,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
           pageBuilder: (_, __, ___) => const LoginScreen(),
           transitionsBuilder: (_, a, __, child) =>
               FadeTransition(opacity: a, child: child),
-          transitionDuration: const Duration(milliseconds: 600),
+          transitionDuration: const Duration(milliseconds: 500),
         ),
       );
 
@@ -60,184 +66,146 @@ class _WelcomeScreenState extends State<WelcomeScreen>
           pageBuilder: (_, __, ___) => const RegisterScreen(),
           transitionsBuilder: (_, a, __, child) =>
               FadeTransition(opacity: a, child: child),
-          transitionDuration: const Duration(milliseconds: 600),
+          transitionDuration: const Duration(milliseconds: 500),
         ),
       );
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      body: Stack(children: [
-        // ── Background Hero Image ────────────────────────────────
-        Positioned.fill(
-          child: Image.network(
-            'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=1200&q=80',
-            fit: BoxFit.cover,
-            color: Colors.black.withValues(alpha: 0.35),
-            colorBlendMode: BlendMode.darken,
-            loadingBuilder: (_, child, p) =>
-                p == null ? child : Container(color: const Color(0xFF111111)),
-          ),
-        ),
-
-        // ── Dark gradient overlay (bottom) ───────────────────────
-        Positioned.fill(
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [
-                  Colors.transparent,
-                  Colors.transparent,
-                  AppColors.cyprus.withValues(alpha: 0.5),
-                  AppColors.cyprus.withValues(alpha: 0.88),
-                  AppColors.cyprus,
-                ],
-                stops: const [0.0, 0.3, 0.55, 0.85, 1.0],
+      backgroundColor: const Color(0xFF0A0A0A),
+      body: Stack(
+        children: [
+          // ── 1. Static dark gradient background ───────────────────
+          Positioned.fill(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    const Color(0xFF0D1F1A),
+                    AppColors.cyprus.withValues(alpha: 0.90),
+                    AppColors.cyprus,
+                  ],
+                  stops: const [0.0, 0.55, 1.0],
+                ),
               ),
             ),
           ),
-        ),
 
-        // ── Left side vignette ────────────────────────────────────
-        Positioned.fill(
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.centerLeft,
-                end: Alignment.centerRight,
-                colors: [
-                  Colors.black.withValues(alpha: 0.25),
-                  Colors.transparent,
-                ],
+          // ── 2. Subtle radial glow (top-right accent) ─────────────
+          Positioned(
+            top: -80,
+            right: -60,
+            child: Container(
+              width: 340,
+              height: 340,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: RadialGradient(
+                  colors: [
+                    AppColors.sand.withValues(alpha: 0.08),
+                    Colors.transparent,
+                  ],
+                ),
               ),
             ),
           ),
-        ),
 
-        // ── Top accent bar ────────────────────────────────────────
-
-        // ── Header: Logo ──────────────────────────────────────────
-        const Positioned(
-          top: 0,
-          left: 0,
-          right: 0,
-          child: SafeArea(
-            child: Padding(
-              padding: EdgeInsets.symmetric(horizontal: 28, vertical: 12),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  SirvyaLogo(
-                    variant: SirvyaLogoVariant.wordmark,
-                    height: 25,
-                    color: AppColors.sand,
-                  ),
-                ],
+          // ── 3. Logo (top-left, always visible) ───────────────────
+          const Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: SafeArea(
+              child: Padding(
+                padding: EdgeInsets.symmetric(horizontal: 28, vertical: 16),
+                child: SirvyaLogo(
+                  variant: SirvyaLogoVariant.wordmark,
+                  height: 25,
+                  color: AppColors.sand,
+                ),
               ),
             ),
           ),
-        ),
 
-        // ── Content: Bottom section ───────────────────────────────
-        Positioned(
-          bottom: 0,
-          left: 0,
-          right: 0,
-          child: FadeTransition(
-            opacity: _fadeAnim,
-            child: SlideTransition(
-              position: _slideAnim,
-              child: SafeArea(
-                top: false,
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(24, 48, 24, 40),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      // ── Main headline ──────────────────────────
-                      RichText(
-                        text: const TextSpan(children: [
-                          TextSpan(
-                            text: 'Your Personal\nCoach\n',
-                            style: TextStyle(
-                              fontSize: 48,
-                              fontWeight: FontWeight.w900,
-                              color: Colors.white,
-                              height: 1.0,
-                              letterSpacing: -1.5,
+          // ── 4. CTA section (slides up) ────────────────────────────
+          Positioned(
+            bottom: 0,
+            left: 0,
+            right: 0,
+            child: FadeTransition(
+              opacity: _uiFade,
+              child: SlideTransition(
+                position: _uiSlide,
+                child: SafeArea(
+                  top: false,
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(24, 48, 24, 40),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        RichText(
+                          text: const TextSpan(children: [
+                            TextSpan(
+                              text: 'Your Personal\nCoach\n',
+                              style: TextStyle(
+                                fontSize: 48,
+                                fontWeight: FontWeight.w900,
+                                color: Colors.white,
+                                height: 1.0,
+                                letterSpacing: -1.5,
+                              ),
                             ),
-                          ),
-                          TextSpan(
-                            text: 'Within Reach',
-                            style: TextStyle(
-                              fontSize: 48,
-                              fontWeight: FontWeight.w900,
-                              color: AppColors.sand,
-                              height: 1.0,
-                              letterSpacing: -1.5,
+                            TextSpan(
+                              text: 'Within Reach',
+                              style: TextStyle(
+                                fontSize: 48,
+                                fontWeight: FontWeight.w900,
+                                color: AppColors.sand,
+                                height: 1.0,
+                                letterSpacing: -1.5,
+                              ),
                             ),
-                          ),
-                        ]),
-                      ),
-
-                      const SizedBox(height: 16),
-
-                      // ── Subtitle ────────────────────────────────
-                      Text(
-                        'Book your session in just a few taps. '
-                        'Transform your body with the best coaches.',
-                        style: TextStyle(
-                          fontSize: 14,
-                          height: 1.6,
-                          color: Colors.white.withValues(alpha: 0.7),
-                          fontWeight: FontWeight.w400,
+                          ]),
                         ),
-                      ),
-
-                      const SizedBox(height: 48),
-
-                      // ── CTA Buttons ─────────────────────────────
-                      Column(
-                        children: [
-                          // Connexion button (Primary - Lime)
-                          _CTAButton(
-                            label: 'LOG IN',
-                            onTap: _goToLogin,
-                            isPrimary: true,
-                            icon: Icons.login_rounded,
+                        const SizedBox(height: 16),
+                        Text(
+                          'Book your session in just a few taps. '
+                          'Transform your body with the best coaches.',
+                          style: TextStyle(
+                            fontSize: 14,
+                            height: 1.6,
+                            color: Colors.white.withValues(alpha: 0.70),
+                            fontWeight: FontWeight.w400,
                           ),
-
-                          const SizedBox(height: 14),
-
-                          // Créer compte button (Secondary - Outlined)
-                          _CTAButton(
-                            label: 'CREATE AN ACCOUNT',
-                            onTap: _goToRegister,
-                            isPrimary: false,
-                            icon: Icons.person_add_rounded,
-                          ),
-                        ],
-                      ),
-
-                      const SizedBox(height: 28),
-
-                      // ── Trust badges ────────────────────────────
-                      const Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                        children: [],
-                      ),
-                    ],
+                        ),
+                        const SizedBox(height: 48),
+                        _CTAButton(
+                          label: 'LOG IN',
+                          onTap: _goToLogin,
+                          isPrimary: true,
+                          icon: Icons.login_rounded,
+                        ),
+                        const SizedBox(height: 14),
+                        _CTAButton(
+                          label: 'CREATE AN ACCOUNT',
+                          onTap: _goToRegister,
+                          isPrimary: false,
+                          icon: Icons.person_add_rounded,
+                        ),
+                        const SizedBox(height: 28),
+                      ],
+                    ),
                   ),
                 ),
               ),
             ),
           ),
-        ),
-      ]),
+        ],
+      ),
     );
   }
 }
@@ -293,7 +261,7 @@ class _CTAButtonState extends State<_CTAButton> {
             boxShadow: widget.isPrimary
                 ? [
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.3),
+                      color: Colors.black.withValues(alpha: 0.30),
                       blurRadius: 28,
                       offset: const Offset(0, 8),
                     ),
