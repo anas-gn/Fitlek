@@ -45,6 +45,9 @@ class _SessionRouterState extends State<SessionRouter> {
       role = await ApiService.getRole();
     }
 
+    final minDelay = Future.delayed(const Duration(milliseconds: 7000));
+    await minDelay;
+
     if (!mounted) return;
 
     switch (role) {
