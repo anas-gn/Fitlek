@@ -1,16 +1,14 @@
 import 'dart:convert';
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'login.dart';
 import 'package:fitlek1/constants/urls.dart';
-import '../../theme/fitlek_theme_extension.dart';
+import '../../constants/app_colors.dart';
+
 const _red = Color(0xFFFF5252);
-const _bgImageUrl = 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRS3dWtlrupEMLWcbrgWbDlQpjQBrdjco7z-PoA1RDtc7U6NU2UR7hjuBLo&s=10';
-
-
-
-
-
+const _bgImageUrl =
+    'assets/branding/sirvya2.jfif';
 
 class ClientForgotScreen extends StatefulWidget {
   const ClientForgotScreen({super.key});
@@ -26,7 +24,7 @@ class _ClientForgotScreenState extends State<ClientForgotScreen>
   final _passwordCtrl = TextEditingController();
   final _confirmCtrl = TextEditingController();
 
-  int _step = 0; // 0 = email, 1 = OTP verification, 2 = new password
+  int _step = 0;
   bool _obscurePass = true;
   bool _obscureConf = true;
   bool _loading = false;
@@ -40,9 +38,11 @@ class _ClientForgotScreenState extends State<ClientForgotScreen>
   @override
   void initState() {
     super.initState();
-    _fadeCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 400));
+    _fadeCtrl = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 400));
     _fadeAnim = CurvedAnimation(parent: _fadeCtrl, curve: Curves.easeOut);
-    _slideCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 400));
+    _slideCtrl = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 400));
     _slideAnim = Tween<Offset>(begin: const Offset(0.05, 0), end: Offset.zero)
         .animate(CurvedAnimation(parent: _slideCtrl, curve: Curves.easeOut));
     _fadeCtrl.forward();
@@ -83,9 +83,7 @@ class _ClientForgotScreenState extends State<ClientForgotScreen>
         return null;
       case 2:
         if (_passwordCtrl.text.length < 6) return 'Password too short (min 6 chars)';
-        if (_passwordCtrl.text != _confirmCtrl.text) {
-          return 'Passwords do not match';
-        }
+        if (_passwordCtrl.text != _confirmCtrl.text) return 'Passwords do not match';
         return null;
       default:
         return null;
@@ -118,7 +116,6 @@ class _ClientForgotScreenState extends State<ClientForgotScreen>
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'email': _emailCtrl.text.trim().toLowerCase()}),
       ).timeout(const Duration(seconds: 12));
-
       final data = jsonDecode(res.body) as Map<String, dynamic>;
       if (res.statusCode == 200) {
         setState(() {
@@ -154,7 +151,6 @@ class _ClientForgotScreenState extends State<ClientForgotScreen>
           'otp': _otpCtrl.text.trim(),
         }),
       ).timeout(const Duration(seconds: 12));
-
       final data = jsonDecode(res.body) as Map<String, dynamic>;
       if (res.statusCode == 200 && data['verified'] == true) {
         setState(() {
@@ -191,7 +187,6 @@ class _ClientForgotScreenState extends State<ClientForgotScreen>
           'newPassword': _passwordCtrl.text,
         }),
       ).timeout(const Duration(seconds: 12));
-
       final data = jsonDecode(res.body) as Map<String, dynamic>;
       if (res.statusCode == 200) {
         if (!mounted) return;
@@ -213,7 +208,7 @@ class _ClientForgotScreenState extends State<ClientForgotScreen>
   void _showSuccess() {
     showModalBottomSheet(
       context: context,
-      backgroundColor: context.fitlek.card,
+      backgroundColor: AppColors.cyprus,
       isDismissible: false,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
@@ -221,82 +216,84 @@ class _ClientForgotScreenState extends State<ClientForgotScreen>
       builder: (ctx) => SafeArea(
         child: SingleChildScrollView(
           padding: EdgeInsets.fromLTRB(
-            28,
-            24,
-            28,
-            24 + MediaQuery.of(ctx).viewInsets.bottom,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 72,
-                height: 72,
+              28, 40, 28, 24 + MediaQuery.of(ctx).viewInsets.bottom),
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            Container(
+              width: 80,
+              height: 80,
+              decoration: BoxDecoration(
+                color: AppColors.sand.withValues(alpha: 0.15),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.lock_open_rounded,
+                  color: AppColors.sand, size: 38),
+            ),
+            const SizedBox(height: 24),
+            const Text(
+              'Password updated',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 24,
+                  fontWeight: FontWeight.w900),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              'You can now log in with your new password.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.6),
+                  fontSize: 14,
+                  height: 1.5),
+            ),
+            const SizedBox(height: 32),
+            GestureDetector(
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  PageRouteBuilder(
+                    pageBuilder: (_, __, ___) => const LoginScreen(),
+                    transitionsBuilder: (_, a, __, child) =>
+                        FadeTransition(opacity: a, child: child),
+                    transitionDuration: const Duration(milliseconds: 500),
+                  ),
+                  (route) => false,
+                );
+              },
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 16),
                 decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.15),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(Icons.lock_open_rounded, color: Theme.of(context).colorScheme.primary, size: 36),
-              ),
-              const SizedBox(height: 20),
-              Text(
-                'Password updated',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: Theme.of(context).colorScheme.onPrimary,
-                  fontSize: 22,
-                  fontWeight: FontWeight.w900,
-                ),
-              ),
-              const SizedBox(height: 10),
-              Text(
-                'You can now log in with your new password.',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: context.fitlek.textMuted, fontSize: 14, height: 1.5),
-              ),
-              const SizedBox(height: 24),
-              GestureDetector(
-                onTap: () {
-                  Navigator.pop(context);
-                  Navigator.pushAndRemoveUntil(
-                    context,
-                    PageRouteBuilder(
-                      pageBuilder: (_, __, ___) => const LoginScreen(),
-                      transitionsBuilder: (_, a, __, child) =>
-                          FadeTransition(opacity: a, child: child),
-                      transitionDuration: const Duration(milliseconds: 500),
-                    ),
-                    (route) => false,
-                  );
-                },
-                child: Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(vertical: 15),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.primary,
-                    borderRadius: BorderRadius.circular(14),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3),
-                        blurRadius: 16,
-                        offset: const Offset(0, 6),
-                      ),
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      AppColors.sand,
+                      AppColors.sand.withValues(alpha: 0.85)
                     ],
                   ),
-                  child: Text(
-                    'Log in',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: Theme.of(context).scaffoldBackgroundColor,
-                      fontSize: 15,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 0.5,
+                  borderRadius: BorderRadius.circular(14),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.sand.withValues(alpha: 0.3),
+                      blurRadius: 16,
+                      offset: const Offset(0, 6),
                     ),
-                  ),
+                  ],
+                ),
+                child: const Text(
+                  'LOG IN',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                      color: AppColors.cyprus,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 1.2),
                 ),
               ),
-            ],
-          ),
+            ),
+          ]),
         ),
       ),
     );
@@ -324,69 +321,90 @@ class _ClientForgotScreenState extends State<ClientForgotScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Stack(
-        children: [
-          Positioned.fill(
-            child: Image.network(
-              _bgImageUrl,
-              fit: BoxFit.cover,
-              loadingBuilder: (context, child, loadingProgress) {
-                if (loadingProgress == null) return child;
-                return Container(color: Theme.of(context).scaffoldBackgroundColor);
-              },
-              errorBuilder: (context, error, stackTrace) => Container(color: Theme.of(context).scaffoldBackgroundColor),
-            ),
-          ),
-          Positioned.fill(
-            child: Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    Theme.of(context).scaffoldBackgroundColor.withValues(alpha: 0.3),
-                    Theme.of(context).scaffoldBackgroundColor.withValues(alpha: 0.85),
-                    Theme.of(context).scaffoldBackgroundColor.withValues(alpha: 0.95),
-                  ],
+    return Theme(
+      data: ThemeData.dark().copyWith(scaffoldBackgroundColor: Colors.black),
+      child: GestureDetector(
+        onHorizontalDragEnd: (details) {
+          if (details.primaryVelocity != null &&
+              details.primaryVelocity! > 300 &&
+              !_loading) {
+            _prevStep();
+          }
+        },
+        child: Scaffold(
+          backgroundColor: Colors.black,
+          body: Stack(
+            children: [
+              Positioned.fill(
+                child: Image.asset(
+                  _bgImageUrl,
+                  fit: BoxFit.cover,
+                  frameBuilder: (_, child, frame, __) =>
+                      frame == null ? Container(color: const Color(0xFF111111)) : child,
+                  errorBuilder: (_, __, ___) => Container(color: const Color(0xFF111111)),
                 ),
               ),
-            ),
-          ),
-          SafeArea(
-            child: Column(children: [
-              _buildTopBar(),
-              _buildStepper(),
-              Expanded(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(horizontal: 24),
-                  child: FadeTransition(
-                    opacity: _fadeAnim,
-                    child: SlideTransition(
-                      position: _slideAnim,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const SizedBox(height: 32),
-                          _buildStepHeader(),
-                          const SizedBox(height: 32),
-                          _buildStepContent(),
-                          if (_errorMsg != null) ...[
-                            const SizedBox(height: 16),
-                            _buildErrorBanner(),
-                          ],
-                          const SizedBox(height: 40),
-                          _buildCTA(),
-                          const SizedBox(height: 24),
-                        ],
-                      ),
+              Positioned.fill(
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 1.2, sigmaY: 1.2),
+                  child:
+                      Container(color: Colors.black.withValues(alpha: 0.25)),
+                ),
+              ),
+              Positioned.fill(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Colors.transparent,
+                        AppColors.cyprus.withValues(alpha: 0.05),
+                        AppColors.cyprus.withValues(alpha: 0.55),
+                        AppColors.cyprus.withValues(alpha: 0.92),
+                        AppColors.cyprus,
+                      ],
+                      stops: const [0.0, 0.28, 0.5, 0.78, 1.0],
                     ),
                   ),
                 ),
               ),
-            ]),
+              SafeArea(
+                child: Column(children: [
+                  _buildTopBar(),
+                  _buildStepper(),
+                  Expanded(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      child: FadeTransition(
+                        opacity: _fadeAnim,
+                        child: SlideTransition(
+                          position: _slideAnim,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const SizedBox(height: 32),
+                              _buildStepHeader(),
+                              const SizedBox(height: 32),
+                              _buildStepContent(),
+                              if (_errorMsg != null) ...[
+                                const SizedBox(height: 16),
+                                _buildErrorBanner(),
+                              ],
+                              const SizedBox(height: 40),
+                              _buildCTA(),
+                              const SizedBox(height: 24),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ]),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -394,16 +412,14 @@ class _ClientForgotScreenState extends State<ClientForgotScreen>
   Widget _buildTopBar() {
     return Padding(
       padding: const EdgeInsets.fromLTRB(8, 16, 24, 0),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          IconButton(
-            onPressed: _loading ? null : _prevStep,
-            icon: Icon(Icons.arrow_back_ios_new_rounded, size: 18, color: Theme.of(context).colorScheme.onPrimary),
-          ),
-          const Spacer(),
-        ],
-      ),
+      child: Row(children: [
+        IconButton(
+          onPressed: _loading ? null : _prevStep,
+          icon: const Icon(Icons.arrow_back_ios_new_rounded,
+              size: 18, color: Colors.white),
+        ),
+        const Spacer(),
+      ]),
     );
   }
 
@@ -423,10 +439,10 @@ class _ClientForgotScreenState extends State<ClientForgotScreen>
                   height: 3,
                   decoration: BoxDecoration(
                     color: done
-                        ? Theme.of(context).colorScheme.primary
+                        ? AppColors.sand
                         : active
-                            ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.4)
-                            : context.fitlek.border,
+                            ? AppColors.sand.withValues(alpha: 0.4)
+                            : Colors.white.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
@@ -440,25 +456,55 @@ class _ClientForgotScreenState extends State<ClientForgotScreen>
   }
 
   static const _stepLabels = ['STEP 1 / 3', 'STEP 2 / 3', 'STEP 3 / 3'];
-  static const _stepTitles = ['Your\nemail address', 'Verification\ncode', 'New\npassword'];
+  static const _stepTitles = [
+    'Your\nemail address',
+    'Verification\ncode',
+    'New\npassword'
+  ];
   static const _stepSubs = [
     'Enter your email to receive a password reset code.',
-    'Enter the 6-digit code sent to your email by noreply@devunivers.com.',
+    'Enter the 6-digit code sent to your email.',
     'Choose a new secure password.',
   ];
 
   Widget _buildStepHeader() {
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Text(_stepLabels[_step],
-          style: TextStyle(
-              color: Theme.of(context).colorScheme.primary, fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 1.8)),
-      const SizedBox(height: 8),
-      Text(_stepTitles[_step],
-          style: TextStyle(
-              color: Theme.of(context).colorScheme.onPrimary, fontSize: 34, fontWeight: FontWeight.w900, height: 1.1)),
+      Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+        decoration: BoxDecoration(
+          color: AppColors.sand.withValues(alpha: 0.14),
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Text(
+          _stepLabels[_step],
+          style: const TextStyle(
+            color: AppColors.sand,
+            fontSize: 11,
+            fontWeight: FontWeight.w800,
+            letterSpacing: 1.6,
+          ),
+        ),
+      ),
+      const SizedBox(height: 16),
+      Text(
+        _stepTitles[_step],
+        style: const TextStyle(
+          fontSize: 34,
+          fontWeight: FontWeight.w900,
+          color: Colors.white,
+          height: 1.08,
+          letterSpacing: -1,
+        ),
+      ),
       const SizedBox(height: 10),
-      Text(_stepSubs[_step],
-          style: TextStyle(color: context.fitlek.textMuted, fontSize: 14, height: 1.5)),
+      Text(
+        _stepSubs[_step],
+        style: TextStyle(
+          fontSize: 14,
+          height: 1.5,
+          color: Colors.white.withValues(alpha: 0.65),
+        ),
+      ),
     ]);
   }
 
@@ -467,62 +513,52 @@ class _ClientForgotScreenState extends State<ClientForgotScreen>
       case 0:
         return _FitField(
           controller: _emailCtrl,
-          label: 'Email',
+          label: 'Email address',
           hint: 'you@email.ma',
+          icon: Icons.alternate_email_rounded,
           keyboardType: TextInputType.emailAddress,
         );
       case 1:
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _FitField(
-              controller: _otpCtrl,
-              label: '6-digit OTP code',
-              hint: '123456',
-              keyboardType: TextInputType.number,
-            ),
-            const SizedBox(height: 12),
-            TextButton.icon(
-              onPressed: _loading ? null : _sendForgotOTP,
-              icon: const Icon(Icons.refresh_rounded, size: 16),
-              label: const Text('Resend code'),
-              style: TextButton.styleFrom(
-                foregroundColor: Theme.of(context).colorScheme.primary,
-              ),
-            ),
-          ],
-        );
+        return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          _FitField(
+            controller: _otpCtrl,
+            label: '6-digit OTP code',
+            hint: '123456',
+            icon: Icons.pin_rounded,
+            keyboardType: TextInputType.number,
+          ),
+          const SizedBox(height: 12),
+          TextButton.icon(
+            onPressed: _loading ? null : _sendForgotOTP,
+            icon: const Icon(Icons.refresh_rounded,
+                color: AppColors.sand, size: 16),
+            label: const Text('Resend code',
+                style: TextStyle(color: AppColors.sand, fontSize: 12)),
+          ),
+        ]);
       case 2:
         return Column(children: [
           _FitField(
             controller: _passwordCtrl,
             label: 'New password',
             hint: '••••••••',
+            icon: Icons.lock_outline_rounded,
             obscure: _obscurePass,
+            showToggle: true,
+            obscureValue: _obscurePass,
+            onToggle: () => setState(() => _obscurePass = !_obscurePass),
             onChanged: (_) => setState(() {}),
-            suffix: IconButton(
-              onPressed: () => setState(() => _obscurePass = !_obscurePass),
-              icon: Icon(
-                _obscurePass ? Icons.visibility_off_rounded : Icons.visibility_rounded,
-                color: context.fitlek.textMuted,
-                size: 20,
-              ),
-            ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 14),
           _FitField(
             controller: _confirmCtrl,
             label: 'Confirm password',
             hint: '••••••••',
+            icon: Icons.lock_rounded,
             obscure: _obscureConf,
-            suffix: IconButton(
-              onPressed: () => setState(() => _obscureConf = !_obscureConf),
-              icon: Icon(
-                _obscureConf ? Icons.visibility_off_rounded : Icons.visibility_rounded,
-                color: context.fitlek.textMuted,
-                size: 20,
-              ),
-            ),
+            showToggle: true,
+            obscureValue: _obscureConf,
+            onToggle: () => setState(() => _obscureConf = !_obscureConf),
           ),
           const SizedBox(height: 16),
           _PasswordStrengthBar(password: _passwordCtrl.text),
@@ -536,46 +572,57 @@ class _ClientForgotScreenState extends State<ClientForgotScreen>
     const labels = ['SEND CODE', 'VERIFY CODE', 'RESET PASSWORD'];
     return Column(children: [
       _loading
-          ? Center(
-              child: CircularProgressIndicator(color: Theme.of(context).colorScheme.primary, strokeWidth: 2.5),
+          ? const Center(
+              child: SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(
+                    color: AppColors.sand, strokeWidth: 2.5),
+              ),
             )
           : GestureDetector(
               onTap: _nextStep,
               child: Container(
                 width: double.infinity,
-                padding: const EdgeInsets.symmetric(vertical: 16),
+                height: 60,
                 decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.primary,
-                  borderRadius: BorderRadius.circular(14),
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      AppColors.sand,
+                      AppColors.sand.withValues(alpha: 0.85)
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(16),
                   boxShadow: [
                     BoxShadow(
-                      color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3),
-                      blurRadius: 16,
-                      offset: const Offset(0, 6),
+                      color: AppColors.sand.withValues(alpha: 0.35),
+                      blurRadius: 28,
+                      offset: const Offset(0, 10),
                     ),
                   ],
                 ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      labels[_step],
-                      style: TextStyle(
-                        color: Theme.of(context).scaffoldBackgroundColor,
-                        fontSize: 15,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: 1.2,
-                      ),
+                child: Center(
+                  child: Text(
+                    labels[_step],
+                    style: const TextStyle(
+                      color: AppColors.cyprus,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 1.5,
                     ),
-                    const SizedBox(width: 8),
-                  ],
+                  ),
                 ),
               ),
             ),
-      const SizedBox(height: 16),
+      const SizedBox(height: 20),
       Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-        Text('Remember your password? ',
-            style: TextStyle(color: context.fitlek.textMuted, fontSize: 13)),
+        Text(
+          'Remember your password? ',
+          style: TextStyle(
+              color: Colors.white.withValues(alpha: 0.55), fontSize: 13),
+        ),
         GestureDetector(
           onTap: () => Navigator.pushReplacement(
             context,
@@ -586,9 +633,12 @@ class _ClientForgotScreenState extends State<ClientForgotScreen>
               transitionDuration: const Duration(milliseconds: 500),
             ),
           ),
-          child: Text(
+          child: const Text(
             'Log in',
-            style: TextStyle(color: Theme.of(context).colorScheme.primary, fontSize: 13, fontWeight: FontWeight.w700),
+            style: TextStyle(
+                color: AppColors.sand,
+                fontSize: 13,
+                fontWeight: FontWeight.w700),
           ),
         ),
       ]),
@@ -607,14 +657,13 @@ class _ClientForgotScreenState extends State<ClientForgotScreen>
         const Icon(Icons.error_outline_rounded, color: _red, size: 16),
         const SizedBox(width: 8),
         Expanded(
-          child: Text(_errorMsg ?? '', style: const TextStyle(color: _red, fontSize: 13)),
+          child: Text(_errorMsg ?? '',
+              style: const TextStyle(color: _red, fontSize: 13)),
         ),
       ]),
     );
   }
 }
-
-// ─── Password Strength Bar ────────────────────────────────────────────────────
 
 class _PasswordStrengthBar extends StatelessWidget {
   final String password;
@@ -632,7 +681,7 @@ class _PasswordStrengthBar extends StatelessWidget {
     return s.clamp(0, 4);
   }
 
-  Color _strengthColor(BuildContext context) {
+  Color get _strengthColor {
     switch (_strength) {
       case 1:
         return Colors.red.shade400;
@@ -641,9 +690,9 @@ class _PasswordStrengthBar extends StatelessWidget {
       case 3:
         return Colors.yellow.shade600;
       case 4:
-        return Theme.of(context).colorScheme.primary;
+        return AppColors.sand;
       default:
-        return context.fitlek.border;
+        return Colors.white.withValues(alpha: 0.15);
     }
   }
 
@@ -675,7 +724,9 @@ class _PasswordStrengthBar extends StatelessWidget {
               margin: const EdgeInsets.only(right: 4),
               height: 4,
               decoration: BoxDecoration(
-                color: i < _strength ? _strengthColor(context) : context.fitlek.border,
+                color: i < _strength
+                    ? _strengthColor
+                    : Colors.white.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -685,65 +736,173 @@ class _PasswordStrengthBar extends StatelessWidget {
       const SizedBox(height: 8),
       Text(
         'Security: $_label',
-        style: TextStyle(color: _strengthColor(context), fontSize: 12, fontWeight: FontWeight.w600),
+        style: TextStyle(
+            color: _strengthColor, fontSize: 12, fontWeight: FontWeight.w600),
       ),
     ]);
   }
 }
 
-// ─── Form Field ────────────────────────────────────────────────────────────────
-
-class _FitField extends StatelessWidget {
+class _FitField extends StatefulWidget {
   final TextEditingController controller;
-  final String label, hint;
+  final String label;
+  final String hint;
+  final IconData icon;
   final bool obscure;
+  final bool showToggle;
+  final bool obscureValue;
   final TextInputType keyboardType;
-  final Widget? suffix;
+  final VoidCallback? onToggle;
   final void Function(String)? onChanged;
 
   const _FitField({
     required this.controller,
     required this.label,
     required this.hint,
+    required this.icon,
     this.obscure = false,
+    this.showToggle = false,
+    this.obscureValue = false,
     this.keyboardType = TextInputType.text,
-    this.suffix,
+    this.onToggle,
     this.onChanged,
   });
 
   @override
+  State<_FitField> createState() => _FitFieldState();
+}
+
+class _FitFieldState extends State<_FitField> {
+  final FocusNode _focusNode = FocusNode();
+  bool _isFocused = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _focusNode.addListener(() {
+      setState(() => _isFocused = _focusNode.hasFocus);
+    });
+  }
+
+  @override
+  void dispose() {
+    _focusNode.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Text(
-        label,
+      AnimatedDefaultTextStyle(
+        duration: const Duration(milliseconds: 200),
         style: TextStyle(
-          color: Theme.of(context).colorScheme.primary,
+          color: _isFocused
+              ? AppColors.sand
+              : Colors.white.withValues(alpha: 0.55),
           fontSize: 12,
           fontWeight: FontWeight.w700,
-          letterSpacing: 0.5,
+          letterSpacing: 0.8,
         ),
+        child: Text(widget.label),
       ),
       const SizedBox(height: 8),
-      Container(
+      AnimatedContainer(
+        duration: const Duration(milliseconds: 220),
+        curve: Curves.easeOut,
         decoration: BoxDecoration(
-          color: context.fitlek.card.withValues(alpha: 0.85),
-          border: Border.all(color: context.fitlek.border),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: TextField(
-          controller: controller,
-          obscureText: obscure,
-          keyboardType: keyboardType,
-          onChanged: onChanged,
-          style: TextStyle(color: Theme.of(context).colorScheme.onPrimary, fontSize: 15),
-          decoration: InputDecoration(
-            hintText: hint,
-            hintStyle: TextStyle(color: context.fitlek.textMuted, fontSize: 15),
-            border: InputBorder.none,
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-            suffixIcon: suffix,
+          color: _isFocused
+              ? Colors.white.withValues(alpha: 0.07)
+              : Colors.white.withValues(alpha: 0.04),
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: _isFocused
+                ? AppColors.sand.withValues(alpha: 0.6)
+                : Colors.white.withValues(alpha: 0.12),
+            width: _isFocused ? 1.5 : 1,
           ),
+          boxShadow: _isFocused
+              ? [
+                  BoxShadow(
+                    color: AppColors.sand.withValues(alpha: 0.12),
+                    blurRadius: 20,
+                    offset: const Offset(0, 4),
+                  ),
+                ]
+              : [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.2),
+                    blurRadius: 6,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
         ),
+        child: Row(children: [
+          const SizedBox(width: 14),
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            width: 38,
+            height: 38,
+            decoration: BoxDecoration(
+              color: _isFocused
+                  ? AppColors.sand.withValues(alpha: 0.18)
+                  : Colors.white.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(
+              widget.icon,
+              color: _isFocused
+                  ? AppColors.sand
+                  : Colors.white.withValues(alpha: 0.45),
+              size: 17,
+            ),
+          ),
+          Expanded(
+            child: TextField(
+              controller: widget.controller,
+              focusNode: _focusNode,
+              keyboardType: widget.keyboardType,
+              obscureText: widget.obscure,
+              onChanged: widget.onChanged,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 15,
+                fontWeight: FontWeight.w500,
+              ),
+              decoration: InputDecoration(
+                hintText: widget.hint,
+                hintStyle: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.28),
+                  fontSize: 14,
+                ),
+                border: InputBorder.none,
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 18,
+                ),
+              ),
+            ),
+          ),
+          if (widget.showToggle)
+            GestureDetector(
+              onTap: widget.onToggle,
+              child: Padding(
+                padding: const EdgeInsets.only(right: 14),
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 200),
+                  child: Icon(
+                    widget.obscureValue
+                        ? Icons.visibility_off_rounded
+                        : Icons.visibility_rounded,
+                    key: ValueKey(widget.obscureValue),
+                    color: _isFocused
+                        ? AppColors.sand.withValues(alpha: 0.7)
+                        : Colors.white.withValues(alpha: 0.35),
+                    size: 20,
+                  ),
+                ),
+              ),
+            ),
+        ]),
       ),
     ]);
   }

@@ -1,4 +1,3 @@
-
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -524,7 +523,16 @@ void _showQrDialog(String code) {
 
   Widget _buildHero(BuildContext ctx, String imageUrl, String name,
       String speciality, double rating) {
-    return SizedBox(
+    return GestureDetector(
+      behavior: HitTestBehavior.translucent,
+      onPanEnd: (details) {
+        final v = details.velocity.pixelsPerSecond;
+        // Glisser vers le bas ou vers la droite pour revenir en arrière
+        if (v.dy > 250 || v.dx > 250) {
+          Navigator.pop(ctx);
+        }
+      },
+      child: SizedBox(
       height: 380,
       child: Stack(children: [
         Positioned.fill(
@@ -553,12 +561,6 @@ void _showQrDialog(String code) {
     ),
   ),
 ),
-        Positioned(
-            top: 52,
-            left: 16,
-            child: SafeArea(
-                child: _backBtn(
-                    onTap: () => Navigator.pop(ctx), transparent: true))),
         Positioned(
           top: 52,
           right: 16,
@@ -635,6 +637,7 @@ void _showQrDialog(String code) {
           ]),
         ),
       ]),
+    ),
     );
   }
 

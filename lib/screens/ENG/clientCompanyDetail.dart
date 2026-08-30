@@ -1,4 +1,3 @@
-
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -104,8 +103,9 @@ class CompanyDetailScreen extends StatefulWidget {
 }
 
 class _CompanyDetailScreenState extends State<CompanyDetailScreen>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   late TabController    _tabController;
+  late AnimationController _shimmerCtrl;
   final ScrollController _scrollCtrl = ScrollController();
   bool _isCollapsed = false;
 
@@ -121,6 +121,7 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen>
   void initState() {
     super.initState();
     _tabController = TabController(length: 4, vsync: this);
+    _shimmerCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 1400))..repeat();
     _scrollCtrl.addListener(() {
       final collapsed = _scrollCtrl.offset > _expandedHeight - 80;
       if (collapsed != _isCollapsed) setState(() => _isCollapsed = collapsed);
@@ -131,6 +132,7 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen>
   @override
   void dispose() {
     _tabController.dispose();
+    _shimmerCtrl.dispose();
     _scrollCtrl.dispose();
     super.dispose();
   }
@@ -239,51 +241,62 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen>
     expandedHeight: _expandedHeight,
     floating: false, pinned: true,
     backgroundColor: Theme.of(context).scaffoldBackgroundColor, elevation: 0,
-    leading: GestureDetector(
-      onTap: () => Navigator.pop(context),
-      child: Container(
-        margin: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          color: Colors.black.withValues(alpha: 0.6),
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: Colors.white24)),
-        child: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 16),
+    automaticallyImplyLeading: false,
+    title: AnimatedSlide(
+      offset: _isCollapsed ? Offset.zero : const Offset(0, 0.3),
+      duration: const Duration(milliseconds: 220),
+      curve: Curves.easeOut,
+      child: AnimatedOpacity(
+        opacity: _isCollapsed ? 1.0 : 0.0,
+        duration: const Duration(milliseconds: 200),
+        child: Text(a.fullName, style: TextStyle(
+          color: Theme.of(context).colorScheme.onSurface, fontSize: 15, fontWeight: FontWeight.w800)),
       ),
     ),
-    title: AnimatedOpacity(
-      opacity: _isCollapsed ? 1.0 : 0.0,
-      duration: const Duration(milliseconds: 200),
-      child: Text(a.fullName, style: TextStyle(
-        color: Theme.of(context).colorScheme.onSurface, fontSize: 15, fontWeight: FontWeight.w800)),
-    ),
     flexibleSpace: FlexibleSpaceBar(
-      background: Stack(fit: StackFit.expand, children: [
-        a.avatarUrl != null
-            ? Image.network(a.avatarUrl!, fit: BoxFit.cover,
-                color: Colors.black.withValues(alpha: 0.4),
-                colorBlendMode: BlendMode.darken,
-                errorBuilder: (_, __, ___) => _defaultCover())
-            : _defaultCover(),
-        Positioned.fill(child: DecoratedBox(
-          decoration: BoxDecoration(gradient: LinearGradient(
-            begin: Alignment.topCenter, end: Alignment.bottomCenter,
-            colors: [Colors.transparent, Theme.of(context).scaffoldBackgroundColor.withValues(alpha: 0.7), Theme.of(context).scaffoldBackgroundColor],
-            stops: const [0.25, 0.7, 1.0])))),
-        if (a.isApproved)
-          Positioned(
-            bottom: 16, right: 20,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-              decoration: BoxDecoration(color: Theme.of(context).colorScheme.primary, borderRadius: BorderRadius.circular(20)),
-              child: Row(children: [
-                Icon(Icons.verified_rounded, color: Theme.of(context).colorScheme.onPrimary, size: 12),
-                const SizedBox(width: 5),
-                Text('VERIFIED', style: TextStyle(
-                  color: Theme.of(context).colorScheme.onPrimary, fontSize: 9,
-                  fontWeight: FontWeight.w900, letterSpacing: 1.2)),
-              ]),
-            )),
-      ]),
+      background: GestureDetector(
+        behavior: HitTestBehavior.translucent,
+        onPanEnd: (details) {
+          final v = details.velocity.pixelsPerSecond;
+          // Glisser vers le bas ou vers la droite pour revenir en arrière
+          if (v.dy > 250 || v.dx > 250) {
+            Navigator.pop(context);
+          }
+        },
+        child: Stack(fit: StackFit.expand, children: [
+          a.avatarUrl != null
+              ? Image.network(a.avatarUrl!, fit: BoxFit.cover,
+                  color: Colors.black.withValues(alpha: 0.4),
+                  colorBlendMode: BlendMode.darken,
+                  errorBuilder: (_, __, ___) => _defaultCover())
+              : _defaultCover(),
+          Positioned.fill(child: DecoratedBox(
+            decoration: BoxDecoration(gradient: LinearGradient(
+              begin: Alignment.topCenter, end: Alignment.bottomCenter,
+              colors: [Colors.transparent, Theme.of(context).scaffoldBackgroundColor.withValues(alpha: 0.7), Theme.of(context).scaffoldBackgroundColor],
+              stops: const [0.25, 0.7, 1.0])))),
+          if (a.isApproved)
+            Positioned(
+              bottom: 16, right: 20,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.primary,
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [BoxShadow(
+                    color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.35),
+                    blurRadius: 10, offset: const Offset(0, 3))],
+                ),
+                child: Row(children: [
+                  Icon(Icons.verified_rounded, color: Theme.of(context).colorScheme.onPrimary, size: 12),
+                  const SizedBox(width: 5),
+                  Text('VERIFIED', style: TextStyle(
+                    color: Theme.of(context).colorScheme.onPrimary, fontSize: 9,
+                    fontWeight: FontWeight.w900, letterSpacing: 1.2)),
+                ]),
+              )),
+        ]),
+      ),
     ),
   );
 
@@ -362,13 +375,19 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen>
 
   Widget _statBox(String val, String label, IconData icon) => Expanded(
     child: Container(
-      padding: const EdgeInsets.symmetric(vertical: 12),
+      padding: const EdgeInsets.symmetric(vertical: 14),
       decoration: BoxDecoration(color: context.fitlek.card,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: context.fitlek.border)),
       child: Column(children: [
-        Icon(icon, color: Theme.of(context).colorScheme.primary, size: 16),
-        const SizedBox(height: 5),
+        Container(
+          width: 28, height: 28,
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+            shape: BoxShape.circle),
+          child: Icon(icon, color: Theme.of(context).colorScheme.primary, size: 14),
+        ),
+        const SizedBox(height: 7),
         Text(val, style: TextStyle(
           color: Theme.of(context).colorScheme.onSurface, fontSize: 13, fontWeight: FontWeight.w900)),
         Text(label, style: TextStyle(color: context.fitlek.textMuted, fontSize: 9)),
@@ -408,8 +427,11 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen>
   Widget _buildCoachesTab() {
     if (_coaches.isEmpty) {
       return Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-        Icon(Icons.people_outline, color: context.fitlek.textMuted, size: 52),
-        const SizedBox(height: 14),
+        Container(
+          width: 88, height: 88,
+          decoration: BoxDecoration(color: context.fitlek.card2, shape: BoxShape.circle),
+          child: Icon(Icons.people_outline, color: context.fitlek.textMuted, size: 38)),
+        const SizedBox(height: 16),
         Text('No coaches linked yet',
           style: TextStyle(color: context.fitlek.textMuted, fontSize: 13)),
       ]));
@@ -521,8 +543,11 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen>
   Widget _buildGalleryTab() {
     if (_images.isEmpty) {
       return Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-        Icon(Icons.photo_library_outlined, color: context.fitlek.textMuted, size: 52),
-        const SizedBox(height: 14),
+        Container(
+          width: 88, height: 88,
+          decoration: BoxDecoration(color: context.fitlek.card2, shape: BoxShape.circle),
+          child: Icon(Icons.photo_library_outlined, color: context.fitlek.textMuted, size: 38)),
+        const SizedBox(height: 16),
         Text('No gym images yet',
           style: TextStyle(color: context.fitlek.textMuted, fontSize: 13)),
       ]));
@@ -542,6 +567,9 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen>
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(14),
             border: Border.all(color: context.fitlek.border),
+            boxShadow: [BoxShadow(
+              color: Colors.black.withValues(alpha: 0.15),
+              blurRadius: 10, offset: const Offset(0, 4))],
           ),
           clipBehavior: Clip.antiAlias,
           child: Image.network(
@@ -830,12 +858,33 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen>
     )),
   );
 
-  Widget _shimBox(double w, double h, {double radius = 0}) => Container(
-    width:  w == double.infinity ? null : w,
-    height: h,
-    decoration: BoxDecoration(
-      color: context.fitlek.card2,
-      borderRadius: BorderRadius.circular(radius)));
+  Widget _shimBox(double w, double h, {double radius = 0}) => AnimatedBuilder(
+    animation: _shimmerCtrl,
+    builder: (_, child) => ShaderMask(
+      blendMode: BlendMode.srcATop,
+      shaderCallback: (bounds) {
+        final t = _shimmerCtrl.value;
+        return LinearGradient(
+          colors: [
+            context.fitlek.card2,
+            context.fitlek.card2.withValues(alpha: 0.35),
+            context.fitlek.card2,
+          ],
+          stops: const [0.0, 0.5, 1.0],
+          begin: Alignment(-1 + 3 * t, 0),
+          end: Alignment(1 + 3 * t, 0),
+        ).createShader(bounds);
+      },
+      child: child,
+    ),
+    child: Container(
+      width:  w == double.infinity ? null : w,
+      height: h,
+      decoration: BoxDecoration(
+        color: context.fitlek.card2,
+        borderRadius: BorderRadius.circular(radius)),
+    ),
+  );
 }
 
 // ─── Map Grid Painter ──────────────────────────────────────────────────────
@@ -884,68 +933,93 @@ class _TabBarDelegate extends SliverPersistentHeaderDelegate {
 }
 
 // ─── Coach Card ──────────────────────────────────────────────────────────────
-class _CoachCard extends StatelessWidget {
+class _CoachCard extends StatefulWidget {
   final _CoachDTO    coach;
   final VoidCallback onTap;
   const _CoachCard({required this.coach, required this.onTap});
 
   @override
+  State<_CoachCard> createState() => _CoachCardState();
+}
+
+class _CoachCardState extends State<_CoachCard> {
+  bool _pressed = false;
+
+  _CoachDTO get coach => widget.coach;
+
+  @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        decoration: BoxDecoration(color: context.fitlek.card,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: context.fitlek.border)),
-        clipBehavior: Clip.antiAlias,
-        child: Row(children: [
-          Stack(children: [
-            SizedBox(
-              width: 96, height: 110,
-              child: coach.avatarUrl != null
-                  ? Image.network(coach.avatarUrl!, fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => _placeholder(context))
-                  : _placeholder(context),
-            ),
-            if (coach.isPremium)
-              Positioned(top: 6, right: 6,
-                child: Container(
-                  padding: const EdgeInsets.all(4),
-                  decoration: BoxDecoration(
-                    color: context.fitlek.premium, shape: BoxShape.circle,
-                    boxShadow: [BoxShadow(
-                      color: context.fitlek.premium.withValues(alpha: 0.5), blurRadius: 8)]),
-                  child: const Icon(Icons.star_rounded, color: Colors.black, size: 10))),
-          ]),
-          Expanded(child: Padding(
-            padding: const EdgeInsets.all(14),
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Row(children: [
-                Expanded(child: Text(coach.fullName, style: TextStyle(
-                  color: Theme.of(context).colorScheme.onSurface, fontWeight: FontWeight.w800, fontSize: 14))),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(color: Theme.of(context).colorScheme.primary, borderRadius: BorderRadius.circular(8)),
-                  child: Text('VIEW', style: TextStyle(
-                    color: Theme.of(context).colorScheme.onPrimary, fontWeight: FontWeight.w900, fontSize: 9, letterSpacing: 1))),
+      onTap: widget.onTap,
+      onTapDown: (_) => setState(() => _pressed = true),
+      onTapUp: (_) => setState(() => _pressed = false),
+      onTapCancel: () => setState(() => _pressed = false),
+      child: AnimatedScale(
+        scale: _pressed ? 0.98 : 1.0,
+        duration: const Duration(milliseconds: 120),
+        curve: Curves.easeOut,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 120),
+          margin: const EdgeInsets.only(bottom: 12),
+          decoration: BoxDecoration(color: context.fitlek.card,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: context.fitlek.border),
+            boxShadow: _pressed
+                ? []
+                : [BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.12),
+                    blurRadius: 14, offset: const Offset(0, 6))]),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: Row(children: [
+              Stack(children: [
+                SizedBox(
+                  width: 96, height: 110,
+                  child: coach.avatarUrl != null
+                      ? Image.network(coach.avatarUrl!, fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => _placeholder(context))
+                      : _placeholder(context),
+                ),
+                if (coach.isPremium)
+                  Positioned(top: 6, right: 6,
+                    child: Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        color: context.fitlek.premium, shape: BoxShape.circle,
+                        boxShadow: [BoxShadow(
+                          color: context.fitlek.premium.withValues(alpha: 0.5), blurRadius: 8)]),
+                      child: const Icon(Icons.star_rounded, color: Colors.black, size: 10))),
               ]),
-              const SizedBox(height: 6),
-              Text(
-                coach.bio.isNotEmpty
-                    ? (coach.bio.length > 55 ? '${coach.bio.substring(0, 55)}…' : coach.bio)
-                    : 'Certified coach',
-                style: TextStyle(color: context.fitlek.textMuted, fontSize: 11, height: 1.4),
-                maxLines: 2),
-              const SizedBox(height: 10),
-              Row(children: [
-                _chip(context, Icons.card_giftcard_rounded, '${coach.totalInvitations} inv.'),
-                const SizedBox(width: 8),
-                _chip(context, Icons.bolt_rounded, '${coach.earnedPoints} pts'),
-              ]),
+              Expanded(child: Padding(
+                padding: const EdgeInsets.all(14),
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Row(children: [
+                    Expanded(child: Text(coach.fullName, style: TextStyle(
+                      color: Theme.of(context).colorScheme.onSurface, fontWeight: FontWeight.w800, fontSize: 14))),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(color: Theme.of(context).colorScheme.primary, borderRadius: BorderRadius.circular(8)),
+                      child: Text('VIEW', style: TextStyle(
+                        color: Theme.of(context).colorScheme.onPrimary, fontWeight: FontWeight.w900, fontSize: 9, letterSpacing: 1))),
+                  ]),
+                  const SizedBox(height: 6),
+                  Text(
+                    coach.bio.isNotEmpty
+                        ? (coach.bio.length > 55 ? '${coach.bio.substring(0, 55)}…' : coach.bio)
+                        : 'Certified coach',
+                    style: TextStyle(color: context.fitlek.textMuted, fontSize: 11, height: 1.4),
+                    maxLines: 2),
+                  const SizedBox(height: 10),
+                  Row(children: [
+                    _chip(context, Icons.card_giftcard_rounded, '${coach.totalInvitations} inv.'),
+                    const SizedBox(width: 8),
+                    _chip(context, Icons.bolt_rounded, '${coach.earnedPoints} pts'),
+                  ]),
+                ]),
+              )),
             ]),
-          )),
-        ]),
+          ),
+        ),
       ),
     );
   }

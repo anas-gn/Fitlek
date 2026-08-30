@@ -18,7 +18,7 @@ const _red = Color(0xFFFF5252);
 
 
 const _bgImageUrl =
-    'https://images.unsplash.com/photo-1571019614242-c5c5dee9f50b?w=1200&q=80';
+    'assets/branding/sirvya1.jfif';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -436,17 +436,28 @@ class _RegisterScreenState extends State<RegisterScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.cyprus,
+    return Theme(
+    data: ThemeData.dark().copyWith(
+      scaffoldBackgroundColor: Colors.black,
+    ),
+    child: GestureDetector(
+      onHorizontalDragEnd: (details) {
+        if (details.primaryVelocity != null && details.primaryVelocity! > 300) {
+          _prevStep();
+        }
+      },
+      child: Scaffold(
+      backgroundColor: Colors.black,
       body: Stack(
         children: [
           // ── Fond image + flou léger, identique à l'écran de login ──
           Positioned.fill(
-            child: Image.network(
+            child: Image.asset(
               _bgImageUrl,
               fit: BoxFit.cover,
-              loadingBuilder: (_, child, p) =>
-                  p == null ? child : Container(color: const Color(0xFF111111)),
+              frameBuilder: (_, child, frame, __) =>
+                  frame == null ? Container(color: const Color(0xFF111111)) : child,
+              errorBuilder: (_, __, ___) => Container(color: const Color(0xFF111111)),
             ),
           ),
           Positioned.fill(
@@ -508,7 +519,8 @@ class _RegisterScreenState extends State<RegisterScreen>
             ]),
           ),
         ],
-      ),
+      ),),
+    ),
     );
   }
 
@@ -1648,94 +1660,118 @@ class _RegisterFieldState extends State<_RegisterField> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Padding(
-          padding: const EdgeInsets.only(left: 2, bottom: 8),
-          child: Text(
-            widget.label,
-            style: TextStyle(
-              color: _isFocused ? AppColors.sand : Colors.white.withValues(alpha: 0.7),
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 0.5,
-            ),
+        AnimatedDefaultTextStyle(
+          duration: const Duration(milliseconds: 200),
+          style: TextStyle(
+            color: _isFocused ? AppColors.sand : Colors.white.withValues(alpha: 0.55),
+            fontSize: 12,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 0.8,
           ),
+          child: Text(widget.label),
         ),
+        const SizedBox(height: 8),
         AnimatedContainer(
           duration: const Duration(milliseconds: 220),
           curve: Curves.easeOut,
           decoration: BoxDecoration(
-            color: AppColors.cyprus.withValues(alpha: 0.55),
+            color: _isFocused
+                ? Colors.white.withValues(alpha: 0.07)
+                : Colors.white.withValues(alpha: 0.04),
             borderRadius: BorderRadius.circular(14),
             border: Border.all(
               color: _isFocused
-                  ? AppColors.sand.withValues(alpha: 0.75)
-                  : Colors.white.withValues(alpha: 0.18),
+                  ? AppColors.sand.withValues(alpha: 0.6)
+                  : Colors.white.withValues(alpha: 0.12),
               width: _isFocused ? 1.5 : 1,
             ),
-            boxShadow: [
-              if (_isFocused)
-                BoxShadow(
-                  color: AppColors.sand.withValues(alpha: 0.18),
-                  blurRadius: 18,
-                  offset: const Offset(0, 4),
-                )
-              else
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.25),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                ),
-            ],
+            boxShadow: _isFocused
+                ? [
+                    BoxShadow(
+                      color: AppColors.sand.withValues(alpha: 0.12),
+                      blurRadius: 20,
+                      offset: const Offset(0, 4),
+                    ),
+                  ]
+                : [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.2),
+                      blurRadius: 6,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
           ),
-          child: TextField(
-            controller: widget.controller,
-            focusNode: _focusNode,
-            keyboardType: widget.keyboardType,
-            obscureText: widget.obscure,
-            onChanged: widget.onChanged,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 15,
-              fontWeight: FontWeight.w500,
-            ),
-            decoration: InputDecoration(
-              hintText: widget.hint,
-              hintStyle: TextStyle(
-                color: Colors.white.withValues(alpha: 0.4),
-                fontSize: 14,
-              ),
-              border: InputBorder.none,
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 16,
-                vertical: 16,
-              ),
-              prefixIcon: Container(
-                margin: const EdgeInsets.only(left: 12, right: 8),
-                width: 40,
-                height: 40,
+          child: Row(
+            children: [
+              const SizedBox(width: 14),
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                width: 38,
+                height: 38,
                 decoration: BoxDecoration(
-                  color: AppColors.sand.withValues(alpha: _isFocused ? 0.22 : 0.15),
+                  color: _isFocused
+                      ? AppColors.sand.withValues(alpha: 0.18)
+                      : Colors.white.withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: Icon(widget.icon, color: AppColors.sand, size: 18),
+                child: Icon(
+                  widget.icon,
+                  color: _isFocused ? AppColors.sand : Colors.white.withValues(alpha: 0.45),
+                  size: 17,
+                ),
               ),
-              prefixIconConstraints: const BoxConstraints(minWidth: 0),
-              suffixIcon: widget.showToggle
-                  ? GestureDetector(
-                      onTap: widget.onToggle,
-                      child: Padding(
-                        padding: const EdgeInsets.only(right: 12),
-                        child: Icon(
-                          widget.obscureValue
-                              ? Icons.visibility_off_rounded
-                              : Icons.visibility_rounded,
-                          color: Colors.white.withValues(alpha: 0.55),
-                          size: 20,
-                        ),
+              Expanded(
+                child: TextField(
+                  controller: widget.controller,
+                  focusNode: _focusNode,
+                  keyboardType: widget.keyboardType,
+                  obscureText: widget.obscure,
+                  onChanged: widget.onChanged,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w500,
+                  ),
+                  decoration: InputDecoration(
+                    hintText: widget.hint,
+                    hintStyle: TextStyle(
+                      color: Colors.white.withValues(alpha: 0.28),
+                      fontSize: 14,
+                    ),
+                    border: InputBorder.none,
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 18,
+                    ),
+                  ),
+                ),
+              ),
+              if (widget.showToggle)
+                GestureDetector(
+                  onTap: widget.onToggle,
+                  child: Padding(
+                    padding: const EdgeInsets.only(right: 14),
+                    child: AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 200),
+                      child: Icon(
+                        widget.obscureValue
+                            ? Icons.visibility_off_rounded
+                            : Icons.visibility_rounded,
+                        key: ValueKey(widget.obscureValue),
+                        color: _isFocused
+                            ? AppColors.sand.withValues(alpha: 0.7)
+                            : Colors.white.withValues(alpha: 0.35),
+                        size: 20,
                       ),
-                    )
-                  : widget.suffix,
-            ),
+                    ),
+                  ),
+                )
+              else if (widget.suffix != null)
+                Padding(
+                  padding: const EdgeInsets.only(right: 14),
+                  child: widget.suffix!,
+                ),
+            ],
           ),
         ),
       ],
