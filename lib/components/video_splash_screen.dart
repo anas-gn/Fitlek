@@ -95,13 +95,8 @@ class _VideoSplashScreenState extends State<VideoSplashScreen> {
                 ),
               ),
             )
-          // Show the logo centered on black while video initialises
-          : Center(
-              child: Image.asset(
-                'assets/branding/logo_dark.png',
-                width: 140,
-              ),
-            ),
+          // Plain black while video initialises — no logo flash
+          : const SizedBox.expand(),
     );
   }
 }

@@ -1,7 +1,7 @@
 name: fitlek1
 description: Fitlek - Premium Fitness Coach App
 publish_to: 'none'
-version: 1.0.0+1
+version: 1.0.0+2
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
@@ -28,6 +28,8 @@ dependencies:
   firebase_core: ^4.12.1
   firebase_messaging: ^16.4.3
   flutter_local_notifications: ^22.1.0
+  package_info_plus: ^9.0.1
+  video_player: ^2.14.0
 
 dev_dependencies:
   flutter_test:
@@ -36,16 +38,16 @@ dev_dependencies:
   flutter_launcher_icons: ^0.14.1
 
 flutter_launcher_icons:
-  image_path: "assets/branding/icon_app.png"
+  image_path: "assets/branding/icon_app_dark.png"
   android: true
   ios: true
   remove_alpha_ios: true
   web:
     generate: true
-    image_path: "assets/branding/icon_app.png"
+    image_path: "assets/branding/icon_app_dark.png"
   windows:
     generate: true
-    image_path: "assets/branding/icon_app.png"
+    image_path: "assets/branding/icon_app_dark.png"
     icon_size: 256
 
 flutter:
