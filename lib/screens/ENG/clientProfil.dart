@@ -1349,6 +1349,7 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
     IconData icon, {
     TextInputType keyboardType = TextInputType.text,
     int maxLines = 1,
+    bool readOnly = false,
   }) {
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
@@ -1392,6 +1393,7 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                         controller: ctrl,
                         keyboardType: keyboardType,
                         maxLines: maxLines,
+                        readOnly: readOnly,
                         style: TextStyle(
                           color: Theme.of(context).colorScheme.onSurface,
                           fontSize: 13,

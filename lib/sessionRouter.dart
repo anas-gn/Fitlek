@@ -28,7 +28,7 @@ class _SessionRouterState extends State<SessionRouter> {
     // 401/403 réel rencontré pendant l'utilisation de l'app. On ne bloque donc
     // JAMAIS le démarrage sur un appel réseau : ainsi on ne login qu'une seule
     // fois par appareil (un nouvel appareil n'ayant pas de token devra login).
-    final minDelay = Future.delayed(const Duration(milliseconds: 600));
+    final minDelay = Future.delayed(const Duration(milliseconds: 7000));
 
     String? role;
     try {
