@@ -1,4 +1,3 @@
-
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -239,51 +238,62 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen>
     expandedHeight: _expandedHeight,
     floating: false, pinned: true,
     backgroundColor: Theme.of(context).scaffoldBackgroundColor, elevation: 0,
-    leading: GestureDetector(
-      onTap: () => Navigator.pop(context),
-      child: Container(
-        margin: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          color: Colors.black.withValues(alpha: 0.6),
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: Colors.white24)),
-        child: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 16),
+    automaticallyImplyLeading: false,
+    title: AnimatedSlide(
+      offset: _isCollapsed ? Offset.zero : const Offset(0, 0.3),
+      duration: const Duration(milliseconds: 220),
+      curve: Curves.easeOut,
+      child: AnimatedOpacity(
+        opacity: _isCollapsed ? 1.0 : 0.0,
+        duration: const Duration(milliseconds: 200),
+        child: Text(a.fullName, style: TextStyle(
+          color: Theme.of(context).colorScheme.onSurface, fontSize: 15, fontWeight: FontWeight.w800)),
       ),
     ),
-    title: AnimatedOpacity(
-      opacity: _isCollapsed ? 1.0 : 0.0,
-      duration: const Duration(milliseconds: 200),
-      child: Text(a.fullName, style: TextStyle(
-        color: Theme.of(context).colorScheme.onSurface, fontSize: 15, fontWeight: FontWeight.w800)),
-    ),
     flexibleSpace: FlexibleSpaceBar(
-      background: Stack(fit: StackFit.expand, children: [
-        a.avatarUrl != null
-            ? Image.network(a.avatarUrl!, fit: BoxFit.cover,
-                color: Colors.black.withValues(alpha: 0.4),
-                colorBlendMode: BlendMode.darken,
-                errorBuilder: (_, __, ___) => _defaultCover())
-            : _defaultCover(),
-        Positioned.fill(child: DecoratedBox(
-          decoration: BoxDecoration(gradient: LinearGradient(
-            begin: Alignment.topCenter, end: Alignment.bottomCenter,
-            colors: [Colors.transparent, Theme.of(context).scaffoldBackgroundColor.withValues(alpha: 0.7), Theme.of(context).scaffoldBackgroundColor],
-            stops: const [0.25, 0.7, 1.0])))),
-        if (a.isApproved)
-          Positioned(
-            bottom: 16, right: 20,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-              decoration: BoxDecoration(color: Theme.of(context).colorScheme.primary, borderRadius: BorderRadius.circular(20)),
-              child: Row(children: [
-                Icon(Icons.verified_rounded, color: Theme.of(context).colorScheme.onPrimary, size: 12),
-                const SizedBox(width: 5),
-                Text('VERIFIED', style: TextStyle(
-                  color: Theme.of(context).colorScheme.onPrimary, fontSize: 9,
-                  fontWeight: FontWeight.w900, letterSpacing: 1.2)),
-              ]),
-            )),
-      ]),
+      background: GestureDetector(
+        behavior: HitTestBehavior.translucent,
+        onPanEnd: (details) {
+          final v = details.velocity.pixelsPerSecond;
+          // Glisser vers le bas ou vers la droite pour revenir en arrière
+          if (v.dy > 250 || v.dx > 250) {
+            Navigator.pop(context);
+          }
+        },
+        child: Stack(fit: StackFit.expand, children: [
+          a.avatarUrl != null
+              ? Image.network(a.avatarUrl!, fit: BoxFit.cover,
+                  color: Colors.black.withValues(alpha: 0.4),
+                  colorBlendMode: BlendMode.darken,
+                  errorBuilder: (_, __, ___) => _defaultCover())
+              : _defaultCover(),
+          Positioned.fill(child: DecoratedBox(
+            decoration: BoxDecoration(gradient: LinearGradient(
+              begin: Alignment.topCenter, end: Alignment.bottomCenter,
+              colors: [Colors.transparent, Theme.of(context).scaffoldBackgroundColor.withValues(alpha: 0.7), Theme.of(context).scaffoldBackgroundColor],
+              stops: const [0.25, 0.7, 1.0])))),
+          if (a.isApproved)
+            Positioned(
+              bottom: 16, right: 20,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.primary,
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [BoxShadow(
+                    color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.35),
+                    blurRadius: 10, offset: const Offset(0, 3))],
+                ),
+                child: Row(children: [
+                  Icon(Icons.verified_rounded, color: Theme.of(context).colorScheme.onPrimary, size: 12),
+                  const SizedBox(width: 5),
+                  Text('VERIFIED', style: TextStyle(
+                    color: Theme.of(context).colorScheme.onPrimary, fontSize: 9,
+                    fontWeight: FontWeight.w900, letterSpacing: 1.2)),
+                ]),
+              )),
+        ]),
+      ),
     ),
   );
 
