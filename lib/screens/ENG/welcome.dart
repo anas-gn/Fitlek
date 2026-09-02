@@ -24,7 +24,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
   static const List<_OnboardingData> _pages = [
     _OnboardingData(
       imageUrl:
-          '/assets/branding/sirvya3.jfif',
+          'assets/branding/sirvya3.jfif',
       tag: 'COACHING',
       title: 'Your Coach,',
       titleAccent: 'On Demand.',
@@ -33,7 +33,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
     ),
     _OnboardingData(
       imageUrl:
-          '/assets/branding/sirvya4.jfif',
+          'assets/branding/sirvya4.jfif',
       tag: 'PROGRESS',
       title: 'Track Every',
       titleAccent: 'Milestone.',
@@ -42,7 +42,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
     ),
     _OnboardingData(
       imageUrl:
-          '/assets/branding/sirvya5.jfif',
+          'assets/branding/sirvya5.jfif',
       tag: 'COMMUNITY',
       title: 'Join',
       titleAccent: 'SIRVYA.',
@@ -324,15 +324,14 @@ class _FullscreenImage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Image.network(
+    return Image.asset(
       url,
       fit: BoxFit.cover,
       width: double.infinity,
       height: double.infinity,
       color: Colors.black.withValues(alpha: 0.12),
       colorBlendMode: BlendMode.darken,
-      loadingBuilder: (_, child, p) =>
-          p == null ? child : Container(color: const Color(0xFF111111)),
+      errorBuilder: (_, __, ___) => Container(color: const Color(0xFF111111)),
     );
   }
 }
