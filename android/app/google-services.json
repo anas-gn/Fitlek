@@ -12,7 +12,12 @@
           "package_name": "com.sirvya.app"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "256158398727-hk7aq5qs0qb0va133bskn38kvsn95l5a.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyCN1OEx0nDomRNL0m4xReD6_jdvm0RD0zs"
@@ -20,7 +25,19 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "256158398727-hk7aq5qs0qb0va133bskn38kvsn95l5a.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "256158398727-01aql5h5hl2db4cepi6stft6cobje8ee.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.fitlek1"
+              }
+            }
+          ]
         }
       }
     }

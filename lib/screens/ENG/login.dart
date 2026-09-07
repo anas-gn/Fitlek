@@ -1,10 +1,11 @@
-import 'dart:convert';
+﻿import 'dart:convert';
 import 'dart:ui';
 import 'package:fitlek1/screens/ENG/clientForgot.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import 'package:http/http.dart' as http;
+import '../../services/google_auth_service.dart';
 import '../../services/apiService.dart';
 import '../../services/notification_service.dart';
 import 'clientHome.dart';
@@ -15,6 +16,20 @@ import 'package:fitlek1/constants/urls.dart';
 import '../../theme/fitlek_theme_extension.dart';
 import '../../constants/app_colors.dart';
 
+const _googleLogoSvg = '''
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
+<path fill="#FFC107" d="M43.611,20.083H42V20H24v8h11.303c-1.649,4.657-6.08,8-11.303,8c-6.627,0-12-5.373-12-12
+c0-6.627,5.373-12,12-12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C12.955,4,4,12.955,4,24
+c0,11.045,8.955,20,20,20c11.045,0,20-8.955,20-20C44,22.659,43.862,21.35,43.611,20.083z"/>
+<path fill="#FF3D00" d="M6.306,14.691l6.571,4.819C14.655,15.108,18.961,12,24,12c3.059,0,5.842,1.154,7.961,3.039
+l5.657-5.657C34.046,6.053,29.268,4,24,4C16.318,4,9.656,8.337,6.306,14.691z"/>
+<path fill="#4CAF50" d="M24,44c5.166,0,9.86-1.977,13.409-5.192l-6.19-5.238C29.211,35.091,26.715,36,24,36
+c-5.202,0-9.619-3.317-11.283-7.946l-6.522,5.025C9.505,39.556,16.227,44,24,44z"/>
+<path fill="#1976D2" d="M43.611,20.083H42V20H24v8h11.303c-0.792,2.237-2.231,4.166-4.087,5.571
+c0.001-0.001,0.002-0.001,0.003-0.002l6.19,5.238C36.971,39.205,44,34,44,24
+C44,22.659,43.862,21.35,43.611,20.083z"/>
+</svg>
+''';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -28,8 +43,11 @@ class _LoginScreenState extends State<LoginScreen>
   final _emailCtrl = TextEditingController();
   final _passwordCtrl = TextEditingController();
   bool _loading = false;
+  bool _googleLoading = false;
   bool _showPassword = false;
   String? _errorMsg;
+
+
 
   late final AnimationController _animCtrl;
   late final Animation<double> _fadeAnim;
@@ -77,7 +95,7 @@ class _LoginScreenState extends State<LoginScreen>
     });
 
     try {
-      if (kDebugMode) debugPrint('🔐 LOGIN ATTEMPT');
+      if (kDebugMode) debugPrint('ðŸ” LOGIN ATTEMPT');
 
       final res = await http
           .post(
@@ -87,7 +105,7 @@ class _LoginScreenState extends State<LoginScreen>
           )
           .timeout(const Duration(seconds: 15));
 
-      if (kDebugMode) debugPrint('📥 LOGIN RESPONSE: ${res.statusCode}');
+      if (kDebugMode) debugPrint('ðŸ“¥ LOGIN RESPONSE: ${res.statusCode}');
 
       final body = jsonDecode(res.body) as Map<String, dynamic>;
 
@@ -124,57 +142,17 @@ class _LoginScreenState extends State<LoginScreen>
         }
 
         if (kDebugMode) {
-          debugPrint('✅ LOGIN SUCCESS - Role: $role, ID: $id');
-          debugPrint('✅ TOKEN: ${token.substring(0, 30)}...');
+          debugPrint('âœ… LOGIN SUCCESS - Role: $role, ID: $id');
+          debugPrint('âœ… TOKEN: ${token.substring(0, 30)}...');
         }
 
-        await ApiService.saveToken(token);
-        await ApiService.saveRole(role);
-        await ApiService.saveUserData(id, firstName);
-        await NotificationService.instance.getFCMToken();
-
-        final savedToken = await ApiService.getToken();
-        if (kDebugMode) {
-          debugPrint(
-              '✅ TOKEN VERIFIED: ${savedToken != null ? "Saved" : "Not Saved"}');
-        }
-
-        if (!mounted) return;
-
-        Widget dest;
-        switch (role) {
-          case 'client':
-            dest = HomeScreen(
-              clientID: id,
-              token: token,
-              firstName: firstName,
-              onLogout: () async {
-                await ApiService.clearToken();
-                if (!mounted) return;
-                _goToWelcome();
-              },
-            );
-            break;
-          case 'coach':
-            dest = const MainLayoutCoach();
-            break;
-          default:
-            setState(() {
-              _errorMsg = 'Unrecognized role: $role';
-              _loading = false;
-            });
-            return;
-        }
-
-        Navigator.pushReplacement(
-          context,
-          PageRouteBuilder(
-            pageBuilder: (_, __, ___) => dest,
-            transitionsBuilder: (_, a, __, child) =>
-                FadeTransition(opacity: a, child: child),
-            transitionDuration: const Duration(milliseconds: 500),
-          ),
-        );
+        await _completeSignIn(token: token, role: role, id: id, firstName: firstName);
+      } else if (res.statusCode == 403 && body['authProvider'] == 'google') {
+        // Google-only account trying to use email/password
+        setState(() {
+          _errorMsg = 'This account uses Google Sign-In. Tap "Continue with Google" below to log in.';
+          _loading = false;
+        });
       } else {
         final errorMsg = body['message'] ??
             body['error'] ??
@@ -186,19 +164,122 @@ class _LoginScreenState extends State<LoginScreen>
         });
       }
     } on http.ClientException {
-      if (kDebugMode) debugPrint('❌ NETWORK ERROR');
+      if (kDebugMode) debugPrint('âŒ NETWORK ERROR');
       setState(() {
         _errorMsg = 'Check your connection.';
         _loading = false;
       });
     } catch (e) {
-      if (kDebugMode) debugPrint('❌ LOGIN ERROR: $e');
+      if (kDebugMode) debugPrint('âŒ LOGIN ERROR: $e');
       setState(() {
         _errorMsg = 'Check your connection';
         _loading = false;
       });
     }
   }
+
+  Future<void> _completeSignIn({
+    required String token,
+    required String role,
+    required int id,
+    required String firstName,
+    bool isNewUser = false,
+    bool hasPassword = true,
+  }) async {
+    await ApiService.saveToken(token);
+    await ApiService.saveRole(role);
+    await ApiService.saveUserData(id, firstName);
+    await NotificationService.instance.getFCMToken();
+
+    if (!mounted) return;
+
+    // If new Google user with no password, offer to set one
+    if (isNewUser && !hasPassword && mounted) {
+      _showSetPasswordPrompt(token: token);
+    }
+
+    Widget dest;
+    switch (role) {
+      case 'client':
+        dest = HomeScreen(
+          clientID: id,
+          token: token,
+          firstName: firstName,
+          onLogout: () async {
+            await ApiService.clearToken();
+            if (!mounted) return;
+            _goToWelcome();
+          },
+        );
+        break;
+      case 'coach':
+        dest = const MainLayoutCoach();
+        break;
+      default:
+        setState(() {
+          _errorMsg = 'Unrecognized role: $role';
+          _loading = false;
+          _googleLoading = false;
+        });
+        return;
+    }
+
+    Navigator.pushReplacement(
+      context,
+      PageRouteBuilder(
+        pageBuilder: (_, __, ___) => dest,
+        transitionsBuilder: (_, a, __, child) =>
+            FadeTransition(opacity: a, child: child),
+        transitionDuration: const Duration(milliseconds: 500),
+      ),
+    );
+  }
+
+  void _showSetPasswordPrompt({required String token}) {
+    if (!mounted) return;
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => _SetPasswordSheet(token: token, baseUrl: baseUrl),
+    );
+  }
+
+  Future<void> _loginWithGoogle() async {
+    setState(() {
+      _googleLoading = true;
+      _errorMsg = null;
+    });
+    try {
+      final result = await GoogleAuthService.signInWithGoogle(role: 'client');
+      await _completeSignIn(
+        token: result.accessToken,
+        role: result.user['role'] as String? ?? 'client',
+        id: result.user['id'] as int? ?? 0,
+        firstName: result.user['firstName'] as String? ?? '',
+        isNewUser: result.isNewUser,
+        hasPassword: result.hasPassword,
+      );
+    } on Exception catch (e) {
+      final msg = e.toString().replaceFirst('Exception: ', '');
+      if (msg == 'cancelled') {
+        setState(() => _googleLoading = false);
+        return;
+      }
+      if (kDebugMode) debugPrint('❌ GOOGLE LOGIN ERROR: ');
+      setState(() {
+        _errorMsg = msg;
+        _googleLoading = false;
+      });
+    } catch (e) {
+      if (kDebugMode) debugPrint('❌ GOOGLE LOGIN ERROR: ');
+      setState(() {
+        _errorMsg = 'Google sign-in failed. Please try again.';
+        _googleLoading = false;
+      });
+    }
+  }
+
 
   void _goToWelcome() => Navigator.pushAndRemoveUntil(
         context,
@@ -317,6 +398,10 @@ class _LoginScreenState extends State<LoginScreen>
                                       )
                                     : const SizedBox(width: double.infinity),
                               ),
+                              const SizedBox(height: 24),
+                              _buildOrDivider(),
+                              const SizedBox(height: 20),
+                              _buildGoogleButton(),
                               const SizedBox(height: 40),
                               _buildDivider(),
                               const SizedBox(height: 20),
@@ -338,9 +423,7 @@ class _LoginScreenState extends State<LoginScreen>
 
   Widget _buildHeader() {
     return Row(
-      children: [
-        
-      ],
+      children: [],
     );
   }
 
@@ -485,21 +568,110 @@ class _LoginScreenState extends State<LoginScreen>
                     strokeWidth: 2.5,
                   ),
                 )
-              : const Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.login_rounded, color: AppColors.cyprus, size: 18),
-                    SizedBox(width: 10),
-                    Text(
-                      'LOG IN',
-                      style: TextStyle(
-                        color: AppColors.cyprus,
-                        fontWeight: FontWeight.w900,
-                        fontSize: 14,
-                        letterSpacing: 1.5,
+              : Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.login_rounded, color: AppColors.cyprus, size: 18),
+                      const SizedBox(width: 10),
+                      Flexible(
+                        child: Text(
+                          'LOG IN',
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: AppColors.cyprus,
+                            fontWeight: FontWeight.w900,
+                            fontSize: 14,
+                            letterSpacing: 1.5,
+                          ),
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
+                ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildOrDivider() {
+    return Row(
+      children: [
+        Expanded(
+          child: Divider(
+              color: Colors.white.withValues(alpha: 0.15), thickness: 1),
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14),
+          child: Text(
+            'OR',
+            style: TextStyle(
+              color: Colors.white.withValues(alpha: 0.4),
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 1.2,
+            ),
+          ),
+        ),
+        Expanded(
+          child: Divider(
+              color: Colors.white.withValues(alpha: 0.15), thickness: 1),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildGoogleButton() {
+    return _PressableScale(
+      onTap: _googleLoading || _loading ? null : _loginWithGoogle,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        width: double.infinity,
+        height: 58,
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.06),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: Colors.white.withValues(alpha: 0.18),
+            width: 1.5,
+          ),
+        ),
+        child: Center(
+          child: _googleLoading
+              ? const SizedBox(
+                  width: 22,
+                  height: 22,
+                  child: CircularProgressIndicator(
+                    color: AppColors.sand,
+                    strokeWidth: 2.5,
+                  ),
+                )
+              : Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      SvgPicture.string(
+                        _googleLogoSvg,
+                        width: 20,
+                        height: 20,
+                      ),
+                      const SizedBox(width: 12),
+                      Flexible(
+                        child: Text(
+                          'CONTINUE WITH GOOGLE',
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w800,
+                            fontSize: 13,
+                            letterSpacing: 1.0,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
         ),
       ),
@@ -579,7 +751,7 @@ class _LoginScreenState extends State<LoginScreen>
             splashColor: AppColors.sand.withValues(alpha: 0.15),
             highlightColor: AppColors.sand.withValues(alpha: 0.08),
             child: Container(
-              padding: const EdgeInsets.symmetric(vertical: 16),
+              padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
               decoration: BoxDecoration(
                 color: Colors.transparent,
                 borderRadius: BorderRadius.circular(14),
@@ -588,18 +760,21 @@ class _LoginScreenState extends State<LoginScreen>
                   width: 1.5,
                 ),
               ),
-              child: const Row(
+              child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.person_add_rounded, color: AppColors.sand, size: 18),
-                  SizedBox(width: 10),
-                  Text(
-                    'CREATE AN ACCOUNT',
-                    style: TextStyle(
-                      color: AppColors.sand,
-                      fontWeight: FontWeight.w900,
-                      fontSize: 14,
-                      letterSpacing: 1.5,
+                  const Icon(Icons.person_add_rounded, color: AppColors.sand, size: 18),
+                  const SizedBox(width: 10),
+                  Flexible(
+                    child: Text(
+                      'CREATE AN ACCOUNT',
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: AppColors.sand,
+                        fontWeight: FontWeight.w900,
+                        fontSize: 14,
+                        letterSpacing: 1.5,
+                      ),
                     ),
                   ),
                 ],
@@ -837,3 +1012,193 @@ class _LoginFieldState extends State<_LoginField> {
     );
   }
 }
+
+// â”€â”€â”€ Set Password Bottom Sheet â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+class _SetPasswordSheet extends StatefulWidget {
+  final String token;
+  final String baseUrl;
+  const _SetPasswordSheet({required this.token, required this.baseUrl});
+
+  @override
+  State<_SetPasswordSheet> createState() => _SetPasswordSheetState();
+}
+
+class _SetPasswordSheetState extends State<_SetPasswordSheet> {
+  final _passCtrl = TextEditingController();
+  final _confirmCtrl = TextEditingController();
+  bool _loading = false;
+  bool _obscure = true;
+  String? _error;
+  bool _done = false;
+
+  @override
+  void dispose() {
+    _passCtrl.dispose();
+    _confirmCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    final pass = _passCtrl.text;
+    if (pass.length < 6) {
+      setState(() => _error = 'Password must be at least 6 characters.');
+      return;
+    }
+    if (pass != _confirmCtrl.text) {
+      setState(() => _error = 'Passwords do not match.');
+      return;
+    }
+    setState(() { _loading = true; _error = null; });
+    try {
+      final res = await http.post(
+        Uri.parse('${widget.baseUrl}/auth/set-password'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ${widget.token}',
+        },
+        body: jsonEncode({'password': pass}),
+      ).timeout(const Duration(seconds: 12));
+      if (res.statusCode == 200) {
+        setState(() { _done = true; _loading = false; });
+      } else {
+        final body = jsonDecode(res.body) as Map<String, dynamic>;
+        setState(() {
+          _error = body['error'] as String? ?? 'Failed to set password.';
+          _loading = false;
+        });
+      }
+    } catch (_) {
+      setState(() { _error = 'Connection error.'; _loading = false; });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+      decoration: const BoxDecoration(
+        color: Color(0xFF1A2332),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
+      child: _done
+          ? Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.check_circle_rounded, color: Color(0xFF4CAF50), size: 56),
+                const SizedBox(height: 12),
+                const Text('Password set!',
+                    style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w800)),
+                const SizedBox(height: 8),
+                Text('You can now log in with your email and password.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontSize: 13)),
+                const SizedBox(height: 20),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.pop(context),
+                    style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.sand,
+                        foregroundColor: AppColors.cyprus,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        padding: const EdgeInsets.symmetric(vertical: 16)),
+                    child: const Text('Done', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
+                  ),
+                ),
+              ],
+            )
+          : Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(width: 40, height: 4,
+                      decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(2))),
+                ),
+                const SizedBox(height: 20),
+                const Text('Set a Password',
+                    style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w800)),
+                const SizedBox(height: 6),
+                Text('Optionally set a password so you can also log in with your email later.',
+                    style: TextStyle(color: Colors.white.withValues(alpha: 0.55), fontSize: 13)),
+                const SizedBox(height: 20),
+                TextField(
+                  controller: _passCtrl,
+                  obscureText: _obscure,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: InputDecoration(
+                    labelText: 'New Password',
+                    labelStyle: TextStyle(color: Colors.white.withValues(alpha: 0.5)),
+                    enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.15))),
+                    focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: AppColors.sand)),
+                    suffixIcon: IconButton(
+                      icon: Icon(_obscure ? Icons.visibility_off_rounded : Icons.visibility_rounded,
+                          color: Colors.white38),
+                      onPressed: () => setState(() => _obscure = !_obscure),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _confirmCtrl,
+                  obscureText: _obscure,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: InputDecoration(
+                    labelText: 'Confirm Password',
+                    labelStyle: TextStyle(color: Colors.white.withValues(alpha: 0.5)),
+                    enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.15))),
+                    focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: const BorderSide(color: AppColors.sand)),
+                  ),
+                ),
+                if (_error != null) ...[
+                  const SizedBox(height: 10),
+                  Text(_error!, style: const TextStyle(color: Color(0xFFFF5252), fontSize: 12)),
+                ],
+                const SizedBox(height: 20),
+                Row(children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.pop(context),
+                      style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.white60,
+                          side: BorderSide(color: Colors.white.withValues(alpha: 0.15)),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                          padding: const EdgeInsets.symmetric(vertical: 16)),
+                      child: const Text('Skip'),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    flex: 2,
+                    child: ElevatedButton(
+                      onPressed: _loading ? null : _submit,
+                      style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.sand,
+                          foregroundColor: AppColors.cyprus,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                          padding: const EdgeInsets.symmetric(vertical: 16)),
+                      child: _loading
+                          ? const SizedBox(width: 20, height: 20,
+                              child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.cyprus))
+                          : const Text('Set Password',
+                              style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
+                    ),
+                  ),
+                ]),
+              ],
+            ),
+    );
+  }
+}
+

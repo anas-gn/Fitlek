@@ -15,6 +15,8 @@ class _VideoSplashScreenState extends State<VideoSplashScreen> {
   late VideoPlayerController _controller;
   bool _isVideoInitialized = false;
   bool _hasNavigated = false;
+  bool _showVideo = true;
+  static const _endBuffer = Duration(milliseconds: 250);
 
   @override
   void initState() {
@@ -24,8 +26,6 @@ class _VideoSplashScreenState extends State<VideoSplashScreen> {
 
   Future<void> _initVideo() async {
     try {
-      // On Flutter Web, VideoPlayerController.asset() builds a wrong URL
-      // (doubles the 'assets/' prefix), so we use networkUrl on web instead.
       if (kIsWeb) {
         _controller = VideoPlayerController.networkUrl(
           Uri.parse('assets/branding/sirvya_intro.mp4'),
@@ -34,7 +34,6 @@ class _VideoSplashScreenState extends State<VideoSplashScreen> {
         _controller = VideoPlayerController.asset('assets/branding/sirvya_intro.mp4');
       }
 
-      // 15s timeout — some Android devices are slow on cold start
       await _controller.initialize().timeout(const Duration(seconds: 15));
 
       if (mounted) {
@@ -42,17 +41,22 @@ class _VideoSplashScreenState extends State<VideoSplashScreen> {
         _controller.play();
       }
 
-      _controller.addListener(() {
-        if (!_hasNavigated &&
-            _controller.value.isInitialized &&
-            _controller.value.position >= _controller.value.duration) {
-          _navigateToNextScreen();
-        }
-      });
+      _controller.addListener(_onVideoTick);
     } catch (e) {
       debugPrint('Error initializing intro video: $e');
-      // Video failed or timed out — skip straight to next screen
       if (mounted) _navigateToNextScreen();
+    }
+  }
+
+  void _onVideoTick() {
+    if (_hasNavigated || !_controller.value.isInitialized) return;
+
+    final position = _controller.value.position;
+    final duration = _controller.value.duration;
+
+    if (position >= duration - _endBuffer) {
+      if (mounted) setState(() => _showVideo = false);
+      _navigateToNextScreen();
     }
   }
 
@@ -73,18 +77,19 @@ class _VideoSplashScreenState extends State<VideoSplashScreen> {
 
   @override
   void dispose() {
+    _controller.removeListener(_onVideoTick);
     _controller.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.black,
-      body: _isVideoInitialized
-          ? GestureDetector(
-              onTap: _navigateToNextScreen,
-              child: SizedBox.expand(
+    return GestureDetector(
+      onTap: _navigateToNextScreen,
+      child: Scaffold(
+        backgroundColor: Colors.black,
+        body: _isVideoInitialized && _showVideo
+            ? SizedBox.expand(
                 child: FittedBox(
                   fit: BoxFit.cover,
                   child: SizedBox(
@@ -93,10 +98,9 @@ class _VideoSplashScreenState extends State<VideoSplashScreen> {
                     child: VideoPlayer(_controller),
                   ),
                 ),
-              ),
-            )
-          // Plain black while video initialises — no logo flash
-          : const SizedBox.expand(),
+              )
+            : const SizedBox.expand(),
+      ),
     );
   }
 }

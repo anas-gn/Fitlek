@@ -20,33 +20,28 @@ class _SessionRouterState extends State<SessionRouter> {
     _resolveSession();
   }
 
-  Future<void> _resolveSession() async {
-    // Restauration "local-first" : si un token + rôle sont déjà présents sur
-    // l'appareil, on considère l'utilisateur connecté et on entre directement.
-    // La session n'est effacée QUE lors d'une déconnexion explicite ou d'un
-    // 401/403 réel rencontré pendant l'utilisation de l'app. On ne bloque donc
-    // JAMAIS le démarrage sur un appel réseau : ainsi on ne login qu'une seule
-    // fois par appareil (un nouvel appareil n'ayant pas de token devra login).
-    String? role;
+  Future<String?> _resolveRole() async {
     try {
       final localRole = await ApiService.getRole();
       final localToken = await ApiService.getToken();
 
       if (localToken != null && localToken.isNotEmpty && localRole != null) {
-        // Session locale présente -> on entre. Validation en arrière-plan
-        // (ne redirige jamais vers le login ; nettoie seulement si 401/403).
-        role = localRole;
         unawaited(ApiService.checkSession());
+        return localRole;
       } else {
-        // Pas de session locale -> on tente une vérification complète au cas où.
-        role = await ApiService.checkSession();
+        return await ApiService.checkSession();
       }
     } catch (_) {
-      role = await ApiService.getRole();
+      return await ApiService.getRole();
     }
+  }
 
-    final minDelay = Future.delayed(const Duration(milliseconds: 7000));
-    await minDelay;
+  Future<void> _resolveSession() async {
+    final results = await Future.wait([
+      _resolveRole(),
+      Future.delayed(const Duration(milliseconds: 500)),
+    ]);
+    final role = results[0] as String?;
 
     if (!mounted) return;
 
@@ -64,7 +59,6 @@ class _SessionRouterState extends State<SessionRouter> {
         );
         break;
       default:
-        // Pas de session valide -> écran de bienvenue
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (_) => const WelcomeScreen()),
@@ -74,12 +68,16 @@ class _SessionRouterState extends State<SessionRouter> {
 
   @override
   Widget build(BuildContext context) {
-    // Plain black screen while session resolves — the VideoSplashScreen
-    // already covers the startup experience, so no logo needed here.
-    return const Scaffold(backgroundColor: Colors.black);
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: Center(
+        child: CircularProgressIndicator(
+          color: Colors.white.withValues(alpha: 0.6),
+        ),
+      ),
+    );
   }
 }
-
 
 class _ClientHomeLoader extends StatefulWidget {
   const _ClientHomeLoader();

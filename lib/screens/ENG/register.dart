@@ -1,11 +1,18 @@
-import 'dart:async';
+﻿import 'dart:async';
 import 'dart:convert';
 import 'dart:ui';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_svg/flutter_svg.dart';
 import 'package:http/http.dart' as http;
+import '../../services/google_auth_service.dart';
 import 'login.dart';
 import 'welcome.dart';
+import 'clientHome.dart';
+import '../../mainLayoutCoach.dart';
 import 'package:fitlek1/constants/urls.dart';
+import '../../services/apiService.dart';
+import '../../services/notification_service.dart';
 import '../../theme/fitlek_theme_extension.dart';
 import '../../components/sirvya_logo.dart';
 import '../../constants/app_colors.dart';
@@ -19,6 +26,21 @@ const _red = Color(0xFFFF5252);
 
 const _bgImageUrl =
     'assets/branding/sirvya1.jfif';
+
+const _googleLogoSvg = '''
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
+<path fill="#FFC107" d="M43.611,20.083H42V20H24v8h11.303c-1.649,4.657-6.08,8-11.303,8c-6.627,0-12-5.373-12-12
+c0-6.627,5.373-12,12-12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C12.955,4,4,12.955,4,24
+c0,11.045,8.955,20,20,20c11.045,0,20-8.955,20-20C44,22.659,43.862,21.35,43.611,20.083z"/>
+<path fill="#FF3D00" d="M6.306,14.691l6.571,4.819C14.655,15.108,18.961,12,24,12c3.059,0,5.842,1.154,7.961,3.039
+l5.657-5.657C34.046,6.053,29.268,4,24,4C16.318,4,9.656,8.337,6.306,14.691z"/>
+<path fill="#4CAF50" d="M24,44c5.166,0,9.86-1.977,13.409-5.192l-6.19-5.238C29.211,35.091,26.715,36,24,36
+c-5.202,0-9.619-3.317-11.283-7.946l-6.522,5.025C9.505,39.556,16.227,44,24,44z"/>
+<path fill="#1976D2" d="M43.611,20.083H42V20H24v8h11.303c-0.792,2.237-2.231,4.166-4.087,5.571
+c0.001-0.001,0.002-0.001,0.003-0.002l6.19,5.238C36.971,39.205,44,34,44,24
+C44,22.659,43.862,21.35,43.611,20.083z"/>
+</svg>
+''';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -48,7 +70,10 @@ class _RegisterScreenState extends State<RegisterScreen>
   bool _obscurePass = true;
   bool _obscureConf = true;
   bool _loading = false;
+  bool _googleLoading = false;
   String? _errorMsg;
+
+
 
   late AnimationController _fadeCtrl;
   late Animation<double> _fadeAnim;
@@ -326,6 +351,198 @@ class _RegisterScreenState extends State<RegisterScreen>
     }
   }
 
+  Future<void> _registerWithGoogle() async {
+    if (_role == null) {
+      setState(() => _errorMsg = 'Select your role before continuing with Google.');
+      return;
+    }
+
+    setState(() {
+      _googleLoading = true;
+      _errorMsg = null;
+    });
+
+    try {
+      final result = await GoogleAuthService.signInWithGoogle(
+        role: _role!,
+        referralCode: (_role == 'coach' && _referralCtrl.text.trim().isNotEmpty)
+            ? _referralCtrl.text.trim()
+            : null,
+      );
+
+      final role = result.user['role'] as String? ?? _role!;
+      final id = result.user['id'] as int? ?? 0;
+      final firstName = result.user['firstName'] as String? ?? '';
+
+      // Coach/Advisor pending approval — show success sheet, don't navigate
+      if ((role == 'coach' || role == 'advisor') && !result.isApproved) {
+        setState(() => _googleLoading = false);
+        _showGoogleSuccess(firstName: firstName, role: role);
+        return;
+      }
+
+      await ApiService.saveToken(result.accessToken);
+      await ApiService.saveRole(role);
+      await ApiService.saveUserData(id, firstName);
+      await NotificationService.instance.getFCMToken();
+
+      if (!mounted) return;
+
+      Widget dest;
+      switch (role) {
+        case 'client':
+          dest = HomeScreen(
+            clientID: id,
+            token: result.accessToken,
+            firstName: firstName,
+            onLogout: () async {
+              await ApiService.clearToken();
+              if (!mounted) return;
+              Navigator.pushAndRemoveUntil(
+                context,
+                PageRouteBuilder(
+                  pageBuilder: (_, __, ___) => const WelcomeScreen(),
+                  transitionsBuilder: (_, a, __, child) =>
+                      FadeTransition(opacity: a, child: child),
+                  transitionDuration: const Duration(milliseconds: 500),
+                ),
+                (_) => false,
+              );
+            },
+          );
+          break;
+        case 'coach':
+          dest = const MainLayoutCoach();
+          break;
+        default:
+          setState(() {
+            _errorMsg = 'Unrecognized role: ';
+            _googleLoading = false;
+          });
+          return;
+      }
+
+      Navigator.pushReplacement(
+        context,
+        PageRouteBuilder(
+          pageBuilder: (_, __, ___) => dest,
+          transitionsBuilder: (_, a, __, child) =>
+              FadeTransition(opacity: a, child: child),
+          transitionDuration: const Duration(milliseconds: 500),
+        ),
+      );
+    } on Exception catch (e) {
+      final msg = e.toString().replaceFirst('Exception: ', '');
+      if (msg == 'cancelled') {
+        setState(() => _googleLoading = false);
+        return;
+      }
+      if (kDebugMode) debugPrint('❌ GOOGLE REGISTER ERROR: ');
+      setState(() {
+        _errorMsg = msg;
+        _googleLoading = false;
+      });
+    } catch (e) {
+      if (kDebugMode) debugPrint('❌ GOOGLE REGISTER ERROR: ');
+      setState(() {
+        _errorMsg = 'Google sign-up failed. Please try again.';
+        _googleLoading = false;
+      });
+    }
+  }
+
+
+  void _showGoogleSuccess({required String firstName, required String role}) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.cyprus,
+      isDismissible: false,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (ctx) => SafeArea(
+        child: SingleChildScrollView(
+          padding: EdgeInsets.fromLTRB(
+            28,
+            40,
+            28,
+            24 + MediaQuery.of(ctx).viewInsets.bottom,
+          ),
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+            Container(
+              width: 80,
+              height: 80,
+              decoration: BoxDecoration(
+                color: AppColors.sand.withValues(alpha: 0.15),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.check_rounded,
+                  color: AppColors.sand, size: 40),
+            ),
+            const SizedBox(height: 24),
+            const Text(
+              'Account created!',
+              style: TextStyle(
+                  color: Colors.white, fontSize: 26, fontWeight: FontWeight.w900),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Welcome $firstName. Your account is pending approval.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.65),
+                  fontSize: 14,
+                  height: 1.6),
+            ),
+            const SizedBox(height: 32),
+            GestureDetector(
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.pushReplacement(
+                  context,
+                  PageRouteBuilder(
+                    pageBuilder: (_, __, ___) => const LoginScreen(),
+                    transitionsBuilder: (_, a, __, child) =>
+                        FadeTransition(opacity: a, child: child),
+                    transitionDuration: const Duration(milliseconds: 500),
+                  ),
+                );
+              },
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [AppColors.sand, AppColors.sand.withValues(alpha: 0.85)],
+                  ),
+                  borderRadius: BorderRadius.circular(14),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.sand.withValues(alpha: 0.3),
+                      blurRadius: 16,
+                      offset: const Offset(0, 6),
+                    ),
+                  ],
+                ),
+                child: const Text(
+                  'Log in',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                      color: AppColors.cyprus,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0.5),
+                ),
+              ),
+            ),
+          ]),
+        ),
+      ),
+    );
+  }
+
   void _showSuccess() {
     showModalBottomSheet(
       context: context,
@@ -450,7 +667,7 @@ class _RegisterScreenState extends State<RegisterScreen>
       backgroundColor: Colors.black,
       body: Stack(
         children: [
-          // ── Fond image + flou léger, identique à l'écran de login ──
+          // â”€â”€ Fond image + flou lÃ©ger, identique Ã  l'Ã©cran de login â”€â”€
           Positioned.fill(
             child: Image.asset(
               _bgImageUrl,
@@ -466,7 +683,7 @@ class _RegisterScreenState extends State<RegisterScreen>
               child: Container(color: Colors.black.withValues(alpha: 0.25)),
             ),
           ),
-          // ── Dégradé de lisibilité (cyprus), identique au login ──
+          // â”€â”€ DÃ©gradÃ© de lisibilitÃ© (cyprus), identique au login â”€â”€
           Positioned.fill(
             child: DecoratedBox(
               decoration: BoxDecoration(
@@ -713,7 +930,94 @@ class _RegisterScreenState extends State<RegisterScreen>
           _errorMsg = null;
         }),
       ),
+      const SizedBox(height: 24),
+      _buildOrDivider(),
+      const SizedBox(height: 20),
+      _buildGoogleButton(),
     ]);
+  }
+
+  Widget _buildOrDivider() {
+    return Row(
+      children: [
+        Expanded(
+          child: Divider(
+              color: Colors.white.withValues(alpha: 0.15), thickness: 1),
+        ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14),
+          child: Text(
+            'OR',
+            style: TextStyle(
+              color: Colors.white.withValues(alpha: 0.4),
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 1.2,
+            ),
+          ),
+        ),
+        Expanded(
+          child: Divider(
+              color: Colors.white.withValues(alpha: 0.15), thickness: 1),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildGoogleButton() {
+    final enabled = _role != null && !_googleLoading && !_loading;
+    return GestureDetector(
+      onTap: enabled ? _registerWithGoogle : null,
+      child: AnimatedOpacity(
+        duration: const Duration(milliseconds: 200),
+        opacity: enabled ? 1.0 : 0.4,
+        child: Container(
+          width: double.infinity,
+          height: 58,
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.06),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: Colors.white.withValues(alpha: 0.18),
+              width: 1.5,
+            ),
+          ),
+          child: Center(
+            child: _googleLoading
+                ? const SizedBox(
+                    width: 22,
+                    height: 22,
+                    child: CircularProgressIndicator(
+                      color: AppColors.sand,
+                      strokeWidth: 2.5,
+                    ),
+                  )
+                : Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      SvgPicture.string(
+                        _googleLogoSvg,
+                        width: 20,
+                        height: 20,
+                      ),
+                      const SizedBox(width: 12),
+                      Text(
+                        _role == null
+                            ? 'SELECT A ROLE FIRST'
+                            : 'CONTINUE WITH GOOGLE',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w800,
+                          fontSize: 13,
+                          letterSpacing: 1.0,
+                        ),
+                      ),
+                    ],
+                  ),
+          ),
+        ),
+      ),
+    );
   }
 
   // Step 1: Identity
@@ -763,7 +1067,7 @@ class _RegisterScreenState extends State<RegisterScreen>
       _RegisterField(
         controller: _passwordCtrl,
         label: 'Password',
-        hint: '••••••••',
+        hint: 'â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢',
         icon: Icons.lock_rounded,
         obscure: _obscurePass,
         showToggle: true,
@@ -775,7 +1079,7 @@ class _RegisterScreenState extends State<RegisterScreen>
       _RegisterField(
         controller: _confirmCtrl,
         label: 'Confirm password',
-        hint: '••••••••',
+        hint: 'â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢',
         icon: Icons.lock_outline_rounded,
         obscure: _obscureConf,
         showToggle: true,
@@ -1028,11 +1332,11 @@ class _RegisterScreenState extends State<RegisterScreen>
                           ),
                           _buildLegalTextSection(
                             'Definitions',
-                            '• Platform: Refers to the Sirvya application, its associated web infrastructure, and services provided by DevUnivers.\n'
-                            '• Company: Refers to DevUnivers, the legal entity operating the Sirvya platform in Morocco.\n'
-                            '• User: Refers to any individual who creates an account on the Platform to book services, view content, or interact with Coaches and Gyms.\n'
-                            '• Coach: Refers to an independent fitness professional, personal trainer, or instructor offering services, advice, or training sessions via the Platform.\n'
-                            '• Gym: Refers to an independent fitness facility, studio, or center listed on the Platform for booking purposes.',
+                            'â€¢ Platform: Refers to the Sirvya application, its associated web infrastructure, and services provided by DevUnivers.\n'
+                            'â€¢ Company: Refers to DevUnivers, the legal entity operating the Sirvya platform in Morocco.\n'
+                            'â€¢ User: Refers to any individual who creates an account on the Platform to book services, view content, or interact with Coaches and Gyms.\n'
+                            'â€¢ Coach: Refers to an independent fitness professional, personal trainer, or instructor offering services, advice, or training sessions via the Platform.\n'
+                            'â€¢ Gym: Refers to an independent fitness facility, studio, or center listed on the Platform for booking purposes.',
                           ),
                           _buildLegalTextSection(
                             '1. Terms of Service (ToS)',
@@ -1328,8 +1632,8 @@ class _RegisterScreenState extends State<RegisterScreen>
   }
 }
 
-/// Applique un léger effet d'échelle au tap, pour un feedback tactile
-/// (identique au comportement du bouton CTA de l'écran de login).
+/// Applique un lÃ©ger effet d'Ã©chelle au tap, pour un feedback tactile
+/// (identique au comportement du bouton CTA de l'Ã©cran de login).
 class _PressableScale extends StatefulWidget {
   final VoidCallback? onTap;
   final Widget child;
@@ -1365,7 +1669,7 @@ class _PressableScaleState extends State<_PressableScale> {
   }
 }
 
-// ─── Role Tile ────────────────────────────────────────────────────────────
+// â”€â”€â”€ Role Tile â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 class _RoleTile extends StatelessWidget {
   final String label, description;
@@ -1456,7 +1760,7 @@ class _RoleTile extends StatelessWidget {
   }
 }
 
-// ─── Gender Tile ────────────────────────────────────────────────────────────
+// â”€â”€â”€ Gender Tile â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 class _GenderTile extends StatelessWidget {
   final String label;
@@ -1524,7 +1828,7 @@ class _GenderTile extends StatelessWidget {
   }
 }
 
-// ─── Password Strength Bar ───────────────────────────────────────────────
+// â”€â”€â”€ Password Strength Bar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 class _PasswordStrengthBar extends StatelessWidget {
   final String password;
@@ -1605,7 +1909,7 @@ class _PasswordStrengthBar extends StatelessWidget {
   }
 }
 
-// ─── Form Field (même look que _LoginField de login.dart) ──────────────────
+// â”€â”€â”€ Form Field (mÃªme look que _LoginField de login.dart) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 class _RegisterField extends StatefulWidget {
   final TextEditingController controller;
@@ -1779,7 +2083,7 @@ class _RegisterFieldState extends State<_RegisterField> {
   }
 }
 
-// ─── Notice Banner ───────────────────────────────────────────────────────
+// â”€â”€â”€ Notice Banner â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 class _NoticeBanner extends StatelessWidget {
   final String role;
@@ -1827,3 +2131,4 @@ class _NoticeBanner extends StatelessWidget {
     );
   }
 }
+
