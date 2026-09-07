@@ -66,5 +66,11 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<key>NSCameraUsageDescription</key>
+	<string>SIRVYA needs access to your camera so you can scan QR codes and update your profile picture.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>SIRVYA needs access to your photo library so you can choose and upload a profile picture.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>SIRVYA needs access to your location to show fitness centers and trainers near you on the map.</string>
 </dict>
 </plist>
