@@ -1,7 +1,7 @@
-name: fitlek1
+﻿name: fitlek1
 description: SIRVYA - Premium Fitness Coach App
 publish_to: 'none'
-version: 1.0.1+5
+version: 1.0.1+6
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
