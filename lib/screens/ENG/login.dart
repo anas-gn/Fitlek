@@ -1,11 +1,13 @@
-﻿import 'dart:convert';
+import 'dart:convert';
 import 'dart:ui';
 import 'package:fitlek1/screens/ENG/clientForgot.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'dart:io' show Platform;
 import 'package:http/http.dart' as http;
 import '../../services/google_auth_service.dart';
+import '../../services/apple_auth_service.dart';
 import '../../services/apiService.dart';
 import '../../services/notification_service.dart';
 import 'clientHome.dart';
@@ -44,6 +46,7 @@ class _LoginScreenState extends State<LoginScreen>
   final _passwordCtrl = TextEditingController();
   bool _loading = false;
   bool _googleLoading = false;
+  bool _appleLoading = false;
   bool _showPassword = false;
   String? _errorMsg;
 
@@ -280,6 +283,41 @@ class _LoginScreenState extends State<LoginScreen>
     }
   }
 
+  Future<void> _loginWithApple() async {
+    setState(() {
+      _appleLoading = true;
+      _errorMsg = null;
+    });
+    try {
+      final result = await AppleAuthService.signInWithApple(role: 'client');
+      await _completeSignIn(
+        token: result.accessToken,
+        role: result.user['role'] as String? ?? 'client',
+        id: result.user['id'] as int? ?? 0,
+        firstName: result.user['firstName'] as String? ?? '',
+        isNewUser: result.isNewUser,
+        hasPassword: result.hasPassword,
+      );
+    } on Exception catch (e) {
+      final msg = e.toString().replaceFirst('Exception: ', '');
+      if (msg == 'cancelled' || msg.contains('canceled') || msg.contains('1001')) {
+        setState(() => _appleLoading = false);
+        return;
+      }
+      if (kDebugMode) debugPrint('❌ APPLE LOGIN ERROR: ');
+      setState(() {
+        _errorMsg = msg;
+        _appleLoading = false;
+      });
+    } catch (e) {
+      if (kDebugMode) debugPrint('❌ APPLE LOGIN ERROR: ');
+      setState(() {
+        _errorMsg = 'Apple sign-in failed. Please try again.';
+        _appleLoading = false;
+      });
+    }
+  }
+
 
   void _goToWelcome() => Navigator.pushAndRemoveUntil(
         context,
@@ -402,6 +440,10 @@ class _LoginScreenState extends State<LoginScreen>
                               _buildOrDivider(),
                               const SizedBox(height: 20),
                               _buildGoogleButton(),
+                              if (!kIsWeb && (Platform.isIOS || Platform.isMacOS)) ...[
+                                const SizedBox(height: 12),
+                                _buildAppleButton(),
+                              ],
                               const SizedBox(height: 40),
                               _buildDivider(),
                               const SizedBox(height: 20),
@@ -624,7 +666,7 @@ class _LoginScreenState extends State<LoginScreen>
 
   Widget _buildGoogleButton() {
     return _PressableScale(
-      onTap: _googleLoading || _loading ? null : _loginWithGoogle,
+      onTap: _googleLoading || _loading || _appleLoading ? null : _loginWithGoogle,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
         width: double.infinity,
@@ -664,6 +706,54 @@ class _LoginScreenState extends State<LoginScreen>
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
                             color: Colors.white,
+                            fontWeight: FontWeight.w800,
+                            fontSize: 13,
+                            letterSpacing: 1.0,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAppleButton() {
+    return _PressableScale(
+      onTap: _googleLoading || _loading || _appleLoading ? null : _loginWithApple,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        width: double.infinity,
+        height: 58,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Center(
+          child: _appleLoading
+              ? const SizedBox(
+                  width: 22,
+                  height: 22,
+                  child: CircularProgressIndicator(
+                    color: Colors.black,
+                    strokeWidth: 2.5,
+                  ),
+                )
+              : const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 12),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.apple_rounded, color: Colors.black, size: 26),
+                      SizedBox(width: 10),
+                      Flexible(
+                        child: Text(
+                          'CONTINUE WITH APPLE',
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: Colors.black,
                             fontWeight: FontWeight.w800,
                             fontSize: 13,
                             letterSpacing: 1.0,

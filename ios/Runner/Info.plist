@@ -72,5 +72,16 @@
 	<string>SIRVYA needs access to your photo library so you can choose and upload a profile picture.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>SIRVYA needs access to your location to show fitness centers and trainers near you on the map.</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>com.googleusercontent.apps.256158398727-01aql5h5hl2db4cepi6stft6cobje8ee</string>
+			</array>
+		</dict>
+	</array>
 </dict>
 </plist>

@@ -1,11 +1,13 @@
-﻿import 'dart:async';
+import 'dart:async';
 import 'dart:convert';
 import 'dart:ui';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
+import 'dart:io' show Platform;
 import 'package:http/http.dart' as http;
 import '../../services/google_auth_service.dart';
+import '../../services/apple_auth_service.dart';
 import 'login.dart';
 import 'welcome.dart';
 import 'clientHome.dart';
@@ -71,6 +73,7 @@ class _RegisterScreenState extends State<RegisterScreen>
   bool _obscureConf = true;
   bool _loading = false;
   bool _googleLoading = false;
+  bool _appleLoading = false;
   String? _errorMsg;
 
 
@@ -447,6 +450,106 @@ class _RegisterScreenState extends State<RegisterScreen>
       setState(() {
         _errorMsg = 'Google sign-up failed. Please try again.';
         _googleLoading = false;
+      });
+    }
+  }
+
+  Future<void> _registerWithApple() async {
+    if (_role == null) {
+      setState(() => _errorMsg = 'Select your role before continuing with Apple.');
+      return;
+    }
+
+    setState(() {
+      _appleLoading = true;
+      _errorMsg = null;
+    });
+
+    try {
+      final result = await AppleAuthService.signInWithApple(
+        role: _role!,
+        referralCode: (_role == 'coach' && _referralCtrl.text.trim().isNotEmpty)
+            ? _referralCtrl.text.trim()
+            : null,
+      );
+
+      final role = result.user['role'] as String? ?? _role!;
+      final id = result.user['id'] as int? ?? 0;
+      final firstName = result.user['firstName'] as String? ?? '';
+
+      // Coach/Advisor pending approval — show success sheet, don't navigate
+      if ((role == 'coach' || role == 'advisor') && !result.isApproved) {
+        setState(() => _appleLoading = false);
+        _showGoogleSuccess(firstName: firstName, role: role);
+        return;
+      }
+
+      await ApiService.saveToken(result.accessToken);
+      await ApiService.saveRole(role);
+      await ApiService.saveUserData(id, firstName);
+      await NotificationService.instance.getFCMToken();
+
+      if (!mounted) return;
+
+      Widget dest;
+      switch (role) {
+        case 'client':
+          dest = HomeScreen(
+            clientID: id,
+            token: result.accessToken,
+            firstName: firstName,
+            onLogout: () async {
+              await ApiService.clearToken();
+              if (!mounted) return;
+              Navigator.pushAndRemoveUntil(
+                context,
+                PageRouteBuilder(
+                  pageBuilder: (_, __, ___) => const WelcomeScreen(),
+                  transitionsBuilder: (_, a, __, child) =>
+                      FadeTransition(opacity: a, child: child),
+                  transitionDuration: const Duration(milliseconds: 500),
+                ),
+                (_) => false,
+              );
+            },
+          );
+          break;
+        case 'coach':
+          dest = const MainLayoutCoach();
+          break;
+        default:
+          setState(() {
+            _errorMsg = 'Unrecognized role: ';
+            _appleLoading = false;
+          });
+          return;
+      }
+
+      Navigator.pushReplacement(
+        context,
+        PageRouteBuilder(
+          pageBuilder: (_, __, ___) => dest,
+          transitionsBuilder: (_, a, __, child) =>
+              FadeTransition(opacity: a, child: child),
+          transitionDuration: const Duration(milliseconds: 500),
+        ),
+      );
+    } on Exception catch (e) {
+      final msg = e.toString().replaceFirst('Exception: ', '');
+      if (msg == 'cancelled' || msg.contains('canceled') || msg.contains('1001')) {
+        setState(() => _appleLoading = false);
+        return;
+      }
+      if (kDebugMode) debugPrint('❌ APPLE REGISTER ERROR: ');
+      setState(() {
+        _errorMsg = msg;
+        _appleLoading = false;
+      });
+    } catch (e) {
+      if (kDebugMode) debugPrint('❌ APPLE REGISTER ERROR: ');
+      setState(() {
+        _errorMsg = 'Apple sign-up failed. Please try again.';
+        _appleLoading = false;
       });
     }
   }
@@ -934,6 +1037,10 @@ class _RegisterScreenState extends State<RegisterScreen>
       _buildOrDivider(),
       const SizedBox(height: 20),
       _buildGoogleButton(),
+      if (!kIsWeb && (Platform.isIOS || Platform.isMacOS)) ...[
+        const SizedBox(height: 12),
+        _buildAppleButton(),
+      ],
     ]);
   }
 
@@ -965,7 +1072,7 @@ class _RegisterScreenState extends State<RegisterScreen>
   }
 
   Widget _buildGoogleButton() {
-    final enabled = _role != null && !_googleLoading && !_loading;
+    final enabled = _role != null && !_googleLoading && !_loading && !_appleLoading;
     return GestureDetector(
       onTap: enabled ? _registerWithGoogle : null,
       child: AnimatedOpacity(
@@ -1007,6 +1114,52 @@ class _RegisterScreenState extends State<RegisterScreen>
                             : 'CONTINUE WITH GOOGLE',
                         style: const TextStyle(
                           color: Colors.white,
+                          fontWeight: FontWeight.w800,
+                          fontSize: 13,
+                          letterSpacing: 1.0,
+                        ),
+                      ),
+                    ],
+                  ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAppleButton() {
+    final enabled = _role != null && !_appleLoading && !_loading && !_googleLoading;
+    return GestureDetector(
+      onTap: enabled ? _registerWithApple : null,
+      child: AnimatedOpacity(
+        duration: const Duration(milliseconds: 200),
+        opacity: enabled ? 1.0 : 0.4,
+        child: Container(
+          width: double.infinity,
+          height: 58,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Center(
+            child: _appleLoading
+                ? const SizedBox(
+                    width: 22,
+                    height: 22,
+                    child: CircularProgressIndicator(
+                      color: Colors.black,
+                      strokeWidth: 2.5,
+                    ),
+                  )
+                : Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.apple_rounded, color: Colors.black, size: 26),
+                      const SizedBox(width: 10),
+                      const Text(
+                        'CONTINUE WITH APPLE',
+                        style: TextStyle(
+                          color: Colors.black,
                           fontWeight: FontWeight.w800,
                           fontSize: 13,
                           letterSpacing: 1.0,

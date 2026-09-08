@@ -1,7 +1,7 @@
-﻿name: fitlek1
+name: fitlek1
 description: SIRVYA - Premium Fitness Coach App
 publish_to: 'none'
-version: 1.0.1+4
+version: 1.0.1+5
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
@@ -33,6 +33,8 @@ dependencies:
   package_info_plus: ^9.0.1
   video_player: ^2.14.0
   flutter_dotenv: ^6.0.1
+  sign_in_with_apple: ^8.2.0
+  crypto: ^3.0.7
 
 dev_dependencies:
   flutter_test:
