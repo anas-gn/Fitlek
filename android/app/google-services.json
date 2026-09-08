@@ -14,7 +14,39 @@
       },
       "oauth_client": [
         {
-          "client_id": "256158398727-hk7aq5qs0qb0va133bskn38kvsn95l5a.apps.googleusercontent.com",
+          "client_id": "256158398727-eqm6s6hjjgu93lnmcr2bkocqb4vff2a6.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.sirvya.app",
+            "certificate_hash": "965a9dffaed18113cf37cc40a2bf8a2a6dc80f95"
+          }
+        },
+        {
+          "client_id": "256158398727-hdqrd0f5tfblbsoeutqmvtn6vq3052br.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.sirvya.app",
+            "certificate_hash": "166d29a41fb84ef02fcc387aeb0e5d78f0e1eb67"
+          }
+        },
+        {
+          "client_id": "256158398727-ljslcn131l6ka8n6iqcn35bk7ah1rvqp.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.sirvya.app",
+            "certificate_hash": "2d14c6bf32c36362f80c7146c454f2ab77c782fc"
+          }
+        },
+        {
+          "client_id": "256158398727-tfiuo2og3tvbhim8q8tprm94lmmj49r7.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.sirvya.app",
+            "certificate_hash": "79e8b4f4fc3aabb4489de23992a3e52c6865dee4"
+          }
+        },
+        {
+          "client_id": "256158398727-12phehhv4i9lt5lemdpur3lmte5ob3hf.apps.googleusercontent.com",
           "client_type": 3
         }
       ],
@@ -27,14 +59,14 @@
         "appinvite_service": {
           "other_platform_oauth_client": [
             {
-              "client_id": "256158398727-hk7aq5qs0qb0va133bskn38kvsn95l5a.apps.googleusercontent.com",
+              "client_id": "256158398727-12phehhv4i9lt5lemdpur3lmte5ob3hf.apps.googleusercontent.com",
               "client_type": 3
             },
             {
               "client_id": "256158398727-01aql5h5hl2db4cepi6stft6cobje8ee.apps.googleusercontent.com",
               "client_type": 2,
               "ios_info": {
-                "bundle_id": "com.example.fitlek1"
+                "bundle_id": "com.sirvya.app"
               }
             }
           ]
