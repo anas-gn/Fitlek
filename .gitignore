@@ -53,6 +53,5 @@ backend/package-lock.json
 node_modules/
 .env
 backend/config/*.json
-backend/
 upload-keystore.jks
 assets/config.env
