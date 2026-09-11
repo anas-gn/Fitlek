@@ -11,6 +11,8 @@ import 'package:path_provider/path_provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../services/apiService.dart';
 import '../../components/ENG/audioPlayerWidget.dart';
+import '../../components/ENG/imagePreview.dart';
+import '../../services/socketService.dart';
 import 'package:flutter/foundation.dart'; // Add kIsWeb
 import 'package:http/http.dart' as http; // Add http
 
@@ -107,14 +109,14 @@ class _ClientConversationScreenState extends State<ClientConversationScreen> {
   void initState() {
     super.initState();
     _fetchMessages();
-    _refreshTimer = Timer.periodic(const Duration(seconds: 5), (_) {
-      _fetchMessages(silent: true);
-    });
+    _initSocket();
     _scrollCtrl.addListener(_onScroll);
   }
 
   @override
   void dispose() {
+    SocketService().offNewMessage();
+    SocketService().leaveRoom(widget.conversationID.toString());
     _msgCtrl.dispose();
     _scrollCtrl.dispose();
     _focusNode.dispose();
@@ -135,6 +137,22 @@ class _ClientConversationScreenState extends State<ClientConversationScreen> {
 
   String _getSendUrl() {
     return '$baseUrl/messages/${widget.conversationID}';
+  }
+
+  void _initSocket() {
+    final socketService = SocketService();
+    socketService.connect();
+    socketService.joinRoom(widget.conversationID.toString());
+    socketService.onNewMessage((data) {
+      if (!mounted) return;
+      // If message is from someone else, we add it to the list
+      if (data['senderID'].toString() != widget.clientID.toString()) {
+        setState(() {
+          _messages.add(_Message.fromJson(data));
+        });
+        _scrollToBottom();
+      }
+    });
   }
 
   Future<void> _fetchMessages({bool silent = false}) async {
@@ -297,7 +315,7 @@ class _ClientConversationScreenState extends State<ClientConversationScreen> {
     } else {
       if (await _audioRecorder.hasPermission()) {
         if (kIsWeb) {
-          await _audioRecorder.start(const RecordConfig(encoder: AudioEncoder.aacLc));
+          await _audioRecorder.start(const RecordConfig(encoder: AudioEncoder.aacLc), path: '');
         } else {
           final dir = await getTemporaryDirectory();
           final path = '${dir.path}/audio_${DateTime.now().millisecondsSinceEpoch}.m4a';
@@ -702,16 +720,24 @@ class _ClientConversationScreenState extends State<ClientConversationScreen> {
           ],
         );
       }
-      return ClipRRect(
-        borderRadius: BorderRadius.circular(12),
-        child: CachedNetworkImage(
-          imageUrl: message.mediaUrl!,
-          fit: BoxFit.cover,
-          placeholder: (context, url) => Container(
-            width: 150, height: 150, color: fgColor.withValues(alpha: 0.1),
-            child: Center(child: CircularProgressIndicator(color: fgColor, strokeWidth: 2)),
-          ),
-          errorWidget: (context, url, error) => Row(
+      return GestureDetector(
+        onTap: () {
+          Navigator.push(context, MaterialPageRoute(
+            builder: (_) => ImagePreview(imageUrl: message.mediaUrl!, tag: message.id.toString()),
+          ));
+        },
+        child: Hero(
+          tag: message.id.toString(),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: CachedNetworkImage(
+              imageUrl: message.mediaUrl!,
+              fit: BoxFit.cover,
+              placeholder: (context, url) => Container(
+                width: 150, height: 150, color: fgColor.withValues(alpha: 0.1),
+                child: Center(child: CircularProgressIndicator(color: fgColor, strokeWidth: 2)),
+              ),
+              errorWidget: (context, url, error) => Row(
             mainAxisSize: MainAxisSize.min,
             children: [
               Icon(Icons.image_not_supported_rounded, color: fgColor.withValues(alpha: 0.7), size: 20),
@@ -720,6 +746,8 @@ class _ClientConversationScreenState extends State<ClientConversationScreen> {
             ],
           ),
         ),
+      ),
+      ),
       );
     } else if (message.mediaType == 'audio') {
       return AudioPlayerWidget(

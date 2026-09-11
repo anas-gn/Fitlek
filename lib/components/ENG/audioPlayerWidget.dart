@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import '../../theme/fitlek_theme_extension.dart';
+import '../../services/audioManager.dart';
 
 class AudioPlayerWidget extends StatefulWidget {
   final String? url;
@@ -95,6 +96,7 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
     if (_isPlaying) {
       _player.pause();
     } else {
+      AudioManager().playNew(_player, widget.url!);
       _player.play(_player.source!);
     }
   }
