@@ -6,11 +6,13 @@ import 'package:image_picker/image_picker.dart';
 import 'package:fitlek1/constants/urls.dart';
 import 'package:fitlek1/services/apiService.dart';
 import 'welcome.dart';
+import 'blockedUsersList.dart';
 import '../../components/theme_selector.dart';
 import '../../theme/fitlek_theme_extension.dart';
 import '../../components/sirvya_logo.dart';
 import 'package:flutter/foundation.dart';
 import 'package:http_parser/http_parser.dart';
+import '../../components/ENG/imagePreview.dart';
 
 class _WeightEntry {
   final String label;
@@ -58,6 +60,8 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
   bool _saving = false;
   bool _saveSuccess = false;
   bool _isEditing = false;
+
+  // ── Account deletion state ────────────────────────────────────────
 
   // ── Avatar ────────────────────────────────────────────────────────
   String? _avatarUrl;
@@ -412,6 +416,464 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
 
   void _toggleEdit() =>
       _isEditing ? _saveProfile() : setState(() => _isEditing = true);
+
+  // ── Account Deletion Flow ─────────────────────────────────────────
+
+  void _showDeleteAccountSheet() {
+    // Step 1: Warning confirmation. Step 2: OTP entry.
+    int step = 1;
+    bool understood = false;
+    bool loading = false;
+    String? errorMsg;
+    String otpValue = '';
+    int secondsLeft = 600; // 10 min countdown
+    bool canResend = false;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      isDismissible: false,
+      enableDrag: false,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSheet) {
+          // ── OTP countdown ticker ───────────────────────────────────
+          Future<void> startCountdown() async {
+            setSheet(() {
+              secondsLeft = 600;
+              canResend = false;
+            });
+            while (secondsLeft > 0) {
+              await Future.delayed(const Duration(seconds: 1));
+              if (!ctx.mounted) return;
+              setSheet(() => secondsLeft--);
+            }
+            if (ctx.mounted) setSheet(() => canResend = true);
+          }
+
+          // ── Step 1 → request OTP ───────────────────────────────────
+          Future<void> requestOtp() async {
+            setSheet(() { loading = true; errorMsg = null; });
+            try {
+              final res = await http.post(
+                Uri.parse('$baseUrl/auth/request-delete-otp'),
+                headers: _headers,
+              ).timeout(const Duration(seconds: 15));
+
+              final body = jsonDecode(res.body) as Map<String, dynamic>;
+              if (res.statusCode == 409 && body['blocked'] == true) {
+                setSheet(() {
+                  loading = false;
+                  errorMsg = body['reason'] as String? ?? 'Cannot delete account right now.';
+                });
+                return;
+              }
+              if (res.statusCode != 200) {
+                setSheet(() {
+                  loading = false;
+                  errorMsg = body['error'] as String? ?? 'Failed to send code.';
+                });
+                return;
+              }
+              // OTP sent → go to step 2
+              setSheet(() { loading = false; step = 2; otpValue = ''; errorMsg = null; });
+              startCountdown();
+            } catch (_) {
+              setSheet(() { loading = false; errorMsg = 'Unable to reach the server.'; });
+            }
+          }
+
+          // ── Step 2 → confirm deletion ──────────────────────────────
+          Future<void> confirmDelete() async {
+            if (otpValue.length != 6) {
+              setSheet(() => errorMsg = 'Please enter the full 6-digit code.');
+              return;
+            }
+            setSheet(() { loading = true; errorMsg = null; });
+            try {
+              final res = await http.post(
+                Uri.parse('$baseUrl/auth/confirm-delete-account'),
+                headers: _headers,
+                body: jsonEncode({'otp': otpValue}),
+              ).timeout(const Duration(seconds: 15));
+
+              final body = jsonDecode(res.body) as Map<String, dynamic>;
+              if (res.statusCode == 200 && body['deleted'] == true) {
+                if (ctx.mounted) Navigator.pop(ctx);
+                _goToLogin();
+                return;
+              }
+              setSheet(() {
+                loading = false;
+                errorMsg = body['error'] as String? ?? 'Verification failed.';
+              });
+            } catch (_) {
+              setSheet(() { loading = false; errorMsg = 'Unable to reach the server.'; });
+            }
+          }
+
+          final errorColor = context.fitlek.error;
+          final cardColor  = context.fitlek.card;
+          final borderColor = context.fitlek.border;
+          final textMuted  = context.fitlek.textMuted;
+          final cs = Theme.of(context).colorScheme;
+
+          // ── STEP 1: Warning + checkbox ─────────────────────────────
+          Widget buildStep1() => Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Handle
+              Center(
+                child: Container(
+                  width: 40, height: 4,
+                  decoration: BoxDecoration(color: borderColor, borderRadius: BorderRadius.circular(2)),
+                ),
+              ),
+              const SizedBox(height: 20),
+              // Header
+              Row(
+                children: [
+                  Container(
+                    width: 44, height: 44,
+                    decoration: BoxDecoration(
+                      color: errorColor.withValues(alpha: 0.12),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(Icons.delete_forever_rounded, color: errorColor, size: 22),
+                  ),
+                  const SizedBox(width: 14),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Delete Account',
+                        style: TextStyle(color: cs.onSurface, fontSize: 17, fontWeight: FontWeight.w800)),
+                      Text('This action is permanent',
+                        style: TextStyle(color: textMuted, fontSize: 12)),
+                    ],
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+              // Warning box
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: errorColor.withValues(alpha: 0.07),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: errorColor.withValues(alpha: 0.2)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('What will be deleted:', style: TextStyle(color: errorColor, fontSize: 12, fontWeight: FontWeight.w700)),
+                    const SizedBox(height: 8),
+                    ...[
+                      'Your profile and personal information',
+                      'All sessions and booking history',
+                      'Messages and conversations',
+                      'Weight progress and fitness data',
+                    ].map((item) => Padding(
+                      padding: const EdgeInsets.only(bottom: 5),
+                      child: Row(
+                        children: [
+                          Icon(Icons.remove_circle_outline, color: errorColor, size: 13),
+                          const SizedBox(width: 8),
+                          Expanded(child: Text(item, style: TextStyle(color: textMuted, fontSize: 12))),
+                        ],
+                      ),
+                    )),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              // I understand checkbox
+              GestureDetector(
+                onTap: () => setSheet(() => understood = !understood),
+                child: Row(
+                  children: [
+                    AnimatedContainer(
+                      duration: const Duration(milliseconds: 150),
+                      width: 22, height: 22,
+                      decoration: BoxDecoration(
+                        color: understood ? errorColor : Colors.transparent,
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(
+                          color: understood ? errorColor : borderColor,
+                          width: 1.5,
+                        ),
+                      ),
+                      child: understood
+                          ? const Icon(Icons.check_rounded, color: Colors.white, size: 14)
+                          : null,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        'I understand this action is irreversible and all my data will be permanently deleted.',
+                        style: TextStyle(color: cs.onSurface, fontSize: 12.5, height: 1.4),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (errorMsg != null) ...[
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: errorColor.withValues(alpha: 0.07),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.warning_rounded, color: errorColor, size: 14),
+                      const SizedBox(width: 8),
+                      Expanded(child: Text(errorMsg!, style: TextStyle(color: errorColor, fontSize: 12))),
+                    ],
+                  ),
+                ),
+              ],
+              const SizedBox(height: 20),
+              // Buttons row
+              Row(
+                children: [
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () => Navigator.pop(ctx),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).scaffoldBackgroundColor,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: borderColor),
+                        ),
+                        child: Center(
+                          child: Text('Cancel',
+                            style: TextStyle(color: cs.onSurface, fontWeight: FontWeight.w700, fontSize: 14)),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: (understood && !loading) ? requestOtp : null,
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        decoration: BoxDecoration(
+                          color: understood
+                              ? errorColor
+                              : errorColor.withValues(alpha: 0.3),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Center(
+                          child: loading
+                              ? SizedBox(
+                                  width: 18, height: 18,
+                                  child: CircularProgressIndicator(
+                                    color: Colors.white, strokeWidth: 2),
+                                )
+                              : const Text('SEND CODE',
+                                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 13, letterSpacing: 0.8)),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          );
+
+          // ── STEP 2: OTP entry ──────────────────────────────────────
+          Widget buildStep2() {
+            final mins = (secondsLeft ~/ 60).toString().padLeft(2, '0');
+            final secs = (secondsLeft % 60).toString().padLeft(2, '0');
+            return Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40, height: 4,
+                    decoration: BoxDecoration(color: borderColor, borderRadius: BorderRadius.circular(2)),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                // Header
+                Row(
+                  children: [
+                    Container(
+                      width: 44, height: 44,
+                      decoration: BoxDecoration(
+                        color: errorColor.withValues(alpha: 0.12),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(Icons.mark_email_read_rounded, color: errorColor, size: 20),
+                    ),
+                    const SizedBox(width: 14),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Verify your identity',
+                          style: TextStyle(color: cs.onSurface, fontSize: 17, fontWeight: FontWeight.w800)),
+                        Text('Check your email for the code',
+                          style: TextStyle(color: textMuted, fontSize: 12)),
+                      ],
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                Text(
+                  'Enter the 6-digit code sent to your email address to confirm account deletion.',
+                  style: TextStyle(color: textMuted, fontSize: 13, height: 1.5),
+                ),
+                const SizedBox(height: 16),
+                // OTP input
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).scaffoldBackgroundColor,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: errorColor.withValues(alpha: 0.4),
+                      width: 1.5,
+                    ),
+                  ),
+                  child: TextField(
+                    autofocus: true,
+                    keyboardType: TextInputType.number,
+                    maxLength: 6,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: cs.onSurface,
+                      fontSize: 28,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 10,
+                    ),
+                    decoration: InputDecoration(
+                      counterText: '',
+                      border: InputBorder.none,
+                      hintText: '● ● ● ● ● ●',
+                      hintStyle: TextStyle(color: borderColor, fontSize: 22, letterSpacing: 8),
+                    ),
+                    onChanged: (v) => setSheet(() => otpValue = v.trim()),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                // Countdown + resend
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    if (!canResend)
+                      Text('Code expires in $mins:$secs',
+                        style: TextStyle(color: textMuted, fontSize: 12))
+                    else
+                      Text('Code expired', style: TextStyle(color: errorColor, fontSize: 12, fontWeight: FontWeight.w600)),
+                    GestureDetector(
+                      onTap: canResend && !loading ? requestOtp : null,
+                      child: Text(
+                        'Resend code',
+                        style: TextStyle(
+                          color: canResend ? errorColor : textMuted,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                          decoration: canResend ? TextDecoration.underline : null,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                if (errorMsg != null) ...[
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: errorColor.withValues(alpha: 0.07),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.error_outline_rounded, color: errorColor, size: 14),
+                        const SizedBox(width: 8),
+                        Expanded(child: Text(errorMsg!, style: TextStyle(color: errorColor, fontSize: 12))),
+                      ],
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 20),
+                Row(
+                  children: [
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: loading ? null : () => setSheet(() { step = 1; errorMsg = null; }),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).scaffoldBackgroundColor,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: borderColor),
+                          ),
+                          child: Center(
+                            child: Text('Back',
+                              style: TextStyle(color: cs.onSurface, fontWeight: FontWeight.w700, fontSize: 14)),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: (otpValue.length == 6 && !loading) ? confirmDelete : null,
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          decoration: BoxDecoration(
+                            color: otpValue.length == 6
+                                ? errorColor
+                                : errorColor.withValues(alpha: 0.3),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Center(
+                            child: loading
+                                ? SizedBox(
+                                    width: 18, height: 18,
+                                    child: CircularProgressIndicator(
+                                      color: Colors.white, strokeWidth: 2),
+                                  )
+                                : const Text('DELETE ACCOUNT',
+                                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 12, letterSpacing: 0.5)),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            );
+          }
+
+          return Padding(
+            padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+            child: Container(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+              decoration: BoxDecoration(
+                color: cardColor,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+              ),
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 200),
+                child: step == 1
+                    ? KeyedSubtree(key: const ValueKey('step1'), child: buildStep1())
+                    : KeyedSubtree(key: const ValueKey('step2'), child: buildStep2()),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
 
   Future<void> _goToLogin() async {
     await ApiService.clearToken();
@@ -950,7 +1412,23 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
       child: Row(
         children: [
           GestureDetector(
-            onTap: _uploadingAvatar ? null : _pickAndUploadAvatar,
+            onTap: _uploadingAvatar
+                ? null
+                : (_isEditing
+                    ? _pickAndUploadAvatar
+                    : () {
+                        if (hasAvatar) {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => ImagePreview(
+                                imageUrl: _avatarUrl!,
+                                tag: 'client_avatar_${widget.clientID}',
+                              ),
+                            ),
+                          );
+                        }
+                      }),
             child: Stack(
               children: [
                 Container(
@@ -960,38 +1438,41 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                         color: Theme.of(context).colorScheme.primary,
                         width: 2.5),
                   ),
-                  child: _uploadingAvatar
-                      ? CircleAvatar(
-                          radius: 36,
-                          backgroundColor: context.fitlek.card2,
-                          child: SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(
-                              color: Theme.of(context).colorScheme.primary,
-                              strokeWidth: 2,
+                  child: Hero(
+                    tag: 'client_avatar_${widget.clientID}',
+                    child: _uploadingAvatar
+                        ? CircleAvatar(
+                            radius: 36,
+                            backgroundColor: context.fitlek.card2,
+                            child: SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                color: Theme.of(context).colorScheme.primary,
+                                strokeWidth: 2,
+                              ),
                             ),
+                          )
+                        : CircleAvatar(
+                            radius: 36,
+                            backgroundColor: context.fitlek.card2,
+                            backgroundImage:
+                                hasAvatar ? NetworkImage(_avatarUrl!) : null,
+                            child: !hasAvatar
+                                ? Text(
+                                    _firstNameCtrl.text.isNotEmpty
+                                        ? _firstNameCtrl.text[0].toUpperCase()
+                                        : '?',
+                                    style: TextStyle(
+                                      color:
+                                          Theme.of(context).colorScheme.primary,
+                                      fontSize: 28,
+                                      fontWeight: FontWeight.w900,
+                                    ),
+                                  )
+                                : null,
                           ),
-                        )
-                      : CircleAvatar(
-                          radius: 36,
-                          backgroundColor: context.fitlek.card2,
-                          backgroundImage:
-                              hasAvatar ? NetworkImage(_avatarUrl!) : null,
-                          child: !hasAvatar
-                              ? Text(
-                                  _firstNameCtrl.text.isNotEmpty
-                                      ? _firstNameCtrl.text[0].toUpperCase()
-                                      : '?',
-                                  style: TextStyle(
-                                    color:
-                                        Theme.of(context).colorScheme.primary,
-                                    fontSize: 28,
-                                    fontWeight: FontWeight.w900,
-                                  ),
-                                )
-                              : null,
-                        ),
+                  ),
                 ),
                 // Badge caméra — toujours visible (pas seulement en mode edit)
                 Positioned(
@@ -1224,6 +1705,16 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
           'Notification preferences',
           onTap: () {},
         ),
+        _actionTile(
+          Icons.block_rounded, 
+          'Blocked Users', 
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => BlockedUsersList(token: widget.token)),
+            );
+          }
+        ),
         _actionTile(Icons.language_rounded, 'Language — English', onTap: () {}),
         const SizedBox(height: 12),
         ThemeSelectorTile(controller: ThemeControllerScope.of(context)),
@@ -1257,6 +1748,36 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
             ),
           ),
         ),
+        const SizedBox(height: 10),
+        // ── Delete Account ─────────────────────────────────────────────
+        GestureDetector(
+          onTap: _showDeleteAccountSheet,
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 13),
+            decoration: BoxDecoration(
+              color: Colors.transparent,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.delete_forever_rounded,
+                    color: context.fitlek.textMuted, size: 15),
+                const SizedBox(width: 7),
+                Text(
+                  'Delete Account',
+                  style: TextStyle(
+                    color: context.fitlek.textMuted,
+                    fontWeight: FontWeight.w500,
+                    fontSize: 12,
+                    decoration: TextDecoration.underline,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(height: 4),
       ],
     );
   }

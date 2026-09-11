@@ -33,6 +33,10 @@ class _CoachEditProfileState extends State<CoachEditProfile> {
 
   bool _saving = false;
   bool _uploadingAvatar = false;
+  
+  List<Map<String, dynamic>> _galleryImages = [];
+  bool _loadingGallery = true;
+  bool _uploadingGallery = false;
 
   static const _genders = ['Male', 'Female', 'Other'];
 
@@ -54,6 +58,24 @@ class _CoachEditProfileState extends State<CoachEditProfile> {
     _publicProfile = p.publicProfile;
     _directMessaging = p.directMessaging;
     _gender = _normalizeGender(p.gender);
+    _loadGallery();
+  }
+
+  Future<void> _loadGallery() async {
+    try {
+      final p = widget.profile;
+      final res = await ApiService.get('/coaches/${p.id}/images');
+      if (mounted) {
+        setState(() {
+          if (res['ok'] == true && res['data'] != null) {
+            _galleryImages = List<Map<String, dynamic>>.from(res['data']);
+          }
+          _loadingGallery = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) setState(() => _loadingGallery = false);
+    }
   }
 
   String _normalizeGender(String raw) {
@@ -121,7 +143,7 @@ class _CoachEditProfileState extends State<CoachEditProfile> {
       source: ImageSource.gallery,
       maxWidth: 800,
       maxHeight: 800,
-      imageQuality: 85,
+      imageQuality: 70,
     );
     if (file == null) return;
 
@@ -158,6 +180,81 @@ class _CoachEditProfileState extends State<CoachEditProfile> {
       _showSnack('Error: $e', isError: true);
     } finally {
       if (mounted) setState(() => _uploadingAvatar = false);
+    }
+  }
+
+  Future<void> _pickAndUploadGalleryImage() async {
+    if (_uploadingGallery || _saving) return;
+    final int allowedImages = 5 - _galleryImages.length;
+    if (allowedImages <= 0) {
+      _showSnack('Maximum 5 images allowed in the gallery', isError: true);
+      return;
+    }
+
+    final picker = ImagePicker();
+    final List<XFile> files = await picker.pickMultiImage(
+      maxWidth: 1024,
+      maxHeight: 1024,
+      imageQuality: 70,
+    );
+    if (files.isEmpty) return;
+
+    final filesToUpload = files.take(allowedImages).toList();
+    if (files.length > allowedImages) {
+      _showSnack('Only $allowedImages images will be added to respect the limit.');
+    }
+
+    setState(() => _uploadingGallery = true);
+    try {
+      bool anyError = false;
+      for (final file in filesToUpload) {
+        final bytes = await file.readAsBytes();
+        final ext = file.name.split('.').last.toLowerCase();
+        final mime = ext == 'png'
+            ? 'image/png'
+            : ext == 'webp'
+                ? 'image/webp'
+                : 'image/jpeg';
+
+        final up = await ApiService.uploadMultipart(
+          '/upload/coach-gallery',
+          fields: {'coachID': widget.profile.id.toString()},
+          fileBytes: bytes,
+          fileField: 'image',
+          fileName: file.name,
+          mimeType: mime,
+        );
+        if (up['ok'] != true) {
+          anyError = true;
+          _showSnack(up['message']?.toString() ?? 'Upload failed for ${file.name}', isError: true);
+        }
+      }
+      
+      if (!anyError) {
+        _showSnack('Images added to gallery!');
+      }
+      await _loadGallery(); // Reload the gallery to get the new images
+    } catch (e) {
+      _showSnack('Error: $e', isError: true);
+    } finally {
+      if (mounted) setState(() => _uploadingGallery = false);
+    }
+  }
+
+  Future<void> _deleteGalleryImage(int imageId) async {
+    try {
+      final p = widget.profile;
+      final res = await ApiService.delete('/coaches/${p.id}/images/$imageId');
+      if (res['ok'] == true) {
+        setState(() {
+          _galleryImages.removeWhere((img) => img['id'] == imageId);
+        });
+        _showSnack('Image deleted');
+      } else {
+        _showSnack(res['message']?.toString() ?? 'Error deleting image', isError: true);
+      }
+    } catch (e) {
+      _showSnack('Error: $e', isError: true);
     }
   }
 
@@ -340,6 +437,8 @@ class _CoachEditProfileState extends State<CoachEditProfile> {
                   _buildCertifications(cs, f),
                   const SizedBox(height: 18),
                   _buildSpecialties(cs, f),
+                  const SizedBox(height: 18),
+                  _buildGallerySection(cs, f),
                   const SizedBox(height: 18),
                   _buildAccountSettings(cs, f),
                   const SizedBox(height: 22),
@@ -658,6 +757,93 @@ class _CoachEditProfileState extends State<CoachEditProfile> {
             ),
           ],
         ),
+      ],
+    );
+  }
+
+  Widget _buildGallerySection(ColorScheme cs, FitlekColors f) {
+    return _card(
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            _sectionHeader('GALLERY', icon: Icons.photo_library_rounded),
+            Text('${_galleryImages.length}/5', style: TextStyle(color: f.textMuted, fontSize: 12, fontWeight: FontWeight.w700)),
+          ],
+        ),
+        const SizedBox(height: 14),
+        if (_loadingGallery)
+          Center(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 20),
+              child: SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2, color: cs.primary)),
+            ),
+          )
+        else if (_galleryImages.isEmpty)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: Text('No images in your gallery yet.', style: TextStyle(color: f.textMuted, fontSize: 13)),
+          )
+        else
+          GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 3,
+              crossAxisSpacing: 8,
+              mainAxisSpacing: 8,
+              childAspectRatio: 1,
+            ),
+            itemCount: _galleryImages.length,
+            itemBuilder: (_, i) {
+              final img = _galleryImages[i];
+              return Stack(
+                fit: StackFit.expand,
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(10),
+                    child: Image.network(
+                      img['urlImage'],
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => Container(
+                        color: f.card2,
+                        child: Icon(Icons.broken_image_rounded, color: f.textMuted),
+                      ),
+                    ),
+                  ),
+                  Positioned(
+                    top: 4,
+                    right: 4,
+                    child: GestureDetector(
+                      onTap: () => _deleteGalleryImage(img['id']),
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.6), shape: BoxShape.circle),
+                        child: const Icon(Icons.close_rounded, size: 14, color: Colors.white),
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
+        const SizedBox(height: 14),
+        if (_galleryImages.length < 5)
+          GestureDetector(
+            onTap: _uploadingGallery ? null : _pickAndUploadGalleryImage,
+            child: CustomPaint(
+              painter: _DashedBorderPainter(color: cs.primary.withValues(alpha: 0.45), radius: 14),
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                child: Center(
+                  child: _uploadingGallery
+                      ? SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: cs.primary))
+                      : Text('+ Add Gallery Image', style: TextStyle(color: cs.primary, fontSize: 13.5, fontWeight: FontWeight.w700)),
+                ),
+              ),
+            ),
+          ),
       ],
     );
   }

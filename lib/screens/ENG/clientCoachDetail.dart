@@ -9,6 +9,7 @@ import 'package:qr_flutter/qr_flutter.dart';
 import 'clientBooking.dart';
 import 'clientConversation.dart';
 import '../../theme/fitlek_theme_extension.dart';
+import '../../components/ENG/imagePreview.dart';
 
 class _ReviewItem {
   final int id;
@@ -69,7 +70,10 @@ class _CoachDetailScreenState extends State<CoachDetailScreen>
 
   bool _loadingCoach = true;
   bool _loadingReviews = true;
+  bool _loadingGallery = true;
   String? _errorCoach;
+  
+  List<Map<String, dynamic>> _galleryImages = [];
 
   int _pendingRating = 0;
   bool _submittingReview = false;
@@ -101,8 +105,35 @@ class _CoachDetailScreenState extends State<CoachDetailScreen>
   }
 
   Future<void> _fetchAll() async {
-    await Future.wait([_fetchCoach(), _fetchReviews()]);
+    await Future.wait([_fetchCoach(), _fetchReviews(), _fetchGallery()]);
     _animCtrl.forward();
+  }
+
+  Future<void> _fetchGallery() async {
+    setState(() => _loadingGallery = true);
+    try {
+      final res = await http.get(
+        Uri.parse('$baseUrl/coaches/${widget.session.coachID}/images'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ${widget.token}',
+        },
+      ).timeout(const Duration(seconds: 10));
+
+      if (res.statusCode == 200) {
+        final List<dynamic> data = jsonDecode(res.body);
+        if (mounted) {
+          setState(() {
+            _galleryImages = List<Map<String, dynamic>>.from(data);
+            _loadingGallery = false;
+          });
+        }
+      } else {
+        if (mounted) setState(() => _loadingGallery = false);
+      }
+    } catch (e) {
+      if (mounted) setState(() => _loadingGallery = false);
+    }
   }
 
   Future<void> _fetchCoach() async {
@@ -511,6 +542,7 @@ void _showQrDialog(String code) {
           if (speciality.isNotEmpty)
             SliverToBoxAdapter(child: _buildTags(speciality)),
           if (c.bio.isNotEmpty) SliverToBoxAdapter(child: _buildBio(c.bio)),
+          if (!_loadingGallery && _galleryImages.isNotEmpty) SliverToBoxAdapter(child: _buildGallery()),
           SliverToBoxAdapter(child: _buildInviteCTA()),
           SliverToBoxAdapter(child: _buildBookCTA(context, s)),
           SliverToBoxAdapter(child: _buildQrCode(c)), 
@@ -525,6 +557,19 @@ void _showQrDialog(String code) {
       String speciality, double rating) {
     return GestureDetector(
       behavior: HitTestBehavior.translucent,
+      onTap: () {
+        if (imageUrl.isNotEmpty) {
+          Navigator.push(
+            ctx,
+            MaterialPageRoute(
+              builder: (_) => ImagePreview(
+                imageUrl: imageUrl,
+                tag: 'coach_detail_hero',
+              ),
+            ),
+          );
+        }
+      },
       onPanEnd: (details) {
         final v = details.velocity.pixelsPerSecond;
         // Glisser vers le bas ou vers la droite pour revenir en arrière
@@ -565,23 +610,31 @@ void _showQrDialog(String code) {
           top: 52,
           right: 16,
           child: SafeArea(
-              child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-            decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.primary,
-                borderRadius: BorderRadius.circular(20)),
-            child: Row(mainAxisSize: MainAxisSize.min, children: [
-              Icon(Icons.verified_rounded,
-                  color: Theme.of(context).colorScheme.onPrimary, size: 11),
-              const SizedBox(width: 4),
-              Text('VERIFIED',
-                  style: TextStyle(
-                      color: Theme.of(context).colorScheme.onPrimary,
-                      fontSize: 9,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 1.4)),
-            ]),
-          )),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.primary,
+                      borderRadius: BorderRadius.circular(20)),
+                  child: Row(mainAxisSize: MainAxisSize.min, children: [
+                    Icon(Icons.verified_rounded,
+                        color: Theme.of(context).colorScheme.onPrimary, size: 11),
+                    const SizedBox(width: 4),
+                    Text('VERIFIED',
+                        style: TextStyle(
+                            color: Theme.of(context).colorScheme.onPrimary,
+                            fontSize: 9,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 1.4)),
+                  ]),
+                ),
+                const SizedBox(width: 8),
+                _buildMoreMenu(),
+              ],
+            )
+          ),
         ),
         if (_avgRating > 0 || _totalReviews > 0)
           Positioned(
@@ -639,6 +692,228 @@ void _showQrDialog(String code) {
       ]),
     ),
     );
+  }
+
+  Widget _buildGallery() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(0, 24, 0, 0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: _sectionHeader('Coach Gallery'),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            height: 140,
+            child: ListView.builder(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              scrollDirection: Axis.horizontal,
+              itemCount: _galleryImages.length,
+              itemBuilder: (ctx, i) {
+                final img = _galleryImages[i];
+                return GestureDetector(
+                  onTap: () {
+                    Navigator.push(
+                      ctx,
+                      MaterialPageRoute(
+                        builder: (_) => ImagePreview(
+                          imageUrl: img['urlImage'],
+                          tag: 'gallery_${img['id']}',
+                        ),
+                      ),
+                    );
+                  },
+                  child: Hero(
+                    tag: 'gallery_${img['id']}',
+                    child: Container(
+                      width: 140,
+                      margin: const EdgeInsets.symmetric(horizontal: 4),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(16),
+                        color: context.fitlek.card2,
+                        image: DecorationImage(
+                          image: NetworkImage(img['urlImage']),
+                          fit: BoxFit.cover,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.1),
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMoreMenu() {
+    final c = _coach!;
+    final name = c.fullName.isNotEmpty ? c.fullName : widget.session.coachName;
+    return PopupMenuButton<String>(
+      icon: Container(
+        padding: const EdgeInsets.all(6),
+        decoration: BoxDecoration(
+          color: Colors.black.withValues(alpha: 0.4),
+          shape: BoxShape.circle,
+        ),
+        child: const Icon(Icons.more_horiz_rounded, color: Colors.white, size: 18),
+      ),
+      color: context.fitlek.card,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      offset: const Offset(0, 40),
+      onSelected: (val) {
+        if (val == 'report') {
+          _showReportDialog(name, c.id);
+        } else if (val == 'block') {
+          _showBlockDialog(name, c.id);
+        }
+      },
+      itemBuilder: (context) => [
+        PopupMenuItem(
+          value: 'report',
+          child: Row(
+            children: [
+              Icon(Icons.flag_rounded, color: context.fitlek.textMuted, size: 18),
+              const SizedBox(width: 8),
+              Text('Report Coach', style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 13, fontWeight: FontWeight.w600)),
+            ],
+          ),
+        ),
+        PopupMenuItem(
+          value: 'block',
+          child: Row(
+            children: [
+              Icon(Icons.block_rounded, color: context.fitlek.error, size: 18),
+              const SizedBox(width: 8),
+              Text('Block Coach', style: TextStyle(color: context.fitlek.error, fontSize: 13, fontWeight: FontWeight.w600)),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  void _showReportDialog(String name, int coachID) {
+    String? selectedReason;
+    final reasons = ['Spam', 'Harassment', 'Inappropriate content', 'Fraud / Scam', 'Other'];
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          backgroundColor: context.fitlek.card,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Text('Report $name', style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 16)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('Why are you reporting this user? We take these reports seriously.', style: TextStyle(color: context.fitlek.textMuted, fontSize: 13)),
+              const SizedBox(height: 16),
+              ...reasons.map((r) => RadioListTile<String>(
+                title: Text(r, style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 13)),
+                value: r,
+                groupValue: selectedReason,
+                activeColor: Theme.of(context).colorScheme.primary,
+                contentPadding: EdgeInsets.zero,
+                dense: true,
+                onChanged: (val) => setDialogState(() => selectedReason = val),
+              )),
+            ],
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Cancel', style: TextStyle(color: context.fitlek.textMuted))),
+            TextButton(
+              onPressed: selectedReason == null ? null : () async {
+                Navigator.pop(ctx);
+                _submitReport(coachID, selectedReason!);
+              },
+              child: Text('Submit', style: TextStyle(color: selectedReason == null ? context.fitlek.textMuted : Theme.of(context).colorScheme.primary, fontWeight: FontWeight.bold)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _submitReport(int reportedID, String reason) async {
+    try {
+      final res = await http.post(
+        Uri.parse('$baseUrl/ugc/report'),
+        headers: {
+          'Authorization': 'Bearer ${widget.token}',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({
+          'reportedID': reportedID,
+          'reason': reason,
+          'type': 'user',
+        }),
+      );
+      if (res.statusCode == 200) {
+        _showSnack('Report submitted successfully.');
+      } else {
+        _showSnack('Failed to submit report', isError: true);
+      }
+    } catch (_) {
+      _showSnack('Network error', isError: true);
+    }
+  }
+
+  void _showBlockDialog(String name, int coachID) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: context.fitlek.card,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text('Block $name?', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
+        content: Text(
+          'They won\'t be able to find your profile or send you messages. They will not be notified that you blocked them.',
+          style: TextStyle(color: context.fitlek.textMuted),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Cancel', style: TextStyle(color: context.fitlek.textMuted))),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(ctx);
+              _submitBlock(coachID);
+            },
+            child: Text('Block', style: TextStyle(color: context.fitlek.error, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _submitBlock(int blockedID) async {
+    try {
+      final res = await http.post(
+        Uri.parse('$baseUrl/ugc/block'),
+        headers: {
+          'Authorization': 'Bearer ${widget.token}',
+          'Content-Type': 'application/json',
+        },
+        body: jsonEncode({'blockedID': blockedID}),
+      );
+      if (res.statusCode == 200) {
+        _showSnack('User blocked.');
+        // Pop the profile screen because we shouldn't see it anymore
+        if (mounted) Navigator.pop(context);
+      } else {
+        _showSnack('Failed to block user', isError: true);
+      }
+    } catch (_) {
+      _showSnack('Network error', isError: true);
+    }
   }
 
   Widget _avatarPlaceholder(String name) => Container(

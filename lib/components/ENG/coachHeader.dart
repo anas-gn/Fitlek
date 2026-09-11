@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../components/sirvya_logo.dart';
 import '../../theme/fitlek_theme_extension.dart';
+import '../../components/ENG/imagePreview.dart';
 
 class CoachHeader extends StatelessWidget {
   final String coachName;
@@ -131,6 +132,19 @@ class CoachHeader extends StatelessWidget {
       label: 'Open Coach Profile',
       child: GestureDetector(
         onTap: onAvatarTap,
+        onLongPress: () {
+          if (avatarUrl.isNotEmpty) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => ImagePreview(
+                  imageUrl: avatarUrl,
+                  tag: 'coach_avatar_$coachName',
+                ),
+              ),
+            );
+          }
+        },
         child: Stack(
           clipBehavior: Clip.none,
           children: [
@@ -139,21 +153,24 @@ class CoachHeader extends StatelessWidget {
                 shape: BoxShape.circle,
                 border: Border.all(color: cs.primary, width: 2),
               ),
-              child: CircleAvatar(
-                radius: 20,
-                backgroundColor: f.card2,
-                backgroundImage:
-                    avatarUrl.isNotEmpty ? NetworkImage(avatarUrl) : null,
-                child: avatarUrl.isEmpty
-                    ? Text(
-                        _initial,
-                        style: TextStyle(
-                          color: cs.primary,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w900,
-                        ),
-                      )
-                    : null,
+              child: Hero(
+                tag: 'coach_avatar_$coachName',
+                child: CircleAvatar(
+                  radius: 20,
+                  backgroundColor: f.card2,
+                  backgroundImage:
+                      avatarUrl.isNotEmpty ? NetworkImage(avatarUrl) : null,
+                  child: avatarUrl.isEmpty
+                      ? Text(
+                          _initial,
+                          style: TextStyle(
+                            color: cs.primary,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        )
+                      : null,
+                ),
               ),
             ),
             Positioned(

@@ -6,6 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'clientCoachDetail.dart';
 import 'package:fitlek1/constants/urls.dart';
 import '../../theme/fitlek_theme_extension.dart';
+import '../../components/ENG/imagePreview.dart';
 
 class _AdvisorDTO {
   final int     id;
@@ -256,6 +257,19 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen>
     flexibleSpace: FlexibleSpaceBar(
       background: GestureDetector(
         behavior: HitTestBehavior.translucent,
+        onTap: () {
+          if (a.avatarUrl != null && a.avatarUrl!.isNotEmpty) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => ImagePreview(
+                  imageUrl: a.avatarUrl!,
+                  tag: 'company_detail_hero',
+                ),
+              ),
+            );
+          }
+        },
         onPanEnd: (details) {
           final v = details.velocity.pixelsPerSecond;
           // Glisser vers le bas ou vers la droite pour revenir en arrière

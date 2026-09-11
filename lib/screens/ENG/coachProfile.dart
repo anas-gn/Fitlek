@@ -8,6 +8,7 @@ import '../../services/apiService.dart';
 import 'coachEditProfile.dart';
 import 'coachNotifications.dart';
 import 'welcome.dart';
+import 'blockedUsersList.dart';
 import '../../components/theme_selector.dart';
 import '../../services/theme_service.dart';
 import '../../constants/app_colors.dart';
@@ -196,6 +197,7 @@ class _CoachProfileState extends State<CoachProfile> with SingleTickerProviderSt
   bool _uploadingAvatar = false;
   CoachProfileData? _profile;
   DashboardStats _stats = DashboardStats.empty();
+  List<Map<String, dynamic>> _galleryImages = [];
   late AnimationController _animCtrl;
 
   // Identity prefers the freshly loaded backend profile, falling back to the
@@ -264,6 +266,22 @@ class _CoachProfileState extends State<CoachProfile> with SingleTickerProviderSt
       setState(() {
         _profile = profileData;
         _stats = stats;
+      });
+
+      // Now fetch gallery images using the coach ID
+      try {
+        final galleryRes = await http.get(Uri.parse('${ApiConfig.baseUrl}/coaches/${profileData.id}/images'), headers: _authHeaders);
+        if (galleryRes.statusCode == 200) {
+          final galleryData = jsonDecode(galleryRes.body);
+          if (galleryData is List) {
+            setState(() {
+              _galleryImages = List<Map<String, dynamic>>.from(galleryData);
+            });
+          }
+        }
+      } catch (_) {}
+
+      setState(() {
         _loading = false;
       });
       _animCtrl.forward(from: 0);
@@ -568,12 +586,64 @@ class _CoachProfileState extends State<CoachProfile> with SingleTickerProviderSt
         const SliverToBoxAdapter(child: SizedBox(height: 16)),
         SliverToBoxAdapter(child: _staggered(0, _buildProfileCard(p))),
         SliverToBoxAdapter(child: _staggered(1, _buildStatsRow(s))),
+        if (_galleryImages.isNotEmpty) SliverToBoxAdapter(child: _staggered(2, _buildGallery())),
         SliverToBoxAdapter(child: _staggered(2, _buildProfessionalInfo(p))),
         SliverToBoxAdapter(child: _staggered(3, _buildReferralCard(p))),
         SliverToBoxAdapter(child: _staggered(4, _buildSettings())),
         SliverToBoxAdapter(child: _staggered(5, _buildFooter())),
         const SliverToBoxAdapter(child: SizedBox(height: 28)),
       ],
+    );
+  }
+
+  Widget _buildGallery() {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(16, 0, 16, 14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+            child: Text('Gallery Preview', style: TextStyle(color: Theme.of(context).colorScheme.primary, fontSize: 13, fontWeight: FontWeight.w800, letterSpacing: 0.8)),
+          ),
+          SizedBox(
+            height: 120,
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              physics: const BouncingScrollPhysics(),
+              itemCount: _galleryImages.length,
+              itemBuilder: (ctx, i) {
+                final img = _galleryImages[i];
+                return GestureDetector(
+                  onTap: () {
+                    showDialog(
+                      context: context,
+                      builder: (c) => Dialog(
+                        backgroundColor: Colors.transparent,
+                        insetPadding: EdgeInsets.zero,
+                        child: GestureDetector(
+                          onTap: () => Navigator.pop(c),
+                          child: InteractiveViewer(
+                            child: Image.network(img['urlImage'], fit: BoxFit.contain),
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                  child: Container(
+                    width: 120,
+                    margin: const EdgeInsets.only(right: 12),
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(16),
+                      image: DecorationImage(image: NetworkImage(img['urlImage']), fit: BoxFit.cover),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -973,7 +1043,7 @@ class _CoachProfileState extends State<CoachProfile> with SingleTickerProviderSt
     );
   }
 
-  // ── Settings group: Appearance / Notifications / Logout ─────────────────
+  // ── Settings group: Appearance / Notifications / Logout / Delete Account ───
   Widget _buildSettings() {
     final f = context.fitlek;
     final cs = Theme.of(context).colorScheme;
@@ -1006,12 +1076,33 @@ class _CoachProfileState extends State<CoachProfile> with SingleTickerProviderSt
           ),
           _settingsDivider(),
           _settingsRow(
+            icon: Icons.block_rounded,
+            iconColor: cs.primary,
+            label: 'Blocked Users',
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => BlockedUsersList(token: widget.token)),
+              );
+            },
+          ),
+          _settingsDivider(),
+          _settingsRow(
             icon: Icons.logout_rounded,
             iconColor: f.error,
             label: 'Logout',
             labelColor: f.error,
             showChevron: false,
             onTap: _showLogoutDialog,
+          ),
+          _settingsDivider(),
+          _settingsRow(
+            icon: Icons.delete_forever_rounded,
+            iconColor: f.textMuted,
+            label: 'Delete Account',
+            labelColor: f.textMuted,
+            showChevron: false,
+            onTap: _showDeleteAccountSheet,
           ),
         ],
       ),
@@ -1146,6 +1237,381 @@ class _CoachProfileState extends State<CoachProfile> with SingleTickerProviderSt
               fontWeight: FontWeight.w700,
               letterSpacing: 1.5,
             )),
+      ),
+    );
+  }
+
+  // ── Account Deletion Flow ──────────────────────────────────────
+  void _showDeleteAccountSheet() {
+    int step = 1;
+    bool understood = false;
+    bool loading = false;
+    String? errorMsg;
+    String otpValue = '';
+    int secondsLeft = 600;
+    bool canResend = false;
+
+    final apiHeaders = {
+      'Authorization': 'Bearer ${widget.token}',
+      'Content-Type': 'application/json',
+    };
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      isDismissible: false,
+      enableDrag: false,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSheet) {
+          Future<void> startCountdown() async {
+            setSheet(() { secondsLeft = 600; canResend = false; });
+            while (secondsLeft > 0) {
+              await Future.delayed(const Duration(seconds: 1));
+              if (!ctx.mounted) return;
+              setSheet(() => secondsLeft--);
+            }
+            if (ctx.mounted) setSheet(() => canResend = true);
+          }
+
+          Future<void> requestOtp() async {
+            setSheet(() { loading = true; errorMsg = null; });
+            try {
+              final res = await http.post(
+                Uri.parse('${ApiConfig.baseUrl}/auth/request-delete-otp'),
+                headers: apiHeaders,
+              ).timeout(const Duration(seconds: 15));
+              final body = jsonDecode(res.body) as Map<String, dynamic>;
+              if (res.statusCode == 409 && body['blocked'] == true) {
+                setSheet(() { loading = false; errorMsg = body['reason'] as String? ?? 'Cannot delete account right now.'; });
+                return;
+              }
+              if (res.statusCode != 200) {
+                setSheet(() { loading = false; errorMsg = body['error'] as String? ?? 'Failed to send code.'; });
+                return;
+              }
+              setSheet(() { loading = false; step = 2; otpValue = ''; errorMsg = null; });
+              startCountdown();
+            } catch (_) {
+              setSheet(() { loading = false; errorMsg = 'Unable to reach the server.'; });
+            }
+          }
+
+          Future<void> confirmDelete() async {
+            if (otpValue.length != 6) {
+              setSheet(() => errorMsg = 'Please enter the full 6-digit code.');
+              return;
+            }
+            setSheet(() { loading = true; errorMsg = null; });
+            try {
+              final res = await http.post(
+                Uri.parse('${ApiConfig.baseUrl}/auth/confirm-delete-account'),
+                headers: apiHeaders,
+                body: jsonEncode({'otp': otpValue}),
+              ).timeout(const Duration(seconds: 15));
+              final body = jsonDecode(res.body) as Map<String, dynamic>;
+              if (res.statusCode == 200 && body['deleted'] == true) {
+                if (ctx.mounted) Navigator.pop(ctx);
+                _handleLogout();
+                return;
+              }
+              setSheet(() { loading = false; errorMsg = body['error'] as String? ?? 'Verification failed.'; });
+            } catch (_) {
+              setSheet(() { loading = false; errorMsg = 'Unable to reach the server.'; });
+            }
+          }
+
+          final f  = context.fitlek;
+          final cs = Theme.of(context).colorScheme;
+          final errorColor  = f.error;
+          final borderColor = f.border;
+          final textMuted   = f.textMuted;
+
+          Widget buildStep1() => Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(child: Container(width: 40, height: 4,
+                decoration: BoxDecoration(color: borderColor, borderRadius: BorderRadius.circular(2)))),
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  Container(
+                    width: 44, height: 44,
+                    decoration: BoxDecoration(color: errorColor.withValues(alpha: 0.12), shape: BoxShape.circle),
+                    child: Icon(Icons.delete_forever_rounded, color: errorColor, size: 22),
+                  ),
+                  const SizedBox(width: 14),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Delete Account', style: TextStyle(color: cs.onSurface, fontSize: 17, fontWeight: FontWeight.w800)),
+                      Text('This action is permanent', style: TextStyle(color: textMuted, fontSize: 12)),
+                    ],
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: errorColor.withValues(alpha: 0.07),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: errorColor.withValues(alpha: 0.2)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('What will be deleted:', style: TextStyle(color: errorColor, fontSize: 12, fontWeight: FontWeight.w700)),
+                    const SizedBox(height: 8),
+                    ...[
+                      'Your coach profile and personal information',
+                      'All client relationships and bookings',
+                      'Messages and conversations',
+                      'Referral points and invitation history',
+                    ].map((item) => Padding(
+                      padding: const EdgeInsets.only(bottom: 5),
+                      child: Row(
+                        children: [
+                          Icon(Icons.remove_circle_outline, color: errorColor, size: 13),
+                          const SizedBox(width: 8),
+                          Expanded(child: Text(item, style: TextStyle(color: textMuted, fontSize: 12))),
+                        ],
+                      ),
+                    )),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              GestureDetector(
+                onTap: () => setSheet(() => understood = !understood),
+                child: Row(
+                  children: [
+                    AnimatedContainer(
+                      duration: const Duration(milliseconds: 150),
+                      width: 22, height: 22,
+                      decoration: BoxDecoration(
+                        color: understood ? errorColor : Colors.transparent,
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(color: understood ? errorColor : borderColor, width: 1.5),
+                      ),
+                      child: understood ? const Icon(Icons.check_rounded, color: Colors.white, size: 14) : null,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        'I understand this action is irreversible and all my data will be permanently deleted.',
+                        style: TextStyle(color: cs.onSurface, fontSize: 12.5, height: 1.4),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (errorMsg != null) ...[
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(color: errorColor.withValues(alpha: 0.07), borderRadius: BorderRadius.circular(8)),
+                  child: Row(
+                    children: [
+                      Icon(Icons.warning_rounded, color: errorColor, size: 14),
+                      const SizedBox(width: 8),
+                      Expanded(child: Text(errorMsg!, style: TextStyle(color: errorColor, fontSize: 12))),
+                    ],
+                  ),
+                ),
+              ],
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: () => Navigator.pop(ctx),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).scaffoldBackgroundColor,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: borderColor),
+                        ),
+                        child: Center(child: Text('Cancel',
+                            style: TextStyle(color: cs.onSurface, fontWeight: FontWeight.w700, fontSize: 14))),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: GestureDetector(
+                      onTap: (understood && !loading) ? requestOtp : null,
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        decoration: BoxDecoration(
+                          color: understood ? errorColor : errorColor.withValues(alpha: 0.3),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Center(
+                          child: loading
+                              ? const SizedBox(width: 18, height: 18,
+                                  child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                              : const Text('SEND CODE',
+                                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 13, letterSpacing: 0.8)),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          );
+
+          Widget buildStep2() {
+            final mins = (secondsLeft ~/ 60).toString().padLeft(2, '0');
+            final secs = (secondsLeft % 60).toString().padLeft(2, '0');
+            return Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(child: Container(width: 40, height: 4,
+                  decoration: BoxDecoration(color: borderColor, borderRadius: BorderRadius.circular(2)))),
+                const SizedBox(height: 20),
+                Row(
+                  children: [
+                    Container(
+                      width: 44, height: 44,
+                      decoration: BoxDecoration(color: errorColor.withValues(alpha: 0.12), shape: BoxShape.circle),
+                      child: Icon(Icons.mark_email_read_rounded, color: errorColor, size: 20),
+                    ),
+                    const SizedBox(width: 14),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Verify your identity', style: TextStyle(color: cs.onSurface, fontSize: 17, fontWeight: FontWeight.w800)),
+                        Text('Check your email for the code', style: TextStyle(color: textMuted, fontSize: 12)),
+                      ],
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 20),
+                Text('Enter the 6-digit code sent to your email address to confirm account deletion.',
+                  style: TextStyle(color: textMuted, fontSize: 13, height: 1.5)),
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).scaffoldBackgroundColor,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: errorColor.withValues(alpha: 0.4), width: 1.5),
+                  ),
+                  child: TextField(
+                    autofocus: true,
+                    keyboardType: TextInputType.number,
+                    maxLength: 6,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: cs.onSurface, fontSize: 28, fontWeight: FontWeight.w900, letterSpacing: 10),
+                    decoration: InputDecoration(
+                      counterText: '',
+                      border: InputBorder.none,
+                      hintText: '● ● ● ● ● ●',
+                      hintStyle: TextStyle(color: borderColor, fontSize: 22, letterSpacing: 8),
+                    ),
+                    onChanged: (v) => setSheet(() => otpValue = v.trim()),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    if (!canResend)
+                      Text('Code expires in $mins:$secs', style: TextStyle(color: textMuted, fontSize: 12))
+                    else
+                      Text('Code expired', style: TextStyle(color: errorColor, fontSize: 12, fontWeight: FontWeight.w600)),
+                    GestureDetector(
+                      onTap: canResend && !loading ? requestOtp : null,
+                      child: Text('Resend code', style: TextStyle(
+                        color: canResend ? errorColor : textMuted,
+                        fontSize: 12, fontWeight: FontWeight.w700,
+                        decoration: canResend ? TextDecoration.underline : null,
+                      )),
+                    ),
+                  ],
+                ),
+                if (errorMsg != null) ...[
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(color: errorColor.withValues(alpha: 0.07), borderRadius: BorderRadius.circular(8)),
+                    child: Row(
+                      children: [
+                        Icon(Icons.error_outline_rounded, color: errorColor, size: 14),
+                        const SizedBox(width: 8),
+                        Expanded(child: Text(errorMsg!, style: TextStyle(color: errorColor, fontSize: 12))),
+                      ],
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 20),
+                Row(
+                  children: [
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: loading ? null : () => setSheet(() { step = 1; errorMsg = null; }),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).scaffoldBackgroundColor,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: borderColor),
+                          ),
+                          child: Center(child: Text('Back',
+                              style: TextStyle(color: cs.onSurface, fontWeight: FontWeight.w700, fontSize: 14))),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: (otpValue.length == 6 && !loading) ? confirmDelete : null,
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          decoration: BoxDecoration(
+                            color: otpValue.length == 6 ? errorColor : errorColor.withValues(alpha: 0.3),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Center(
+                            child: loading
+                                ? const SizedBox(width: 18, height: 18,
+                                    child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                                : const Text('DELETE ACCOUNT',
+                                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 12, letterSpacing: 0.5)),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            );
+          }
+
+          return Padding(
+            padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+            child: Container(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+              decoration: BoxDecoration(
+                color: f.card,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+              ),
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 200),
+                child: step == 1
+                    ? KeyedSubtree(key: const ValueKey('step1'), child: buildStep1())
+                    : KeyedSubtree(key: const ValueKey('step2'), child: buildStep2()),
+              ),
+            ),
+          );
+        },
       ),
     );
   }

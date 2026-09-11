@@ -218,6 +218,10 @@ class _CoachClientDetailState extends State<CoachClientDetail> {
         centerTitle: true,
         iconTheme: IconThemeData(color: cs.onSurface),
         title: Text('Client', style: TextStyle(color: cs.onSurface, fontSize: 17, fontWeight: FontWeight.w800)),
+        actions: [
+          _buildMoreMenu(),
+          const SizedBox(width: 8),
+        ],
       ),
       body: SafeArea(
         top: false,
@@ -524,5 +528,141 @@ class _CoachClientDetailState extends State<CoachClientDetail> {
         ),
       ),
     );
+  }
+
+  Widget _buildMoreMenu() {
+    return PopupMenuButton<String>(
+      icon: Icon(Icons.more_horiz_rounded, color: Theme.of(context).colorScheme.onSurface),
+      color: context.fitlek.card,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      offset: const Offset(0, 40),
+      onSelected: (val) {
+        if (val == 'report') {
+          _showReportDialog();
+        } else if (val == 'block') {
+          _showBlockDialog();
+        }
+      },
+      itemBuilder: (context) => [
+        PopupMenuItem(
+          value: 'report',
+          child: Row(
+            children: [
+              Icon(Icons.flag_rounded, color: context.fitlek.textMuted, size: 18),
+              const SizedBox(width: 8),
+              Text('Report Client', style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 13, fontWeight: FontWeight.w600)),
+            ],
+          ),
+        ),
+        PopupMenuItem(
+          value: 'block',
+          child: Row(
+            children: [
+              Icon(Icons.block_rounded, color: context.fitlek.error, size: 18),
+              const SizedBox(width: 8),
+              Text('Block Client', style: TextStyle(color: context.fitlek.error, fontSize: 13, fontWeight: FontWeight.w600)),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  void _showReportDialog() {
+    String? selectedReason;
+    final reasons = ['Spam', 'Harassment', 'Inappropriate content', 'Fraud / Scam', 'Other'];
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          backgroundColor: context.fitlek.card,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Text('Report $_fullName', style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 16)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('Why are you reporting this user? We take these reports seriously.', style: TextStyle(color: context.fitlek.textMuted, fontSize: 13)),
+              const SizedBox(height: 16),
+              ...reasons.map((r) => RadioListTile<String>(
+                title: Text(r, style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 13)),
+                value: r,
+                groupValue: selectedReason,
+                activeColor: Theme.of(context).colorScheme.primary,
+                contentPadding: EdgeInsets.zero,
+                dense: true,
+                onChanged: (val) => setDialogState(() => selectedReason = val),
+              )),
+            ],
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Cancel', style: TextStyle(color: context.fitlek.textMuted))),
+            TextButton(
+              onPressed: selectedReason == null ? null : () async {
+                Navigator.pop(ctx);
+                _submitReport(int.parse(widget.clientId), selectedReason!);
+              },
+              child: Text('Submit', style: TextStyle(color: selectedReason == null ? context.fitlek.textMuted : Theme.of(context).colorScheme.primary, fontWeight: FontWeight.bold)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _submitReport(int reportedID, String reason) async {
+    try {
+      final res = await ApiService.post('/ugc/report', {
+        'reportedID': reportedID,
+        'reason': reason,
+        'type': 'user',
+      });
+      if (res['ok'] == true) {
+        _showSnack('Report submitted successfully.');
+      } else {
+        _showSnack('Failed to submit report', isError: true);
+      }
+    } catch (_) {
+      _showSnack('Network error', isError: true);
+    }
+  }
+
+  void _showBlockDialog() {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: context.fitlek.card,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text('Block $_fullName?', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
+        content: Text(
+          'They won\'t be able to find your profile or send you messages. They will not be notified that you blocked them.',
+          style: TextStyle(color: context.fitlek.textMuted),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Cancel', style: TextStyle(color: context.fitlek.textMuted))),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(ctx);
+              _submitBlock(int.parse(widget.clientId));
+            },
+            child: Text('Block', style: TextStyle(color: context.fitlek.error, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _submitBlock(int blockedID) async {
+    try {
+      final res = await ApiService.post('/ugc/block', {'blockedID': blockedID});
+      if (res['ok'] == true) {
+        _showSnack('User blocked.');
+        if (mounted) Navigator.pop(context, true); // Pop out, trigger refresh
+      } else {
+        _showSnack('Failed to block user', isError: true);
+      }
+    } catch (_) {
+      _showSnack('Network error', isError: true);
+    }
   }
 }
