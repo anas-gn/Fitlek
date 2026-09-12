@@ -1,9 +1,10 @@
-﻿import 'dart:convert';
+import 'dart:convert';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:http/http.dart' as http;
 import 'package:fitlek1/constants/urls.dart';
+import 'dart:io' show Platform;
 
 class GoogleAuthResult {
   final String accessToken;
@@ -39,7 +40,10 @@ class GoogleAuthService {
         userCredential = await FirebaseAuth.instance.signInWithPopup(googleProvider);
       } else {
         // On Mobile, we use the native google_sign_in package
-        final GoogleSignIn googleSignIn = GoogleSignIn(scopes: ['email', 'profile']);
+        final GoogleSignIn googleSignIn = GoogleSignIn(
+          scopes: ['email', 'profile'],
+          clientId: !kIsWeb && Platform.isIOS ? '256158398727-01aql5h5hl2db4cepi6stft6cobje8ee.apps.googleusercontent.com' : null,
+        );
         await googleSignIn.signOut(); // force account picker
         
         final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
