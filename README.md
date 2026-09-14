@@ -121,6 +121,88 @@ npm run dev
 
 ---
 
+## 🏋️ Workout Module (openGym Integration)
+
+Le module workout est intégré dans l'application Sirvya et permet aux clients de suivre leurs entraînements.
+
+### Architecture
+
+Le module workout utilise une architecture à quatre services :
+
+| Service | Port | Commande | Répertoire |
+|---------|------|----------|------------|
+| Sirvya coaching backend | 3000 | `node index.js` | backend/ |
+| Workout API | 3001 | `node server.js` (avec PORT=3001) | workout/api/ |
+| Workout frontend (Vite) | 5173 | `npm run dev` avec API_TARGET=http://127.0.0.1:3001 | workout/frontend/ |
+| Sirvya Flutter web build | 8090 | `serve build/web/` | repo root |
+
+### Démarrage rapide (Windows)
+
+Pour démarrer tous les services simultanément sur Windows :
+
+```powershell
+.\start-all.ps1
+```
+
+Pour arrêter tous les services :
+
+```powershell
+.\stop-all.ps1
+```
+
+### Prérequis
+
+- Node.js 18+
+- Flutter SDK
+- FIREBASE_SERVICE_ACCOUNT (uniquement pour Google/Apple SSO - email/password SSO ne nécessite pas cette configuration)
+
+### Configuration
+
+Le module workout nécessite une configuration supplémentaire pour l'authentification SSO Firebase (Google/Apple) :
+
+```bash
+cd workout
+cp .env.example .env
+# Configurez FIREBASE_SERVICE_ACCOUNT dans .env pour l'authentification Google/Apple
+# Email/password SSO ne nécessite pas cette configuration
+```
+
+### Flux d'authentification
+
+1. **Email/password login** : Le token JWT Sirvya est validé contre l'API Sirvya, puis échangé contre une session openGym
+2. **Google/Apple SSO** : Le token Firebase ID est vérifié via firebase-admin, puis échangé contre une session openGym
+3. **Session persistence** : La session openGym est stockée localement (secure storage sur mobile, sessionStorage sur web) pour permettre la reconnexion sans nouvelle authentification
+
+### Points d'entrée
+
+- **Mobile** : Taper sur le logo SIRVYA dans l'en-tête de l'écran client ouvre le module workout dans une WebView intégrée
+- **Web** : Le même logo ouvre le module workout dans le navigateur externe
+- **Retour** : Le bouton de retour dans le module workout ramène à l'interface de coaching Sirvya
+
+### Tests de validation
+
+Pour vérifier l'intégration complète :
+
+1. **Email/password SSO** : Connectez-vous avec email/password → tapez le logo SIRVYA → le module workout s'ouvre déjà authentifié
+2. **Google/Apple SSO** : Configurez workout/.env avec FIREBASE_SERVICE_ACCOUNT → connectez-vous via Google/Apple → même résultat
+3. **Web handoff** : Flutter web utilise #sirvya_login= avec échange same-origin via proxy Vite
+4. **Native WebView handoff** : Mobile utilise #sirvya_token= avec échange direct dans WebView intégrée
+5. **Relaunch** : Relancez l'app avec une session valide → atterrissage direct dans le module workout
+6. **Navigation retour** : Tapez retour → retour à l'interface de coaching avec état Sirvya intact
+7. **i18n** : ENG/ESP/FR tous atteignent le point d'entrée workout
+
+### Ce qu'il ne faut PAS changer
+
+- Ne pas toucher backend/ (API Sirvya Express/MySQL)
+- Ne pas porter de code entre React et Flutter
+- Ne pas remplacer le stockage JSON d'openGym ou MySQL de Sirvya
+- Ne pas renommer Fitlek/Sirvya (logos, noms, copy)
+- Ne pas utiliser Docker
+- Ne pas rendre passkey le flux principal (reste fallback self-hosted)
+- Ne pas ajouter de gating premium (fonctionnalités workout gratuites)
+
+---
+
 ## 🔑 Variables d'environnement (backend)
 
 

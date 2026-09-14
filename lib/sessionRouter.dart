@@ -4,6 +4,7 @@ import 'services/apiService.dart';
 import 'screens/ENG/welcome.dart';
 import 'screens/ENG/login.dart';
 import 'screens/ENG/clientHome.dart';
+import 'screens/workout_webview.dart';
 import 'mainLayoutCoach.dart';
 
 class SessionRouter extends StatefulWidget {
@@ -26,6 +27,12 @@ class _SessionRouterState extends State<SessionRouter> {
       final localToken = await ApiService.getToken();
 
       if (localToken != null && localToken.isNotEmpty && localRole != null) {
+        // A Sirvya workout session takes precedence: drop straight into the workout
+        // WebView (it re-validates its token against the workout server on load).
+        final sirvyaAuth = await ApiService.getSirvyaAuth();
+        if (sirvyaAuth != null && sirvyaAuth.isNotEmpty) {
+          return 'sirvya_workout';
+        }
         unawaited(ApiService.checkSession());
         return localRole;
       } else {
@@ -50,6 +57,15 @@ class _SessionRouterState extends State<SessionRouter> {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (_) => const MainLayoutCoach()),
+        );
+        break;
+      case 'sirvya_workout':
+        // Sirvya users whose workout session is still live drop straight into the
+        // embedded openGym frontend on return to the app. The screen re-verifies the
+        // stored token via the workout server; role falls back to 'client' otherwise.
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const WorkoutWebviewScreen()),
         );
         break;
       case 'client':

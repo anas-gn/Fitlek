@@ -52,6 +52,7 @@ backend/package-lock.json
 # Root NodeJS / general ignores
 node_modules/
 .env
+workout/.env
 backend/config/*.json
 upload-keystore.jks
 assets/config.env

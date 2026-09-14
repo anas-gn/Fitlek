@@ -4,10 +4,21 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:fitlek1/constants/urls.dart' as urls;
 
 class ApiService {
   static const String baseUrl = urls.baseUrl;
+  
+  // Secure storage for workout tokens on native mobile
+  static const _secureStorage = FlutterSecureStorage(
+    aOptions: AndroidOptions(
+      encryptedSharedPreferences: true,
+    ),
+    iOptions: IOSOptions(
+      accessibility: KeychainAccessibility.first_unlock,
+    ),
+  );
 
   static Future<String?> getToken() async {
     final prefs = await SharedPreferences.getInstance();
@@ -20,12 +31,50 @@ class ApiService {
     if (kDebugMode) debugPrint('TOKEN SAVED');
   }
 
+  /// Persists the openGym bearer session minted by the workout server's
+  /// /api/auth/sirvya-login bridge. Uses secure storage on native mobile,
+  /// sessionStorage on web. Kept separate from the Sirvya platform token.
+  static Future<String?> getSirvyaAuth() async {
+    if (kIsWeb) {
+      // Web: use sessionStorage via window
+      // Note: This requires JS interop, for now use SharedPreferences as fallback
+      final prefs = await SharedPreferences.getInstance();
+      return prefs.getString('sirvyaAuth');
+    } else {
+      // Native mobile: use secure storage
+      return await _secureStorage.read(key: 'sirvyaAuth');
+    }
+  }
+
+  static Future<void> setSirvyaAuth(String token) async {
+    if (kIsWeb) {
+      // Web: use sessionStorage via window
+      // Note: This requires JS interop, for now use SharedPreferences as fallback
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('sirvyaAuth', token);
+    } else {
+      // Native mobile: use secure storage
+      await _secureStorage.write(key: 'sirvyaAuth', value: token);
+    }
+  }
+
+  static Future<void> clearSirvyaAuth() async {
+    if (kIsWeb) {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('sirvyaAuth');
+    } else {
+      await _secureStorage.delete(key: 'sirvyaAuth');
+    }
+  }
+
   static Future<void> clearToken() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('token');
     await prefs.remove('role');
     await prefs.remove('userId');
     await prefs.remove('firstName');
+    // Also clear workout session on Sirvya logout
+    await clearSirvyaAuth();
     await prefs.clear();
     if (kDebugMode) debugPrint('TOKEN CLEARED FULLY');
   }

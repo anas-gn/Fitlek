@@ -15,6 +15,7 @@ import 'clientProfil.dart';
 import '../../theme/fitlek_theme_extension.dart';
 import '../../components/sirvya_logo.dart';
 import '../../constants/app_colors.dart';
+import '../sirvya_logo.dart' show WorkoutLogo; // clickable logo → workout WebView
 
 class _AdvisorItem {
   final int id;
@@ -585,7 +586,7 @@ class _HomeScreenState extends State<HomeScreen> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          const SirvyaLogo(variant: SirvyaLogoVariant.wordmark, height: 18),
+          const WorkoutLogo(variant: SirvyaLogoVariant.wordmark, height: 18),
           const Spacer(),
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
@@ -1334,7 +1335,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 ],
               ),
               child: const Center(
-                child: SirvyaLogo(variant: SirvyaLogoVariant.mark, height: 105),
+                                child: WorkoutLogo(variant: SirvyaLogoVariant.mark, height: 105),
               ),
             ),
           ),
