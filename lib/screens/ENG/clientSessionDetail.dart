@@ -564,32 +564,19 @@ class _SessionDetailScreenState extends State<SessionDetailScreen>
                           fontSize: 15,
                           letterSpacing: -0.3)),
                   const SizedBox(height: 4),
-                  Text(_session.coachSpeciality,
+                  Text(
+                      "${_session.coachSpeciality.isNotEmpty ? _session.coachSpeciality : 'Coach'} • ${_session.location.isNotEmpty ? _session.location : 'Anywhere'}",
                       style: TextStyle(
                           color: context.fitlek.textSecondary, fontSize: 12)),
                   const SizedBox(height: 6),
-                  if (_session.coachRating > 0)
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                          color: Theme.of(context)
-                              .colorScheme
-                              .primary
-                              .withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(8)),
-                      child: Row(mainAxisSize: MainAxisSize.min, children: [
-                        Icon(Icons.star_rounded,
-                            color: Theme.of(context).colorScheme.primary,
-                            size: 12),
-                        const SizedBox(width: 4),
-                        Text('${_session.coachRating.toStringAsFixed(1)}/5',
-                            style: TextStyle(
-                                color: Theme.of(context).colorScheme.primary,
-                                fontWeight: FontWeight.w700,
-                                fontSize: 11)),
-                      ]),
-                    ),
+                  Row(
+                    children: [
+                      Text(
+                        '⭐ ${_session.coachRating > 0 ? _session.coachRating.toStringAsFixed(1) : 'New'}',
+                        style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 12, fontWeight: FontWeight.w800),
+                      ),
+                    ],
+                  ),
                 ])),
             Icon(Icons.chevron_right_rounded,
                 color: context.fitlek.textMuted, size: 24),

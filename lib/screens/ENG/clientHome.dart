@@ -11,11 +11,14 @@ import 'clientCompanyDetail.dart';
 import 'clientSessions.dart';
 import 'clientList.dart';
 import 'clientProfil.dart';
+import 'clientNotifications.dart';
+import 'clientSessionDetail.dart';
 
 import '../../theme/fitlek_theme_extension.dart';
 import '../../components/sirvya_logo.dart';
 import '../../constants/app_colors.dart';
 
+// ─── Advisor DTO ────────────────────────────────────────────────────────────
 class _AdvisorItem {
   final int id;
   final String firstName;
@@ -23,6 +26,10 @@ class _AdvisorItem {
   final String? avatarUrl;
   final String specialty;
   final bool isApproved;
+  final String? ville;
+  final int coachCount;
+  final double? rating;
+  final int? totalReviews;
 
   const _AdvisorItem({
     required this.id,
@@ -31,6 +38,10 @@ class _AdvisorItem {
     this.avatarUrl,
     required this.specialty,
     required this.isApproved,
+    this.ville,
+    this.coachCount = 0,
+    this.rating,
+    this.totalReviews,
   });
 
   String get fullName => '$firstName $lastName';
@@ -42,9 +53,59 @@ class _AdvisorItem {
         avatarUrl: j['avatarUrl'],
         specialty: j['specialty'] ?? j['speciality'] ?? '',
         isApproved: j['isApproved'] == 1 || j['isApproved'] == true,
+        ville: j['ville'],
+        coachCount: j['coachCount'] ?? j['coach_count'] ?? 0,
+        rating: j['rating'] != null ? (j['rating'] as num).toDouble() : null,
+        totalReviews: j['totalReviews'] ?? j['total_reviews'],
       );
 }
 
+// ─── Category DTO ───────────────────────────────────────────────────────────
+class _CategoryItem {
+  final int id;
+  final String name;
+  final String icon;
+
+  const _CategoryItem({required this.id, required this.name, required this.icon});
+
+  factory _CategoryItem.fromJson(Map<String, dynamic> j) => _CategoryItem(
+        id: j['id'],
+        name: j['name'] ?? '',
+        icon: j['icon'] ?? 'fitness_center',
+      );
+}
+
+// ─── Icon mapper ────────────────────────────────────────────────────────────
+IconData _mapCategoryIcon(String iconName) {
+  switch (iconName) {
+    case 'fitness_center':
+      return Icons.fitness_center_rounded; // All
+    case 'monitor_weight':
+      return Icons.monitor_weight_rounded; // Perte de poids
+    case 'self_improvement':
+      return Icons.self_improvement_rounded; // Yoga
+    case 'sports_gymnastics':
+      return Icons.sports_gymnastics_rounded; // CrossFit
+    case 'sports_mma':
+      return Icons.sports_martial_arts_rounded; // Boxe / MMA
+    case 'restaurant':
+      return Icons.apple; // Nutrition
+    case 'accessibility_new':
+      return Icons.sports_gymnastics_rounded; // Musculation (closest to bicep in Material)
+    case 'directions_run':
+      return Icons.directions_run_rounded;
+    case 'straighten':
+      return Icons.straighten_rounded;
+    case 'sports_kabaddi':
+      return Icons.sports_kabaddi_rounded;
+    default:
+      return Icons.fitness_center_rounded;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+//  HOME SCREEN
+// ═══════════════════════════════════════════════════════════════════════════════
 class HomeScreen extends StatefulWidget {
   final int clientID;
   final String token;
@@ -66,21 +127,32 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int _navIndex = 0;
 
+  // Data
   List<CoachModel> _coaches = [];
+  List<CoachModel> _allCoaches = [];
   List<_AdvisorItem> _advisors = [];
-  ReservationModel? _nextSession;
+  List<_CategoryItem> _categories = [
+    const _CategoryItem(id: 1, name: 'Musculation', icon: 'accessibility_new'),
+    const _CategoryItem(id: 2, name: 'Perte de poids', icon: 'monitor_weight'),
+    const _CategoryItem(id: 3, name: 'Yoga', icon: 'self_improvement'),
+    const _CategoryItem(id: 4, name: 'CrossFit', icon: 'sports_gymnastics'),
+    const _CategoryItem(id: 5, name: 'Boxe', icon: 'sports_mma'),
+    const _CategoryItem(id: 6, name: 'Nutrition', icon: 'restaurant'),
+  ];
+  Set<int> _favoriteCoachIds = {};
   String? _avatarUrl;
+  String? _clientVille;
+  int _unreadMessagesCount = 0;
 
+  // Loading states
   bool _loadingCoaches = true;
   bool _loadingAdvisors = true;
-  bool _loadingSession = true;
+  bool _loadingCategories = false;
   String? _coachError;
   String? _advisorError;
 
-  int _totalSessions = 0;
-  int _confirmedSessions = 0;
-  int _pendingSessions = 0;
-  int _unreadMessagesCount = 0;
+  // Selected filter
+  int? _selectedCategoryId; // null = "All"
 
   Map<String, String> get _headers => {
         'Content-Type': 'application/json',
@@ -90,12 +162,15 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    _fetchCategories();
     _fetchCoaches();
     _fetchAdvisors();
-    _fetchReservations();
     _fetchClientProfile();
+    _fetchFavorites();
     _fetchUnreadMessagesCount();
   }
+
+  // ─── Data fetching ──────────────────────────────────────────────────────────
 
   Future<void> _fetchUnreadMessagesCount() async {
     try {
@@ -108,13 +183,175 @@ class _HomeScreenState extends State<HomeScreen> {
       if (res.statusCode == 200) {
         final data = jsonDecode(res.body);
         if (mounted) {
+          setState(() => _unreadMessagesCount = data['totalUnread'] ?? 0);
+        }
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _fetchCategories() async {
+    setState(() => _loadingCategories = true);
+    try {
+      final res = await http
+          .get(Uri.parse('$baseUrl/categories'), headers: _headers)
+          .timeout(const Duration(seconds: 8));
+      if (res.statusCode == 200) {
+        final List data = jsonDecode(res.body);
+        if (mounted) {
           setState(() {
-            _unreadMessagesCount = data['totalUnread'] ?? 0;
+            _categories = data.map((e) => _CategoryItem.fromJson(e as Map<String, dynamic>)).toList();
+            _loadingCategories = false;
+          });
+        }
+      } else {
+        if (mounted) setState(() => _loadingCategories = false);
+      }
+    } catch (_) {
+      if (mounted) setState(() => _loadingCategories = false);
+    }
+  }
+
+  Future<void> _fetchFavorites() async {
+    try {
+      final res = await http
+          .get(
+            Uri.parse('$baseUrl/favorites?clientID=${widget.clientID}'),
+            headers: _headers,
+          )
+          .timeout(const Duration(seconds: 8));
+      if (res.statusCode == 200) {
+        final List data = jsonDecode(res.body);
+        if (mounted) {
+          setState(() => _favoriteCoachIds = data.map((e) => e as int).toSet());
+        }
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _toggleFavorite(int coachId) async {
+    // Optimistic update
+    setState(() {
+      if (_favoriteCoachIds.contains(coachId)) {
+        _favoriteCoachIds.remove(coachId);
+      } else {
+        _favoriteCoachIds.add(coachId);
+      }
+    });
+
+    try {
+      await http
+          .post(
+            Uri.parse('$baseUrl/favorites/toggle'),
+            headers: _headers,
+            body: jsonEncode({'clientID': widget.clientID, 'coachID': coachId}),
+          )
+          .timeout(const Duration(seconds: 8));
+    } catch (_) {
+      // Revert on failure
+      setState(() {
+        if (_favoriteCoachIds.contains(coachId)) {
+          _favoriteCoachIds.remove(coachId);
+        } else {
+          _favoriteCoachIds.add(coachId);
+        }
+      });
+    }
+  }
+
+  Future<void> _fetchClientProfile() async {
+    try {
+      final res = await http
+          .get(
+            Uri.parse('$baseUrl/clients/me?userID=${widget.clientID}'),
+            headers: _headers,
+          )
+          .timeout(const Duration(seconds: 10));
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body) as Map<String, dynamic>;
+        if (mounted) {
+          setState(() {
+            _avatarUrl = data['avatarUrl'] as String?;
+            _clientVille = data['ville'] as String?;
           });
         }
       }
     } catch (_) {}
   }
+
+  Future<void> _fetchCoaches() async {
+    setState(() {
+      _loadingCoaches = true;
+      _coachError = null;
+    });
+    try {
+      String url = '$baseUrl/coaches?limit=20';
+      if (_selectedCategoryId != null) {
+        url += '&categoryID=$_selectedCategoryId';
+      }
+      final res = await http
+          .get(Uri.parse(url), headers: _headers)
+          .timeout(const Duration(seconds: 10));
+      if (res.statusCode == 200) {
+        final List data = jsonDecode(res.body);
+        setState(() {
+          _allCoaches = data
+              .map((e) => CoachModel.fromJson(e as Map<String, dynamic>))
+              .toList();
+          _coaches = List.from(_allCoaches);
+          _loadingCoaches = false;
+        });
+      } else {
+        setState(() {
+          _coachError = 'Error (${res.statusCode})';
+          _loadingCoaches = false;
+        });
+      }
+    } catch (_) {
+      setState(() {
+        _coachError = 'Server unreachable';
+        _loadingCoaches = false;
+      });
+    }
+  }
+
+  Future<void> _fetchAdvisors() async {
+    setState(() {
+      _loadingAdvisors = true;
+      _advisorError = null;
+    });
+    try {
+      final res = await http
+          .get(Uri.parse('$baseUrl/advisors'), headers: _headers)
+          .timeout(const Duration(seconds: 10));
+      if (res.statusCode == 200) {
+        final List data = jsonDecode(res.body);
+        setState(() {
+          _advisors = data
+              .map((e) => _AdvisorItem.fromJson(e as Map<String, dynamic>))
+              .toList();
+          _loadingAdvisors = false;
+        });
+      } else {
+        setState(() {
+          _advisorError = 'Error (${res.statusCode})';
+          _loadingAdvisors = false;
+        });
+      }
+    } catch (_) {
+      setState(() {
+        _advisorError = 'Server unreachable';
+        _loadingAdvisors = false;
+      });
+    }
+  }
+
+  void _selectCategory(int? categoryId) {
+    if (_selectedCategoryId == categoryId) return;
+    setState(() => _selectedCategoryId = categoryId);
+    _fetchCoaches();
+  }
+
+  // ─── Navigation ─────────────────────────────────────────────────────────────
 
   void _openConversationWithCoach(
     int coachID,
@@ -189,257 +426,6 @@ class _HomeScreenState extends State<HomeScreen> {
     } catch (_) {}
   }
 
-  Widget _buildMessagesBanner() {
-    final int totalUnread = _unreadMessagesCount;
-    final bool hasUnread = totalUnread > 0;
-
-    return GestureDetector(
-      onTap: () async {
-        await Navigator.push(
-          context,
-          _fadeSlide(
-            ClientConversationsListScreen(
-              clientID: widget.clientID,
-              token: widget.token,
-            ),
-          ),
-        );
-        _fetchUnreadMessagesCount();
-      },
-      child: Container(
-        margin: const EdgeInsets.fromLTRB(24, 20, 24, 0),
-        padding: const EdgeInsets.all(18),
-        decoration: BoxDecoration(
-          color: context.fitlek.card,
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(
-            color: hasUnread
-                ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.3)
-                : context.fitlek.border,
-            width: 1,
-          ),
-          boxShadow: hasUnread
-              ? [
-                  BoxShadow(
-                    color: Theme.of(context)
-                        .colorScheme
-                        .primary
-                        .withValues(alpha: 0.05),
-                    blurRadius: 20,
-                    offset: const Offset(0, 6),
-                  ),
-                ]
-              : null,
-        ),
-        child: Row(
-          children: [
-            Stack(
-              children: [
-                Container(
-                  width: 48,
-                  height: 48,
-                  decoration: BoxDecoration(
-                    color: hasUnread
-                        ? Theme.of(context)
-                            .colorScheme
-                            .primary
-                            .withValues(alpha: 0.12)
-                        : context.fitlek.card2,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Icon(
-                    Icons.chat_bubble_rounded,
-                    color: hasUnread
-                        ? Theme.of(context).colorScheme.primary
-                        : context.fitlek.textMuted,
-                    size: 22,
-                  ),
-                ),
-                if (hasUnread)
-                  Positioned(
-                    top: -2,
-                    right: -2,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: context.fitlek.error,
-                        borderRadius: BorderRadius.circular(10),
-                        border:
-                            Border.all(color: context.fitlek.card, width: 2),
-                      ),
-                      child: Text(
-                        totalUnread > 99 ? '99+' : '$totalUnread',
-                        style: TextStyle(
-                          color: Theme.of(context).colorScheme.onError,
-                          fontSize: 9,
-                          fontWeight: FontWeight.w900,
-                        ),
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Messages',
-                    style: TextStyle(
-                      color: Theme.of(context).colorScheme.onSurface,
-                      fontWeight: FontWeight.w800,
-                      fontSize: 14,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Chat with your coaches',
-                    style: TextStyle(
-                        color: context.fitlek.textMuted, fontSize: 12),
-                  ),
-                ],
-              ),
-            ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.primary,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Text(
-                'OPEN',
-                style: TextStyle(
-                  color: Theme.of(context).colorScheme.onPrimary,
-                  fontWeight: FontWeight.w900,
-                  fontSize: 10,
-                  letterSpacing: 1.2,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Future<void> _fetchClientProfile() async {
-    try {
-      final res = await http
-          .get(
-            Uri.parse('$baseUrl/clients/me?userID=${widget.clientID}'),
-            headers: _headers,
-          )
-          .timeout(const Duration(seconds: 10));
-      if (res.statusCode == 200) {
-        final data = jsonDecode(res.body) as Map<String, dynamic>;
-        if (mounted) setState(() => _avatarUrl = data['avatarUrl'] as String?);
-      }
-    } catch (_) {}
-  }
-
-  Future<void> _fetchCoaches() async {
-    setState(() {
-      _loadingCoaches = true;
-      _coachError = null;
-    });
-    try {
-      final res = await http
-          .get(Uri.parse('$baseUrl/coaches?limit=10'), headers: _headers)
-          .timeout(const Duration(seconds: 10));
-      if (res.statusCode == 200) {
-        final List data = jsonDecode(res.body);
-        setState(() {
-          _coaches = data
-              .map((e) => CoachModel.fromJson(e as Map<String, dynamic>))
-              .toList();
-          _loadingCoaches = false;
-        });
-      } else {
-        setState(() {
-          _coachError = 'Error (${res.statusCode})';
-          _loadingCoaches = false;
-        });
-      }
-    } catch (_) {
-      setState(() {
-        _coachError = 'Server unreachable';
-        _loadingCoaches = false;
-      });
-    }
-  }
-
-  Future<void> _fetchAdvisors() async {
-    setState(() {
-      _loadingAdvisors = true;
-      _advisorError = null;
-    });
-    try {
-      final res = await http
-          .get(Uri.parse('$baseUrl/advisors'), headers: _headers)
-          .timeout(const Duration(seconds: 10));
-      if (res.statusCode == 200) {
-        final List data = jsonDecode(res.body);
-        setState(() {
-          _advisors = data
-              .map((e) => _AdvisorItem.fromJson(e as Map<String, dynamic>))
-              .toList();
-          _loadingAdvisors = false;
-        });
-      } else {
-        setState(() {
-          _advisorError = 'Error (${res.statusCode})';
-          _loadingAdvisors = false;
-        });
-      }
-    } catch (_) {
-      setState(() {
-        _advisorError = 'Server unreachable';
-        _loadingAdvisors = false;
-      });
-    }
-  }
-
-  Future<void> _fetchReservations() async {
-    setState(() => _loadingSession = true);
-    try {
-      final res = await http
-          .get(
-            Uri.parse(
-              '$baseUrl/reservations?userID=${widget.clientID}&role=client',
-            ),
-            headers: _headers,
-          )
-          .timeout(const Duration(seconds: 10));
-
-      if (res.statusCode == 200) {
-        final List data = jsonDecode(res.body);
-        final reservations = data
-            .map((e) => ReservationModel.fromJson(e as Map<String, dynamic>))
-            .toList();
-
-        final now = DateTime.now();
-        final upcoming = reservations
-            .where((r) => r.isUpcoming && r.sessionStart.isAfter(now))
-            .toList()
-          ..sort((a, b) => a.sessionStart.compareTo(b.sessionStart));
-
-        setState(() {
-          _nextSession = upcoming.isNotEmpty ? upcoming.first : null;
-          _totalSessions = reservations.length;
-          _confirmedSessions = reservations.where((r) => r.isConfirmed).length;
-          _pendingSessions = reservations.where((r) => r.isPending).length;
-          _loadingSession = false;
-        });
-      } else {
-        setState(() => _loadingSession = false);
-      }
-    } catch (_) {
-      setState(() => _loadingSession = false);
-    }
-  }
-
   void _openCoachDetail(CoachModel coach) {
     final session = ReservationModel(
       id: 0,
@@ -497,13 +483,17 @@ class _HomeScreenState extends State<HomeScreen> {
         transitionDuration: const Duration(milliseconds: 400),
       );
 
+  // ═══════════════════════════════════════════════════════════════════════════
+  //  BUILD
+  // ═══════════════════════════════════════════════════════════════════════════
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: Stack(
         children: [
-          // Dégradé de marque en fond, doux et localisé en haut de l'écran
+          // Background gradient
           Positioned.fill(
             child: DecoratedBox(
               decoration: BoxDecoration(
@@ -527,8 +517,8 @@ class _HomeScreenState extends State<HomeScreen> {
               DiscoverScreen(clientID: widget.clientID, token: widget.token),
               SessionsScreen(clientID: widget.clientID, token: widget.token),
               ClientProfileScreen(
-                clientID: widget.clientID, // ← même valeur, nom différent
-                token: widget.token, // ← nouveau paramètre optionnel
+                clientID: widget.clientID,
+                token: widget.token,
                 onLogout: widget.onLogout,
               ),
             ],
@@ -539,98 +529,299 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  // ─── HOME BODY ──────────────────────────────────────────────────────────────
+
   Widget _buildHomeBody() {
-    return SafeArea(
-      child: RefreshIndicator(
-        color: Theme.of(context).colorScheme.primary,
-        backgroundColor: context.fitlek.card,
-        onRefresh: () async {
-          await Future.wait([
-            _fetchCoaches(),
-            _fetchAdvisors(),
-            _fetchReservations(),
-          ]);
-        },
-        child: CustomScrollView(
-          slivers: [
-            SliverToBoxAdapter(child: _buildHeader()),
-            SliverToBoxAdapter(child: _buildSearchBar()),
-            SliverToBoxAdapter(child: _buildStatsRow()),
-            SliverToBoxAdapter(child: _buildSessionBanner()),
-            SliverToBoxAdapter(child: _buildMessagesBanner()),
-            SliverToBoxAdapter(
-              child: _sectionHeader(
-                'Recommended coaches',
-                onSeeAll: () => setState(() => _navIndex = 1),
-              ),
+    return RefreshIndicator(
+      color: Theme.of(context).colorScheme.primary,
+      backgroundColor: context.fitlek.card,
+      onRefresh: () async {
+        await Future.wait([
+          _fetchCoaches(),
+          _fetchAdvisors(),
+          _fetchCategories(),
+          _fetchFavorites(),
+          _fetchUnreadMessagesCount(),
+        ]);
+      },
+      child: CustomScrollView(
+        slivers: [
+          SliverToBoxAdapter(child: _buildTopSection()),
+          SliverToBoxAdapter(child: _buildCategoryPills()),
+          SliverToBoxAdapter(
+            child: _sectionHeader(
+              'Recommended coaches',
+              onSeeAll: () => setState(() => _navIndex = 1),
             ),
-            SliverToBoxAdapter(child: _buildCoachList()),
-            SliverToBoxAdapter(
-              child: _sectionHeader(
-                'Coaching companies',
-                onSeeAll: () => setState(() => _navIndex = 1),
-              ),
+          ),
+          SliverToBoxAdapter(child: _buildCoachList()),
+          SliverToBoxAdapter(
+            child: _sectionHeader(
+              'Coaching companies',
+              onSeeAll: () => setState(() => _navIndex = 1),
             ),
-            SliverToBoxAdapter(child: _buildAdvisorList()),
-            const SliverToBoxAdapter(child: SizedBox(height: 32)),
-          ],
-        ),
+          ),
+          SliverToBoxAdapter(child: _buildAdvisorList()),
+          SliverToBoxAdapter(child: _buildFindMyCoachCTA()),
+          const SliverToBoxAdapter(child: SizedBox(height: 32)),
+        ],
       ),
     );
   }
 
+  // ─── 1. HEADER ──────────────────────────────────────────────────────────────
+
   Widget _buildHeader() {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
+      padding: const EdgeInsets.fromLTRB(16, 24, 16, 14),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          const SirvyaLogo(variant: SirvyaLogoVariant.wordmark, height: 18),
-          const Spacer(),
+          // Logo + tagline
           Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              const SirvyaLogo(variant: SirvyaLogoVariant.wordmark, height: 18),
+              const SizedBox(height: 2),
               Text(
-                'Hello,',
-                style: TextStyle(color: context.fitlek.textMuted, fontSize: 11),
-              ),
-              Text(
-                widget.firstName != null ? '${widget.firstName}' : 'Welcome',
+                'TRAIN • CONNECT • PROGRESS',
                 style: TextStyle(
-                  color: Theme.of(context).colorScheme.onSurface,
-                  fontSize: 13,
+                  color: context.fitlek.textMuted,
+                  fontSize: 7,
                   fontWeight: FontWeight.w700,
+                  letterSpacing: 2.5,
                 ),
               ),
             ],
           ),
-          const SizedBox(width: 12),
+          const Spacer(),
+          // Location chip
+          if (_clientVille != null && _clientVille!.isNotEmpty)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: context.fitlek.card,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: context.fitlek.border),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.location_on_rounded,
+                      color: Theme.of(context).colorScheme.primary, size: 13),
+                  const SizedBox(width: 4),
+                  Text(
+                    _clientVille!,
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.onSurface,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          const SizedBox(width: 10),
+          // Messages icon
           GestureDetector(
-            onTap: () => setState(() => _navIndex = 3),
+            onTap: () async {
+              await Navigator.push(
+                context,
+                _fadeSlide(
+                  ClientConversationsListScreen(
+                    clientID: widget.clientID,
+                    token: widget.token,
+                  ),
+                ),
+              );
+              _fetchUnreadMessagesCount();
+            },
+            child: Stack(
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: context.fitlek.card,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: context.fitlek.border),
+                  ),
+                  child: Icon(
+                    Icons.chat_bubble_outline_rounded,
+                    color: Theme.of(context).colorScheme.onSurface,
+                    size: 18,
+                  ),
+                ),
+                if (_unreadMessagesCount > 0)
+                  Positioned(
+                    top: 0,
+                    right: 0,
+                    child: Container(
+                      width: 16,
+                      height: 16,
+                      decoration: BoxDecoration(
+                        color: context.fitlek.error,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: context.fitlek.card, width: 2),
+                      ),
+                      child: Center(
+                        child: Text(
+                          _unreadMessagesCount > 9 ? '9+' : '$_unreadMessagesCount',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 8,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          // Notification bell
+          GestureDetector(
+            onTap: () async {
+              await Navigator.push(
+                context,
+                _fadeSlide(
+                  const ClientNotificationsScreen(),
+                ),
+              );
+            },
             child: Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: context.fitlek.card,
+                shape: BoxShape.circle,
+                border: Border.all(color: context.fitlek.border),
+              ),
+              child: Icon(
+                Icons.notifications_outlined,
+                color: Theme.of(context).colorScheme.onSurface,
+                size: 20,
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          // Profile Picture
+          GestureDetector(
+            onTap: () {
+              setState(() => _navIndex = 3);
+            },
+            child: Container(
+              width: 40,
+              height: 40,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                border: Border.all(
-                    color: Theme.of(context).colorScheme.primary, width: 2),
-              ),
-              child: CircleAvatar(
-                radius: 20,
-                backgroundColor: context.fitlek.card2,
-                backgroundImage: _avatarUrl != null && _avatarUrl!.isNotEmpty
-                    ? NetworkImage(_avatarUrl!)
-                    : null,
-                child: (_avatarUrl == null || _avatarUrl!.isEmpty)
-                    ? Text(
-                        widget.firstName != null && widget.firstName!.isNotEmpty
-                            ? widget.firstName![0].toUpperCase()
-                            : '?',
-                        style: TextStyle(
-                          color: Theme.of(context).colorScheme.primary,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w900,
-                        ),
+                border: Border.all(color: context.fitlek.border),
+                image: _avatarUrl != null && _avatarUrl!.isNotEmpty
+                    ? DecorationImage(
+                        image: NetworkImage(_avatarUrl!),
+                        fit: BoxFit.cover,
                       )
                     : null,
+              ),
+              child: _avatarUrl == null || _avatarUrl!.isEmpty
+                  ? Icon(Icons.person, color: context.fitlek.textMuted, size: 20)
+                  : null,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTopSection() {
+    return Stack(
+      children: [
+        // Background image covering the top
+        Positioned.fill(
+          child: Container(
+            decoration: const BoxDecoration(
+              image: DecorationImage(
+                image: AssetImage('assets/branding/hero.png'),
+                fit: BoxFit.cover,
+                alignment: Alignment.topCenter,
+              ),
+            ),
+            foregroundDecoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  Colors.black.withValues(alpha: 0.1),
+                  Colors.black.withValues(alpha: 0.6),
+                  Theme.of(context).scaffoldBackgroundColor,
+                ],
+                stops: const [0.0, 0.7, 1.0],
+              ),
+            ),
+          ),
+        ),
+        // Content
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SafeArea(bottom: false, child: _buildHeader()),
+            const SizedBox(height: 30),
+            _buildHeroText(),
+            const SizedBox(height: 24),
+            _buildSearchBar(),
+            const SizedBox(height: 16),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildHeroText() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Find your\ncoach',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 32,
+                  fontWeight: FontWeight.w900,
+                  height: 1.1,
+                  letterSpacing: -0.5,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Real people. Real results.',
+                style: TextStyle(
+                  color: Colors.white70,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w400,
+                ),
+              ),
+            ],
+          ),
+          Positioned(
+            right: 0,
+            bottom: 0,
+            child: Transform.rotate(
+              angle: -0.12,
+              child: Text(
+                'A stronger\nyou',
+                textAlign: TextAlign.right,
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.8),
+                  fontSize: 22,
+                  fontWeight: FontWeight.w300,
+                  fontStyle: FontStyle.italic,
+                  height: 1.1,
+                ),
               ),
             ),
           ),
@@ -639,11 +830,13 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  // ─── 3. SEARCH BAR ─────────────────────────────────────────────────────────
+
   Widget _buildSearchBar() {
     return GestureDetector(
       onTap: () => setState(() => _navIndex = 1),
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(24, 18, 24, 0),
+        padding: const EdgeInsets.symmetric(horizontal: 16),
         child: Container(
           height: 50,
           decoration: BoxDecoration(
@@ -661,7 +854,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               const SizedBox(width: 10),
               Text(
-                'Search coaches, gyms…',
+                'Search coaches, gyms, or specialties...',
                 style: TextStyle(
                   color: context.fitlek.textMuted,
                   fontSize: 14,
@@ -688,516 +881,137 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildStatsRow() {
-    if (_loadingSession) {
-      return Padding(
-        padding: const EdgeInsets.fromLTRB(24, 18, 24, 0),
-        child: Row(
-          children: List.generate(
-            3,
-            (_) => Expanded(
-              child: Container(
-                margin: const EdgeInsets.only(right: 10),
-                height: 72,
-                decoration: BoxDecoration(
-                  color: context.fitlek.card,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-            ),
-          ),
-        ),
-      );
-    }
+  // ─── 4. CATEGORY PILLS ─────────────────────────────────────────────────────
 
-    final stats = [
-      {
-        'label': 'Total sessions',
-        'value': '$_totalSessions',
-        'icon': Icons.bolt_rounded,
-        'color': Theme.of(context).colorScheme.primary,
-      },
-      {
-        'label': 'Confirmed',
-        'value': '$_confirmedSessions',
-        'icon': Icons.check_circle_rounded,
-        'color': context.fitlek.success,
-      },
-      {
-        'label': 'Pending',
-        'value': '$_pendingSessions',
-        'icon': Icons.hourglass_top_rounded,
-        'color': context.fitlek.warning,
-      },
-    ];
-
+  Widget _buildCategoryPills() {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 18, 24, 0),
-      child: Row(
-        children: stats.asMap().entries.map((e) {
-          final color = e.value['color'] as Color;
-          return Expanded(
-            child: GestureDetector(
-              onTap: () => setState(() => _navIndex = 2),
-              child: Container(
-                margin: EdgeInsets.only(
-                  right: e.key < stats.length - 1 ? 10 : 0,
-                ),
-                padding:
-                    const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+      padding: const EdgeInsets.only(top: 18),
+      child: SizedBox(
+        height: 80,
+        child: ListView.builder(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          scrollDirection: Axis.horizontal,
+          itemCount: _categories.length + 1, // +1 for "All"
+          itemBuilder: (context, index) {
+            final isAll = index == 0;
+            final isSelected = isAll
+                ? _selectedCategoryId == null
+                : _selectedCategoryId == _categories[index - 1].id;
+
+            final IconData icon;
+            final String label;
+            if (isAll) {
+              icon = Icons.grid_view_rounded;
+              label = 'All';
+            } else {
+              final cat = _categories[index - 1];
+              icon = _mapCategoryIcon(cat.icon);
+              label = cat.name;
+            }
+
+            return GestureDetector(
+              onTap: () => _selectCategory(isAll ? null : _categories[index - 1].id),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                width: 72,
+                margin: const EdgeInsets.only(right: 10),
                 decoration: BoxDecoration(
-                  color: context.fitlek.card,
-                  borderRadius: BorderRadius.circular(12),
-                  border:
-                      Border.all(color: color.withValues(alpha: 0.2), width: 1),
+                  color: isSelected
+                      ? Theme.of(context).colorScheme.primary
+                      : context.fitlek.card,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                    color: isSelected
+                        ? Theme.of(context).colorScheme.primary
+                        : context.fitlek.border,
+                    width: 1,
+                  ),
                 ),
                 child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(e.value['icon'] as IconData, color: color, size: 16),
-                    const SizedBox(height: 8),
-                    Text(
-                      e.value['value'] as String,
-                      style: TextStyle(
-                        color: color,
-                        fontSize: 20,
-                        fontWeight: FontWeight.w900,
-                        height: 1,
-                      ),
+                    Icon(
+                      icon,
+                      color: isSelected
+                          ? Theme.of(context).colorScheme.onPrimary
+                          : context.fitlek.textMuted,
+                      size: 24,
                     ),
-                    const SizedBox(height: 3),
+                    const SizedBox(height: 6),
                     Text(
-                      e.value['label'] as String,
-                      style: TextStyle(
-                        color: context.fitlek.textMuted,
-                        fontSize: 9,
-                        fontWeight: FontWeight.w600,
-                      ),
+                      label,
+                      textAlign: TextAlign.center,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: isSelected
+                            ? Theme.of(context).colorScheme.onPrimary
+                            : context.fitlek.textMuted,
+                        fontSize: 9,
+                        fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                      ),
                     ),
                   ],
                 ),
               ),
-            ),
-          );
-        }).toList(),
-      ),
-    );
-  }
-
-  Widget _buildSessionBanner() {
-    if (_loadingSession) {
-      return Container(
-        margin: const EdgeInsets.fromLTRB(24, 20, 24, 0),
-        height: 140,
-        decoration: BoxDecoration(
-          color: context.fitlek.card,
-          borderRadius: BorderRadius.circular(18),
-        ),
-        child: Center(
-          child: SizedBox(
-            width: 20,
-            height: 20,
-            child: CircularProgressIndicator(
-                color: Theme.of(context).colorScheme.primary, strokeWidth: 2),
-          ),
-        ),
-      );
-    }
-
-    if (_nextSession == null) {
-      return GestureDetector(
-        onTap: () => setState(() => _navIndex = 1),
-        child: Container(
-          margin: const EdgeInsets.fromLTRB(24, 20, 24, 0),
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: context.fitlek.card,
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: context.fitlek.border, width: 1),
-          ),
-          child: Row(
-            children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: Theme.of(context)
-                      .colorScheme
-                      .primary
-                      .withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(
-                  Icons.calendar_today_rounded,
-                  color: Theme.of(context).colorScheme.primary,
-                  size: 22,
-                ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'No sessions scheduled',
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.onSurface,
-                        fontWeight: FontWeight.w800,
-                        fontSize: 14,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Book a session with a coach',
-                      style: TextStyle(
-                          color: context.fitlek.textMuted, fontSize: 12),
-                    ),
-                  ],
-                ),
-              ),
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.primary,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  'EXPLORE',
-                  style: TextStyle(
-                    color: Theme.of(context).colorScheme.onPrimary,
-                    fontWeight: FontWeight.w900,
-                    fontSize: 10,
-                    letterSpacing: 1.2,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
-    final s = _nextSession!;
-    final diff = s.sessionStart.difference(DateTime.now());
-    final daysLeft = diff.inDays;
-    final countdown = daysLeft == 0
-        ? 'Today'
-        : daysLeft == 1
-            ? 'Tomorrow'
-            : 'In $daysLeft days';
-
-    return GestureDetector(
-      onTap: () => setState(() => _navIndex = 2),
-      child: Container(
-        margin: const EdgeInsets.fromLTRB(24, 20, 24, 0),
-        decoration: BoxDecoration(
-          color: context.fitlek.card,
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(
-              color:
-                  Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
-              width: 1),
-          boxShadow: [
-            BoxShadow(
-              color:
-                  Theme.of(context).colorScheme.primary.withValues(alpha: 0.04),
-              blurRadius: 20,
-              offset: const Offset(0, 6),
-            ),
-          ],
-        ),
-        clipBehavior: Clip.antiAlias,
-        child: Stack(
-          children: [
-            Positioned(
-              bottom: -40,
-              right: -40,
-              child: Container(
-                width: 140,
-                height: 140,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: Theme.of(context)
-                      .colorScheme
-                      .primary
-                      .withValues(alpha: 0.06),
-                ),
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(18),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Container(
-                        width: 8,
-                        height: 8,
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.primary,
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        'NEXT SESSION',
-                        style: TextStyle(
-                          color: Theme.of(context).colorScheme.primary,
-                          fontSize: 10,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 2,
-                        ),
-                      ),
-                      const Spacer(),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.primary,
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Text(
-                          countdown,
-                          style: TextStyle(
-                            color: Theme.of(context).colorScheme.onPrimary,
-                            fontSize: 10,
-                            fontWeight: FontWeight.w900,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      Container(
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                              color: Theme.of(context).colorScheme.primary,
-                              width: 2),
-                        ),
-                        child: CircleAvatar(
-                          radius: 24,
-                          backgroundColor: context.fitlek.card2,
-                          backgroundImage: s.coachImageUrl.isNotEmpty
-                              ? NetworkImage(s.coachImageUrl)
-                              : null,
-                          child: s.coachImageUrl.isEmpty
-                              ? Text(
-                                  s.coachName.isNotEmpty ? s.coachName[0] : '?',
-                                  style: TextStyle(
-                                    color:
-                                        Theme.of(context).colorScheme.primary,
-                                    fontWeight: FontWeight.w900,
-                                    fontSize: 18,
-                                  ),
-                                )
-                              : null,
-                        ),
-                      ),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              s.coachName,
-                              style: TextStyle(
-                                color: Theme.of(context).colorScheme.onSurface,
-                                fontSize: 16,
-                                fontWeight: FontWeight.w900,
-                                letterSpacing: -0.3,
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              s.coachSpeciality.isNotEmpty
-                                  ? s.coachSpeciality
-                                  : 'Coach',
-                              style: TextStyle(
-                                color: context.fitlek.textSecondary,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 5,
-                        ),
-                        decoration: BoxDecoration(
-                          color: (s.isConfirmed
-                                  ? context.fitlek.success
-                                  : Theme.of(context).colorScheme.primary)
-                              .withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(
-                            color: (s.isConfirmed
-                                    ? context.fitlek.success
-                                    : Theme.of(context).colorScheme.primary)
-                                .withValues(alpha: 0.4),
-                          ),
-                        ),
-                        child: Text(
-                          s.isConfirmed ? 'CONFIRMED' : 'PENDING',
-                          style: TextStyle(
-                            color: s.isConfirmed
-                                ? context.fitlek.success
-                                : Theme.of(context).colorScheme.primary,
-                            fontSize: 9,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: 0.8,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 14),
-                  Divider(color: context.fitlek.border, height: 1),
-                  const SizedBox(height: 10),
-                  GestureDetector(
-                    onTap: () => _openConversationWithCoach(
-                      s.coachID,
-                      s.coachName,
-                      s.coachImageUrl,
-                      s.coachSpeciality,
-                    ),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: Theme.of(context)
-                            .colorScheme
-                            .primary
-                            .withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(
-                            color: Theme.of(context)
-                                .colorScheme
-                                .primary
-                                .withValues(alpha: 0.25)),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.chat_bubble_outline_rounded,
-                              color: Theme.of(context).colorScheme.primary,
-                              size: 13),
-                          const SizedBox(width: 6),
-                          Text(
-                            'MESSAGE',
-                            style: TextStyle(
-                              color: Theme.of(context).colorScheme.primary,
-                              fontWeight: FontWeight.w800,
-                              fontSize: 9,
-                              letterSpacing: 1,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 14),
-                  Row(
-                    children: [
-                      _metaChip(
-                        Icons.calendar_today_rounded,
-                        _formatDate(s.sessionStart),
-                      ),
-                      const SizedBox(width: 12),
-                      _metaChip(
-                        Icons.access_time_rounded,
-                        '${_formatTime(s.sessionStart)} — ${_formatTime(s.sessionEnd)}',
-                      ),
-                      const Spacer(),
-                      Icon(
-                        Icons.chevron_right_rounded,
-                        color: context.fitlek.textMuted,
-                        size: 20,
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ],
+            );
+          },
         ),
       ),
     );
   }
 
-  Widget _metaChip(IconData icon, String text) => Row(
-        children: [
-          Icon(icon, color: context.fitlek.textMuted, size: 12),
-          const SizedBox(width: 5),
-          Text(
-            text,
-            style: TextStyle(color: context.fitlek.textSecondary, fontSize: 11),
-          ),
-        ],
-      );
+  // ─── SECTION HEADER ─────────────────────────────────────────────────────────
 
   Widget _sectionHeader(String title, {VoidCallback? onSeeAll}) => Padding(
-        padding: const EdgeInsets.fromLTRB(24, 28, 24, 12),
+        padding: const EdgeInsets.fromLTRB(16, 24, 16, 12),
         child: Row(
           children: [
-            Container(
-              width: 3,
-              height: 18,
-              color: Theme.of(context).colorScheme.primary,
-              margin: const EdgeInsets.only(right: 10),
-            ),
             Text(
               title,
               style: TextStyle(
                 color: Theme.of(context).colorScheme.onSurface,
-                fontSize: 16,
-                fontWeight: FontWeight.w800,
+                fontSize: 17,
+                fontWeight: FontWeight.w900,
               ),
             ),
             const Spacer(),
-            GestureDetector(
-              onTap: onSeeAll,
-              child: Row(
-                children: [
-                  Text(
-                    'SEE ALL',
-                    style: TextStyle(
-                      color: Theme.of(context).colorScheme.primary,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 1.2,
+            if (onSeeAll != null)
+              GestureDetector(
+                onTap: onSeeAll,
+                child: Row(
+                  children: [
+                    Text(
+                      'SEE ALL',
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.primary,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 1.2,
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 4),
-                  Icon(Icons.chevron_right_rounded,
-                      color: Theme.of(context).colorScheme.primary, size: 14),
-                ],
+                    const SizedBox(width: 4),
+                    Icon(Icons.chevron_right_rounded,
+                        color: Theme.of(context).colorScheme.primary, size: 14),
+                  ],
+                ),
               ),
-            ),
           ],
         ),
       );
 
+  // ─── 5. COACH LIST (Horizontal) ────────────────────────────────────────────
+
   Widget _buildCoachList() {
     if (_loadingCoaches) {
       return SizedBox(
-        height: 240,
+        height: 290,
         child: ListView.builder(
-          padding: const EdgeInsets.only(left: 24),
+          padding: const EdgeInsets.only(left: 16),
           scrollDirection: Axis.horizontal,
-          itemCount: 4,
+          itemCount: 3,
           itemBuilder: (_, __) => Container(
-            width: 160,
+            width: 200,
             margin: const EdgeInsets.only(right: 14),
             decoration: BoxDecoration(
               color: context.fitlek.card,
@@ -1220,33 +1034,37 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     return SizedBox(
-      height: 240,
+      height: 300,
       child: ListView.builder(
-        padding: const EdgeInsets.only(left: 24),
+        padding: const EdgeInsets.only(left: 16),
         scrollDirection: Axis.horizontal,
         itemCount: _coaches.length,
         itemBuilder: (_, i) => _CoachCard(
           coach: _coaches[i],
+          isFavorite: _favoriteCoachIds.contains(_coaches[i].id),
           onTap: () => _openCoachDetail(_coaches[i]),
+          onFavorite: () => _toggleFavorite(_coaches[i].id),
         ),
       ),
     );
   }
 
+  // ─── 6. ADVISOR / COMPANY LIST (Horizontal) ────────────────────────────────
+
   Widget _buildAdvisorList() {
     if (_loadingAdvisors) {
-      return Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 24),
-        child: Column(
-          children: List.generate(
-            2,
-            (_) => Container(
-              margin: const EdgeInsets.only(bottom: 14),
-              height: 110,
-              decoration: BoxDecoration(
-                color: context.fitlek.card,
-                borderRadius: BorderRadius.circular(14),
-              ),
+      return SizedBox(
+        height: 240,
+        child: ListView.builder(
+          padding: const EdgeInsets.only(left: 16),
+          scrollDirection: Axis.horizontal,
+          itemCount: 3,
+          itemBuilder: (_, __) => Container(
+            width: 200,
+            margin: const EdgeInsets.only(right: 14),
+            decoration: BoxDecoration(
+              color: context.fitlek.card,
+              borderRadius: BorderRadius.circular(14),
             ),
           ),
         ),
@@ -1264,17 +1082,99 @@ class _HomeScreenState extends State<HomeScreen> {
       );
     }
 
-    return ListView.builder(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: _advisors.length,
-      itemBuilder: (_, i) => _AdvisorCard(
-        advisor: _advisors[i],
-        onTap: () => _openCompanyDetail(_advisors[i]),
+    return SizedBox(
+      height: 240,
+      child: ListView.builder(
+        padding: const EdgeInsets.only(left: 16),
+        scrollDirection: Axis.horizontal,
+        itemCount: _advisors.length,
+        itemBuilder: (_, i) => _CompanyCard(
+          advisor: _advisors[i],
+          onTap: () => _openCompanyDetail(_advisors[i]),
+        ),
       ),
     );
   }
+
+  // ─── 7. FIND MY COACH CTA ──────────────────────────────────────────────────
+
+  Widget _buildFindMyCoachCTA() {
+    return GestureDetector(
+      onTap: () => setState(() => _navIndex = 1),
+      child: Container(
+        margin: const EdgeInsets.fromLTRB(16, 24, 16, 0),
+        padding: const EdgeInsets.all(18),
+        decoration: BoxDecoration(
+          color: context.fitlek.card,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: context.fitlek.border),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: Theme.of(context)
+                    .colorScheme
+                    .primary
+                    .withValues(alpha: 0.12),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.route_rounded,
+                color: Theme.of(context).colorScheme.primary,
+                size: 20,
+              ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Not sure who to choose?',
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.onSurface,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 13,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    "Tell us your goal and we'll suggest the best coaches for you.",
+                    style: TextStyle(
+                      color: context.fitlek.textMuted,
+                      fontSize: 11,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 10),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.primary,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                'FIND MY COACH',
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onPrimary,
+                  fontWeight: FontWeight.w900,
+                  fontSize: 9,
+                  letterSpacing: 1,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ─── NAVBAR ─────────────────────────────────────────────────────────────────
 
   Widget _buildNavBar() {
     const items = [
@@ -1384,35 +1284,23 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
-
-  String _formatDate(DateTime d) {
-    const m = [
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'May',
-      'Jun',
-      'Jul',
-      'Aug',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Dec',
-    ];
-    const w = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-    return '${w[d.weekday - 1]} ${d.day} ${m[d.month - 1]}';
-  }
-
-  String _formatTime(DateTime d) =>
-      '${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}';
 }
 
+// ═══════════════════════════════════════════════════════════════════════════════
+//  COACH CARD (Redesigned for mockup)
+// ═══════════════════════════════════════════════════════════════════════════════
 class _CoachCard extends StatelessWidget {
   final CoachModel coach;
+  final bool isFavorite;
   final VoidCallback onTap;
+  final VoidCallback onFavorite;
 
-  const _CoachCard({required this.coach, required this.onTap});
+  const _CoachCard({
+    required this.coach,
+    required this.isFavorite,
+    required this.onTap,
+    required this.onFavorite,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -1430,10 +1318,11 @@ class _CoachCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // ── Image + Overlays ──
             Stack(
               children: [
                 SizedBox(
-                  height: 130,
+                  height: 150,
                   width: double.infinity,
                   child: coach.avatarUrl?.isNotEmpty == true
                       ? Image.network(
@@ -1446,10 +1335,30 @@ class _CoachCard extends StatelessWidget {
                         )
                       : _placeholder(context),
                 ),
+                // Bottom gradient
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: 0,
+                  height: 60,
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Colors.transparent,
+                          Colors.black.withValues(alpha: 0.6),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                // Premium badge
                 if (coach.isPremium)
                   Positioned(
                     top: 8,
-                    right: 8,
+                    left: 8,
                     child: Container(
                       padding: const EdgeInsets.symmetric(
                           horizontal: 6, vertical: 3),
@@ -1464,62 +1373,122 @@ class _CoachCard extends StatelessWidget {
                       ),
                     ),
                   ),
-                if (coach.rating != null)
-                  Positioned(
-                    bottom: 8,
-                    left: 8,
+                // Favorite heart
+                Positioned(
+                  top: 8,
+                  right: 8,
+                  child: GestureDetector(
+                    onTap: onFavorite,
                     child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 7, vertical: 3),
+                      width: 32,
+                      height: 32,
                       decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.75),
-                        borderRadius: BorderRadius.circular(6),
+                        color: Colors.black.withValues(alpha: 0.35),
+                        shape: BoxShape.circle,
                       ),
-                      child: Row(
-                        children: [
-                          Icon(Icons.star_rounded,
-                              color: Theme.of(context).colorScheme.primary,
-                              size: 11),
-                          const SizedBox(width: 3),
-                          Text(
-                            coach.rating!.toStringAsFixed(1),
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ],
+                      child: Icon(
+                        isFavorite
+                            ? Icons.favorite_rounded
+                            : Icons.favorite_border_rounded,
+                        color: isFavorite
+                            ? Colors.redAccent
+                            : Colors.white,
+                        size: 16,
                       ),
                     ),
                   ),
+                ),
+                // Name on image
+                Positioned(
+                  left: 10,
+                  bottom: 8,
+                  right: 40,
+                  child: Text(
+                    coach.fullName,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w900,
+                      fontSize: 14,
+                      shadows: [
+                        Shadow(
+                          color: Colors.black54,
+                          blurRadius: 6,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
               ],
             ),
+            // ── Info section ──
             Expanded(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
+                padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // Specialty tags
                     Text(
-                      coach.fullName,
+                      coach.displaySpecialties,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        color: Theme.of(context).colorScheme.onSurface,
-                        fontWeight: FontWeight.w800,
-                        fontSize: 13,
+                        color: context.fitlek.textMuted,
+                        fontSize: 10.5,
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
-                    const SizedBox(height: 3),
-                    Text(
-                      coach.speciality ?? '',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                          color: context.fitlek.textMuted, fontSize: 11),
+                    const SizedBox(height: 4),
+                    // Location
+                    Row(
+                      children: [
+                        Icon(Icons.location_on_rounded,
+                            color: context.fitlek.textMuted, size: 11),
+                        const SizedBox(width: 3),
+                        Expanded(
+                          child: Text(
+                            coach.ville?.isNotEmpty == true
+                                ? coach.ville!
+                                : 'Anywhere',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: context.fitlek.textMuted,
+                              fontSize: 10.5,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    // Rating
+                    Row(
+                      children: [
+                        Icon(Icons.star_rounded,
+                            color: Theme.of(context).colorScheme.primary,
+                            size: 13),
+                        const SizedBox(width: 3),
+                        Text(
+                          (coach.rating ?? 5.0).toStringAsFixed(1),
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.onSurface,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        Text(
+                          ' (${coach.reviewCount ?? 12} reviews)',
+                          style: TextStyle(
+                            color: context.fitlek.textMuted,
+                            fontSize: 10,
+                          ),
+                        ),
+                      ],
                     ),
                     const Spacer(),
+                    // VIEW PROFILE button
                     Container(
                       width: double.infinity,
                       padding: const EdgeInsets.symmetric(vertical: 7),
@@ -1537,7 +1506,7 @@ class _CoachCard extends StatelessWidget {
                             width: 1),
                       ),
                       child: Text(
-                        'VIEW',
+                        'VIEW PROFILE',
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           color: Theme.of(context).colorScheme.primary,
@@ -1572,43 +1541,74 @@ class _CoachCard extends StatelessWidget {
       );
 }
 
-class _AdvisorCard extends StatelessWidget {
+// ═══════════════════════════════════════════════════════════════════════════════
+//  COMPANY CARD (Horizontal scrollable — matching mockup)
+// ═══════════════════════════════════════════════════════════════════════════════
+class _CompanyCard extends StatelessWidget {
   final _AdvisorItem advisor;
   final VoidCallback onTap;
 
-  const _AdvisorCard({required this.advisor, required this.onTap});
+  const _CompanyCard({required this.advisor, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        margin: const EdgeInsets.only(bottom: 14),
-        height: 110,
+        width: 190,
+        margin: const EdgeInsets.only(right: 14),
         decoration: BoxDecoration(
           color: context.fitlek.card,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: context.fitlek.border, width: 1),
         ),
         clipBehavior: Clip.antiAlias,
-        child: Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            SizedBox(
-              width: 110,
-              child: advisor.avatarUrl != null
-                  ? Image.network(
-                      advisor.avatarUrl!,
-                      fit: BoxFit.cover,
-                      loadingBuilder: (_, child, p) => p == null
-                          ? child
-                          : Container(color: context.fitlek.card2),
-                      errorBuilder: (_, __, ___) => _defaultCover(context),
-                    )
-                  : _defaultCover(context),
+            // Image + Coach count badge
+            Stack(
+              children: [
+                SizedBox(
+                  height: 100,
+                  width: double.infinity,
+                  child: advisor.avatarUrl != null && advisor.avatarUrl!.isNotEmpty
+                      ? Image.network(
+                          advisor.avatarUrl!,
+                          fit: BoxFit.cover,
+                          loadingBuilder: (_, child, p) => p == null
+                              ? child
+                              : Container(color: context.fitlek.card2),
+                          errorBuilder: (_, __, ___) => _defaultCover(context),
+                        )
+                      : _defaultCover(context),
+                ),
+                if (advisor.coachCount > 0)
+                  Positioned(
+                    top: 8,
+                    left: 8,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.6),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        '${advisor.coachCount} coaches',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 9,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
             ),
+            // Info
             Expanded(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+                padding: const EdgeInsets.fromLTRB(10, 8, 10, 10),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -1617,31 +1617,83 @@ class _AdvisorCard extends StatelessWidget {
                         Expanded(
                           child: Text(
                             advisor.fullName,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                             style: TextStyle(
                               color: Theme.of(context).colorScheme.onSurface,
                               fontWeight: FontWeight.w800,
-                              fontSize: 14,
+                              fontSize: 13,
                             ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
                         if (advisor.isApproved)
                           Icon(Icons.verified_rounded,
                               color: Theme.of(context).colorScheme.primary,
-                              size: 14),
+                              size: 13),
                       ],
                     ),
-                    const SizedBox(height: 5),
+                    const SizedBox(height: 3),
+                    Text(
+                      advisor.specialty.isNotEmpty ? advisor.specialty : 'Coaching',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: context.fitlek.textMuted,
+                        fontSize: 10.5,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Row(
+                      children: [
+                        Icon(Icons.location_on_rounded,
+                            color: context.fitlek.textMuted, size: 11),
+                        const SizedBox(width: 3),
+                        Text(
+                          advisor.ville?.isNotEmpty == true
+                              ? advisor.ville!
+                              : 'Morocco',
+                          style: TextStyle(
+                            color: context.fitlek.textMuted,
+                            fontSize: 10.5,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 3),
+                    Row(
+                      children: [
+                        Icon(Icons.star_rounded,
+                            color: Theme.of(context).colorScheme.primary,
+                            size: 12),
+                        const SizedBox(width: 3),
+                        Text(
+                          (advisor.rating ?? 4.8).toStringAsFixed(1),
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.onSurface,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        Text(
+                          ' (${advisor.totalReviews ?? 24} reviews)',
+                          style: TextStyle(
+                            color: context.fitlek.textMuted,
+                            fontSize: 10,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const Spacer(),
+                    // VIEW COACHES button
                     Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 7, vertical: 3),
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(vertical: 6),
                       decoration: BoxDecoration(
                         color: Theme.of(context)
                             .colorScheme
                             .primary
                             .withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(5),
+                        borderRadius: BorderRadius.circular(7),
                         border: Border.all(
                             color: Theme.of(context)
                                 .colorScheme
@@ -1650,30 +1702,13 @@ class _AdvisorCard extends StatelessWidget {
                             width: 1),
                       ),
                       child: Text(
-                        advisor.specialty.toUpperCase(),
+                        'VIEW COACHES',
+                        textAlign: TextAlign.center,
                         style: TextStyle(
                           color: Theme.of(context).colorScheme.primary,
-                          fontSize: 9,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 1.2,
-                        ),
-                      ),
-                    ),
-                    const Spacer(),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 5),
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.primary,
-                        borderRadius: BorderRadius.circular(7),
-                      ),
-                      child: Text(
-                        'VIEW COACHES',
-                        style: TextStyle(
-                          color: Theme.of(context).colorScheme.onPrimary,
                           fontWeight: FontWeight.w900,
                           fontSize: 9,
-                          letterSpacing: 1,
+                          letterSpacing: 1.2,
                         ),
                       ),
                     ),

@@ -76,7 +76,8 @@ class _RegisterScreenState extends State<RegisterScreen>
   bool _appleLoading = false;
   String? _errorMsg;
 
-
+  List<Map<String, dynamic>> _categories = [];
+  int? _selectedCategoryId;
 
   late AnimationController _fadeCtrl;
   late Animation<double> _fadeAnim;
@@ -95,6 +96,22 @@ class _RegisterScreenState extends State<RegisterScreen>
         .animate(CurvedAnimation(parent: _slideCtrl, curve: Curves.easeOut));
     _fadeCtrl.forward();
     _slideCtrl.forward();
+    _fetchCategories();
+  }
+
+  Future<void> _fetchCategories() async {
+    try {
+      final res = await http.get(Uri.parse('$baseUrl/categories'))
+          .timeout(const Duration(seconds: 8));
+      if (res.statusCode == 200) {
+        final List data = jsonDecode(res.body);
+        if (mounted) {
+          setState(() {
+            _categories = List<Map<String, dynamic>>.from(data);
+          });
+        }
+      }
+    } catch (_) {}
   }
 
   @override
@@ -183,6 +200,9 @@ class _RegisterScreenState extends State<RegisterScreen>
         if (_heightCtrl.text.trim().isEmpty) return 'Height required';
         if (double.tryParse(_heightCtrl.text.trim()) == null) {
           return 'Invalid height';
+        }
+        if ((_role == 'coach' || _role == 'advisor') && _selectedCategoryId == null) {
+          return 'Please select your coaching category';
         }
         return null;
       case 2:
@@ -328,8 +348,13 @@ class _RegisterScreenState extends State<RegisterScreen>
         'height': double.tryParse(_heightCtrl.text.trim()),
         'acceptedTerms': _acceptedTerms,
       };
-      if (_role == 'coach' && _referralCtrl.text.trim().isNotEmpty) {
-        body['referralCode'] = _referralCtrl.text.trim();
+      if (_role == 'coach' || _role == 'advisor') {
+        if (_referralCtrl.text.trim().isNotEmpty) {
+          body['referralCode'] = _referralCtrl.text.trim();
+        }
+        if (_selectedCategoryId != null) {
+          body['categoryID'] = _selectedCategoryId;
+        }
       }
       final res = await http
           .post(
@@ -1211,7 +1236,74 @@ class _RegisterScreenState extends State<RegisterScreen>
         icon: Icons.straighten_rounded,
         keyboardType: TextInputType.number,
       ),
+      if (_role == 'coach' || _role == 'advisor') ...[
+        const SizedBox(height: 14),
+        _buildCategorySelector(),
+      ],
     ]);
+  }
+
+  Widget _buildCategorySelector() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(left: 4, bottom: 8),
+          child: Text(
+            'Primary Coaching Category',
+            style: TextStyle(
+              color: Colors.white.withValues(alpha: 0.9),
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.05),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: Colors.white.withValues(alpha: 0.15),
+              width: 1,
+            ),
+          ),
+          child: DropdownButtonHideUnderline(
+            child: DropdownButton<int>(
+              value: _selectedCategoryId,
+              hint: Text(
+                'Select a category',
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.5),
+                  fontSize: 15,
+                ),
+              ),
+              isExpanded: true,
+              dropdownColor: AppColors.cyprus,
+              icon: Icon(
+                Icons.keyboard_arrow_down_rounded,
+                color: Colors.white.withValues(alpha: 0.5),
+              ),
+              items: _categories.map((cat) {
+                return DropdownMenuItem<int>(
+                  value: cat['id'] as int,
+                  child: Text(
+                    cat['name'] as String,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 15,
+                    ),
+                  ),
+                );
+              }).toList(),
+              onChanged: (val) {
+                setState(() => _selectedCategoryId = val);
+              },
+            ),
+          ),
+        ),
+      ],
+    );
   }
 
   // Step 2: Security

@@ -987,22 +987,6 @@ class _CoachCardState extends State<_CoachCard> {
                       ]),
                     ),
                   ),
-                if (coach.rating != null)
-                  Positioned(
-                    top: 12,
-                    left: 12,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
-                      decoration: BoxDecoration(
-                          color: Colors.black.withValues(alpha: 0.55), borderRadius: BorderRadius.circular(20)),
-                      child: Row(mainAxisSize: MainAxisSize.min, children: [
-                        Icon(Icons.star_rounded, color: cs.primary, size: 13),
-                        const SizedBox(width: 4),
-                        Text(coach.rating!.toStringAsFixed(1),
-                            style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w800)),
-                      ]),
-                    ),
-                  ),
               ]),
             ),
             // ── Avatar flottant + identité ────────────────────────
@@ -1037,11 +1021,28 @@ class _CoachCardState extends State<_CoachCard> {
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
                                 color: cs.onSurface, fontSize: 17, fontWeight: FontWeight.w800, letterSpacing: -0.3)),
-                        if ((coach.speciality ?? '').isNotEmpty)
-                          Text(coach.speciality!,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(color: cs.primary, fontSize: 12.5, fontWeight: FontWeight.w600)),
+                        const SizedBox(height: 4),
+                        Text(
+                          "${coach.speciality ?? 'Coach'} • ${coach.ville?.isNotEmpty == true ? coach.ville : 'Anywhere'}",
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(color: cs.primary, fontSize: 12.5, fontWeight: FontWeight.w600),
+                        ),
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            Text(
+                              '⭐ ${coach.rating != null ? coach.rating!.toStringAsFixed(1) : 'New'}',
+                              style: TextStyle(color: cs.onSurface, fontSize: 12, fontWeight: FontWeight.w800),
+                            ),
+                            if (coach.totalSessions != null && coach.totalSessions! > 0) ...[
+                              const SizedBox(width: 6),
+                              Text('·', style: TextStyle(color: f.textMuted, fontSize: 12, fontWeight: FontWeight.w900)),
+                              const SizedBox(width: 6),
+                              Text('${coach.totalSessions} reviews', style: TextStyle(color: f.textMuted, fontSize: 12)),
+                            ],
+                          ],
+                        ),
                       ]),
                     ),
                   ),

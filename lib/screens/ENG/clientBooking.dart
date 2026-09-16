@@ -398,53 +398,31 @@ class _BookingScreenState extends State<BookingScreen>
                     fontSize: 15,
                     fontWeight: FontWeight.w800,
                     letterSpacing: -0.3)),
-            if (s.coachSpeciality.isNotEmpty) ...[
-              const SizedBox(height: 3),
-              Text(s.coachSpeciality,
-                  style:
-                      TextStyle(color: context.fitlek.textMuted, fontSize: 12)),
-            ],
-            const SizedBox(height: 8),
-            Row(children: [
-              ...List.generate(5, (i) {
-                if (i < rating.floor()) {
-                  return Icon(Icons.star_rounded,
-                      color: Theme.of(context).colorScheme.primary, size: 13);
-                } else if (i < rating && rating - i >= 0.5) {
-                  return Icon(Icons.star_half_rounded,
-                      color: Theme.of(context).colorScheme.primary, size: 13);
-                } else {
-                  return Icon(Icons.star_outline_rounded,
-                      color: context.fitlek.textMuted, size: 13);
-                }
-              }),
-              const SizedBox(width: 6),
-              Text(
-                rating > 0
-                    ? '${rating.toStringAsFixed(1)}${reviews > 0 ? ' ($reviews)' : ''}'
-                    : 'Not yet rated',
-                style: TextStyle(
-                    color: rating > 0
-                        ? Theme.of(context).colorScheme.primary
-                        : context.fitlek.textMuted,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700),
-              ),
-              if (price > 0) ...[
-                const SizedBox(width: 10),
-                Container(
-                  width: 1,
-                  height: 10,
-                  color: context.fitlek.border,
+            const SizedBox(height: 4),
+            Text(
+                "${s.coachSpeciality.isNotEmpty ? s.coachSpeciality : 'Coach'} • ${s.location.isNotEmpty ? s.location : 'Anywhere'}",
+                style: TextStyle(color: context.fitlek.textMuted, fontSize: 12)),
+            const SizedBox(height: 6),
+            Row(
+              children: [
+                Text(
+                  '⭐ ${rating > 0 ? rating.toStringAsFixed(1) : 'New'}',
+                  style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 12, fontWeight: FontWeight.w800),
                 ),
-                const SizedBox(width: 10),
-                Text('${price.toInt()} MAD/session',
-                    style: TextStyle(
-                        color: context.fitlek.textSecondary,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600)),
+                if (reviews > 0) ...[
+                  const SizedBox(width: 4),
+                  Text('·', style: TextStyle(color: context.fitlek.textMuted, fontSize: 12, fontWeight: FontWeight.w900)),
+                  const SizedBox(width: 4),
+                  Text('$reviews reviews', style: TextStyle(color: context.fitlek.textMuted, fontSize: 12)),
+                ],
+                if (price > 0) ...[
+                  const SizedBox(width: 6),
+                  Text('·', style: TextStyle(color: context.fitlek.textMuted, fontSize: 12, fontWeight: FontWeight.w900)),
+                  const SizedBox(width: 6),
+                  Text('${price.toInt()} MAD/session', style: TextStyle(color: context.fitlek.textMuted, fontSize: 12)),
+                ],
               ],
-            ]),
+            ),
           ]),
         ),
       ]),

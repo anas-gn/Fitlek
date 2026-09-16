@@ -44,6 +44,7 @@ class CoachProfileData {
   final String tel;
   final String ville;
   final double? price;
+  final int? categoryID;
 
   CoachProfileData({
     required this.id,
@@ -70,6 +71,7 @@ class CoachProfileData {
     required this.tel,
     required this.ville,
     this.price,
+    this.categoryID,
   });
 
   bool get hasProfessionalInfo =>
@@ -135,6 +137,7 @@ class CoachProfileData {
       tel: json['tel']?.toString() ?? '',
       ville: json['ville']?.toString() ?? '',
       price: parsedPrice,
+      categoryID: json['categoryID'] != null ? int.tryParse(json['categoryID'].toString()) : null,
     );
   }
 }

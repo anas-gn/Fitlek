@@ -15,6 +15,9 @@ class CoachModel {
   final double? rating;
   final int? totalSessions;
   final String? speciality;
+  final int? categoryID;
+  final String? categoryName;
+  final int? reviewCount;
 
   const CoachModel({
     required this.id,
@@ -33,9 +36,25 @@ class CoachModel {
     this.rating,
     this.totalSessions,
     this.speciality,
+    this.categoryID,
+    this.categoryName,
+    this.reviewCount,
   });
 
   String get fullName => '$firstName $lastName';
+
+  /// Returns a display string like "Musculation • Transformation"
+  /// Uses categoryName first, falls back to speciality
+  String get displaySpecialties {
+    final parts = <String>[];
+    if (categoryName != null && categoryName!.isNotEmpty) {
+      parts.add(categoryName!);
+    }
+    if (speciality != null && speciality!.isNotEmpty && speciality != categoryName) {
+      parts.add(speciality!);
+    }
+    return parts.isNotEmpty ? parts.join(' • ') : 'Coach';
+  }
 
   factory CoachModel.fromJson(Map<String, dynamic> json) => CoachModel(
         id: json['id'],
@@ -50,7 +69,6 @@ class CoachModel {
         totalInvitations: json['totalInvitations'] ?? 0,
         earnedPoints: json['earnedPoints'] ?? 0,
         tel: json['tel'],
-        // ✅ FIX: Gère String ET num pour price
         price: json['price'] != null
             ? (json['price'] is num 
                 ? (json['price'] as num).toDouble() 
@@ -61,9 +79,10 @@ class CoachModel {
             : null,
         totalSessions: json['totalSessions'],
         speciality: json['speciality'],
+        categoryID: json['categoryID'],
+        categoryName: json['categoryName'],
+        reviewCount: json['reviewCount'],
       );
-
-
 
   Map<String, dynamic> toJson() => {
         'id': id,
@@ -76,11 +95,14 @@ class CoachModel {
         'invitationCode': invitationCode,
         'totalInvitations': totalInvitations,
         'earnedPoints': earnedPoints,
-        'tel': tel,           // ✅ AJOUTÉ
-        'price': price,       // ✅ AJOUTÉ
+        'tel': tel,
+        'price': price,
         'rating': rating,
-        'ville':ville,
+        'ville': ville,
         'totalSessions': totalSessions,
         'speciality': speciality,
+        'categoryID': categoryID,
+        'categoryName': categoryName,
+        'reviewCount': reviewCount,
       };
-}
+}

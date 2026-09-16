@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:fitlek1/constants/urls.dart';
 import 'clientConversation.dart';
 import '../../theme/fitlek_theme_extension.dart';
+import '../../components/ENG/imagePreview.dart';
 
 class _ConversationItem {
   final int id;
@@ -407,18 +408,25 @@ class _ConversationTile extends StatelessWidget {
                           width: 1.5,
                         ),
                       ),
-                      child: CircleAvatar(
-                        radius: 26,
-                        backgroundColor: context.fitlek.card2,
-                        backgroundImage: conversation.otherAvatar != null && conversation.otherAvatar!.isNotEmpty
-                            ? NetworkImage(conversation.otherAvatar!)
-                            : null,
-                        child: (conversation.otherAvatar == null || conversation.otherAvatar!.isEmpty)
-                            ? Text(
-                                conversation.otherName.isNotEmpty ? conversation.otherName[0].toUpperCase() : '?',
-                                style: TextStyle(color: Theme.of(context).colorScheme.primary, fontSize: 18, fontWeight: FontWeight.w900),
-                              )
-                            : null,
+                      child: GestureDetector(
+                        onTap: () {
+                          if (conversation.otherAvatar != null && conversation.otherAvatar!.isNotEmpty) {
+                            Navigator.push(context, MaterialPageRoute(builder: (_) => ImagePreview(imageUrl: conversation.otherAvatar!, tag: 'list_avatar_${conversation.id}')));
+                          }
+                        },
+                        child: CircleAvatar(
+                          radius: 26,
+                          backgroundColor: context.fitlek.card2,
+                          backgroundImage: conversation.otherAvatar != null && conversation.otherAvatar!.isNotEmpty
+                              ? NetworkImage(conversation.otherAvatar!)
+                              : null,
+                          child: (conversation.otherAvatar == null || conversation.otherAvatar!.isEmpty)
+                              ? Text(
+                                  conversation.otherName.isNotEmpty ? conversation.otherName[0].toUpperCase() : '?',
+                                  style: TextStyle(color: Theme.of(context).colorScheme.primary, fontSize: 18, fontWeight: FontWeight.w900),
+                                )
+                              : null,
+                        ),
                       ),
                     ),
                     if (hasUnread)

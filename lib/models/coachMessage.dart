@@ -8,6 +8,7 @@ class CoachMessage {
   final bool mediaExpired;
   final DateTime timestamp;
   final bool isFromCoach;
+  final bool isRead;
 
   const CoachMessage({
     required this.id,
@@ -19,5 +20,6 @@ class CoachMessage {
     this.mediaExpired = false,
     required this.timestamp,
     required this.isFromCoach,
+    this.isRead = false,
   });
 }

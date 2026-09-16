@@ -48,6 +48,10 @@ class _CoachDTO {
   final bool    isPremium;
   final String  bio, instagramPage, invitationCode;
   final int     earnedPoints, totalInvitations;
+  final String? ville;
+  final String? speciality;
+  final double? rating;
+  final int?    totalSessions;
 
   const _CoachDTO({
     required this.id, required this.firstName, required this.lastName,
@@ -55,6 +59,7 @@ class _CoachDTO {
     required this.bio, required this.instagramPage,
     required this.invitationCode,
     required this.earnedPoints, required this.totalInvitations,
+    this.ville, this.speciality, this.rating, this.totalSessions,
   });
 
   String get fullName => '$firstName $lastName';
@@ -70,6 +75,10 @@ class _CoachDTO {
     invitationCode:   j['invitationCode'] ?? '',
     earnedPoints:     j['earnedPoints']     ?? 0,
     totalInvitations: j['totalInvitations'] ?? 0,
+    ville:            j['ville'],
+    speciality:       j['speciality'] ?? j['specialty'],
+    rating:           j['rating'] != null ? (j['rating'] as num).toDouble() : null,
+    totalSessions:    j['totalSessions'],
   );
 }
 
@@ -1013,16 +1022,31 @@ class _CoachCardState extends State<_CoachCard> {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(color: Theme.of(context).colorScheme.primary, borderRadius: BorderRadius.circular(8)),
-                      child: Text('VIEW', style: TextStyle(
+                      child: Text('VIEW PROFILE', style: TextStyle(
                         color: Theme.of(context).colorScheme.onPrimary, fontWeight: FontWeight.w900, fontSize: 9, letterSpacing: 1))),
                   ]),
                   const SizedBox(height: 6),
                   Text(
-                    coach.bio.isNotEmpty
-                        ? (coach.bio.length > 55 ? '${coach.bio.substring(0, 55)}…' : coach.bio)
-                        : 'Certified coach',
-                    style: TextStyle(color: context.fitlek.textMuted, fontSize: 11, height: 1.4),
-                    maxLines: 2),
+                    "${coach.speciality ?? 'Coach'} • ${coach.ville?.isNotEmpty == true ? coach.ville : 'Anywhere'}",
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(color: context.fitlek.textMuted, fontSize: 11),
+                  ),
+                  const SizedBox(height: 6),
+                  Row(
+                    children: [
+                      Text(
+                        '⭐ ${coach.rating != null ? coach.rating!.toStringAsFixed(1) : 'New'}',
+                        style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 11, fontWeight: FontWeight.w800),
+                      ),
+                      if (coach.totalSessions != null && coach.totalSessions! > 0) ...[
+                        const SizedBox(width: 4),
+                        Text('·', style: TextStyle(color: context.fitlek.textMuted, fontSize: 11, fontWeight: FontWeight.w900)),
+                        const SizedBox(width: 4),
+                        Text('${coach.totalSessions} reviews', style: TextStyle(color: context.fitlek.textMuted, fontSize: 11)),
+                      ],
+                    ],
+                  ),
                   const SizedBox(height: 10),
                   Row(children: [
                     _chip(context, Icons.card_giftcard_rounded, '${coach.totalInvitations} inv.'),

@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import '../../services/apiService.dart';
 import '../../models/coachConversation.dart';
 import 'coachChat.dart';
-
 import '../../theme/fitlek_theme_extension.dart';
+import '../../components/ENG/imagePreview.dart';
 class CoachConversations extends StatefulWidget {
   const CoachConversations({super.key});
   @override
@@ -125,7 +125,7 @@ class _CoachConversationsState extends State<CoachConversations> {
               decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(
                 color: hasUnread ? cs.primary : f.border, width: 1.5)),
               child: ClipOval(child: conv.clientPhotoUrl.isNotEmpty
-                ? Image.network(conv.clientPhotoUrl, fit: BoxFit.cover, errorBuilder: (_, __, ___) => Icon(Icons.person, color: f.textMuted, size: 26))
+                ? GestureDetector(onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => ImagePreview(imageUrl: conv.clientPhotoUrl, tag: 'list_avatar_${conv.id}'))), child: Image.network(conv.clientPhotoUrl, fit: BoxFit.cover, errorBuilder: (_, __, ___) => Icon(Icons.person, color: f.textMuted, size: 26)))
                 : Icon(Icons.person, color: f.textMuted, size: 26))),
             if (hasUnread) Positioned(right: 0, top: 0, child: Container(
               width: 18, height: 18,

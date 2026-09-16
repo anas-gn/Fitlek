@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import 'package:fitlek1/constants/urls.dart';
 import '../../services/apiService.dart';
 import '../../theme/fitlek_theme_extension.dart';
 import 'coachProfile.dart' show CoachProfileData;
@@ -37,6 +40,8 @@ class _CoachEditProfileState extends State<CoachEditProfile> {
   List<Map<String, dynamic>> _galleryImages = [];
   bool _loadingGallery = true;
   bool _uploadingGallery = false;
+  List<Map<String, dynamic>> _categories = [];
+  int? _selectedCategoryId;
 
   static const _genders = ['Male', 'Female', 'Other'];
 
@@ -58,7 +63,24 @@ class _CoachEditProfileState extends State<CoachEditProfile> {
     _publicProfile = p.publicProfile;
     _directMessaging = p.directMessaging;
     _gender = _normalizeGender(p.gender);
+    _selectedCategoryId = p.categoryID;
     _loadGallery();
+    _fetchCategories();
+  }
+
+  Future<void> _fetchCategories() async {
+    try {
+      final res = await http.get(Uri.parse('$baseUrl/categories'))
+          .timeout(const Duration(seconds: 8));
+      if (res.statusCode == 200) {
+        final List data = jsonDecode(res.body);
+        if (mounted) {
+          setState(() {
+            _categories = List<Map<String, dynamic>>.from(data);
+          });
+        }
+      }
+    } catch (_) {}
   }
 
   Future<void> _loadGallery() async {
@@ -369,6 +391,7 @@ class _CoachEditProfileState extends State<CoachEditProfile> {
         'instagramPage': _instagramCtrl.text.trim(),
         'tel': _telCtrl.text.trim(),
         'ville': _villeCtrl.text.trim(),
+        if (_selectedCategoryId != null) 'categoryID': _selectedCategoryId,
         // Never send price — coaches do not set a session price in the app.
       };
       if (_avatarUrl != null && _avatarUrl != p.avatarUrl) {
@@ -595,6 +618,28 @@ class _CoachEditProfileState extends State<CoachEditProfile> {
           ),
         ),
         const SizedBox(height: 14),
+        if (_categories.isNotEmpty) ...[
+          _labeledField(
+            label: 'Primary Coaching Category',
+            child: DropdownButtonFormField<int>(
+              value: _selectedCategoryId,
+              hint: Text('Select a category', style: TextStyle(color: f.textMuted)),
+              items: _categories
+                  .map((cat) => DropdownMenuItem<int>(
+                        value: cat['id'] as int,
+                        child: Text(cat['name'] as String),
+                      ))
+                  .toList(),
+              onChanged: (v) {
+                if (v != null) setState(() => _selectedCategoryId = v);
+              },
+              style: TextStyle(color: cs.onSurface, fontSize: 14.5, fontWeight: FontWeight.w600),
+              dropdownColor: f.card,
+              decoration: _inputDecoration(f, cs),
+            ),
+          ),
+          const SizedBox(height: 14),
+        ],
         _labeledField(
           label: 'Professional Title',
           child: TextFormField(

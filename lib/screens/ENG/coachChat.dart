@@ -80,6 +80,7 @@ class _CoachChatState extends State<CoachChat> {
             mediaExpired: data['mediaExpired'] == 1 || data['mediaExpired'] == true,
             timestamp: data['createdAt'] != null ? DateTime.parse(data['createdAt']) : DateTime.now(),
             isFromCoach: false,
+            isRead: data['isRead'] == 1 || data['isRead'] == true,
           ));
         });
         _scrollToBottom();
@@ -104,6 +105,7 @@ class _CoachChatState extends State<CoachChat> {
           mediaExpired: m['mediaExpired'] == 1 || m['mediaExpired'] == true,
           timestamp: m['createdAt'] != null ? DateTime.parse(m['createdAt']) : DateTime.now(),
           isFromCoach: m['senderID'].toString() == _coachID,
+          isRead: m['isRead'] == 1 || m['isRead'] == true,
         )).toList();
         _loading = false;
       });
@@ -135,6 +137,7 @@ class _CoachChatState extends State<CoachChat> {
       text: text,
       timestamp: DateTime.now(),
       isFromCoach: true,
+      isRead: false,
     );
     setState(() => _messages.add(tempMsg));
     _scrollToBottom();
@@ -147,9 +150,56 @@ class _CoachChatState extends State<CoachChat> {
     }
   }
 
-  Future<void> _pickAndSendImage() async {
+  void _showAttachOptions() {
+    final cs = Theme.of(context).colorScheme;
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: context.fitlek.card,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 20),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              _attachOption(Icons.camera_alt_rounded, 'Camera', cs.primary, () {
+                Navigator.pop(context);
+                _pickAndSendSingleImage(ImageSource.camera);
+              }),
+              _attachOption(Icons.photo_library_rounded, 'Gallery', cs.primary, () {
+                Navigator.pop(context);
+                _pickAndSendMultipleImages();
+              }),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _attachOption(IconData icon, String label, Color color, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 56, height: 56,
+            decoration: BoxDecoration(color: color.withValues(alpha: 0.1), shape: BoxShape.circle),
+            child: Icon(icon, color: color, size: 28),
+          ),
+          const SizedBox(height: 8),
+          Text(label, style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 13, fontWeight: FontWeight.w600)),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _pickAndSendSingleImage(ImageSource source) async {
     final picker = ImagePicker();
-    final xFile = await picker.pickImage(source: ImageSource.gallery, imageQuality: 70);
+    final xFile = await picker.pickImage(source: source, imageQuality: 70);
     if (xFile == null) return;
 
     setState(() => _isUploadingMedia = true);
@@ -170,6 +220,34 @@ class _CoachChatState extends State<CoachChat> {
       setState(() => _isUploadingMedia = false);
       ApiService.showError(context, 'Image upload failed');
     }
+  }
+
+  Future<void> _pickAndSendMultipleImages() async {
+    final picker = ImagePicker();
+    final xFiles = await picker.pickMultiImage(imageQuality: 70);
+    if (xFiles.isEmpty) return;
+
+    setState(() => _isUploadingMedia = true);
+    for (var xFile in xFiles) {
+      final bytes = await xFile.readAsBytes();
+      final result = await ApiService.uploadMultipart(
+        '/upload/chat-image',
+        fields: {},
+        fileBytes: bytes,
+        fileField: 'image',
+        fileName: xFile.name,
+        mimeType: 'image/webp',
+      );
+
+      if (!mounted) return;
+      if (result['ok'] == true && result['url'] != null) {
+        await _sendMediaMessage(result['url'], 'image');
+        if (mounted) setState(() => _isUploadingMedia = true);
+      } else {
+        ApiService.showError(context, 'Failed to upload some images');
+      }
+    }
+    if (mounted) setState(() => _isUploadingMedia = false);
   }
 
   Future<void> _toggleRecording() async {
@@ -228,6 +306,7 @@ class _CoachChatState extends State<CoachChat> {
       mediaType: type,
       timestamp: DateTime.now(),
       isFromCoach: true,
+      isRead: false,
     );
     setState(() {
       _messages.add(tempMsg);
@@ -302,12 +381,19 @@ class _CoachChatState extends State<CoachChat> {
           decoration: BoxDecoration(color: f.card, borderRadius: BorderRadius.circular(10)),
           child: Icon(Icons.arrow_back_ios_new_rounded, color: cs.onSurface, size: 17))),
       const SizedBox(width: 12),
-      Container(width: 40, height: 40,
-        decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: cs.primary.withValues(alpha: 0.4), width: 1.5)),
-        child: ClipOval(child: widget.conversation.clientPhotoUrl.isNotEmpty
-          ? Image.network(widget.conversation.clientPhotoUrl, fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => Icon(Icons.person, color: f.textMuted, size: 20))
-          : Icon(Icons.person, color: f.textMuted, size: 20))),
+      GestureDetector(
+        onTap: () {
+          if (widget.conversation.clientPhotoUrl.isNotEmpty) {
+            Navigator.push(context, MaterialPageRoute(builder: (_) => ImagePreview(imageUrl: widget.conversation.clientPhotoUrl, tag: 'header_avatar')));
+          }
+        },
+        child: Container(width: 40, height: 40,
+          decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: cs.primary.withValues(alpha: 0.4), width: 1.5)),
+          child: ClipOval(child: widget.conversation.clientPhotoUrl.isNotEmpty
+            ? Image.network(widget.conversation.clientPhotoUrl, fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => Icon(Icons.person, color: f.textMuted, size: 20))
+            : Icon(Icons.person, color: f.textMuted, size: 20))),
+      ),
       const SizedBox(width: 10),
       Expanded(child: Text(widget.conversation.clientName,
         maxLines: 1, overflow: TextOverflow.ellipsis,
@@ -351,7 +437,20 @@ class _CoachChatState extends State<CoachChat> {
                 child: _buildBubbleContent(message, isCoach),
               ),
               const SizedBox(height: 4),
-              Text(_formatTime(message.timestamp), style: TextStyle(color: f.textMuted, fontSize: 10, fontWeight: FontWeight.w500)),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(_formatTime(message.timestamp), style: TextStyle(color: isCoach ? cs.onPrimary.withValues(alpha: 0.6) : f.textMuted, fontSize: 10, fontWeight: FontWeight.w500)),
+                  if (isCoach) ...[
+                    const SizedBox(width: 4),
+                    Icon(
+                      message.isRead ? Icons.done_all_rounded : Icons.done_rounded,
+                      color: message.isRead ? const Color(0xFF4ade80) : cs.onPrimary.withValues(alpha: 0.6),
+                      size: 11,
+                    ),
+                  ],
+                ],
+              ),
             ],
           )),
         ],
@@ -425,7 +524,7 @@ class _CoachChatState extends State<CoachChat> {
     decoration: BoxDecoration(color: Theme.of(context).scaffoldBackgroundColor, border: Border(top: BorderSide(color: f.border))),
     child: Row(children: [
       GestureDetector(
-        onTap: _pickAndSendImage,
+        onTap: _showAttachOptions,
         child: Container(
           padding: const EdgeInsets.all(8),
           child: Icon(Icons.add_photo_alternate_rounded, color: f.textMuted, size: 24),

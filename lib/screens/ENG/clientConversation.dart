@@ -255,9 +255,56 @@ class _ClientConversationScreenState extends State<ClientConversationScreen> {
     }
   }
 
-  Future<void> _pickAndSendImage() async {
+  void _showAttachOptions() {
+    final cs = Theme.of(context).colorScheme;
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: context.fitlek.card,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 20),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              _attachOption(Icons.camera_alt_rounded, 'Camera', cs.primary, () {
+                Navigator.pop(context);
+                _pickAndSendSingleImage(ImageSource.camera);
+              }),
+              _attachOption(Icons.photo_library_rounded, 'Gallery', cs.primary, () {
+                Navigator.pop(context);
+                _pickAndSendMultipleImages();
+              }),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _attachOption(IconData icon, String label, Color color, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 56, height: 56,
+            decoration: BoxDecoration(color: color.withValues(alpha: 0.1), shape: BoxShape.circle),
+            child: Icon(icon, color: color, size: 28),
+          ),
+          const SizedBox(height: 8),
+          Text(label, style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 13, fontWeight: FontWeight.w600)),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _pickAndSendSingleImage(ImageSource source) async {
     final picker = ImagePicker();
-    final xFile = await picker.pickImage(source: ImageSource.gallery, imageQuality: 70);
+    final xFile = await picker.pickImage(source: source, imageQuality: 70);
     if (xFile == null) return;
 
     setState(() => _isUploadingMedia = true);
@@ -278,6 +325,34 @@ class _ClientConversationScreenState extends State<ClientConversationScreen> {
       setState(() => _isUploadingMedia = false);
       _showSnack('Image upload failed', isError: true);
     }
+  }
+
+  Future<void> _pickAndSendMultipleImages() async {
+    final picker = ImagePicker();
+    final xFiles = await picker.pickMultiImage(imageQuality: 70);
+    if (xFiles.isEmpty) return;
+
+    setState(() => _isUploadingMedia = true);
+    for (var xFile in xFiles) {
+      final bytes = await xFile.readAsBytes();
+      final result = await ApiService.uploadMultipart(
+        '/upload/chat-image',
+        fields: {},
+        fileBytes: bytes,
+        fileField: 'image',
+        fileName: xFile.name,
+        mimeType: 'image/webp',
+      );
+
+      if (!mounted) return;
+      if (result['ok'] == true && result['url'] != null) {
+        await _sendMediaMessage(result['url'], 'image');
+        if (mounted) setState(() => _isUploadingMedia = true);
+      } else {
+        _showSnack('Failed to upload some images', isError: true);
+      }
+    }
+    if (mounted) setState(() => _isUploadingMedia = false);
   }
 
   Future<void> _toggleRecording() async {
@@ -450,23 +525,32 @@ class _ClientConversationScreenState extends State<ClientConversationScreen> {
       ),
       title: Row(
         children: [
-          Container(
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              border: Border.all(color: Theme.of(context).colorScheme.primary, width: 2),
-            ),
-            child: CircleAvatar(
-              radius: 18,
-              backgroundColor: context.fitlek.card2,
-              backgroundImage: widget.coachAvatar != null && widget.coachAvatar!.isNotEmpty
-                  ? NetworkImage(widget.coachAvatar!)
-                  : null,
-              child: (widget.coachAvatar == null || widget.coachAvatar!.isEmpty)
-                  ? Text(
-                      widget.coachName != null && widget.coachName!.isNotEmpty ? widget.coachName![0].toUpperCase() : '?',
-                      style: TextStyle(color: Theme.of(context).colorScheme.primary, fontSize: 14, fontWeight: FontWeight.w900),
-                    )
-                  : null,
+          GestureDetector(
+            onTap: () {
+              if (widget.coachAvatar != null && widget.coachAvatar!.isNotEmpty) {
+                Navigator.push(context, MaterialPageRoute(
+                  builder: (_) => ImagePreview(imageUrl: widget.coachAvatar!, tag: 'header_avatar'),
+                ));
+              }
+            },
+            child: Container(
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                border: Border.all(color: Theme.of(context).colorScheme.primary, width: 2),
+              ),
+              child: CircleAvatar(
+                radius: 18,
+                backgroundColor: context.fitlek.card2,
+                backgroundImage: widget.coachAvatar != null && widget.coachAvatar!.isNotEmpty
+                    ? NetworkImage(widget.coachAvatar!)
+                    : null,
+                child: (widget.coachAvatar == null || widget.coachAvatar!.isEmpty)
+                    ? Text(
+                        widget.coachName != null && widget.coachName!.isNotEmpty ? widget.coachName![0].toUpperCase() : '?',
+                        style: TextStyle(color: Theme.of(context).colorScheme.primary, fontSize: 14, fontWeight: FontWeight.w900),
+                      )
+                    : null,
+              ),
             ),
           ),
           const SizedBox(width: 10),
@@ -688,7 +772,7 @@ class _ClientConversationScreenState extends State<ClientConversationScreen> {
                             const SizedBox(width: 4),
                             Icon(
                               msg.isRead ? Icons.done_all_rounded : Icons.done_rounded,
-                              color: Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.6),
+                              color: msg.isRead ? const Color(0xFF4ade80) : Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.6),
                               size: 12,
                             ),
                           ],
@@ -774,7 +858,7 @@ class _ClientConversationScreenState extends State<ClientConversationScreen> {
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           GestureDetector(
-            onTap: _pickAndSendImage,
+            onTap: _showAttachOptions,
             child: Container(
               padding: const EdgeInsets.all(8),
               child: Icon(Icons.add_photo_alternate_rounded, color: context.fitlek.textMuted, size: 24),
