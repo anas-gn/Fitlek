@@ -15,15 +15,14 @@ void main() async {
     WidgetsFlutterBinding.ensureInitialized();
     try {
       await dotenv.load(fileName: "assets/config.env");
-    } catch (e) {
+    } 
+    catch (e) {
       debugPrint("Failed to load env: $e");
     }
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
-    
-    // Initialize notifications
-    try {
+        try {
       await NotificationService.instance.init();
     } catch (e) {
       debugPrint("Failed to initialize notifications: $e");

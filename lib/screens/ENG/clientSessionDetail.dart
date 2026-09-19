@@ -39,6 +39,10 @@ class _SessionDetailScreenState extends State<SessionDetailScreen>
 
   bool _cancelling = false;
 
+  // Vrai rating depuis la BDD (avg des reviews du coach)
+  double? _realCoachRating;
+  int? _realReviewCount;
+
   Map<String, String> get _headers => {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer ${widget.token}',
@@ -65,6 +69,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen>
     }
 
     _animCtrl.forward();
+    _fetchRealCoachRating();
   }
 
   @override
@@ -137,6 +142,29 @@ class _SessionDetailScreenState extends State<SessionDetailScreen>
   bool get _sessionIsPast => _session.sessionStart.isBefore(DateTime.now());
 
   bool get _canReview => _session.isConfirmed && _sessionIsPast;
+
+  /// Fetch le vrai rating moyen du coach depuis /reviews/coach/:id
+  Future<void> _fetchRealCoachRating() async {
+    try {
+      final res = await http
+          .get(
+            Uri.parse('$baseUrl/reviews/coach/${_session.coachID}'),
+            headers: _headers,
+          )
+          .timeout(const Duration(seconds: 8));
+      if (res.statusCode == 200) {
+        final data = jsonDecode(res.body) as Map<String, dynamic>;
+        if (mounted) {
+          setState(() {
+            final r = data['avg'];
+            final c = data['total'];
+            _realCoachRating = r != null ? (r as num).toDouble() : null;
+            _realReviewCount = c != null ? (c as num).toInt() : null;
+          });
+        }
+      }
+    } catch (_) {}
+  }
 
   Future<void> _cancelSession() async {
     final errorColor = context.fitlek.error;
@@ -569,14 +597,37 @@ class _SessionDetailScreenState extends State<SessionDetailScreen>
                       style: TextStyle(
                           color: context.fitlek.textSecondary, fontSize: 12)),
                   const SizedBox(height: 6),
-                  Row(
-                    children: [
-                      Text(
-                        '⭐ ${_session.coachRating > 0 ? _session.coachRating.toStringAsFixed(1) : 'New'}',
-                        style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 12, fontWeight: FontWeight.w800),
+                  Builder(builder: (_) {
+                    final double rating = _realCoachRating ?? 0.0;
+                    final int count = _realReviewCount ?? 0;
+                    final bool hasRating = count > 0;
+                    return Row(children: [
+                      Icon(
+                        Icons.star_rounded,
+                        color: hasRating
+                            ? const Color(0xFFF59E0B)
+                            : context.fitlek.textMuted,
+                        size: 13,
                       ),
-                    ],
-                  ),
+                      const SizedBox(width: 3),
+                      Text(
+                        hasRating ? rating.toStringAsFixed(1) : 'New',
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.onSurface,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      if (hasRating)
+                        Text(
+                          ' ($count)',
+                          style: TextStyle(
+                            color: context.fitlek.textMuted,
+                            fontSize: 10,
+                          ),
+                        ),
+                    ]);
+                  }),
                 ])),
             Icon(Icons.chevron_right_rounded,
                 color: context.fitlek.textMuted, size: 24),

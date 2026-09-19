@@ -72,7 +72,7 @@ class _CoachDetailScreenState extends State<CoachDetailScreen>
   bool _loadingReviews = true;
   bool _loadingGallery = true;
   String? _errorCoach;
-  
+
   List<Map<String, dynamic>> _galleryImages = [];
 
   int _pendingRating = 0;
@@ -91,7 +91,7 @@ class _CoachDetailScreenState extends State<CoachDetailScreen>
   void initState() {
     super.initState();
     _animCtrl = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 600));
+        vsync: this, duration: const Duration(milliseconds: 700));
     _fadeAnim = CurvedAnimation(parent: _animCtrl, curve: Curves.easeOut);
     _fetchAll();
     _checkInvitationStatus();
@@ -119,7 +119,6 @@ class _CoachDetailScreenState extends State<CoachDetailScreen>
           'Authorization': 'Bearer ${widget.token}',
         },
       ).timeout(const Duration(seconds: 10));
-
       if (res.statusCode == 200) {
         final List<dynamic> data = jsonDecode(res.body);
         if (mounted) {
@@ -149,7 +148,6 @@ class _CoachDetailScreenState extends State<CoachDetailScreen>
           'Authorization': 'Bearer ${widget.token}',
         },
       ).timeout(const Duration(seconds: 10));
-
       if (res.statusCode == 200) {
         final jsonData = jsonDecode(res.body);
         setState(() {
@@ -169,86 +167,7 @@ class _CoachDetailScreenState extends State<CoachDetailScreen>
       });
     }
   }
-Widget _buildQrCode(CoachModel c) {
-  final code = c.invitationCode;
-  if (code.isEmpty) return const SizedBox.shrink();
 
-  return Padding(
-    padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
-    child: Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: context.fitlek.card,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: context.fitlek.border),
-      ),
-      child: Column(
-        children: [
-          Row(children: [
-            _sectionHeader('Coach QR Code'),
-          ]),
-          const SizedBox(height: 16),
-          GestureDetector(
-            onTap: () => _showQrDialog(code),
-            child: Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: QrImageView(
-                data: code,
-                version: QrVersions.auto,
-                size: 140,
-              ),
-            ),
-          ),
-          const SizedBox(height: 10),
-          Text('Tap to enlarge or scan',
-              style: TextStyle(color: context.fitlek.textMuted, fontSize: 11)),
-        ],
-      ),
-    ),
-  );
-}
-
-void _showQrDialog(String code) {
-  showDialog(
-    context: context,
-    builder: (ctx) => Dialog(
-      backgroundColor: context.fitlek.card,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-      child: Padding(
-        padding: const EdgeInsets.all(28),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text('Coach QR Code',
-                style: TextStyle(
-                    color: Theme.of(context).colorScheme.onSurface,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w800)),
-            const SizedBox(height: 20),
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                  color: Colors.white, borderRadius: BorderRadius.circular(16)),
-              child: QrImageView(data: code, version: QrVersions.auto, size: 220),
-            ),
-            const SizedBox(height: 16),
-            Text(code,
-                style: TextStyle(
-                    color: Theme.of(context).colorScheme.primary,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 1.5)),
-          ],
-        ),
-      ),
-    ),
-  );
-}
   Future<void> _fetchReviews() async {
     setState(() => _loadingReviews = true);
     try {
@@ -259,7 +178,6 @@ void _showQrDialog(String code) {
           'Authorization': 'Bearer ${widget.token}',
         },
       ).timeout(const Duration(seconds: 10));
-
       if (res.statusCode == 200) {
         final data = jsonDecode(res.body) as Map<String, dynamic>;
         final list = (data['reviews'] as List)
@@ -269,7 +187,6 @@ void _showQrDialog(String code) {
             list.where((r) => r.clientID == widget.clientID).isNotEmpty
                 ? list.firstWhere((r) => r.clientID == widget.clientID)
                 : null;
-
         setState(() {
           _reviews = list;
           _avgRating = (data['avg'] as num).toDouble();
@@ -311,12 +228,9 @@ void _showQrDialog(String code) {
             }),
           )
           .timeout(const Duration(seconds: 10));
-
       if (res.statusCode == 201) {
         _showSnack('Review saved ✓');
-        setState(() {
-          _showReviewForm = false;
-        });
+        setState(() => _showReviewForm = false);
         await _fetchReviews();
       } else {
         final body = jsonDecode(res.body);
@@ -345,7 +259,6 @@ void _showQrDialog(String code) {
             }),
           )
           .timeout(const Duration(seconds: 10));
-
       if (res.statusCode == 201) {
         _showSnack('Invitation sent to the coach ✓');
         setState(() => _inviteStatus = 'pending');
@@ -373,7 +286,6 @@ void _showQrDialog(String code) {
           'Authorization': 'Bearer ${widget.token}',
         },
       ).timeout(const Duration(seconds: 10));
-
       if (res.statusCode == 200) {
         final data = jsonDecode(res.body) as Map<String, dynamic>;
         final status = data['status'];
@@ -384,9 +296,7 @@ void _showQrDialog(String code) {
           await _fetchConversation();
         }
       }
-    } catch (_) {
-      // Best-effort: invitation status is non-critical, ignore failures.
-    }
+    } catch (_) {}
   }
 
   Future<void> _fetchConversation() async {
@@ -404,14 +314,11 @@ void _showQrDialog(String code) {
             }),
           )
           .timeout(const Duration(seconds: 10));
-
       if (res.statusCode == 200 || res.statusCode == 201) {
         final data = jsonDecode(res.body) as Map<String, dynamic>;
         setState(() => _conversationID = data['conversationID']);
       }
-    } catch (_) {
-      // Best-effort: conversation lookup is non-critical, ignore failures.
-    }
+    } catch (_) {}
   }
 
   void _openConversation() {
@@ -460,384 +367,68 @@ void _showQrDialog(String code) {
     ));
   }
 
-  @override
-  Widget build(BuildContext context) {
-    if (_loadingCoach) return _buildLoading();
-    if (_errorCoach != null) return _buildError();
-    return _buildContent();
-  }
-
- Widget _buildLoading() => Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      body: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            SizedBox(
-              width: 84,
-              height: 84,
-              child: Image.asset(
-                'assets/branding/icon_app.png',
-                fit: BoxFit.contain,
-              ),
-            ),
-            const SizedBox(height: 14),
-           
-          ],
-        ),
-      ),
-    );
-
-  Widget _buildError() => Scaffold(
-        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-        body: SafeArea(
-            child: Column(children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-            child: Align(
-                alignment: Alignment.centerLeft,
-                child: _backBtn(onTap: () => Navigator.pop(context))),
-          ),
-          Expanded(
-              child: Center(
-                  child: Column(mainAxisSize: MainAxisSize.min, children: [
-            Icon(Icons.wifi_off_rounded,
-                color: context.fitlek.textMuted, size: 48),
-            const SizedBox(height: 12),
-            Text(_errorCoach!,
-                style:
-                    TextStyle(color: context.fitlek.textMuted, fontSize: 13)),
-            const SizedBox(height: 20),
-            _retryBtn(onTap: _fetchAll),
-          ]))),
-        ])),
-      );
-
-  Widget _buildContent() {
-    final s = widget.session;
-    final c = _coach!;
-
-    final imageUrl =
-        (c.avatarUrl?.isNotEmpty == true) ? c.avatarUrl! : s.coachImageUrl;
-    final name = c.fullName.isNotEmpty ? c.fullName : s.coachName;
-    final speciality =
-        (c.speciality?.isNotEmpty == true) ? c.speciality! : s.coachSpeciality;
-    final rating = _avgRating > 0 ? _avgRating : (c.rating ?? s.coachRating);
-
-    final canReview = s.isConfirmed && s.sessionStart.isBefore(DateTime.now());
-
-    return FadeTransition(
-      opacity: _fadeAnim,
-      child: Scaffold(
-        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-        body: CustomScrollView(slivers: [
-          SliverToBoxAdapter(
-              child: _buildHero(context, imageUrl, name, speciality, rating)),
-          SliverToBoxAdapter(
-              child: _buildStats(rating, c.totalInvitations, _totalReviews)),
-          if (c.ville != null || c.tel != null)
-            SliverToBoxAdapter(child: _buildContactInfo(c)),
-          if (c.instagramPage.isNotEmpty)
-            SliverToBoxAdapter(child: _buildInstagram(c.instagramPage)),
-          if (speciality.isNotEmpty)
-            SliverToBoxAdapter(child: _buildTags(speciality)),
-          if (c.bio.isNotEmpty) SliverToBoxAdapter(child: _buildBio(c.bio)),
-          if (!_loadingGallery && _galleryImages.isNotEmpty) SliverToBoxAdapter(child: _buildGallery()),
-          SliverToBoxAdapter(child: _buildInviteCTA()),
-          SliverToBoxAdapter(child: _buildBookCTA(context, s)),
-          SliverToBoxAdapter(child: _buildQrCode(c)), 
-          SliverToBoxAdapter(child: _buildReviewsSection(rating, canReview)),
-          const SliverToBoxAdapter(child: SizedBox(height: 40)),
-        ]),
-      ),
-    );
-  }
-
-  Widget _buildHero(BuildContext ctx, String imageUrl, String name,
-      String speciality, double rating) {
-    return GestureDetector(
-      behavior: HitTestBehavior.translucent,
-      onTap: () {
-        if (imageUrl.isNotEmpty) {
-          Navigator.push(
-            ctx,
-            MaterialPageRoute(
-              builder: (_) => ImagePreview(
-                imageUrl: imageUrl,
-                tag: 'coach_detail_hero',
-              ),
-            ),
-          );
-        }
-      },
-      onPanEnd: (details) {
-        final v = details.velocity.pixelsPerSecond;
-        // Glisser vers le bas ou vers la droite pour revenir en arrière
-        if (v.dy > 250 || v.dx > 250) {
-          Navigator.pop(ctx);
-        }
-      },
-      child: SizedBox(
-      height: 380,
-      child: Stack(children: [
-        Positioned.fill(
-          child: imageUrl.isNotEmpty
-              ? Image.network(imageUrl,
-                  fit: BoxFit.cover,
-                  loadingBuilder: (_, child, p) =>
-                      p == null ? child : Container(color: context.fitlek.card),
-                  errorBuilder: (_, __, ___) => _avatarPlaceholder(name))
-              : _avatarPlaceholder(name),
-        ),
-       Positioned.fill(
-  child: DecoratedBox(
-    decoration: BoxDecoration(
-      gradient: LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-        colors: [
-          Colors.transparent,                                                    // Haut : image visible
-          Theme.of(context).scaffoldBackgroundColor.withValues(alpha: 0.3),      // Transition
-          Theme.of(context).scaffoldBackgroundColor.withValues(alpha: 0.85),   // Fond dominant
-          Theme.of(context).scaffoldBackgroundColor,                            // Bas : opaque
-        ],
-        stops: const [0.0, 0.5, 0.85, 1.0],
-      ),
-    ),
-  ),
-),
-        Positioned(
-          top: 52,
-          right: 16,
-          child: SafeArea(
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                  decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.primary,
-                      borderRadius: BorderRadius.circular(20)),
-                  child: Row(mainAxisSize: MainAxisSize.min, children: [
-                    Icon(Icons.verified_rounded,
-                        color: Theme.of(context).colorScheme.onPrimary, size: 11),
-                    const SizedBox(width: 4),
-                    Text('VERIFIED',
-                        style: TextStyle(
-                            color: Theme.of(context).colorScheme.onPrimary,
-                            fontSize: 9,
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: 1.4)),
-                  ]),
-                ),
-                const SizedBox(width: 8),
-                _buildMoreMenu(),
-              ],
-            )
-          ),
-        ),
-        if (_avgRating > 0 || _totalReviews > 0)
-          Positioned(
-            bottom: 76,
-            right: 20,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.6),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(
-                      color: Theme.of(context)
-                          .colorScheme
-                          .primary
-                          .withValues(alpha: 0.4))),
-              child: Row(mainAxisSize: MainAxisSize.min, children: [
-                Icon(Icons.star_rounded,
-                    color: Theme.of(context).colorScheme.primary, size: 13),
-                const SizedBox(width: 4),
-                Text(
-                    _avgRating > 0
-                        ? '${_avgRating.toStringAsFixed(1)}  •  $_totalReviews reviews'
-                        : '$_totalReviews reviews',
-                    style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700)),
-              ]),
-            ),
-          ),
-        Positioned(
-          bottom: 20,
-          left: 20,
-          right: 20,
-          child:
-              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(name,
-                style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 32,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: -1.0,
-                    height: 1.0)),
-            const SizedBox(height: 5),
-            Text(speciality,
-                style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.55),
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500)),
-            // --- AJOUT : Afficher la ville si elle existe ---
-            
-            // --- FIN AJOUT ---
-          ]),
-        ),
-      ]),
-    ),
-    );
-  }
-
-  Widget _buildGallery() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(0, 24, 0, 0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: _sectionHeader('Coach Gallery'),
-          ),
-          const SizedBox(height: 12),
-          SizedBox(
-            height: 140,
-            child: ListView.builder(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              scrollDirection: Axis.horizontal,
-              itemCount: _galleryImages.length,
-              itemBuilder: (ctx, i) {
-                final img = _galleryImages[i];
-                return GestureDetector(
-                  onTap: () {
-                    Navigator.push(
-                      ctx,
-                      MaterialPageRoute(
-                        builder: (_) => ImagePreview(
-                          imageUrl: img['urlImage'],
-                          tag: 'gallery_${img['id']}',
-                        ),
-                      ),
-                    );
-                  },
-                  child: Hero(
-                    tag: 'gallery_${img['id']}',
-                    child: Container(
-                      width: 140,
-                      margin: const EdgeInsets.symmetric(horizontal: 4),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(16),
-                        color: context.fitlek.card2,
-                        image: DecorationImage(
-                          image: NetworkImage(img['urlImage']),
-                          fit: BoxFit.cover,
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.1),
-                            blurRadius: 4,
-                            offset: const Offset(0, 2),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMoreMenu() {
-    final c = _coach!;
-    final name = c.fullName.isNotEmpty ? c.fullName : widget.session.coachName;
-    return PopupMenuButton<String>(
-      icon: Container(
-        padding: const EdgeInsets.all(6),
-        decoration: BoxDecoration(
-          color: Colors.black.withValues(alpha: 0.4),
-          shape: BoxShape.circle,
-        ),
-        child: const Icon(Icons.more_horiz_rounded, color: Colors.white, size: 18),
-      ),
-      color: context.fitlek.card,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      offset: const Offset(0, 40),
-      onSelected: (val) {
-        if (val == 'report') {
-          _showReportDialog(name, c.id);
-        } else if (val == 'block') {
-          _showBlockDialog(name, c.id);
-        }
-      },
-      itemBuilder: (context) => [
-        PopupMenuItem(
-          value: 'report',
-          child: Row(
-            children: [
-              Icon(Icons.flag_rounded, color: context.fitlek.textMuted, size: 18),
-              const SizedBox(width: 8),
-              Text('Report Coach', style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 13, fontWeight: FontWeight.w600)),
-            ],
-          ),
-        ),
-        PopupMenuItem(
-          value: 'block',
-          child: Row(
-            children: [
-              Icon(Icons.block_rounded, color: context.fitlek.error, size: 18),
-              const SizedBox(width: 8),
-              Text('Block Coach', style: TextStyle(color: context.fitlek.error, fontSize: 13, fontWeight: FontWeight.w600)),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
   void _showReportDialog(String name, int coachID) {
     String? selectedReason;
-    final reasons = ['Spam', 'Harassment', 'Inappropriate content', 'Fraud / Scam', 'Other'];
-
+    final reasons = [
+      'Spam',
+      'Harassment',
+      'Inappropriate content',
+      'Fraud / Scam',
+      'Other'
+    ];
     showDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) => AlertDialog(
           backgroundColor: context.fitlek.card,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: Text('Report $name', style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 16)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Text('Report $name',
+              style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurface,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800)),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text('Why are you reporting this user? We take these reports seriously.', style: TextStyle(color: context.fitlek.textMuted, fontSize: 13)),
+              Text(
+                  'Why are you reporting this user? We take these reports seriously.',
+                  style: TextStyle(
+                      color: context.fitlek.textMuted, fontSize: 13)),
               const SizedBox(height: 16),
               ...reasons.map((r) => RadioListTile<String>(
-                title: Text(r, style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 13)),
-                value: r,
-                groupValue: selectedReason,
-                activeColor: Theme.of(context).colorScheme.primary,
-                contentPadding: EdgeInsets.zero,
-                dense: true,
-                onChanged: (val) => setDialogState(() => selectedReason = val),
-              )),
+                    title: Text(r,
+                        style: TextStyle(
+                            color: Theme.of(context).colorScheme.onSurface,
+                            fontSize: 13)),
+                    value: r,
+                    groupValue: selectedReason,
+                    activeColor: Theme.of(context).colorScheme.primary,
+                    contentPadding: EdgeInsets.zero,
+                    dense: true,
+                    onChanged: (val) =>
+                        setDialogState(() => selectedReason = val),
+                  )),
             ],
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Cancel', style: TextStyle(color: context.fitlek.textMuted))),
             TextButton(
-              onPressed: selectedReason == null ? null : () async {
-                Navigator.pop(ctx);
-                _submitReport(coachID, selectedReason!);
-              },
-              child: Text('Submit', style: TextStyle(color: selectedReason == null ? context.fitlek.textMuted : Theme.of(context).colorScheme.primary, fontWeight: FontWeight.bold)),
+                onPressed: () => Navigator.pop(ctx),
+                child: Text('Cancel',
+                    style: TextStyle(color: context.fitlek.textMuted))),
+            TextButton(
+              onPressed: selectedReason == null
+                  ? null
+                  : () async {
+                      Navigator.pop(ctx);
+                      _submitReport(coachID, selectedReason!);
+                    },
+              child: Text('Submit',
+                  style: TextStyle(
+                      color: selectedReason == null
+                          ? context.fitlek.textMuted
+                          : Theme.of(context).colorScheme.primary,
+                      fontWeight: FontWeight.bold)),
             ),
           ],
         ),
@@ -874,20 +465,30 @@ void _showQrDialog(String code) {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: context.fitlek.card,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text('Block $name?', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
+        shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text('Block $name?',
+            style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurface,
+                fontWeight: FontWeight.w800)),
         content: Text(
           'They won\'t be able to find your profile or send you messages. They will not be notified that you blocked them.',
           style: TextStyle(color: context.fitlek.textMuted),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Cancel', style: TextStyle(color: context.fitlek.textMuted))),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: Text('Cancel',
+                  style: TextStyle(color: context.fitlek.textMuted))),
           TextButton(
             onPressed: () async {
               Navigator.pop(ctx);
               _submitBlock(coachID);
             },
-            child: Text('Block', style: TextStyle(color: context.fitlek.error, fontWeight: FontWeight.bold)),
+            child: Text('Block',
+                style: TextStyle(
+                    color: context.fitlek.error,
+                    fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -906,7 +507,6 @@ void _showQrDialog(String code) {
       );
       if (res.statusCode == 200) {
         _showSnack('User blocked.');
-        // Pop the profile screen because we shouldn't see it anymore
         if (mounted) Navigator.pop(context);
       } else {
         _showSnack('Failed to block user', isError: true);
@@ -916,47 +516,411 @@ void _showQrDialog(String code) {
     }
   }
 
-  Widget _avatarPlaceholder(String name) => Container(
-        color: context.fitlek.card,
-        child: Center(
-            child: Text(
-          name.isNotEmpty ? name[0].toUpperCase() : '?',
-          style: TextStyle(
-              color: Theme.of(context).colorScheme.primary,
-              fontSize: 72,
-              fontWeight: FontWeight.w900),
-        )),
+  void _showQrDialog(String code) {
+    showDialog(
+      context: context,
+      builder: (ctx) => Dialog(
+        backgroundColor: context.fitlek.card,
+        shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+        child: Padding(
+          padding: const EdgeInsets.all(28),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('Coach QR Code',
+                  style: TextStyle(
+                      color: Theme.of(context).colorScheme.onSurface,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800)),
+              const SizedBox(height: 20),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16)),
+                child: QrImageView(
+                    data: code, version: QrVersions.auto, size: 220),
+              ),
+              const SizedBox(height: 16),
+              Text(code,
+                  style: TextStyle(
+                      color: Theme.of(context).colorScheme.primary,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 1.5)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_loadingCoach) return _buildLoading();
+    if (_errorCoach != null) return _buildError();
+    return _buildContent();
+  }
+
+  Widget _buildLoading() => Scaffold(
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        body: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              SizedBox(
+                width: 84,
+                height: 84,
+                child: Image.asset('assets/branding/icon_app.png',
+                    fit: BoxFit.contain),
+              ),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                    color: Theme.of(context).colorScheme.primary,
+                    strokeWidth: 2),
+              ),
+            ],
+          ),
+        ),
       );
+
+  Widget _buildError() => Scaffold(
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        body: SafeArea(
+            child: Column(children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+            child: Align(
+                alignment: Alignment.centerLeft,
+                child: _backBtn(onTap: () => Navigator.pop(context))),
+          ),
+          Expanded(
+              child: Center(
+                  child: Column(mainAxisSize: MainAxisSize.min, children: [
+            Icon(Icons.wifi_off_rounded,
+                color: context.fitlek.textMuted, size: 48),
+            const SizedBox(height: 12),
+            Text(_errorCoach!,
+                style:
+                    TextStyle(color: context.fitlek.textMuted, fontSize: 13)),
+            const SizedBox(height: 20),
+            _retryBtn(onTap: _fetchAll),
+          ]))),
+        ])),
+      );
+
+  Widget _buildContent() {
+    final s = widget.session;
+    final c = _coach!;
+    final imageUrl =
+        (c.avatarUrl?.isNotEmpty == true) ? c.avatarUrl! : s.coachImageUrl;
+    final name = c.fullName.isNotEmpty ? c.fullName : s.coachName;
+    final speciality =
+        (c.speciality?.isNotEmpty == true) ? c.speciality! : s.coachSpeciality;
+    final rating = _avgRating > 0 ? _avgRating : (c.rating ?? s.coachRating);
+    final canReview = s.isConfirmed && s.sessionStart.isBefore(DateTime.now());
+
+    return FadeTransition(
+      opacity: _fadeAnim,
+      child: Scaffold(
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        body: CustomScrollView(slivers: [
+          SliverToBoxAdapter(
+              child: _buildHero(context, imageUrl, name, speciality, c)),
+          SliverToBoxAdapter(
+              child: _buildStats(rating, c.totalInvitations, _totalReviews)),
+          SliverToBoxAdapter(child: _buildPrimaryActions(context, s, c)),
+          if (speciality.isNotEmpty)
+            SliverToBoxAdapter(child: _buildTags(speciality)),
+          if (c.bio.isNotEmpty)
+            SliverToBoxAdapter(child: _buildBio(c.bio)),
+          if (c.ville != null || c.tel != null)
+            SliverToBoxAdapter(child: _buildContactInfo(c)),
+          if (c.instagramPage.isNotEmpty)
+            SliverToBoxAdapter(child: _buildInstagram(c.instagramPage)),
+          if (!_loadingGallery && _galleryImages.isNotEmpty)
+            SliverToBoxAdapter(child: _buildGallery()),
+          if (c.invitationCode.isNotEmpty)
+            SliverToBoxAdapter(child: _buildQrCode(c)),
+          SliverToBoxAdapter(
+              child: _buildReviewsSection(rating, canReview)),
+          const SliverToBoxAdapter(child: SizedBox(height: 48)),
+        ]),
+      ),
+    );
+  }
+
+  Widget _buildHero(BuildContext ctx, String imageUrl, String name,
+      String speciality, CoachModel c) {
+    return GestureDetector(
+      behavior: HitTestBehavior.translucent,
+      onTap: () {
+        if (imageUrl.isNotEmpty) {
+          Navigator.push(
+            ctx,
+            MaterialPageRoute(
+              builder: (_) =>
+                  ImagePreview(imageUrl: imageUrl, tag: 'coach_detail_hero'),
+            ),
+          );
+        }
+      },
+      onPanEnd: (details) {
+        final v = details.velocity.pixelsPerSecond;
+        if (v.dy > 250 || v.dx > 250) Navigator.pop(ctx);
+      },
+      child: SizedBox(
+        height: 420,
+        child: Stack(fit: StackFit.expand, children: [
+          imageUrl.isNotEmpty
+              ? Hero(
+                  tag: 'coach_detail_hero',
+                  child: Image.network(
+                    imageUrl,
+                    fit: BoxFit.cover,
+                    loadingBuilder: (_, child, p) =>
+                        p == null ? child : Container(color: context.fitlek.card),
+                    errorBuilder: (_, __, ___) => _avatarPlaceholder(name),
+                  ),
+                )
+              : _avatarPlaceholder(name),
+          Positioned.fill(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.black.withValues(alpha: 0.18),
+                    Colors.transparent,
+                    Theme.of(context)
+                        .scaffoldBackgroundColor
+                        .withValues(alpha: 0.55),
+                    Theme.of(context).scaffoldBackgroundColor,
+                  ],
+                  stops: const [0.0, 0.35, 0.75, 1.0],
+                ),
+              ),
+            ),
+          ),
+          SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _backBtn(onTap: () => Navigator.pop(ctx), transparent: true),
+                  const Spacer(),
+                  Row(children: [
+                    if (_avgRating > 0 || _totalReviews > 0)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(
+                            color: Colors.black.withValues(alpha: 0.52),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .primary
+                                    .withValues(alpha: 0.5))),
+                        child: Row(mainAxisSize: MainAxisSize.min, children: [
+                          Icon(Icons.star_rounded,
+                              color: Theme.of(context).colorScheme.primary,
+                              size: 13),
+                          const SizedBox(width: 4),
+                          Text(
+                              _avgRating > 0
+                                  ? '${_avgRating.toStringAsFixed(1)}  ·  $_totalReviews'
+                                  : '$_totalReviews reviews',
+                              style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w700)),
+                        ]),
+                      ),
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 6),
+                      decoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.primary,
+                          borderRadius: BorderRadius.circular(20)),
+                      child: Row(mainAxisSize: MainAxisSize.min, children: [
+                        Icon(Icons.verified_rounded,
+                            color: Theme.of(context).colorScheme.onPrimary,
+                            size: 11),
+                        const SizedBox(width: 4),
+                        Text('VERIFIED',
+                            style: TextStyle(
+                                color: Theme.of(context).colorScheme.onPrimary,
+                                fontSize: 9,
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: 1.4)),
+                      ]),
+                    ),
+                    const SizedBox(width: 8),
+                    _buildMoreMenu(c),
+                  ]),
+                ],
+              ),
+            ),
+          ),
+          Positioned(
+            bottom: 24,
+            left: 20,
+            right: 20,
+            child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(name,
+                      style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 34,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: -1.2,
+                          height: 1.0)),
+                  const SizedBox(height: 6),
+                  Row(children: [
+                    Icon(Icons.fitness_center_rounded,
+                        color: Colors.white.withValues(alpha: 0.6), size: 13),
+                    const SizedBox(width: 5),
+                    Flexible(
+                      child: Text(speciality,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                              color: Colors.white.withValues(alpha: 0.6),
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500)),
+                    ),
+                    if (c.ville != null && c.ville!.isNotEmpty) ...[
+                      const SizedBox(width: 12),
+                      Container(
+                        width: 3,
+                        height: 3,
+                        decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.4),
+                            shape: BoxShape.circle),
+                      ),
+                      const SizedBox(width: 12),
+                      Icon(Icons.location_on_rounded,
+                          color: Colors.white.withValues(alpha: 0.6),
+                          size: 12),
+                      const SizedBox(width: 3),
+                      Text(c.ville!,
+                          style: TextStyle(
+                              color: Colors.white.withValues(alpha: 0.6),
+                              fontSize: 13,
+                              fontWeight: FontWeight.w500)),
+                    ],
+                  ]),
+                ]),
+          ),
+        ]),
+      ),
+    );
+  }
+
+  Widget _buildMoreMenu(CoachModel c) {
+    final name = c.fullName.isNotEmpty ? c.fullName : widget.session.coachName;
+    return PopupMenuButton<String>(
+      icon: Container(
+        padding: const EdgeInsets.all(7),
+        decoration: BoxDecoration(
+          color: Colors.black.withValues(alpha: 0.45),
+          shape: BoxShape.circle,
+        ),
+        child: const Icon(Icons.more_horiz_rounded,
+            color: Colors.white, size: 18),
+      ),
+      color: context.fitlek.card,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      offset: const Offset(0, 44),
+      onSelected: (val) {
+        if (val == 'report') {
+          _showReportDialog(name, c.id);
+        } else if (val == 'block') {
+          _showBlockDialog(name, c.id);
+        }
+      },
+      itemBuilder: (context) => [
+        PopupMenuItem(
+          value: 'report',
+          child: Row(children: [
+            Icon(Icons.flag_rounded,
+                color: context.fitlek.textMuted, size: 18),
+            const SizedBox(width: 10),
+            Text('Report Coach',
+                style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurface,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600)),
+          ]),
+        ),
+        PopupMenuItem(
+          value: 'block',
+          child: Row(children: [
+            Icon(Icons.block_rounded, color: context.fitlek.error, size: 18),
+            const SizedBox(width: 10),
+            Text('Block Coach',
+                style: TextStyle(
+                    color: context.fitlek.error,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600)),
+          ]),
+        ),
+      ],
+    );
+  }
 
   Widget _buildStats(double rating, int totalInvitations, int totalReviews) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
       child: Row(children: [
-        _statBox(totalReviews > 0 ? rating.toStringAsFixed(1) : '—', 'Rating',
+        _statBox(
+            totalReviews > 0 ? rating.toStringAsFixed(1) : '—',
+            'Rating',
             Icons.star_rounded),
         const SizedBox(width: 10),
         _statBox('$totalReviews', 'Reviews', Icons.chat_bubble_outline_rounded),
         const SizedBox(width: 10),
-        _statBox('$totalInvitations', 'Invitations', Icons.group_add_outlined),
+        _statBox('$totalInvitations', 'Clients', Icons.group_add_outlined),
       ]),
     );
   }
 
   Widget _statBox(String value, String label, IconData icon) => Expanded(
         child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 8),
+          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
           decoration: BoxDecoration(
             color: context.fitlek.card,
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(16),
             border: Border.all(color: context.fitlek.border, width: 1),
           ),
           child: Column(children: [
-            Icon(icon, color: Theme.of(context).colorScheme.primary, size: 16),
-            const SizedBox(height: 6),
+            Container(
+              width: 34,
+              height: 34,
+              decoration: BoxDecoration(
+                color: Theme.of(context)
+                    .colorScheme
+                    .primary
+                    .withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(icon,
+                  color: Theme.of(context).colorScheme.primary, size: 16),
+            ),
+            const SizedBox(height: 8),
             Text(value,
                 style: TextStyle(
                     color: Theme.of(context).colorScheme.onSurface,
-                    fontSize: 15,
+                    fontSize: 16,
                     fontWeight: FontWeight.w900,
                     letterSpacing: -0.5),
                 maxLines: 1,
@@ -969,32 +933,233 @@ void _showQrDialog(String code) {
         ),
       );
 
-  Widget _buildContactInfo(CoachModel c) {
+  Widget _buildPrimaryActions(
+      BuildContext ctx, ReservationModel s, CoachModel c) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+      child: Row(children: [
+        Expanded(child: _buildInviteCTA()),
+        const SizedBox(width: 10),
+        _buildBookBtn(ctx, s),
+      ]),
+    );
+  }
+
+  Widget _buildInviteCTA() {
+    final String btnText;
+    final IconData btnIcon;
+    final Color btnColor;
+    final Color textColor;
+    final bool isDisabled;
+    final VoidCallback? onTap;
+
+    switch (_inviteStatus) {
+      case 'accepted':
+        btnText = 'Message';
+        btnIcon = Icons.chat_bubble_rounded;
+        btnColor = Theme.of(context).colorScheme.primary;
+        textColor = Theme.of(context).colorScheme.onPrimary;
+        isDisabled = false;
+        onTap = _openConversation;
+        break;
+      case 'pending':
+        btnText = 'Pending';
+        btnIcon = Icons.schedule_rounded;
+        btnColor =
+            Theme.of(context).colorScheme.primary.withValues(alpha: 0.13);
+        textColor = Theme.of(context).colorScheme.primary;
+        isDisabled = true;
+        onTap = null;
+        break;
+      case 'refused':
+        btnText = 'Declined';
+        btnIcon = Icons.cancel_rounded;
+        btnColor = Colors.red.withValues(alpha: 0.12);
+        textColor = Colors.redAccent;
+        isDisabled = true;
+        onTap = null;
+        break;
+      default:
+        btnText = 'Invite Coach';
+        btnIcon = Icons.person_add_rounded;
+        btnColor = Theme.of(context).colorScheme.primary;
+        textColor = Theme.of(context).colorScheme.onPrimary;
+        isDisabled = false;
+        onTap = _sendInvitation;
+    }
+
+    return GestureDetector(
+      onTap: _sendingInvite ? null : onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        decoration: BoxDecoration(
+          color: btnColor,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(
+            color: isDisabled
+                ? (_inviteStatus == 'refused'
+                    ? Colors.red.withValues(alpha: 0.35)
+                    : Theme.of(context)
+                        .colorScheme
+                        .primary
+                        .withValues(alpha: 0.35))
+                : Theme.of(context)
+                    .colorScheme
+                    .primary
+                    .withValues(alpha: 0.6),
+            width: 1,
+          ),
+          boxShadow: isDisabled
+              ? null
+              : [
+                  BoxShadow(
+                    color: Theme.of(context)
+                        .colorScheme
+                        .primary
+                        .withValues(alpha: 0.22),
+                    blurRadius: 18,
+                    offset: const Offset(0, 6),
+                  ),
+                ],
+        ),
+        child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+          _sendingInvite
+              ? SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(
+                    color: Theme.of(context).colorScheme.onPrimary,
+                    strokeWidth: 2,
+                  ),
+                )
+              : Icon(btnIcon, color: textColor, size: 16),
+          const SizedBox(width: 8),
+          Text(
+            btnText,
+            style: TextStyle(
+              color: textColor,
+              fontWeight: FontWeight.w800,
+              fontSize: 13,
+              letterSpacing: 0.4,
+            ),
+          ),
+        ]),
+      ),
+    );
+  }
+
+  Widget _buildBookBtn(BuildContext ctx, ReservationModel s) => GestureDetector(
+        onTap: () => Navigator.push(
+            ctx,
+            PageRouteBuilder(
+              pageBuilder: (_, __, ___) => BookingScreen(
+                session: s,
+                clientID: widget.clientID,
+                token: widget.token,
+              ),
+              transitionsBuilder: (_, anim, __, child) => FadeTransition(
+                opacity: anim,
+                child: SlideTransition(
+                  position: Tween<Offset>(
+                    begin: const Offset(0, 0.04),
+                    end: Offset.zero,
+                  ).animate(CurvedAnimation(
+                      parent: anim, curve: Curves.easeOutCubic)),
+                  child: child,
+                ),
+              ),
+              transitionDuration: const Duration(milliseconds: 380),
+            )),
+        child: Container(
+          padding:
+              const EdgeInsets.symmetric(vertical: 16, horizontal: 18),
+          decoration: BoxDecoration(
+            color: context.fitlek.card,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: context.fitlek.border),
+          ),
+          child: Row(children: [
+            Icon(Icons.calendar_month_rounded,
+                color: Theme.of(context).colorScheme.onSurface, size: 18),
+            const SizedBox(width: 7),
+            Text('Book',
+                style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurface,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 13,
+                    letterSpacing: 0.2)),
+          ]),
+        ),
+      );
+
+  Widget _buildTags(String speciality) {
+    final tags = speciality
+        .split(RegExp(r'[,/]'))
+        .map((t) => t.trim())
+        .where((t) => t.isNotEmpty)
+        .toList();
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+      child: Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: tags
+              .map((tag) => Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 13, vertical: 7),
+                    decoration: BoxDecoration(
+                        color: Theme.of(context)
+                            .colorScheme
+                            .primary
+                            .withValues(alpha: 0.08),
+                        borderRadius: BorderRadius.circular(30),
+                        border: Border.all(
+                            color: Theme.of(context)
+                                .colorScheme
+                                .primary
+                                .withValues(alpha: 0.22))),
+                    child: Text(tag,
+                        style: TextStyle(
+                            color: Theme.of(context).colorScheme.primary,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 0.3)),
+                  ))
+              .toList()),
+    );
+  }
+
+  Widget _buildBio(String bio) => Padding(
+        padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          _sectionHeader('About'),
+          const SizedBox(height: 14),
+          Text(bio,
+              style: TextStyle(
+                  color: context.fitlek.textSecondary,
+                  fontSize: 14,
+                  height: 1.72,
+                  letterSpacing: 0.1)),
+        ]),
+      );
+
+  Widget _buildContactInfo(CoachModel c) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
       child: Container(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(18),
         decoration: BoxDecoration(
           color: context.fitlek.card,
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(16),
           border: Border.all(color: context.fitlek.border),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(children: [
-              Container(
-                  width: 3,
-                  height: 16,
-                  color: Theme.of(context).colorScheme.primary,
-                  margin: const EdgeInsets.only(right: 10)),
-              Text('Practical info',
-                  style: TextStyle(
-                      color: Theme.of(context).colorScheme.onSurface,
-                      fontSize: 15,
-                      fontWeight: FontWeight.w800)),
-            ]),
-            const SizedBox(height: 14),
+            _sectionHeader('Practical info'),
+            const SizedBox(height: 16),
             if (c.ville != null && c.ville!.isNotEmpty)
               _infoRow(
                 icon: Icons.location_on_rounded,
@@ -1004,7 +1169,7 @@ void _showQrDialog(String code) {
                 onTap: null,
               ),
             if (c.ville != null && c.ville!.isNotEmpty && c.tel != null)
-              const SizedBox(height: 12),
+              const SizedBox(height: 14),
             if (c.tel != null)
               _infoRow(
                 icon: Icons.phone_rounded,
@@ -1032,12 +1197,14 @@ void _showQrDialog(String code) {
     final child = Row(
       children: [
         Container(
-          width: 40,
-          height: 40,
+          width: 42,
+          height: 42,
           decoration: BoxDecoration(
-            color:
-                Theme.of(context).colorScheme.primary.withValues(alpha: 0.08),
-            borderRadius: BorderRadius.circular(12),
+            color: Theme.of(context)
+                .colorScheme
+                .primary
+                .withValues(alpha: 0.09),
+            borderRadius: BorderRadius.circular(13),
           ),
           child: Icon(icon,
               color: Theme.of(context).colorScheme.primary, size: 18),
@@ -1048,26 +1215,26 @@ void _showQrDialog(String code) {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(label,
-                  style:
-                      TextStyle(color: context.fitlek.textMuted, fontSize: 10)),
+                  style: TextStyle(
+                      color: context.fitlek.textMuted, fontSize: 10)),
               const SizedBox(height: 2),
-              Text(
-                value,
-                style: TextStyle(
-                  color: valueColor,
-                  fontSize: 15,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
+              Text(value,
+                  style: TextStyle(
+                      color: valueColor,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800)),
             ],
           ),
         ),
         if (onTap != null)
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            padding:
+                const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
             decoration: BoxDecoration(
-              color:
-                  Theme.of(context).colorScheme.primary.withValues(alpha: 0.08),
+              color: Theme.of(context)
+                  .colorScheme
+                  .primary
+                  .withValues(alpha: 0.08),
               borderRadius: BorderRadius.circular(8),
               border: Border.all(
                   color: Theme.of(context)
@@ -1084,79 +1251,40 @@ void _showQrDialog(String code) {
           ),
       ],
     );
-
     if (onTap != null) {
       return GestureDetector(
-        onTap: onTap,
-        behavior: HitTestBehavior.opaque,
-        child: child,
-      );
+          onTap: onTap, behavior: HitTestBehavior.opaque, child: child);
     }
     return child;
   }
 
-  Widget _buildTags(String speciality) {
-    final tags = speciality
-        .split(RegExp(r'[,/]'))
-        .map((t) => t.trim())
-        .where((t) => t.isNotEmpty)
-        .toList();
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-      child: Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: tags
-              .map((tag) => Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                        color: Theme.of(context)
-                            .colorScheme
-                            .primary
-                            .withValues(alpha: 0.08),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(
-                            color: Theme.of(context)
-                                .colorScheme
-                                .primary
-                                .withValues(alpha: 0.25))),
-                    child: Text(tag,
-                        style: TextStyle(
-                            color: Theme.of(context).colorScheme.primary,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 0.3)),
-                  ))
-              .toList()),
-    );
-  }
-
   Widget _buildInstagram(String handle) {
-    final display = handle.startsWith('http') ? handle.split('/').last : handle;
+    final display =
+        handle.startsWith('http') ? handle.split('/').last : handle;
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        padding:
+            const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
         decoration: BoxDecoration(
             color: context.fitlek.card,
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(16),
             border: Border.all(color: context.fitlek.border)),
         child: Row(children: [
           Container(
-            width: 36,
-            height: 36,
+            width: 40,
+            height: 40,
             decoration: BoxDecoration(
                 color: context.fitlek.instagram.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(10)),
+                borderRadius: BorderRadius.circular(12)),
             child: Icon(Icons.camera_alt_rounded,
-                color: context.fitlek.instagram, size: 17),
+                color: context.fitlek.instagram, size: 18),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 14),
           Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text('Instagram',
-                style:
-                    TextStyle(color: context.fitlek.textMuted, fontSize: 10)),
+                style: TextStyle(
+                    color: context.fitlek.textMuted, fontSize: 10)),
             const SizedBox(height: 2),
             Text('@$display',
                 style: TextStyle(
@@ -1172,182 +1300,103 @@ void _showQrDialog(String code) {
     );
   }
 
-  Widget _buildBio(String bio) => Padding(
-        padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          _sectionHeader('About'),
-          const SizedBox(height: 12),
-          Text(bio,
-              style: TextStyle(
-                  color: context.fitlek.textSecondary,
-                  fontSize: 13.5,
-                  height: 1.7,
-                  letterSpacing: 0.1)),
-        ]),
-      );
+  Widget _buildGallery() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(0, 28, 0, 0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: _sectionHeader('Gallery'),
+          ),
+          const SizedBox(height: 14),
+          SizedBox(
+            height: 150,
+            child: ListView.builder(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              scrollDirection: Axis.horizontal,
+              itemCount: _galleryImages.length,
+              itemBuilder: (ctx, i) {
+                final img = _galleryImages[i];
+                return GestureDetector(
+                  onTap: () {
+                    Navigator.push(
+                      ctx,
+                      MaterialPageRoute(
+                        builder: (_) => ImagePreview(
+                          imageUrl: img['urlImage'],
+                          tag: 'gallery_${img['id']}',
+                        ),
+                      ),
+                    );
+                  },
+                  child: Hero(
+                    tag: 'gallery_${img['id']}',
+                    child: Container(
+                      width: 150,
+                      margin: const EdgeInsets.symmetric(horizontal: 4),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(18),
+                        color: context.fitlek.card2,
+                        image: DecorationImage(
+                          image: NetworkImage(img['urlImage']),
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
-  Widget _buildInviteCTA() {
-    final String btnText;
-    final IconData btnIcon;
-    final Color btnColor;
-    final Color textColor;
-    final bool isDisabled;
-    final VoidCallback? onTap;
-
-    switch (_inviteStatus) {
-      case 'accepted':
-        btnText = 'SEND A MESSAGE';
-        btnIcon = Icons.chat_bubble_rounded;
-        btnColor = Theme.of(context).colorScheme.primary;
-        textColor = Theme.of(context).colorScheme.onPrimary;
-        isDisabled = false;
-        onTap = _openConversation;
-        break;
-      case 'pending':
-        btnText = 'INVITATION SENT';
-        btnIcon = Icons.schedule_rounded;
-        btnColor =
-            Theme.of(context).colorScheme.primary.withValues(alpha: 0.15);
-        textColor = Theme.of(context).colorScheme.primary;
-        isDisabled = true;
-        onTap = null;
-        break;
-      case 'refused':
-        btnText = 'INVITATION DECLINED';
-        btnIcon = Icons.cancel_rounded;
-        btnColor = Colors.red.withValues(alpha: 0.15);
-        textColor = Colors.redAccent;
-        isDisabled = true;
-        onTap = null;
-        break;
-      default:
-        btnText = 'INVITE THIS COACH';
-        btnIcon = Icons.person_add_rounded;
-        btnColor = Theme.of(context).colorScheme.primary;
-        textColor = Theme.of(context).colorScheme.onPrimary;
-        isDisabled = false;
-        onTap = _sendInvitation;
-    }
-
+  Widget _buildQrCode(CoachModel c) {
+    final code = c.invitationCode;
+    if (code.isEmpty) return const SizedBox.shrink();
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 28, 20, 0),
-      child: GestureDetector(
-        onTap: _sendingInvite ? null : onTap,
-        child: AnimatedContainer(
-          duration: const Duration(milliseconds: 200),
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(vertical: 17),
-          decoration: BoxDecoration(
-            color: btnColor,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(
-              color: _inviteStatus == 'accepted'
-                  ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.5)
-                  : isDisabled
-                      ? (_inviteStatus == 'refused'
-                          ? Colors.red.withValues(alpha: 0.4)
-                          : Theme.of(context)
-                              .colorScheme
-                              .primary
-                              .withValues(alpha: 0.4))
-                      : Theme.of(context)
-                          .colorScheme
-                          .primary
-                          .withValues(alpha: 0.5),
-              width: 1,
-            ),
-            // --- MODIFICATION : Ombre de la couleur de la page au lieu de noir ---
-            boxShadow: isDisabled
-                ? null
-                : [
-                    BoxShadow(
-                      color: Theme.of(context)
-                          .colorScheme
-                          .primary
-                          .withValues(alpha: 0.20),
-                      blurRadius: 20,
-                      offset: const Offset(0, 6),
-                    ),
-                  ],
-            // --- FIN MODIFICATION ---
-          ),
-          child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-            _sendingInvite
-                ? SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(
-                      color: Theme.of(context).colorScheme.onPrimary,
-                      strokeWidth: 2,
-                    ),
-                  )
-                : Icon(btnIcon, color: textColor, size: 16),
-            const SizedBox(width: 8),
-            Text(
-              btnText,
-              style: TextStyle(
-                color: textColor,
-                fontWeight: FontWeight.w900,
-                fontSize: 13,
-                letterSpacing: 1.8,
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: context.fitlek.card,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: context.fitlek.border),
+        ),
+        child: Column(
+          children: [
+            Row(children: [_sectionHeader('Coach QR Code')]),
+            const SizedBox(height: 18),
+            GestureDetector(
+              onTap: () => _showQrDialog(code),
+              child: Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: QrImageView(
+                    data: code, version: QrVersions.auto, size: 150),
               ),
             ),
-          ]),
+            const SizedBox(height: 10),
+            Text('Tap to enlarge',
+                style: TextStyle(
+                    color: context.fitlek.textMuted, fontSize: 11)),
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildBookCTA(BuildContext ctx, ReservationModel s) => Padding(
-        padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
-        child: GestureDetector(
-          onTap: () => Navigator.push(
-              ctx,
-              PageRouteBuilder(
-                pageBuilder: (_, __, ___) => BookingScreen(
-                  session: s,
-                  clientID: widget.clientID,
-                  token: widget.token,
-                ),
-                transitionsBuilder: (_, anim, __, child) => FadeTransition(
-                  opacity: anim,
-                  child: SlideTransition(
-                    position: Tween<Offset>(
-                      begin: const Offset(0, 0.04),
-                      end: Offset.zero,
-                    ).animate(CurvedAnimation(
-                        parent: anim, curve: Curves.easeOutCubic)),
-                    child: child,
-                  ),
-                ),
-                transitionDuration: const Duration(milliseconds: 380),
-              )),
-          child: Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(vertical: 17),
-            decoration: BoxDecoration(
-              color: context.fitlek.card,
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: context.fitlek.border),
-            ),
-            child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-              Icon(Icons.calendar_month_rounded,
-                  color: Theme.of(context).colorScheme.onSurface, size: 16),
-              const SizedBox(width: 8),
-              Text('BOOK A SESSION',
-                  style: TextStyle(
-                      color: Theme.of(context).colorScheme.onSurface,
-                      fontWeight: FontWeight.w900,
-                      fontSize: 13,
-                      letterSpacing: 1.8)),
-            ]),
-          ),
-        ),
-      );
-
   Widget _buildReviewsSection(double rating, bool canReview) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(0, 28, 0, 0),
+      padding: const EdgeInsets.fromLTRB(0, 32, 0, 0),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -1387,19 +1436,20 @@ void _showQrDialog(String code) {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
             child: GestureDetector(
-              onTap: () => setState(() => _showReviewForm = !_showReviewForm),
+              onTap: () =>
+                  setState(() => _showReviewForm = !_showReviewForm),
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 16, vertical: 13),
                 decoration: BoxDecoration(
                     color: _showReviewForm
                         ? Theme.of(context)
                             .colorScheme
                             .primary
-                            .withValues(alpha: 0.12)
+                            .withValues(alpha: 0.1)
                         : context.fitlek.card,
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(14),
                     border: Border.all(
                         color: _showReviewForm
                             ? Theme.of(context)
@@ -1415,7 +1465,10 @@ void _showQrDialog(String code) {
                       color: Theme.of(context).colorScheme.primary,
                       size: 16),
                   const SizedBox(width: 10),
-                  Text(_myReview != null ? 'Edit my review' : 'Leave a review',
+                  Text(
+                      _myReview != null
+                          ? 'Edit my review'
+                          : 'Leave a review',
                       style: TextStyle(
                           color: Theme.of(context).colorScheme.primary,
                           fontSize: 13,
@@ -1439,7 +1492,7 @@ void _showQrDialog(String code) {
             child: _buildReviewForm(),
           ),
         ],
-        const SizedBox(height: 16),
+        const SizedBox(height: 18),
         if (_loadingReviews)
           Center(
               child: Padding(
@@ -1460,10 +1513,10 @@ void _showQrDialog(String code) {
   }
 
   Widget _buildReviewForm() => Container(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(18),
         decoration: BoxDecoration(
-            color: context.fitlek.card.withValues(alpha: 0.8),
-            borderRadius: BorderRadius.circular(14),
+            color: context.fitlek.card,
+            borderRadius: BorderRadius.circular(16),
             border: Border.all(
                 color: Theme.of(context)
                     .colorScheme
@@ -1475,7 +1528,7 @@ void _showQrDialog(String code) {
                   color: context.fitlek.textSecondary,
                   fontSize: 11,
                   fontWeight: FontWeight.w600)),
-          const SizedBox(height: 8),
+          const SizedBox(height: 10),
           Row(
               children: List.generate(5, (i) {
             final filled = i < _pendingRating;
@@ -1493,11 +1546,11 @@ void _showQrDialog(String code) {
                         color: filled
                             ? Theme.of(context).colorScheme.primary
                             : context.fitlek.textMuted,
-                        size: 28)),
+                        size: 30)),
               ),
             );
           })),
-          const SizedBox(height: 14),
+          const SizedBox(height: 16),
           Text('Comment (optional)',
               style: TextStyle(
                   color: context.fitlek.textSecondary,
@@ -1551,14 +1604,19 @@ void _showQrDialog(String code) {
                           width: 18,
                           height: 18,
                           child: CircularProgressIndicator(
-                              color: Theme.of(context).colorScheme.onPrimary,
+                              color:
+                                  Theme.of(context).colorScheme.onPrimary,
                               strokeWidth: 2))
-                      : Text(_myReview != null ? 'UPDATE' : 'PUBLISH REVIEW',
+                      : Text(
+                          _myReview != null
+                              ? 'Update review'
+                              : 'Publish review',
                           style: TextStyle(
-                              color: Theme.of(context).colorScheme.onPrimary,
-                              fontWeight: FontWeight.w900,
-                              fontSize: 12,
-                              letterSpacing: 1.5)),
+                              color:
+                                  Theme.of(context).colorScheme.onPrimary,
+                              fontWeight: FontWeight.w800,
+                              fontSize: 13,
+                              letterSpacing: 0.4)),
                 ),
               ),
             ),
@@ -1582,22 +1640,25 @@ void _showQrDialog(String code) {
       'Nov',
       'Dec'
     ][review.createdAt.month - 1];
-
     return Container(
       margin: const EdgeInsets.fromLTRB(20, 0, 20, 10),
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
           color: context.fitlek.card,
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(16),
           border: Border.all(
               color: isMyReview
-                  ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.3)
+                  ? Theme.of(context)
+                      .colorScheme
+                      .primary
+                      .withValues(alpha: 0.3)
                   : context.fitlek.border)),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      child:
+          Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [
           Container(
-            width: 34,
-            height: 34,
+            width: 38,
+            height: 38,
             decoration: BoxDecoration(
                 color: isMyReview
                     ? Theme.of(context)
@@ -1616,9 +1677,9 @@ void _showQrDialog(String code) {
                             ? Theme.of(context).colorScheme.primary
                             : context.fitlek.textSecondary,
                         fontWeight: FontWeight.w800,
-                        fontSize: 14))),
+                        fontSize: 15))),
           ),
-          const SizedBox(width: 10),
+          const SizedBox(width: 12),
           Expanded(
               child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -1630,12 +1691,12 @@ void _showQrDialog(String code) {
                               ? Theme.of(context).colorScheme.primary
                               : Theme.of(context).colorScheme.onSurface,
                           fontWeight: FontWeight.w700,
-                          fontSize: 12)),
+                          fontSize: 13)),
                   if (isMyReview) ...[
-                    const SizedBox(width: 6),
+                    const SizedBox(width: 7),
                     Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 6, vertical: 2),
+                          horizontal: 7, vertical: 2),
                       decoration: BoxDecoration(
                           color: Theme.of(context)
                               .colorScheme
@@ -1644,7 +1705,8 @@ void _showQrDialog(String code) {
                           borderRadius: BorderRadius.circular(6)),
                       child: Text('My review',
                           style: TextStyle(
-                              color: Theme.of(context).colorScheme.primary,
+                              color:
+                                  Theme.of(context).colorScheme.primary,
                               fontSize: 9,
                               fontWeight: FontWeight.w700)),
                     ),
@@ -1663,31 +1725,31 @@ void _showQrDialog(String code) {
                           ? Icons.star_rounded
                           : Icons.star_outline_rounded,
                       color: Theme.of(context).colorScheme.primary,
-                      size: 12))),
+                      size: 13))),
         ]),
         if (review.comment?.isNotEmpty == true) ...[
-          const SizedBox(height: 10),
+          const SizedBox(height: 12),
           Text(review.comment!,
               style: TextStyle(
                   color: context.fitlek.textSecondary,
-                  fontSize: 12.5,
-                  height: 1.55)),
+                  fontSize: 13,
+                  height: 1.58)),
         ],
       ]),
     );
   }
 
   Widget _buildEmptyReviews() => Padding(
-        padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
+        padding: const EdgeInsets.fromLTRB(20, 4, 20, 0),
         child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 28),
+          padding: const EdgeInsets.symmetric(vertical: 32),
           decoration: BoxDecoration(
               color: context.fitlek.card,
-              borderRadius: BorderRadius.circular(14),
+              borderRadius: BorderRadius.circular(16),
               border: Border.all(color: context.fitlek.border)),
           child: Column(children: [
             Icon(Icons.star_border_rounded,
-                color: context.fitlek.textMuted, size: 36),
+                color: context.fitlek.textMuted, size: 38),
             const SizedBox(height: 10),
             Text('No reviews yet',
                 style: TextStyle(
@@ -1696,18 +1758,33 @@ void _showQrDialog(String code) {
                     fontWeight: FontWeight.w600)),
             const SizedBox(height: 4),
             Text('Be the first to share your experience',
-                style:
-                    TextStyle(color: context.fitlek.textMuted, fontSize: 11)),
+                style: TextStyle(
+                    color: context.fitlek.textMuted, fontSize: 11)),
           ]),
         ),
+      );
+
+  Widget _avatarPlaceholder(String name) => Container(
+        color: context.fitlek.card,
+        child: Center(
+            child: Text(
+          name.isNotEmpty ? name[0].toUpperCase() : '?',
+          style: TextStyle(
+              color: Theme.of(context).colorScheme.primary,
+              fontSize: 80,
+              fontWeight: FontWeight.w900),
+        )),
       );
 
   Widget _sectionHeader(String title) =>
       Row(mainAxisSize: MainAxisSize.min, children: [
         Container(
             width: 3,
-            height: 16,
-            color: Theme.of(context).colorScheme.primary,
+            height: 17,
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.primary,
+              borderRadius: BorderRadius.circular(2),
+            ),
             margin: const EdgeInsets.only(right: 10)),
         Text(title,
             style: TextStyle(
@@ -1723,9 +1800,9 @@ void _showQrDialog(String code) {
           padding: const EdgeInsets.all(10),
           decoration: BoxDecoration(
               color: transparent
-                  ? Colors.black.withValues(alpha: 0.5)
+                  ? Colors.black.withValues(alpha: 0.45)
                   : context.fitlek.card,
-              borderRadius: BorderRadius.circular(10),
+              borderRadius: BorderRadius.circular(11),
               border: Border.all(
                   color: transparent
                       ? Colors.white.withValues(alpha: 0.15)
@@ -1741,10 +1818,13 @@ void _showQrDialog(String code) {
   Widget _retryBtn({required VoidCallback onTap}) => GestureDetector(
         onTap: onTap,
         child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+          padding:
+              const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
           decoration: BoxDecoration(
-              color:
-                  Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+              color: Theme.of(context)
+                  .colorScheme
+                  .primary
+                  .withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(10),
               border: Border.all(
                   color: Theme.of(context)
