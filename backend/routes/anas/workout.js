@@ -1,7 +1,7 @@
 import express from 'express';
 import { requireAuth, requireRole } from '../../middleware/auth.js';
 import { fail, integer, text, json, number, validatePlan, validateSet, validateCustomExercise, summarize, estimated1RM, isWorkSet,setVolume } from '../../services/workoutDomain.js';
-import {defaultWorkoutPreferences, validatePreferences, nextTarget} from '../../services/workoutExperience.js';
+import {defaultWorkoutPreferences, validatePreferences, nextTarget, balancePreferences, balancePreferenceKeys} from '../../services/workoutExperience.js';
 import {buildTrainingStats,scheduleAdherence} from '../../services/workoutStats.js';
 import {installWorkoutMedia} from '../../services/workoutMedia.js';
 import {installWorkoutHistoryTransfer} from '../../services/workoutHistoryTransfer.js';
@@ -72,6 +72,12 @@ export function createWorkoutRouter(db, {ready = Promise.resolve(), notify = asy
     const clientID = integer(req.query.clientID);
     await linked(db, req.user.id, clientID);
     return clientID;
+  };
+  const validateBalanceExercises=async(conn,user,p)=>{
+    const ids=new Set([p.balanceAnchorID,...p.balanceTargets.map(v=>v.exerciseID),
+      ...p.balanceProtocols.flatMap(v=>[v.anchorID,...v.targets.map(t=>t.exerciseID)])].filter(v=>v!=null));
+    if(ids.size>100)fail('invalid_workout');
+    for(const id of ids)await visibleExercise(conn,user,id);
   };
   // Validates account/role in the database as well as the JWT on every request.
   installWorkoutMedia(router,db,{run,sessionAccess,visibleExercise},true);
@@ -155,8 +161,29 @@ export function createWorkoutRouter(db, {ready = Promise.resolve(), notify = asy
   }));
   router.put('/preferences',run(async(req,res)=>{
     const p=validatePreferences(req.body);
+    await validateBalanceExercises(db,req.user,p);
     await db.query('INSERT INTO workout_preferences (userID,preferences) VALUES (?,?) ON DUPLICATE KEY UPDATE preferences=VALUES(preferences)',[req.user.id,JSON.stringify(p)]);
     res.json(p);
+  }));
+  // Coach access is limited to linked clients and these workout-specific ratios.
+  router.get('/balance',run(async(req,res)=>{
+    const clientID=await clientScope(req);
+    const [[row]]=await db.query('SELECT preferences FROM workout_preferences WHERE userID=?',[clientID]);
+    res.json(balancePreferences(row?json(row.preferences):{}));
+  }));
+  router.put('/balance',run(async(req,res)=>{
+    const clientID=await clientScope(req);
+    if(Object.keys(req.body).some(k=>!balancePreferenceKeys.includes(k)))fail('invalid_workout');
+    const data=await transaction(async conn=>{
+      await conn.query("INSERT IGNORE INTO workout_preferences (userID,preferences) VALUES (?, '{}')",[clientID]);
+      const [[row]]=await conn.query('SELECT preferences FROM workout_preferences WHERE userID=? FOR UPDATE',[clientID]);
+      const changes=Object.fromEntries(balancePreferenceKeys.filter(k=>Object.hasOwn(req.body,k)).map(k=>[k,req.body[k]]));
+      const p=validatePreferences({...json(row.preferences),...changes});
+      await validateBalanceExercises(conn,{id:clientID,role:'client'},p);
+      await conn.query('UPDATE workout_preferences SET preferences=? WHERE userID=?',[JSON.stringify(p),clientID]);
+      return balancePreferences(p);
+    });
+    res.json(data);
   }));
   router.get('/clients', requireRole('coach'), run(async (req, res) => {
     const [rows] = await db.query(`SELECT u.id, u.firstName, u.lastName, u.avatarUrl FROM users u JOIN coachclients cc ON cc.clientID = u.id

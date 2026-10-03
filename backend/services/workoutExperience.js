@@ -5,7 +5,18 @@ export const defaultWorkoutPreferences = Object.freeze({unit:'kg', defaultRestSe
   restPauseSeconds:15, timerSound:true, timerVibration:true, timerFlash:false,
   automaticRest:true, keepAwake:false, bodyweightCheckIn:false, bodyweightGoal:null, view:'cards', effort:'off', weekStart:1,
   reminderEnabled:false, reminderTime:'08:00', timeZone:'UTC', equipmentProfiles:[], activeEquipmentProfile:null,
-  barWeight:20,balanceAnchorID:null,balanceTargets:[],plates:[25,20,15,10,5,2.5,1.25].map(weight=>({weight,count:4}))});
+  barWeight:20,balanceAnchorID:null,balanceTargets:[],balanceProtocols:[],activeBalanceProtocolID:null,
+  plates:[25,20,15,10,5,2.5,1.25].map(weight=>({weight,count:4}))});
+export const balancePreferenceKeys=['balanceAnchorID','balanceTargets','balanceProtocols','activeBalanceProtocolID'];
+export function balancePreferences(preferences){
+  return Object.fromEntries(balancePreferenceKeys.map(k=>[k,preferences[k]??defaultWorkoutPreferences[k]]));
+}
+const validateBalanceTargets=targets=>{
+  if(!Array.isArray(targets)||targets.length>50||targets.some(v=>!v||typeof v!=='object'||Array.isArray(v)))fail('invalid_workout');
+  const rows=targets.map(v=>({exerciseID:integer(v.exerciseID),targetPercent:number(v.targetPercent,1,500)}));
+  if(rows.some(v=>v.targetPercent==null)||new Set(rows.map(v=>v.exerciseID)).size!==rows.length)fail('invalid_workout');
+  return rows;
+};
 export function validatePreferences(input) {
   if (!input || typeof input !== 'object' || Array.isArray(input)) fail('invalid_workout');
   const p={...defaultWorkoutPreferences,...input};
@@ -25,10 +36,18 @@ export function validatePreferences(input) {
   p.plates=p.plates.map(v=>({weight:number(v.weight,0.01,100),count:integer(v.count,0,40)}));
   if(p.plates.some(v=>v.weight==null))fail('invalid_workout');
   p.balanceAnchorID=p.balanceAnchorID==null?null:integer(p.balanceAnchorID);
-  if(!Array.isArray(p.balanceTargets)||p.balanceTargets.length>50)fail('invalid_workout');
-  if(p.balanceTargets.some(v=>!v||typeof v!=='object'||Array.isArray(v)))fail('invalid_workout');
-  p.balanceTargets=p.balanceTargets.map(v=>({exerciseID:integer(v.exerciseID),targetPercent:number(v.targetPercent,1,500)}));
-  if(p.balanceTargets.some(v=>v.targetPercent==null))fail('invalid_workout');
+  p.balanceTargets=validateBalanceTargets(p.balanceTargets);
+  if(!Array.isArray(p.balanceProtocols)||p.balanceProtocols.length>10)fail('invalid_workout');
+  p.balanceProtocols=p.balanceProtocols.map(v=>{
+    if(!v||typeof v!=='object'||Array.isArray(v)||typeof v.id!=='string'||! /^[a-zA-Z0-9_-]{1,80}$/.test(v.id))fail('invalid_workout');
+    return {id:v.id,name:text(v.name,80,true),anchorID:integer(v.anchorID),targets:validateBalanceTargets(v.targets)};
+  });
+  if(new Set(p.balanceProtocols.map(v=>v.id)).size!==p.balanceProtocols.length)fail('invalid_workout');
+  if(p.activeBalanceProtocolID!=null){
+    const active=p.balanceProtocols.find(v=>v.id===p.activeBalanceProtocolID);
+    if(!active)fail('invalid_workout');
+    p.balanceAnchorID=active.anchorID;p.balanceTargets=active.targets;
+  }
   return Object.fromEntries(Object.keys(defaultWorkoutPreferences).map(k=>[k,p[k]]));
 }
 

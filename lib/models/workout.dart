@@ -11,7 +11,7 @@ class Exercise {
   final String name, muscleGroup, equipment, type;
   final bool isBodyweight, favorite;
   final String personalNotes;
-  final String? description, imageUrl, videoUrl;
+  final String? description, imageUrl, videoUrl, externalSource, externalId;
   final List<String> instructions, secondaryMuscles;
   const Exercise(
       {required this.id,
@@ -26,6 +26,8 @@ class Exercise {
       this.description,
       this.imageUrl,
       this.videoUrl,
+      this.externalSource,
+      this.externalId,
       this.instructions = const [],
       this.secondaryMuscles = const []});
   bool get isTimed => type != 'reps';
@@ -42,6 +44,8 @@ class Exercise {
       description: j['description'],
       imageUrl: j['imageUrl'],
       videoUrl: j['videoUrl'],
+      externalSource: j['externalSource'],
+      externalId: j['externalId'],
       instructions:
           (j['instructions'] as List? ?? []).map((e) => '$e').toList(),
       secondaryMuscles:

@@ -10,6 +10,7 @@ import 'workout_media.dart';
 import 'workout_muscles.dart';
 import 'workout_builder.dart';
 import 'workout_charts.dart';
+import 'workout_demonstration.dart';
 
 class WorkoutExerciseLibrary extends StatefulWidget {
   final bool selecting;
@@ -536,6 +537,8 @@ class _WorkoutExerciseDetailState extends State<WorkoutExerciseDetail> {
                 ? const Center(child: CircularProgressIndicator())
                 : ListView(padding: const EdgeInsets.all(20), children: [
                     if (_offline) const WorkoutOfflineNotice(),
+                    if (e.imageUrl == null)
+                      WorkoutDemonstrationPanel(exercise: e),
                     if (e.imageUrl != null)
                       ClipRRect(
                           borderRadius: BorderRadius.circular(16),

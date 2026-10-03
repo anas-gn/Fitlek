@@ -1,0 +1,21 @@
+[
+  {"wgerID":73,"name":"Bench Press","targets":[["sirvya","bench-press"],["exercises-dataset","0025"]]},
+  {"wgerID":75,"name":"Benchpress Dumbbells","targets":[["sirvya","dumbbell-press"],["exercises-dataset","0289"]]},
+  {"wgerID":76,"name":"Bench Press Narrow Grip","targets":[["exercises-dataset","0030"]]},
+  {"wgerID":91,"name":"Biceps Curls With Barbell","targets":[["exercises-dataset","0031"]]},
+  {"wgerID":92,"name":"Biceps Curls With Dumbbell","targets":[["sirvya","curl"],["exercises-dataset","0294"]]},
+  {"wgerID":185,"name":"Decline Bench Press Barbell","targets":[["exercises-dataset","0033"]]},
+  {"wgerID":257,"name":"Front Squats","targets":[["exercises-dataset","0042"]]},
+  {"wgerID":272,"name":"Hammer Curls","targets":[["exercises-dataset","0313"]]},
+  {"wgerID":275,"name":"Hammercurls on Cable","targets":[["exercises-dataset","0165"]]},
+  {"wgerID":348,"name":"Lateral Raises","targets":[["sirvya","lateral-raise"],["exercises-dataset","0334"]]},
+  {"wgerID":365,"name":"Leg Curls (laying)","targets":[["exercises-dataset","0586"]]},
+  {"wgerID":366,"name":"Leg Curls (sitting)","targets":[["exercises-dataset","0599"]]},
+  {"wgerID":394,"name":"Long-Pulley (low Row)","targets":[["sirvya","row"],["exercises-dataset","0861"]]},
+  {"wgerID":537,"name":"Incline Bench Press - Dumbbell","targets":[["exercises-dataset","0314"]]},
+  {"wgerID":538,"name":"Incline Bench Press - Barbell","targets":[["exercises-dataset","0047"]]},
+  {"wgerID":566,"name":"Shoulder Press, Barbell","targets":[["exercises-dataset","0091"]]},
+  {"wgerID":567,"name":"Shoulder Press, Dumbbells","targets":[["exercises-dataset","0405"]]},
+  {"wgerID":571,"name":"Shrugs, Barbells","targets":[["exercises-dataset","0095"]]},
+  {"wgerID":572,"name":"Shrugs, Dumbbells","targets":[["exercises-dataset","0406"]]}
+]

@@ -112,7 +112,10 @@ class NotificationService {
           androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
           notificationDetails: NotificationDetails(
               android: AndroidNotificationDetails(
-                  'sirvya_workout_alerts', 'Workout alerts',
+                  // Android channel sound/vibration are fixed at creation.
+                  'sirvya_workout_alerts_${sound ? 'sound' : 'quiet'}_${vibration ? 'vibrate' : 'still'}',
+                  workoutTranslate('Workout alerts',
+                      LocaleService.instance.locale.languageCode),
                   importance: Importance.high,
                   priority: Priority.high,
                   playSound: sound,

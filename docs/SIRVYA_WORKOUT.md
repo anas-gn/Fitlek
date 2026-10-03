@@ -44,6 +44,7 @@ download capability rechecks current access and cannot authenticate other APIs.
 | GET/POST /exercises; GET/PUT/DELETE /exercises/:id | Paginated catalog, contextual filters/details and owner-only custom lifecycle |
 | PUT /exercises/:id/preferences; GET /exercises/:id/history | Favorites/notes and owned/linked history |
 | GET/PUT /preferences; GET /templates | Workout-only configuration and original starter routines |
+| GET/PUT /balance?clientID=:id | Scoped balance protocols; linked Coaches can edit ratios without changing other Client preferences |
 | GET/POST /plans; GET/PUT/DELETE /plans/:id | Personal/Coach plan lifecycle, revision checks and archive |
 | POST /plans/:id/duplicate; GET /plans/:id/export; POST /plans/import | Stable portable prescriptions, no accounts |
 | GET/PUT /schedule | Weekday routines, multi-routine overrides and explicit rest days |
@@ -89,7 +90,20 @@ Android scheduling is inexact without additional exact-alarm permissions.
 Stats use recorded data. Adherence is against the current assigned schedule,
 because old schedule versions cannot establish past obligations. Structural
 balance offers configurable anchor ratios, not imported named preset tables.
+Named custom protocols can be saved, selected and deleted. Coach review loads
+the selected Client's ratios, rather than the Coach's own preference values.
+The endpoint updates only balance fields, validates visible stable exercise IDs,
+and preserves units, timers and reminders in the existing preferences row.
 Weight check-ins/imports reuse the existing weighthistory table and API.
+
+Exercise details include 19 bundled, independently licensed demonstrations
+covering 24 catalog identities. Native frame controls and optional playback work
+offline, respect reduced motion and stop on disposal/backgrounding. On-screen
+credits and the bundled license describe each unmodified illustration.
+
+Workout dialogs return after their exit transition, allowing editor controllers
+to be safely disposed. Android rest-alert channel IDs include the sound and
+vibration choices because those channel attributes are fixed at creation.
 
 Private uploads are outside public /uploads, bounded in size/count and validated.
 Images are decoded/resized/re-encoded without metadata; videos require a valid

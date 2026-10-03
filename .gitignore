@@ -62,3 +62,4 @@ workout_tmp/
 backend/storage/
 backend.tar.gz
 sirvya_backup.sql
+android/.kotlin/

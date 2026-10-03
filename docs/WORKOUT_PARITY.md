@@ -56,6 +56,7 @@ browser identity providers have separate verification limits below.
 | Library exercise → routine action; older exercise history | REIMPLEMENT | DONE: native day selection/configuration and paginated history with actual performance charts, widget tests |
 | Muscle explorer, details and exercise history | NEEDS ADAPTATION | DONE: original vector illustration, library filters, linked-client selection and real history |
 | Dataset images, animations and videos | EXCLUDE - LICENSE ISSUE | EXCLUDED - LICENSE: metadata MIT license expressly excludes media; no such assets copied |
+| Licensed demonstration replacement | NEEDS ADAPTATION | DONE: 38 unmodified, attributed CC BY-SA illustrations in 19 native demonstrations, mapped to 24 stable identities; offline frames/playback and reduced-motion controls. Coverage is limited to reviewed matching exercises. |
 | Multilingual exercise instructions | NEEDS ADAPTATION | DONE: licensed EN/FR/ES instructions; SIRVYA language selection |
 | Single/combined routine, freestyle, past-workout logging | REIMPLEMENT | DONE: snapshot containers in the same database, date-aware history/progression |
 | Cards/compact/guided views, steppers, keyboard controls | NEEDS ADAPTATION | DONE: Flutter rows/sheets, keyboard Enter/arrows, Space rest pause; mobile layouts |
@@ -75,7 +76,7 @@ browser identity providers have separate verification limits below.
 | Strong/Hevy/FitNotes CSV and bodyweight import/export | NEEDS ADAPTATION | DONE: preview/mapping, atomic batches, deduplication, existing weighthistory reused; parser and ownership tests |
 | Progress charts/records/heatmap/frequency/time/streaks/periods | REIMPLEMENT | DONE: dated real performance and native charts; seven-row calendar heatmap covers the selected period including a full year |
 | Muscle balance/recent training load/relative strength | NEEDS ADAPTATION | DONE: actual working/hard sets, last training date and recent load; no invented recovery score |
-| Structural balance protocols and overrides | NEEDS ADAPTATION | PARTIAL: independent anchor-lift comparisons and configurable target ratios; published Poliquin/Thibaudeau/ATG preset tables are not incorporated |
+| Structural balance protocols and overrides | NEEDS ADAPTATION | PARTIAL: named custom protocols, selection/delete, stable anchors and target overrides work. Linked Coaches edit actual Client ratios with ownership checks and preservation of other preferences. Published Poliquin/Thibaudeau/ATG preset tables await independent source/license review. |
 | Effort distributions, cardio distance and speed | REIMPLEMENT | DONE: actual optional RPE/RIR and distance/time metrics |
 | Bodyweight goal/check-in/history | REPLACE WITH EXISTING SIRVYA FEATURE | DONE: existing weighthistory plus workout-specific goal/check-in preference; no second profile |
 | AI provider setup, chat and automated Coach plans | REPLACE WITH EXISTING SIRVYA FEATURE | REPLACED BY SIRVYA human Coach plan/review flow; no separate AI provider setup or identity |
@@ -100,6 +101,8 @@ Native fixture renders at 396 × 844:
 [Exercise library](verification/native-library.png),
 [Coach builder](verification/native-coach-builder.png),
 [Progress](verification/native-progress.png).
+Additional native captures: [Demonstration](verification/native-demonstration.png)
+and [Client balance protocol](verification/native-balance-protocol.png).
 
 Workout has scoped dark/light neutral surfaces, green actions, compact set grids,
 rounded cards, modal editors, a calendar strip and persistent timer controls.
@@ -120,19 +123,28 @@ login endpoint and restores its session; manual login form entry was not exercis
 
 ## Verification limits
 
-Local backend regression: 57 tests passed, no skips, with disposable users in the
-existing MySQL database. The full Flutter suite passes 29 tests, with the optional
-capture test skipped; that capture passed separately. Native navigation,
-recovery, forms, timers, rich sets, bounded caches and year heatmaps are covered.
-The release web build passes. Workout scoped analysis is clean. Repository-wide
+Local backend regression: 60 tests passed, no skips, with disposable users in the
+existing MySQL database. The full Flutter suite passes 34 tests with screenshot
+capture enabled and no skips. Native navigation, recovery, forms, timers, rich
+sets, bounded caches, year heatmaps, licensed demonstrations and scoped Client
+balance protocol creation/edit/selection/deletion are covered.
+The release web build passes; all 38 bundled demonstration frame hashes match
+the audited originals. Workout scoped analysis is clean. Repository-wide
 analysis retains 60 existing warnings/lints in other screens and no compilation
 errors.
 
-Android APK verification is incomplete: the existing Java 25 setting is
-incompatible with Gradle 8.14. Retrying with installed Java 17 passed dependency
-validation but exhausted C: during Gradle cache processing. The retry was stopped
-when disk space became critical, and the previous Java setting was restored.
-Free sufficient disk space and use Java 17 before rerunning the APK check.
+Android debug APK build passes with Java 17 and the Flutter ARM64 target after
+disk space became available. Earlier attempts failed during native-library
+extraction/merging due to insufficient disk space; generated files from those
+failed app builds were removed. The APK retains package `com.sirvya.app`, label
+SIRVYA, version 1.0.2 (10), and includes all 38 audited illustration frames plus
+their full license. Artifact: `build/app/outputs/flutter-apk/app-debug.apk`
+(144,481,288 bytes). SHA-256:
+`fbd3b40cf516ec3c2899283a1e7cb2cb2abf776d7e74dc438a1da1a4340a68f2`.
+This local verification build uses `API_BASE_URL=http://localhost:3000/api`;
+an attached Android device needs `adb reverse tcp:3000 tcp:3000` to reach the
+local backend. No physical device was attached. The original global Java 25
+setting was restored; it remains incompatible with the existing Gradle wrapper.
 
 Real Google OAuth browser sign-in, physical Android/iOS alerts/actions/vibration,
 video codecs, wake lock and printer integration remain unverified. An isolated

@@ -78,4 +78,5 @@ flutter:
     - assets/branding/
     - assets/sounds/
     - assets/workout/fonts/
+    - assets/workout/demonstrations/
     - assets/config.env

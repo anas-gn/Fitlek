@@ -69,6 +69,35 @@ test('SIRVYA Workout HTTP / MySQL lifecycle and existing endpoint regression', {
         {name: 'Core', dayOfWeek: 3, exercises: [{exerciseID: timed.id, targetSets: 1, targetDurationSeconds: 45, restSeconds: 30}]},
       ]};
     });
+    await t.test('balance protocols use linked-client ownership and preserve other workout preferences',async()=>{
+      const [catalog]=await db.query("SELECT id FROM exercises WHERE externalSource='sirvya' ORDER BY id LIMIT 2");
+      const [anchor,target]=catalog.map(e=>e.id);
+      const protocol={id:'coach_protocol',name:'Coach upper targets',anchorID:anchor,targets:[{exerciseID:target,targetPercent:75}]};
+      await request(client,'/workout/preferences','PUT',{unit:'lb',defaultRestSeconds:45});
+      const path=`/workout/balance?clientID=${client.id}`;
+      assert.equal((await request(null,path)).status,401);
+      assert.equal((await request(otherClient,path)).status,403);
+      assert.equal((await request(otherCoach,path,'PUT',{})).status,403);
+      assert.equal((await request(otherCoach,path)).status,403);
+      assert.equal((await request(coach,'/workout/balance?clientID=invalid')).status,400);
+      const saved=await request(coach,path,'PUT',{balanceProtocols:[protocol],activeBalanceProtocolID:protocol.id});
+      assert.equal(saved.status,200,JSON.stringify(saved.body));assert.equal(saved.body.balanceAnchorID,anchor);
+      assert.equal((await request(client,'/workout/balance')).body.activeBalanceProtocolID,protocol.id);
+      assert.equal((await request(client,'/workout/preferences')).body.unit,'lb');
+      assert.equal((await request(client,'/workout/preferences')).body.defaultRestSeconds,45);
+      assert.equal((await request(coach,'/workout/preferences')).body.balanceProtocols.length,0);
+      assert.equal((await request(coach,path,'PUT',{unit:'kg'})).status,400);
+      const custom=await request(otherClient,'/workout/exercises','POST',{name:'Private balance reference',muscleGroup:'back',equipment:'barbell',isBodyweight:false,instructions:['Fixture']});
+      assert.equal(custom.status,201);
+      assert.equal((await request(client,'/workout/balance','PUT',{balanceAnchorID:custom.body.id,activeBalanceProtocolID:null})).status,404);
+      assert.equal((await request(client,'/workout/preferences','PUT',{balanceAnchorID:custom.body.id})).status,404);
+      assert.equal((await request(coach,path,'PUT',{balanceAnchorID:999999999,activeBalanceProtocolID:null})).status,404);
+      assert.equal((await request(client,'/workout/balance')).body.activeBalanceProtocolID,protocol.id,'failed writes roll back');
+      const edited=await request(client,'/workout/balance','PUT',{balanceTargets:[{exerciseID:target,targetPercent:80}],activeBalanceProtocolID:null});
+      assert.equal(edited.status,200);assert.equal(edited.body.balanceProtocols.length,1);assert.equal(edited.body.balanceTargets[0].targetPercent,80);
+      await request(client,'/workout/balance','PUT',{balanceProtocols:[]});
+      await request(client,'/workout/preferences','PUT',{});
+    });
     await t.test('only an authorized coach can create and assign a client plan', async () => {
       assert.equal((await request(client, '/workout/plans', 'POST', {...body,clientID:otherClient.id})).status, 403);
       assert.equal((await request(otherCoach, '/workout/plans', 'POST', body)).status, 403);

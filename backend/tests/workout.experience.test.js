@@ -62,3 +62,14 @@ test('workout preferences validate units, timers, equipment and time-zone remind
     assert.throws(()=>validatePreferences(invalid),{code:'invalid_workout',status:400});
   }
 });
+test('saved balance protocols resolve stable anchors and reject ambiguous or malformed targets',()=>{
+  const protocol={id:'upper_1',name:'Upper balance',anchorID:1,targets:[{exerciseID:2,targetPercent:75}]};
+  const p=validatePreferences({balanceProtocols:[protocol],activeBalanceProtocolID:'upper_1'});
+  assert.equal(p.balanceAnchorID,1);assert.deepEqual(p.balanceTargets,protocol.targets);
+  for(const invalid of [{balanceProtocols:[null]},{balanceProtocols:[{...protocol,id:'../bad'}]},
+    {balanceProtocols:[protocol,protocol]},{balanceProtocols:[{...protocol,name:' '}]},
+    {balanceProtocols:[{...protocol,targets:[null]}]},{activeBalanceProtocolID:'missing'},
+    {balanceTargets:[{exerciseID:1,targetPercent:70},{exerciseID:1,targetPercent:80}]}]){
+    assert.throws(()=>validatePreferences(invalid),{code:'invalid_workout',status:400});
+  }
+});

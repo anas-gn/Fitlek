@@ -134,9 +134,18 @@ class WorkoutRoute<T> extends MaterialPageRoute<T> {
 }
 
 Future<T?> workoutDialog<T>(
-        {required BuildContext context, required WidgetBuilder builder}) =>
-    showDialog<T>(
-        context: context, builder: (context) => WorkoutScope(builder: builder));
+    {required BuildContext context, required WidgetBuilder builder}) async {
+  final navigator = Navigator.of(context, rootNavigator: true);
+  final route = DialogRoute<T>(
+      context: context,
+      themes: InheritedTheme.capture(from: context, to: navigator.context),
+      builder: (context) => WorkoutScope(builder: builder));
+  final result = await navigator.push(route);
+  // Editors may release their controllers once the closing route is disposed.
+  await route.completed;
+  return result;
+}
+
 Future<T?> workoutSheet<T>(
         {required BuildContext context,
         required WidgetBuilder builder,

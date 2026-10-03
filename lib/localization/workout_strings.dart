@@ -1,5 +1,59 @@
 // Independently authored SIRVYA translations.
 const workoutStrings = <String, List<String>>{
+  'Workout alerts': ['Alertes d’entraînement', 'Alertas de entrenamiento'],
+  'Balance protocol': ['Protocole d’équilibre', 'Protocolo de equilibrio'],
+  'Custom targets': ['Objectifs personnalisés', 'Objetivos personalizados'],
+  'Save balance protocol': [
+    'Enregistrer le protocole',
+    'Guardar protocolo de equilibrio'
+  ],
+  'Protocol name': ['Nom du protocole', 'Nombre del protocolo'],
+  'Delete protocol': ['Supprimer le protocole', 'Eliminar protocolo'],
+  'Delete balance protocol?': [
+    'Supprimer ce protocole ?',
+    '¿Eliminar este protocolo?'
+  ],
+  'The current ratios will remain as custom targets.': [
+    'Les ratios actuels restent des objectifs personnalisés.',
+    'Las proporciones actuales permanecerán como objetivos personalizados.'
+  ],
+  'Anchor not recorded in this period': [
+    'Référence non enregistrée pour cette période',
+    'Referencia no registrada en este período'
+  ],
+  'Record the anchor exercise to compare this protocol.': [
+    'Enregistrez l’exercice de référence pour comparer ce protocole.',
+    'Registra el ejercicio de referencia para comparar este protocolo.'
+  ],
+  'Demonstration': ['Démonstration', 'Demostración'],
+  'Illustration credits': [
+    'Crédits de l’illustration',
+    'Créditos de la ilustración'
+  ],
+  'Original illustration, unmodified.': [
+    'Illustration originale, sans modification.',
+    'Ilustración original sin modificar.'
+  ],
+  'Illustration source': [
+    'Source de l’illustration',
+    'Fuente de la ilustración'
+  ],
+  'Illustration license': [
+    'Licence de l’illustration',
+    'Licencia de la ilustración'
+  ],
+  'Reload demonstration': [
+    'Recharger la démonstration',
+    'Recargar demostración'
+  ],
+  'Previous demonstration frame': ['Image précédente', 'Imagen anterior'],
+  'Next demonstration frame': ['Image suivante', 'Imagen siguiente'],
+  'Pause demonstration': ['Suspendre la démonstration', 'Pausar demostración'],
+  'Play demonstration': ['Lancer la démonstration', 'Reproducir demostración'],
+  'Unable to open link': [
+    'Impossible d’ouvrir le lien',
+    'No se puede abrir el enlace'
+  ],
   'Activity · last {0} days': [
     'Activité · {0} derniers jours',
     'Actividad · últimos {0} días'

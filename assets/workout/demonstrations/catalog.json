@@ -1,0 +1,785 @@
+{
+  "version": 1,
+  "demonstrations": [
+    {
+      "wgerID": 73,
+      "wgerUUID": "3717d144-7815-4a97-9a56-956fb889c996",
+      "name": "Bench Press",
+      "targets": [
+        [
+          "sirvya",
+          "bench-press"
+        ],
+        [
+          "exercises-dataset",
+          "0025"
+        ]
+      ],
+      "license": "CC BY-SA 3.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0/",
+      "modified": false,
+      "frames": [
+        {
+          "id": 68,
+          "asset": "assets/workout/demonstrations/wger-68.png",
+          "sourceUrl": "https://wger.de/media/exercise-images/192/Bench-press-1.png",
+          "sha256": "917e88d61aefa05cf46a98e44e41630343c0b2c821624ca0ac41c07dfedbceed",
+          "title": "Bench-press-1.png",
+          "author": "Everkinetic",
+          "authorUrl": null,
+          "originalUrl": null,
+          "derivativeSourceUrl": null,
+          "authorHistory": []
+        },
+        {
+          "id": 70,
+          "asset": "assets/workout/demonstrations/wger-70.png",
+          "sourceUrl": "https://wger.de/media/exercise-images/192/Bench-press-2.png",
+          "sha256": "8f7da56e008f2e08e04e27c8702bfa223587029ed2bf186cee27ad9c312269c5",
+          "title": "Bench-press-2.png",
+          "author": "Everkinetic",
+          "authorUrl": null,
+          "originalUrl": null,
+          "derivativeSourceUrl": null,
+          "authorHistory": []
+        }
+      ]
+    },
+    {
+      "wgerID": 75,
+      "wgerUUID": "28321cf3-70e6-48a4-ade1-d11382180cb3",
+      "name": "Benchpress Dumbbells",
+      "targets": [
+        [
+          "sirvya",
+          "dumbbell-press"
+        ],
+        [
+          "exercises-dataset",
+          "0289"
+        ]
+      ],
+      "license": "CC BY-SA 3.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0/",
+      "modified": false,
+      "frames": [
+        {
+          "id": 113,
+          "asset": "assets/workout/demonstrations/wger-113.png",
+          "sourceUrl": "https://wger.de/media/exercise-images/97/Dumbbell-bench-press-1.png",
+          "sha256": "2d8aa760a9c81b98f79937c936c4819b5686a04a1c376a072061a5493da0a5d4",
+          "title": "Dumbbell-bench-press-1.png",
+          "author": "Everkinetic",
+          "authorUrl": null,
+          "originalUrl": null,
+          "derivativeSourceUrl": null,
+          "authorHistory": []
+        },
+        {
+          "id": 114,
+          "asset": "assets/workout/demonstrations/wger-114.png",
+          "sourceUrl": "https://wger.de/media/exercise-images/97/Dumbbell-bench-press-2.png",
+          "sha256": "e80a5a428f4a0f0535b16968d7ac4f45aa00a5067181b225e4967a10d87d3aa3",
+          "title": "Dumbbell-bench-press-2.png",
+          "author": "Everkinetic",
+          "authorUrl": null,
+          "originalUrl": null,
+          "derivativeSourceUrl": null,
+          "authorHistory": []
+        }
+      ]
+    },
+    {
+      "wgerID": 76,
+      "wgerUUID": "3db63138-a047-4a4d-b616-1a0b7dfca105",
+      "name": "Bench Press Narrow Grip",
+      "targets": [
+        [
+          "exercises-dataset",
+          "0030"
+        ]
+      ],
+      "license": "CC BY-SA 3.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0/",
+      "modified": false,
+      "frames": [
+        {
+          "id": 15,
+          "asset": "assets/workout/demonstrations/wger-15.png",
+          "sourceUrl": "https://wger.de/media/exercise-images/88/Narrow-grip-bench-press-1.png",
+          "sha256": "9940d091c2248e520f21ed1541de500ae50b11d201ad61bcc092d13dd629c898",
+          "title": "Narrow-grip-bench-press-1.png",
+          "author": "Everkinetic",
+          "authorUrl": null,
+          "originalUrl": null,
+          "derivativeSourceUrl": null,
+          "authorHistory": []
+        },
+        {
+          "id": 16,
+          "asset": "assets/workout/demonstrations/wger-16.png",
+          "sourceUrl": "https://wger.de/media/exercise-images/88/Narrow-grip-bench-press-2.png",
+          "sha256": "f0dca9df7285fa03656afb4305defa727fea41318e3ac099ddc2be855b7a5b9c",
+          "title": "Narrow-grip-bench-press-2.png",
+          "author": "Everkinetic",
+          "authorUrl": null,
+          "originalUrl": null,
+          "derivativeSourceUrl": null,
+          "authorHistory": []
+        }
+      ]
+    },
+    {
+      "wgerID": 91,
+      "wgerUUID": "7b99a081-6b1a-4aa5-b86a-5a935d083a35",
+      "name": "Biceps Curls With Barbell",
+      "targets": [
+        [
+          "exercises-dataset",
+          "0031"
+        ]
+      ],
+      "license": "CC BY-SA 3.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0/",
+      "modified": false,
+      "frames": [
+        {
+          "id": 27,
+          "asset": "assets/workout/demonstrations/wger-27.png",
+          "sourceUrl": "https://wger.de/media/exercise-images/74/Bicep-curls-1.png",
+          "sha256": "c33d15868b7856471bff7a3a5cf5efaf7082b8d1376a9cf990a2257a2a1dcd3c",
+          "title": "Bicep-curls-1.png",
+          "author": "Everkinetic",
+          "authorUrl": null,
+          "originalUrl": null,
+          "derivativeSourceUrl": null,
+          "authorHistory": []
+        },
+        {
+          "id": 28,
+          "asset": "assets/workout/demonstrations/wger-28.png",
+          "sourceUrl": "https://wger.de/media/exercise-images/74/Bicep-curls-2.png",
+          "sha256": "f3f401a35ccef993f1ca8c37db35e200f5f6d6321b66b3d609e0207b50032f57",
+          "title": "Bicep-curls-2.png",
+          "author": "Everkinetic",
+          "authorUrl": null,
+          "originalUrl": null,
+          "derivativeSourceUrl": null,
+          "authorHistory": []
+        }
+      ]
+    },
+    {
+      "wgerID": 92,
+      "wgerUUID": "1ae6a28d-10e7-4ecf-af4f-905f8193e2c6",
+      "name": "Biceps Curls With Dumbbell",
+      "targets": [
+        [
+          "sirvya",
+          "curl"
+        ],
+        [
+          "exercises-dataset",
+          "0294"
+        ]
+      ],
+      "license": "CC BY-SA 3.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0/",
+      "modified": false,
+      "frames": [
+        {
+          "id": 23,
+          "asset": "assets/workout/demonstrations/wger-23.png",
+          "sourceUrl": "https://wger.de/media/exercise-images/81/Biceps-curl-1.png",
+          "sha256": "9db73cea5e78b57534ee38a72b8a92cc2bdb0f882f7ace4d8f3bb6354d9909b4",
+          "title": "Biceps-curl-1.png",
+          "author": "Everkinetic",
+          "authorUrl": null,
+          "originalUrl": null,
+          "derivativeSourceUrl": null,
+          "authorHistory": []
+        },
+        {
+          "id": 24,
+          "asset": "assets/workout/demonstrations/wger-24.png",
+          "sourceUrl": "https://wger.de/media/exercise-images/81/Biceps-curl-2.png",
+          "sha256": "e1ac408080bfb00b4cc97665df0029d5d66207fb758857bbac0afafb5ff58881",
+          "title": "Biceps-curl-2.png",
+          "author": "Everkinetic",
+          "authorUrl": null,
+          "originalUrl": null,
+          "derivativeSourceUrl": null,
+          "authorHistory": []
+        }
+      ]
+    },
+    {
+      "wgerID": 185,
+      "wgerUUID": "bcd801f0-9a38-4615-a91c-900153c8c234",
+      "name": "Decline Bench Press Barbell",
+      "targets": [
+        [
+          "exercises-dataset",
+          "0033"
+        ]
+      ],
+      "license": "CC BY-SA 3.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0/",
+      "modified": false,
+      "frames": [
+        {
+          "id": 115,
+          "asset": "assets/workout/demonstrations/wger-115.png",
+          "sourceUrl": "https://wger.de/media/exercise-images/100/Decline-bench-press-1.png",
+          "sha256": "50ea915603a7eb2b4e7bc31c47a597c04a7675df2ff3b05855fd782ac2dd9224",
+          "title": "Decline-bench-press-1.png",
+          "author": "Everkinetic",
+          "authorUrl": null,
+          "originalUrl": null,
+          "derivativeSourceUrl": null,
+          "authorHistory": []
+        },
+        {
+          "id": 116,
+          "asset": "assets/workout/demonstrations/wger-116.png",
+          "sourceUrl": "https://wger.de/media/exercise-images/100/Decline-bench-press-2.png",
+          "sha256": "199b5e823e91efadc30cf103f3b9dc994125a2b5b714ca77258a748d1a6c12ae",
+          "title": "Decline-bench-press-2.png",
+          "author": "Everkinetic",
+          "authorUrl": null,
+          "originalUrl": null,
+          "derivativeSourceUrl": null,
+          "authorHistory": []
+        }
+      ]
+    },
+    {
+      "wgerID": 257,
+      "wgerUUID": "d677de4c-5bd9-412a-91f1-857116a666a2",
+      "name": "Front Squats",
+      "targets": [
+        [
+          "exercises-dataset",
+          "0042"
+        ]
+      ],
+      "license": "CC BY-SA 3.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0/",
+      "modified": false,
+      "frames": [
+        {
+          "id": 149,
+          "asset": "assets/workout/demonstrations/wger-149.png",
+          "sourceUrl": "https://wger.de/media/exercise-images/191/Front-squat-1-857x1024.png",
+          "sha256": "4068499db0a18054ceb56c01e36f0d74c58bb9a3f0729e1d990acd21d8d84159",
+          "title": "Front-squat-1-857x1024.png",
+          "author": "Everkinetic",
+          "authorUrl": null,
+          "originalUrl": null,
+          "derivativeSourceUrl": null,
+          "authorHistory": []
+        },
+        {
+          "id": 150,
+          "asset": "assets/workout/demonstrations/wger-150.png",
+          "sourceUrl": "https://wger.de/media/exercise-images/191/Front-squat-2-857x1024.png",
+          "sha256": "4fb462d6f75e2e063b1f11469df38983921dea139fd06bc94183e917951d97e0",
+          "title": "Front-squat-2-857x1024.png",
+          "author": "Everkinetic",
+          "authorUrl": null,
+          "originalUrl": null,
+          "derivativeSourceUrl": null,
+          "authorHistory": []
+        }
+      ]
+    },
+    {
+      "wgerID": 272,
+      "wgerUUID": "c0d9fe98-f4fe-49f3-8037-05e1984e7d2d",
+      "name": "Hammer Curls",
+      "targets": [
+        [
+          "exercises-dataset",
+          "0313"
+        ]
+      ],
+      "license": "CC BY-SA 3.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0/",
+      "modified": false,
+      "frames": [
+        {
+          "id": 47,
+          "asset": "assets/workout/demonstrations/wger-47.png",
+          "sourceUrl": "https://wger.de/media/exercise-images/86/Bicep-hammer-curl-1.png",
+          "sha256": "f9809143f121283705612669b9d98cd25432be0c9018fe1f79ed924bafec7801",
+          "title": "Bicep-hammer-curl-1.png",
+          "author": "Everkinetic",
+          "authorUrl": null,
+          "originalUrl": null,
+          "derivativeSourceUrl": null,
+          "authorHistory": []
+        },
+        {
+          "id": 48,
+          "asset": "assets/workout/demonstrations/wger-48.png",
+          "sourceUrl": "https://wger.de/media/exercise-images/86/Bicep-hammer-curl-2.png",
+          "sha256": "c5591af9a40419516da525aa108997807881e9c0ea4293b4b1f432c7b9862452",
+          "title": "Bicep-hammer-curl-2.png",
+          "author": "Everkinetic",
+          "authorUrl": null,
+          "originalUrl": null,
+          "derivativeSourceUrl": null,
+          "authorHistory": []
+        }
+      ]
+    },
+    {
+      "wgerID": 275,
+      "wgerUUID": "04365177-e078-489b-983a-8ac61b7346f1",
+      "name": "Hammercurls on Cable",
+      "targets": [
+        [
+          "exercises-dataset",
+          "0165"
+        ]
+      ],
+      "license": "CC BY-SA 3.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0/",
+      "modified": false,
+      "frames": [
+        {
+          "id": 51,
+          "asset": "assets/workout/demonstrations/wger-51.png",
+          "sourceUrl": "https://wger.de/media/exercise-images/138/Hammer-curls-with-rope-1.png",
+          "sha256": "5d0e536b188619f6203f7e7071a4384809b8fdba58fc9a8516fca4a7bcfed68e",
+          "title": "Hammer-curls-with-rope-1.png",
+          "author": "Everkinetic",
+          "authorUrl": null,
+          "originalUrl": null,
+          "derivativeSourceUrl": null,
+          "authorHistory": []
+        },
+        {
+          "id": 52,
+          "asset": "assets/workout/demonstrations/wger-52.png",
+          "sourceUrl": "https://wger.de/media/exercise-images/138/Hammer-curls-with-rope-2.png",
+          "sha256": "67f1a65795579fb774ace42fca87c5ad6f6e07f3f7e21f2b0b744034ad4e6ffa",
+          "title": "Hammer-curls-with-rope-2.png",
+          "author": "Everkinetic",
+          "authorUrl": null,
+          "originalUrl": null,
+          "derivativeSourceUrl": null,
+          "authorHistory": []
+        }
+      ]
+    },
+    {
+      "wgerID": 348,
+      "wgerUUID": "63375f5b-2d81-471c-bea4-fc3d207e96cb",
+      "name": "Lateral Raises",
+      "targets": [
+        [
+          "sirvya",
+          "lateral-raise"
+        ],
+        [
+          "exercises-dataset",
+          "0334"
+        ]
+      ],
+      "license": "CC BY-SA 3.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0/",
+      "modified": false,
+      "frames": [
+        {
+          "id": 178,
+          "asset": "assets/workout/demonstrations/wger-178.png",
+          "sourceUrl": "https://wger.de/media/exercise-images/148/lateral-dumbbell-raises-large-1.png",
+          "sha256": "7c31318be41a8ed82d6390d52eebda7ca280c18bb7727cf27f04c35c33eb3cdf",
+          "title": "lateral-dumbbell-raises-large-1.png",
+          "author": "Everkinetic",
+          "authorUrl": null,
+          "originalUrl": null,
+          "derivativeSourceUrl": null,
+          "authorHistory": []
+        },
+        {
+          "id": 177,
+          "asset": "assets/workout/demonstrations/wger-177.png",
+          "sourceUrl": "https://wger.de/media/exercise-images/148/lateral-dumbbell-raises-large-2.png",
+          "sha256": "acdcbbc93c7242d837f771d3422e26ad627da8faf2a3b133416fe886f8cc3cce",
+          "title": "lateral-dumbbell-raises-large-2.png",
+          "author": "Everkinetic",
+          "authorUrl": null,
+          "originalUrl": null,
+          "derivativeSourceUrl": null,
+          "authorHistory": []
+        }
+      ]
+    },
+    {
+      "wgerID": 365,
+      "wgerUUID": "3bc8b411-a28d-4e1c-a6d1-769e18fe9881",
+      "name": "Leg Curls (laying)",
+      "targets": [
+        [
+          "exercises-dataset",
+          "0586"
+        ]
+      ],
+      "license": "CC BY-SA 3.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0/",
+      "modified": false,
+      "frames": [
+        {
+          "id": 179,
+          "asset": "assets/workout/demonstrations/wger-179.png",
+          "sourceUrl": "https://wger.de/media/exercise-images/154/lying-leg-curl-machine-large-1.png",
+          "sha256": "e8da278d94c2c7fe5feed8aab3d4666aac55f699f19bad38c086cea2208c98ad",
+          "title": "lying-leg-curl-machine-large-1.png",
+          "author": "Everkinetic",
+          "authorUrl": null,
+          "originalUrl": null,
+          "derivativeSourceUrl": null,
+          "authorHistory": []
+        },
+        {
+          "id": 180,
+          "asset": "assets/workout/demonstrations/wger-180.png",
+          "sourceUrl": "https://wger.de/media/exercise-images/154/lying-leg-curl-machine-large-2.png",
+          "sha256": "c9476f7baeaa61ea503abd07219be240eaa7cd443040447da004485d7f0dc1e4",
+          "title": "lying-leg-curl-machine-large-2.png",
+          "author": "Everkinetic",
+          "authorUrl": null,
+          "originalUrl": null,
+          "derivativeSourceUrl": null,
+          "authorHistory": []
+        }
+      ]
+    },
+    {
+      "wgerID": 366,
+      "wgerUUID": "440a5184-de58-4a86-a7ba-76ddeafaa855",
+      "name": "Leg Curls (sitting)",
+      "targets": [
+        [
+          "exercises-dataset",
+          "0599"
+        ]
+      ],
+      "license": "CC BY-SA 3.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0/",
+      "modified": false,
+      "frames": [
+        {
+          "id": 181,
+          "asset": "assets/workout/demonstrations/wger-181.png",
+          "sourceUrl": "https://wger.de/media/exercise-images/117/seated-leg-curl-large-1.png",
+          "sha256": "d13ff4f8aa04ab62b8ed1b42a9493307bd4077eaf4f84da57d4cc7dbe28ac372",
+          "title": "seated-leg-curl-large-1.png",
+          "author": "Everkinetic",
+          "authorUrl": null,
+          "originalUrl": null,
+          "derivativeSourceUrl": null,
+          "authorHistory": []
+        },
+        {
+          "id": 182,
+          "asset": "assets/workout/demonstrations/wger-182.png",
+          "sourceUrl": "https://wger.de/media/exercise-images/117/seated-leg-curl-large-2.png",
+          "sha256": "9985758b68e0d1b8eddbe5b5e5f3ede345005b21eca337e74245b13bd02c8593",
+          "title": "seated-leg-curl-large-2.png",
+          "author": "Everkinetic",
+          "authorUrl": null,
+          "originalUrl": null,
+          "derivativeSourceUrl": null,
+          "authorHistory": []
+        }
+      ]
+    },
+    {
+      "wgerID": 394,
+      "wgerUUID": "a7e6c20a-6ddc-4401-9935-ace2d02e3995",
+      "name": "Long-Pulley (low Row)",
+      "targets": [
+        [
+          "sirvya",
+          "row"
+        ],
+        [
+          "exercises-dataset",
+          "0861"
+        ]
+      ],
+      "license": "CC BY-SA 3.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0/",
+      "modified": false,
+      "frames": [
+        {
+          "id": 144,
+          "asset": "assets/workout/demonstrations/wger-144.png",
+          "sourceUrl": "https://wger.de/media/exercise-images/143/Cable-seated-rows-1.png",
+          "sha256": "f3d34798088421f3fbdc54bae7b7f0e04059f50ace657e9b96bbc0c7e6404731",
+          "title": "Cable-seated-rows-1.png",
+          "author": "Everkinetic",
+          "authorUrl": null,
+          "originalUrl": null,
+          "derivativeSourceUrl": null,
+          "authorHistory": []
+        },
+        {
+          "id": 143,
+          "asset": "assets/workout/demonstrations/wger-143.png",
+          "sourceUrl": "https://wger.de/media/exercise-images/143/Cable-seated-rows-2.png",
+          "sha256": "6e52bfc5f0c486c0fb1ea40fdaf60493e92fb36b033a414a1de3c696936fac7f",
+          "title": "Cable-seated-rows-2.png",
+          "author": "Everkinetic",
+          "authorUrl": null,
+          "originalUrl": null,
+          "derivativeSourceUrl": null,
+          "authorHistory": []
+        }
+      ]
+    },
+    {
+      "wgerID": 537,
+      "wgerUUID": "57e17672-52b9-43cf-8d0d-4b3f06a0c0d0",
+      "name": "Incline Bench Press - Dumbbell",
+      "targets": [
+        [
+          "exercises-dataset",
+          "0314"
+        ]
+      ],
+      "license": "CC BY-SA 3.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0/",
+      "modified": false,
+      "frames": [
+        {
+          "id": 105,
+          "asset": "assets/workout/demonstrations/wger-105.png",
+          "sourceUrl": "https://wger.de/media/exercise-images/16/Incline-press-1.png",
+          "sha256": "53b0545c1bbe7dc5d7db758d4e510f7331f4b73d1ec291d4760f1e6d421ad6f9",
+          "title": "Incline-press-1.png",
+          "author": "Everkinetic",
+          "authorUrl": null,
+          "originalUrl": null,
+          "derivativeSourceUrl": null,
+          "authorHistory": []
+        },
+        {
+          "id": 106,
+          "asset": "assets/workout/demonstrations/wger-106.png",
+          "sourceUrl": "https://wger.de/media/exercise-images/16/Incline-press-2.png",
+          "sha256": "e5a431a2475859436b32fcedefa316543c8dd2f72fb70e9980020e2ff3a21f34",
+          "title": "Incline-press-2.png",
+          "author": "Everkinetic",
+          "authorUrl": null,
+          "originalUrl": null,
+          "derivativeSourceUrl": null,
+          "authorHistory": []
+        }
+      ]
+    },
+    {
+      "wgerID": 538,
+      "wgerUUID": "275fb49f-975c-4d6e-9d63-2c86ed740f40",
+      "name": "Incline Bench Press - Barbell",
+      "targets": [
+        [
+          "exercises-dataset",
+          "0047"
+        ]
+      ],
+      "license": "CC BY-SA 3.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0/",
+      "modified": false,
+      "frames": [
+        {
+          "id": 129,
+          "asset": "assets/workout/demonstrations/wger-129.png",
+          "sourceUrl": "https://wger.de/media/exercise-images/41/Incline-bench-press-1.png",
+          "sha256": "396b0bb512b64d0aba41c2093b7d246e74dc354589b6310e9b8bc2c98ecd767f",
+          "title": "Incline-bench-press-1.png",
+          "author": "Everkinetic",
+          "authorUrl": null,
+          "originalUrl": null,
+          "derivativeSourceUrl": null,
+          "authorHistory": []
+        },
+        {
+          "id": 130,
+          "asset": "assets/workout/demonstrations/wger-130.png",
+          "sourceUrl": "https://wger.de/media/exercise-images/41/Incline-bench-press-2.png",
+          "sha256": "4f5b1d20639bc2abe522264f3fcf802d088d26ee6ba80a70a381cae9f34816ac",
+          "title": "Incline-bench-press-2.png",
+          "author": "Everkinetic",
+          "authorUrl": null,
+          "originalUrl": null,
+          "derivativeSourceUrl": null,
+          "authorHistory": []
+        }
+      ]
+    },
+    {
+      "wgerID": 566,
+      "wgerUUID": "8b0a0371-c0a9-42a7-aab7-68d520542fb2",
+      "name": "Shoulder Press, Barbell",
+      "targets": [
+        [
+          "exercises-dataset",
+          "0091"
+        ]
+      ],
+      "license": "CC BY-SA 3.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0/",
+      "modified": false,
+      "frames": [
+        {
+          "id": 171,
+          "asset": "assets/workout/demonstrations/wger-171.png",
+          "sourceUrl": "https://wger.de/media/exercise-images/119/seated-barbell-shoulder-press-large-1.png",
+          "sha256": "34584e3751dceb4e6ef8b91fe0d0408f1a7ef7930b11a9367859af7a900af424",
+          "title": "seated-barbell-shoulder-press-large-1.png",
+          "author": "Everkinetic",
+          "authorUrl": null,
+          "originalUrl": null,
+          "derivativeSourceUrl": null,
+          "authorHistory": []
+        },
+        {
+          "id": 172,
+          "asset": "assets/workout/demonstrations/wger-172.png",
+          "sourceUrl": "https://wger.de/media/exercise-images/119/seated-barbell-shoulder-press-large-2.png",
+          "sha256": "4033f2e600e96fb6614a861a70fc41d5c3a368749c87a31efd16449ee6e27dbb",
+          "title": "seated-barbell-shoulder-press-large-2.png",
+          "author": "Everkinetic",
+          "authorUrl": null,
+          "originalUrl": null,
+          "derivativeSourceUrl": null,
+          "authorHistory": []
+        }
+      ]
+    },
+    {
+      "wgerID": 567,
+      "wgerUUID": "87affa4b-395b-437c-9581-2bd20ea5aa7c",
+      "name": "Shoulder Press, Dumbbells",
+      "targets": [
+        [
+          "exercises-dataset",
+          "0405"
+        ]
+      ],
+      "license": "CC BY-SA 3.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0/",
+      "modified": false,
+      "frames": [
+        {
+          "id": 173,
+          "asset": "assets/workout/demonstrations/wger-173.png",
+          "sourceUrl": "https://wger.de/media/exercise-images/123/dumbbell-shoulder-press-large-1.png",
+          "sha256": "d3fbf6690df84e743ae090164f133e84c5595a54a892d80532e0af4cb543f670",
+          "title": "dumbbell-shoulder-press-large-1.png",
+          "author": "Everkinetic",
+          "authorUrl": null,
+          "originalUrl": null,
+          "derivativeSourceUrl": null,
+          "authorHistory": []
+        },
+        {
+          "id": 174,
+          "asset": "assets/workout/demonstrations/wger-174.png",
+          "sourceUrl": "https://wger.de/media/exercise-images/123/dumbbell-shoulder-press-large-2.png",
+          "sha256": "42aa5e8286d57566ac5e5239013deddb48201c64656f13b4d26b91f6e33182ef",
+          "title": "dumbbell-shoulder-press-large-2.png",
+          "author": "Everkinetic",
+          "authorUrl": null,
+          "originalUrl": null,
+          "derivativeSourceUrl": null,
+          "authorHistory": []
+        }
+      ]
+    },
+    {
+      "wgerID": 571,
+      "wgerUUID": "270e108d-3cd2-45a9-807b-c357317eb15c",
+      "name": "Shrugs, Barbells",
+      "targets": [
+        [
+          "exercises-dataset",
+          "0095"
+        ]
+      ],
+      "license": "CC BY-SA 3.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0/",
+      "modified": false,
+      "frames": [
+        {
+          "id": 43,
+          "asset": "assets/workout/demonstrations/wger-43.png",
+          "sourceUrl": "https://wger.de/media/exercise-images/150/Barbell-shrugs-1.png",
+          "sha256": "17baa9d1701fa4f4219040e46f8de0eb584af6a7ac8faf39e8cfe88265ab11d4",
+          "title": "Barbell-shrugs-1.png",
+          "author": "Everkinetic",
+          "authorUrl": null,
+          "originalUrl": null,
+          "derivativeSourceUrl": null,
+          "authorHistory": []
+        },
+        {
+          "id": 44,
+          "asset": "assets/workout/demonstrations/wger-44.png",
+          "sourceUrl": "https://wger.de/media/exercise-images/150/Barbell-shrugs-2.png",
+          "sha256": "e6a56bf6ab748c0797a6a90030b71a6bcc6d13fda4f86c87d86a1f5a1e8d4e17",
+          "title": "Barbell-shrugs-2.png",
+          "author": "Everkinetic",
+          "authorUrl": null,
+          "originalUrl": null,
+          "derivativeSourceUrl": null,
+          "authorHistory": []
+        }
+      ]
+    },
+    {
+      "wgerID": 572,
+      "wgerUUID": "72a945ec-3a7f-424b-9a05-1616ef7dce91",
+      "name": "Shrugs, Dumbbells",
+      "targets": [
+        [
+          "exercises-dataset",
+          "0406"
+        ]
+      ],
+      "license": "CC BY-SA 3.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/3.0/",
+      "modified": false,
+      "frames": [
+        {
+          "id": 40,
+          "asset": "assets/workout/demonstrations/wger-40.png",
+          "sourceUrl": "https://wger.de/media/exercise-images/151/Dumbbell-shrugs-1.png",
+          "sha256": "7d4582f8f8e0573cbbf40527d461a9a67337bc147e00cf097147bab753026b10",
+          "title": "Dumbbell-shrugs-1.png",
+          "author": "Everkinetic",
+          "authorUrl": null,
+          "originalUrl": null,
+          "derivativeSourceUrl": null,
+          "authorHistory": []
+        },
+        {
+          "id": 39,
+          "asset": "assets/workout/demonstrations/wger-39.png",
+          "sourceUrl": "https://wger.de/media/exercise-images/151/Dumbbell-shrugs-2.png",
+          "sha256": "b0c74fd695fc0ec90eac9e2c00d1f8e6652956e9fd7c806d40d3df13fced1560",
+          "title": "Dumbbell-shrugs-2.png",
+          "author": "Everkinetic",
+          "authorUrl": null,
+          "originalUrl": null,
+          "derivativeSourceUrl": null,
+          "authorHistory": []
+        }
+      ]
+    }
+  ]
+}

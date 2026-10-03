@@ -572,6 +572,7 @@ class _WorkoutProgressScreenState extends State<WorkoutProgressScreen> {
                                   ]))),
                           _exerciseChart(stats),
                           WorkoutBalanceCard(
+                              clientID: widget.clientID,
                               records: workoutRows(stats['records'])),
                           if (stats['effortDistribution'] != null)
                             ...['rpe', 'rir'].map((scale) {
