@@ -4,6 +4,90 @@ import '../../../services/workout_service.dart';
 import 'exercise_library.dart';
 import 'workout_ui.dart';
 
+// Primary working-set coverage, independent of resistance load or bodyweight.
+// Unknown regions stay in the textual list instead of being assigned anatomy.
+Map<String, double> workoutMuscleCoverage(List<WorkoutExercise> exercises,
+    {List<WorkoutSet>? performed}) {
+  final totals = <String, double>{};
+  for (final exercise in exercises) {
+    final count = performed == null
+        ? exercise.sets
+        : performed
+            .where(
+                (set) => set.workoutExerciseID == exercise.id && !set.isWarmup)
+            .length;
+    if (count > 0) {
+      final group = exercise.exercise.muscleGroup;
+      totals[group] = (totals[group] ?? 0) + count;
+    }
+  }
+  return totals;
+}
+
+class WorkoutMuscleCoverage extends StatelessWidget {
+  final Map<String, double> load;
+  const WorkoutMuscleCoverage({super.key, required this.load});
+  @override
+  Widget build(BuildContext context) {
+    const aliases = {
+      'pectorals': 'chest',
+      'core': 'abs',
+      'delts': 'shoulders',
+      'quadriceps': 'quads',
+      'legs': 'quads',
+      'lats': 'back',
+      'upper back': 'back',
+      'spine': 'back',
+      'traps': 'back',
+      'upper arms': 'biceps'
+    };
+    final regions = <String, double>{};
+    for (final entry in load.entries) {
+      final name = aliases[entry.key] ?? entry.key;
+      regions[name] = (regions[name] ?? 0) + entry.value;
+    }
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      const SizedBox(height: 16),
+      const WorkoutLabel('Muscle coverage',
+          style: TextStyle(fontWeight: FontWeight.w600)),
+      const WorkoutLabel('Primary muscles · working sets'),
+      SizedBox(
+          height: 220,
+          child: Row(children: [
+            for (final back in [false, true])
+              Expanded(
+                  child: Column(children: [
+                Expanded(
+                    child: FittedBox(
+                        child: SizedBox(
+                            width: 280,
+                            height: 380,
+                            child: CustomPaint(
+                                painter: _BodyPainter(
+                                    back: back,
+                                    selected: null,
+                                    group: (name) => name,
+                                    load: regions,
+                                    accent:
+                                        Theme.of(context).colorScheme.primary,
+                                    surface: Theme.of(context)
+                                        .colorScheme
+                                        .surfaceContainerHighest))))),
+                WorkoutLabel(back ? 'Back' : 'Front')
+              ]))
+          ])),
+      Wrap(
+          spacing: 8,
+          runSpacing: 4,
+          children: load.entries
+              .map((entry) => Chip(
+                  label: WorkoutLabel(
+                      '${entry.key}: ${workoutValue(entry.value)}')))
+              .toList())
+    ]);
+  }
+}
+
 // Original vector illustration; no third-party anatomy assets.
 class WorkoutMuscleExplorer extends StatefulWidget {
   final bool selecting;
@@ -154,12 +238,14 @@ class _BodyPainter extends CustomPainter {
   final String? selected;
   final String Function(String) group;
   final Color accent, surface;
+  final Map<String, double> load;
   _BodyPainter(
       {required this.back,
       required this.selected,
       required this.group,
       required this.accent,
-      required this.surface});
+      required this.surface,
+      this.load = const {}});
   @override
   void paint(Canvas canvas, Size size) {
     final base = Paint()..color = surface;
@@ -169,8 +255,17 @@ class _BodyPainter extends CustomPainter {
             const Rect.fromLTWH(130, 52, 20, 24), const Radius.circular(7)),
         base);
     for (final r in muscleRegions(back)) {
-      canvas.drawRRect(RRect.fromRectAndRadius(r.$2, const Radius.circular(12)),
-          Paint()..color = group(r.$1) == selected ? accent : surface);
+      final total = load[group(r.$1)] ?? 0;
+      final maximum = load.values.fold<double>(1, (a, b) => a > b ? a : b);
+      canvas.drawRRect(
+          RRect.fromRectAndRadius(r.$2, const Radius.circular(12)),
+          Paint()
+            ..color = group(r.$1) == selected
+                ? accent
+                : total > 0
+                    ? Color.lerp(
+                        surface, accent, (total / maximum).clamp(0.2, 1))!
+                    : surface);
     }
   }
 
@@ -179,5 +274,6 @@ class _BodyPainter extends CustomPainter {
       old.back != back ||
       old.selected != selected ||
       old.accent != accent ||
+      old.load != load ||
       old.surface != surface;
 }

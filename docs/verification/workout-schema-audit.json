@@ -1,0 +1,1420 @@
+{
+  "verifiedAt": "2026-10-03T21:32:32.463Z",
+  "mysqlVersion": "8.4.9",
+  "tables": [
+    "exercises",
+    "workout_plans",
+    "workout_days",
+    "workout_exercises",
+    "workout_sessions",
+    "workout_sets",
+    "workout_preferences",
+    "workout_exercise_preferences",
+    "workout_schedule",
+    "workout_schedule_dates",
+    "workout_alerts",
+    "workout_media",
+    "workout_imports",
+    "workout_import_exercises"
+  ],
+  "columns": [
+    {
+      "TABLE_NAME": "exercises",
+      "COLUMN_NAME": "id",
+      "COLUMN_TYPE": "bigint unsigned",
+      "IS_NULLABLE": "NO",
+      "COLUMN_KEY": "PRI"
+    },
+    {
+      "TABLE_NAME": "exercises",
+      "COLUMN_NAME": "name",
+      "COLUMN_TYPE": "varchar(160)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_KEY": ""
+    },
+    {
+      "TABLE_NAME": "exercises",
+      "COLUMN_NAME": "description",
+      "COLUMN_TYPE": "text",
+      "IS_NULLABLE": "YES",
+      "COLUMN_KEY": ""
+    },
+    {
+      "TABLE_NAME": "exercises",
+      "COLUMN_NAME": "muscleGroup",
+      "COLUMN_TYPE": "varchar(80)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_KEY": "MUL"
+    },
+    {
+      "TABLE_NAME": "exercises",
+      "COLUMN_NAME": "secondaryMuscles",
+      "COLUMN_TYPE": "json",
+      "IS_NULLABLE": "YES",
+      "COLUMN_KEY": ""
+    },
+    {
+      "TABLE_NAME": "exercises",
+      "COLUMN_NAME": "equipment",
+      "COLUMN_TYPE": "varchar(80)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_KEY": ""
+    },
+    {
+      "TABLE_NAME": "exercises",
+      "COLUMN_NAME": "exerciseType",
+      "COLUMN_TYPE": "enum('reps','timed','cardio')",
+      "IS_NULLABLE": "NO",
+      "COLUMN_KEY": ""
+    },
+    {
+      "TABLE_NAME": "exercises",
+      "COLUMN_NAME": "isBodyweight",
+      "COLUMN_TYPE": "tinyint(1)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_KEY": ""
+    },
+    {
+      "TABLE_NAME": "exercises",
+      "COLUMN_NAME": "isTimed",
+      "COLUMN_TYPE": "tinyint(1)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_KEY": ""
+    },
+    {
+      "TABLE_NAME": "exercises",
+      "COLUMN_NAME": "imageUrl",
+      "COLUMN_TYPE": "varchar(500)",
+      "IS_NULLABLE": "YES",
+      "COLUMN_KEY": ""
+    },
+    {
+      "TABLE_NAME": "exercises",
+      "COLUMN_NAME": "videoUrl",
+      "COLUMN_TYPE": "varchar(500)",
+      "IS_NULLABLE": "YES",
+      "COLUMN_KEY": ""
+    },
+    {
+      "TABLE_NAME": "exercises",
+      "COLUMN_NAME": "instructions",
+      "COLUMN_TYPE": "json",
+      "IS_NULLABLE": "NO",
+      "COLUMN_KEY": ""
+    },
+    {
+      "TABLE_NAME": "exercises",
+      "COLUMN_NAME": "externalSource",
+      "COLUMN_TYPE": "varchar(80)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_KEY": "MUL"
+    },
+    {
+      "TABLE_NAME": "exercises",
+      "COLUMN_NAME": "externalId",
+      "COLUMN_TYPE": "varchar(160)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_KEY": ""
+    },
+    {
+      "TABLE_NAME": "exercises",
+      "COLUMN_NAME": "ownerID",
+      "COLUMN_TYPE": "bigint unsigned",
+      "IS_NULLABLE": "YES",
+      "COLUMN_KEY": "MUL"
+    },
+    {
+      "TABLE_NAME": "exercises",
+      "COLUMN_NAME": "instructionTranslations",
+      "COLUMN_TYPE": "json",
+      "IS_NULLABLE": "YES",
+      "COLUMN_KEY": ""
+    },
+    {
+      "TABLE_NAME": "exercises",
+      "COLUMN_NAME": "isPrivate",
+      "COLUMN_TYPE": "tinyint(1)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_KEY": ""
+    },
+    {
+      "TABLE_NAME": "exercises",
+      "COLUMN_NAME": "archivedAt",
+      "COLUMN_TYPE": "datetime",
+      "IS_NULLABLE": "YES",
+      "COLUMN_KEY": ""
+    },
+    {
+      "TABLE_NAME": "workout_alerts",
+      "COLUMN_NAME": "id",
+      "COLUMN_TYPE": "bigint unsigned",
+      "IS_NULLABLE": "NO",
+      "COLUMN_KEY": "PRI"
+    },
+    {
+      "TABLE_NAME": "workout_alerts",
+      "COLUMN_NAME": "userID",
+      "COLUMN_TYPE": "bigint unsigned",
+      "IS_NULLABLE": "NO",
+      "COLUMN_KEY": "MUL"
+    },
+    {
+      "TABLE_NAME": "workout_alerts",
+      "COLUMN_NAME": "sessionID",
+      "COLUMN_TYPE": "bigint unsigned",
+      "IS_NULLABLE": "YES",
+      "COLUMN_KEY": "MUL"
+    },
+    {
+      "TABLE_NAME": "workout_alerts",
+      "COLUMN_NAME": "alertKey",
+      "COLUMN_TYPE": "varchar(160)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_KEY": ""
+    },
+    {
+      "TABLE_NAME": "workout_alerts",
+      "COLUMN_NAME": "dueAt",
+      "COLUMN_TYPE": "datetime",
+      "IS_NULLABLE": "NO",
+      "COLUMN_KEY": ""
+    },
+    {
+      "TABLE_NAME": "workout_alerts",
+      "COLUMN_NAME": "title",
+      "COLUMN_TYPE": "varchar(160)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_KEY": ""
+    },
+    {
+      "TABLE_NAME": "workout_alerts",
+      "COLUMN_NAME": "body",
+      "COLUMN_TYPE": "varchar(500)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_KEY": ""
+    },
+    {
+      "TABLE_NAME": "workout_alerts",
+      "COLUMN_NAME": "deliveredAt",
+      "COLUMN_TYPE": "datetime",
+      "IS_NULLABLE": "YES",
+      "COLUMN_KEY": "MUL"
+    },
+    {
+      "TABLE_NAME": "workout_alerts",
+      "COLUMN_NAME": "claimedAt",
+      "COLUMN_TYPE": "datetime",
+      "IS_NULLABLE": "YES",
+      "COLUMN_KEY": ""
+    },
+    {
+      "TABLE_NAME": "workout_days",
+      "COLUMN_NAME": "id",
+      "COLUMN_TYPE": "bigint unsigned",
+      "IS_NULLABLE": "NO",
+      "COLUMN_KEY": "PRI"
+    },
+    {
+      "TABLE_NAME": "workout_days",
+      "COLUMN_NAME": "workoutPlanID",
+      "COLUMN_TYPE": "bigint unsigned",
+      "IS_NULLABLE": "NO",
+      "COLUMN_KEY": "MUL"
+    },
+    {
+      "TABLE_NAME": "workout_days",
+      "COLUMN_NAME": "name",
+      "COLUMN_TYPE": "varchar(160)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_KEY": ""
+    },
+    {
+      "TABLE_NAME": "workout_days",
+      "COLUMN_NAME": "dayOfWeek",
+      "COLUMN_TYPE": "int",
+      "IS_NULLABLE": "YES",
+      "COLUMN_KEY": ""
+    },
+    {
+      "TABLE_NAME": "workout_days",
+      "COLUMN_NAME": "sortOrder",
+      "COLUMN_TYPE": "int",
+      "IS_NULLABLE": "NO",
+      "COLUMN_KEY": ""
+    },
+    {
+      "TABLE_NAME": "workout_days",
+      "COLUMN_NAME": "configuration",
+      "COLUMN_TYPE": "json",
+      "IS_NULLABLE": "YES",
+      "COLUMN_KEY": ""
+    },
+    {
+      "TABLE_NAME": "workout_exercise_preferences",
+      "COLUMN_NAME": "userID",
+      "COLUMN_TYPE": "bigint unsigned",
+      "IS_NULLABLE": "NO",
+      "COLUMN_KEY": "PRI"
+    },
+    {
+      "TABLE_NAME": "workout_exercise_preferences",
+      "COLUMN_NAME": "exerciseID",
+      "COLUMN_TYPE": "bigint unsigned",
+      "IS_NULLABLE": "NO",
+      "COLUMN_KEY": "PRI"
+    },
+    {
+      "TABLE_NAME": "workout_exercise_preferences",
+      "COLUMN_NAME": "favorite",
+      "COLUMN_TYPE": "tinyint(1)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_KEY": ""
+    },
+    {
+      "TABLE_NAME": "workout_exercise_preferences",
+      "COLUMN_NAME": "notes",
+      "COLUMN_TYPE": "text",
+      "IS_NULLABLE": "YES",
+      "COLUMN_KEY": ""
+    },
+    {
+      "TABLE_NAME": "workout_exercises",
+      "COLUMN_NAME": "id",
+      "COLUMN_TYPE": "bigint unsigned",
+      "IS_NULLABLE": "NO",
+      "COLUMN_KEY": "PRI"
+    },
+    {
+      "TABLE_NAME": "workout_exercises",
+      "COLUMN_NAME": "workoutDayID",
+      "COLUMN_TYPE": "bigint unsigned",
+      "IS_NULLABLE": "NO",
+      "COLUMN_KEY": "MUL"
+    },
+    {
+      "TABLE_NAME": "workout_exercises",
+      "COLUMN_NAME": "exerciseID",
+      "COLUMN_TYPE": "bigint unsigned",
+      "IS_NULLABLE": "NO",
+      "COLUMN_KEY": "MUL"
+    },
+    {
+      "TABLE_NAME": "workout_exercises",
+      "COLUMN_NAME": "sortOrder",
+      "COLUMN_TYPE": "int",
+      "IS_NULLABLE": "NO",
+      "COLUMN_KEY": ""
+    },
+    {
+      "TABLE_NAME": "workout_exercises",
+      "COLUMN_NAME": "targetSets",
+      "COLUMN_TYPE": "int",
+      "IS_NULLABLE": "NO",
+      "COLUMN_KEY": ""
+    },
+    {
+      "TABLE_NAME": "workout_exercises",
+      "COLUMN_NAME": "targetReps",
+      "COLUMN_TYPE": "int",
+      "IS_NULLABLE": "YES",
+      "COLUMN_KEY": ""
+    },
+    {
+      "TABLE_NAME": "workout_exercises",
+      "COLUMN_NAME": "targetWeight",
+      "COLUMN_TYPE": "decimal(8,2)",
+      "IS_NULLABLE": "YES",
+      "COLUMN_KEY": ""
+    },
+    {
+      "TABLE_NAME": "workout_exercises",
+      "COLUMN_NAME": "targetDurationSeconds",
+      "COLUMN_TYPE": "int",
+      "IS_NULLABLE": "YES",
+      "COLUMN_KEY": ""
+    },
+    {
+      "TABLE_NAME": "workout_exercises",
+      "COLUMN_NAME": "restSeconds",
+      "COLUMN_TYPE": "int",
+      "IS_NULLABLE": "NO",
+      "COLUMN_KEY": ""
+    },
+    {
+      "TABLE_NAME": "workout_exercises",
+      "COLUMN_NAME": "notes",
+      "COLUMN_TYPE": "text",
+      "IS_NULLABLE": "YES",
+      "COLUMN_KEY": ""
+    },
+    {
+      "TABLE_NAME": "workout_exercises",
+      "COLUMN_NAME": "supersetGroup",
+      "COLUMN_TYPE": "varchar(64)",
+      "IS_NULLABLE": "YES",
+      "COLUMN_KEY": ""
+    },
+    {
+      "TABLE_NAME": "workout_exercises",
+      "COLUMN_NAME": "configuration",
+      "COLUMN_TYPE": "json",
+      "IS_NULLABLE": "YES",
+      "COLUMN_KEY": ""
+    },
+    {
+      "TABLE_NAME": "workout_import_exercises",
+      "COLUMN_NAME": "userID",
+      "COLUMN_TYPE": "bigint unsigned",
+      "IS_NULLABLE": "NO",
+      "COLUMN_KEY": "PRI"
+    },
+    {
+      "TABLE_NAME": "workout_import_exercises",
+      "COLUMN_NAME": "sourceKey",
+      "COLUMN_TYPE": "char(64)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_KEY": "PRI"
+    },
+    {
+      "TABLE_NAME": "workout_import_exercises",
+      "COLUMN_NAME": "exerciseID",
+      "COLUMN_TYPE": "bigint unsigned",
+      "IS_NULLABLE": "NO",
+      "COLUMN_KEY": "MUL"
+    },
+    {
+      "TABLE_NAME": "workout_imports",
+      "COLUMN_NAME": "userID",
+      "COLUMN_TYPE": "bigint unsigned",
+      "IS_NULLABLE": "NO",
+      "COLUMN_KEY": "PRI"
+    },
+    {
+      "TABLE_NAME": "workout_imports",
+      "COLUMN_NAME": "fingerprint",
+      "COLUMN_TYPE": "char(64)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_KEY": "PRI"
+    },
+    {
+      "TABLE_NAME": "workout_imports",
+      "COLUMN_NAME": "sessionID",
+      "COLUMN_TYPE": "bigint unsigned",
+      "IS_NULLABLE": "NO",
+      "COLUMN_KEY": "MUL"
+    },
+    {
+      "TABLE_NAME": "workout_media",
+      "COLUMN_NAME": "id",
+      "COLUMN_TYPE": "bigint unsigned",
+      "IS_NULLABLE": "NO",
+      "COLUMN_KEY": "PRI"
+    },
+    {
+      "TABLE_NAME": "workout_media",
+      "COLUMN_NAME": "ownerID",
+      "COLUMN_TYPE": "bigint unsigned",
+      "IS_NULLABLE": "NO",
+      "COLUMN_KEY": "MUL"
+    },
+    {
+      "TABLE_NAME": "workout_media",
+      "COLUMN_NAME": "sessionID",
+      "COLUMN_TYPE": "bigint unsigned",
+      "IS_NULLABLE": "YES",
+      "COLUMN_KEY": "MUL"
+    },
+    {
+      "TABLE_NAME": "workout_media",
+      "COLUMN_NAME": "exerciseID",
+      "COLUMN_TYPE": "bigint unsigned",
+      "IS_NULLABLE": "YES",
+      "COLUMN_KEY": "MUL"
+    },
+    {
+      "TABLE_NAME": "workout_media",
+      "COLUMN_NAME": "filename",
+      "COLUMN_TYPE": "varchar(80)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_KEY": "UNI"
+    },
+    {
+      "TABLE_NAME": "workout_media",
+      "COLUMN_NAME": "mimeType",
+      "COLUMN_TYPE": "varchar(80)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_KEY": ""
+    },
+    {
+      "TABLE_NAME": "workout_media",
+      "COLUMN_NAME": "createdAt",
+      "COLUMN_TYPE": "datetime",
+      "IS_NULLABLE": "NO",
+      "COLUMN_KEY": ""
+    },
+    {
+      "TABLE_NAME": "workout_plans",
+      "COLUMN_NAME": "id",
+      "COLUMN_TYPE": "bigint unsigned",
+      "IS_NULLABLE": "NO",
+      "COLUMN_KEY": "PRI"
+    },
+    {
+      "TABLE_NAME": "workout_plans",
+      "COLUMN_NAME": "coachID",
+      "COLUMN_TYPE": "bigint unsigned",
+      "IS_NULLABLE": "YES",
+      "COLUMN_KEY": "MUL"
+    },
+    {
+      "TABLE_NAME": "workout_plans",
+      "COLUMN_NAME": "clientID",
+      "COLUMN_TYPE": "bigint unsigned",
+      "IS_NULLABLE": "NO",
+      "COLUMN_KEY": "MUL"
+    },
+    {
+      "TABLE_NAME": "workout_plans",
+      "COLUMN_NAME": "name",
+      "COLUMN_TYPE": "varchar(160)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_KEY": ""
+    },
+    {
+      "TABLE_NAME": "workout_plans",
+      "COLUMN_NAME": "description",
+      "COLUMN_TYPE": "text",
+      "IS_NULLABLE": "YES",
+      "COLUMN_KEY": ""
+    },
+    {
+      "TABLE_NAME": "workout_plans",
+      "COLUMN_NAME": "status",
+      "COLUMN_TYPE": "enum('draft','assigned','archived')",
+      "IS_NULLABLE": "NO",
+      "COLUMN_KEY": ""
+    },
+    {
+      "TABLE_NAME": "workout_plans",
+      "COLUMN_NAME": "revision",
+      "COLUMN_TYPE": "int",
+      "IS_NULLABLE": "NO",
+      "COLUMN_KEY": ""
+    },
+    {
+      "TABLE_NAME": "workout_plans",
+      "COLUMN_NAME": "createdAt",
+      "COLUMN_TYPE": "datetime",
+      "IS_NULLABLE": "NO",
+      "COLUMN_KEY": ""
+    },
+    {
+      "TABLE_NAME": "workout_plans",
+      "COLUMN_NAME": "updatedAt",
+      "COLUMN_TYPE": "datetime",
+      "IS_NULLABLE": "NO",
+      "COLUMN_KEY": ""
+    },
+    {
+      "TABLE_NAME": "workout_preferences",
+      "COLUMN_NAME": "userID",
+      "COLUMN_TYPE": "bigint unsigned",
+      "IS_NULLABLE": "NO",
+      "COLUMN_KEY": "PRI"
+    },
+    {
+      "TABLE_NAME": "workout_preferences",
+      "COLUMN_NAME": "preferences",
+      "COLUMN_TYPE": "json",
+      "IS_NULLABLE": "NO",
+      "COLUMN_KEY": ""
+    },
+    {
+      "TABLE_NAME": "workout_preferences",
+      "COLUMN_NAME": "updatedAt",
+      "COLUMN_TYPE": "datetime",
+      "IS_NULLABLE": "NO",
+      "COLUMN_KEY": ""
+    },
+    {
+      "TABLE_NAME": "workout_schedule",
+      "COLUMN_NAME": "userID",
+      "COLUMN_TYPE": "bigint unsigned",
+      "IS_NULLABLE": "NO",
+      "COLUMN_KEY": "PRI"
+    },
+    {
+      "TABLE_NAME": "workout_schedule",
+      "COLUMN_NAME": "workoutDate",
+      "COLUMN_TYPE": "date",
+      "IS_NULLABLE": "NO",
+      "COLUMN_KEY": "PRI"
+    },
+    {
+      "TABLE_NAME": "workout_schedule",
+      "COLUMN_NAME": "workoutDayID",
+      "COLUMN_TYPE": "bigint unsigned",
+      "IS_NULLABLE": "NO",
+      "COLUMN_KEY": "PRI"
+    },
+    {
+      "TABLE_NAME": "workout_schedule_dates",
+      "COLUMN_NAME": "userID",
+      "COLUMN_TYPE": "bigint unsigned",
+      "IS_NULLABLE": "NO",
+      "COLUMN_KEY": "PRI"
+    },
+    {
+      "TABLE_NAME": "workout_schedule_dates",
+      "COLUMN_NAME": "workoutDate",
+      "COLUMN_TYPE": "date",
+      "IS_NULLABLE": "NO",
+      "COLUMN_KEY": "PRI"
+    },
+    {
+      "TABLE_NAME": "workout_sessions",
+      "COLUMN_NAME": "id",
+      "COLUMN_TYPE": "bigint unsigned",
+      "IS_NULLABLE": "NO",
+      "COLUMN_KEY": "PRI"
+    },
+    {
+      "TABLE_NAME": "workout_sessions",
+      "COLUMN_NAME": "workoutPlanID",
+      "COLUMN_TYPE": "bigint unsigned",
+      "IS_NULLABLE": "NO",
+      "COLUMN_KEY": "MUL"
+    },
+    {
+      "TABLE_NAME": "workout_sessions",
+      "COLUMN_NAME": "workoutDayID",
+      "COLUMN_TYPE": "bigint unsigned",
+      "IS_NULLABLE": "YES",
+      "COLUMN_KEY": "MUL"
+    },
+    {
+      "TABLE_NAME": "workout_sessions",
+      "COLUMN_NAME": "clientID",
+      "COLUMN_TYPE": "bigint unsigned",
+      "IS_NULLABLE": "NO",
+      "COLUMN_KEY": "MUL"
+    },
+    {
+      "TABLE_NAME": "workout_sessions",
+      "COLUMN_NAME": "prescription",
+      "COLUMN_TYPE": "json",
+      "IS_NULLABLE": "NO",
+      "COLUMN_KEY": ""
+    },
+    {
+      "TABLE_NAME": "workout_sessions",
+      "COLUMN_NAME": "status",
+      "COLUMN_TYPE": "enum('active','completed','cancelled')",
+      "IS_NULLABLE": "NO",
+      "COLUMN_KEY": ""
+    },
+    {
+      "TABLE_NAME": "workout_sessions",
+      "COLUMN_NAME": "startedAt",
+      "COLUMN_TYPE": "datetime(3)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_KEY": ""
+    },
+    {
+      "TABLE_NAME": "workout_sessions",
+      "COLUMN_NAME": "completedAt",
+      "COLUMN_TYPE": "datetime(3)",
+      "IS_NULLABLE": "YES",
+      "COLUMN_KEY": ""
+    },
+    {
+      "TABLE_NAME": "workout_sessions",
+      "COLUMN_NAME": "durationSeconds",
+      "COLUMN_TYPE": "int",
+      "IS_NULLABLE": "YES",
+      "COLUMN_KEY": ""
+    },
+    {
+      "TABLE_NAME": "workout_sessions",
+      "COLUMN_NAME": "notes",
+      "COLUMN_TYPE": "text",
+      "IS_NULLABLE": "YES",
+      "COLUMN_KEY": ""
+    },
+    {
+      "TABLE_NAME": "workout_sessions",
+      "COLUMN_NAME": "activeClientID",
+      "COLUMN_TYPE": "bigint unsigned",
+      "IS_NULLABLE": "YES",
+      "COLUMN_KEY": "UNI"
+    },
+    {
+      "TABLE_NAME": "workout_sessions",
+      "COLUMN_NAME": "execution",
+      "COLUMN_TYPE": "json",
+      "IS_NULLABLE": "YES",
+      "COLUMN_KEY": ""
+    },
+    {
+      "TABLE_NAME": "workout_sessions",
+      "COLUMN_NAME": "revision",
+      "COLUMN_TYPE": "int",
+      "IS_NULLABLE": "NO",
+      "COLUMN_KEY": ""
+    },
+    {
+      "TABLE_NAME": "workout_sessions",
+      "COLUMN_NAME": "excludedFromProgression",
+      "COLUMN_TYPE": "tinyint(1)",
+      "IS_NULLABLE": "NO",
+      "COLUMN_KEY": ""
+    },
+    {
+      "TABLE_NAME": "workout_sets",
+      "COLUMN_NAME": "id",
+      "COLUMN_TYPE": "bigint unsigned",
+      "IS_NULLABLE": "NO",
+      "COLUMN_KEY": "PRI"
+    },
+    {
+      "TABLE_NAME": "workout_sets",
+      "COLUMN_NAME": "workoutSessionID",
+      "COLUMN_TYPE": "bigint unsigned",
+      "IS_NULLABLE": "NO",
+      "COLUMN_KEY": "MUL"
+    },
+    {
+      "TABLE_NAME": "workout_sets",
+      "COLUMN_NAME": "workoutExerciseID",
+      "COLUMN_TYPE": "bigint unsigned",
+      "IS_NULLABLE": "NO",
+      "COLUMN_KEY": ""
+    },
+    {
+      "TABLE_NAME": "workout_sets",
+      "COLUMN_NAME": "exerciseID",
+      "COLUMN_TYPE": "bigint unsigned",
+      "IS_NULLABLE": "NO",
+      "COLUMN_KEY": "MUL"
+    },
+    {
+      "TABLE_NAME": "workout_sets",
+      "COLUMN_NAME": "setNumber",
+      "COLUMN_TYPE": "int",
+      "IS_NULLABLE": "NO",
+      "COLUMN_KEY": ""
+    },
+    {
+      "TABLE_NAME": "workout_sets",
+      "COLUMN_NAME": "reps",
+      "COLUMN_TYPE": "int",
+      "IS_NULLABLE": "YES",
+      "COLUMN_KEY": ""
+    },
+    {
+      "TABLE_NAME": "workout_sets",
+      "COLUMN_NAME": "weight",
+      "COLUMN_TYPE": "decimal(8,2)",
+      "IS_NULLABLE": "YES",
+      "COLUMN_KEY": ""
+    },
+    {
+      "TABLE_NAME": "workout_sets",
+      "COLUMN_NAME": "durationSeconds",
+      "COLUMN_TYPE": "int",
+      "IS_NULLABLE": "YES",
+      "COLUMN_KEY": ""
+    },
+    {
+      "TABLE_NAME": "workout_sets",
+      "COLUMN_NAME": "rpe",
+      "COLUMN_TYPE": "decimal(3,1)",
+      "IS_NULLABLE": "YES",
+      "COLUMN_KEY": ""
+    },
+    {
+      "TABLE_NAME": "workout_sets",
+      "COLUMN_NAME": "rir",
+      "COLUMN_TYPE": "int",
+      "IS_NULLABLE": "YES",
+      "COLUMN_KEY": ""
+    },
+    {
+      "TABLE_NAME": "workout_sets",
+      "COLUMN_NAME": "completedAt",
+      "COLUMN_TYPE": "datetime",
+      "IS_NULLABLE": "NO",
+      "COLUMN_KEY": ""
+    },
+    {
+      "TABLE_NAME": "workout_sets",
+      "COLUMN_NAME": "details",
+      "COLUMN_TYPE": "json",
+      "IS_NULLABLE": "YES",
+      "COLUMN_KEY": ""
+    }
+  ],
+  "foreignKeys": [
+    {
+      "TABLE_NAME": "exercises",
+      "CONSTRAINT_NAME": "fk_workout_exercise_owner",
+      "REFERENCED_TABLE_NAME": "users",
+      "DELETE_RULE": "SET NULL"
+    },
+    {
+      "TABLE_NAME": "workout_plans",
+      "CONSTRAINT_NAME": "fk_workout_plan_coach",
+      "REFERENCED_TABLE_NAME": "users",
+      "DELETE_RULE": "SET NULL"
+    },
+    {
+      "TABLE_NAME": "workout_alerts",
+      "CONSTRAINT_NAME": "workout_alerts_ibfk_1",
+      "REFERENCED_TABLE_NAME": "users",
+      "DELETE_RULE": "CASCADE"
+    },
+    {
+      "TABLE_NAME": "workout_alerts",
+      "CONSTRAINT_NAME": "workout_alerts_ibfk_2",
+      "REFERENCED_TABLE_NAME": "workout_sessions",
+      "DELETE_RULE": "CASCADE"
+    },
+    {
+      "TABLE_NAME": "workout_days",
+      "CONSTRAINT_NAME": "workout_days_ibfk_1",
+      "REFERENCED_TABLE_NAME": "workout_plans",
+      "DELETE_RULE": "CASCADE"
+    },
+    {
+      "TABLE_NAME": "workout_exercises",
+      "CONSTRAINT_NAME": "workout_exercises_ibfk_1",
+      "REFERENCED_TABLE_NAME": "workout_days",
+      "DELETE_RULE": "CASCADE"
+    },
+    {
+      "TABLE_NAME": "workout_exercises",
+      "CONSTRAINT_NAME": "workout_exercises_ibfk_2",
+      "REFERENCED_TABLE_NAME": "exercises",
+      "DELETE_RULE": "RESTRICT"
+    },
+    {
+      "TABLE_NAME": "workout_exercise_preferences",
+      "CONSTRAINT_NAME": "workout_exercise_preferences_ibfk_1",
+      "REFERENCED_TABLE_NAME": "users",
+      "DELETE_RULE": "CASCADE"
+    },
+    {
+      "TABLE_NAME": "workout_exercise_preferences",
+      "CONSTRAINT_NAME": "workout_exercise_preferences_ibfk_2",
+      "REFERENCED_TABLE_NAME": "exercises",
+      "DELETE_RULE": "CASCADE"
+    },
+    {
+      "TABLE_NAME": "workout_imports",
+      "CONSTRAINT_NAME": "workout_imports_ibfk_1",
+      "REFERENCED_TABLE_NAME": "users",
+      "DELETE_RULE": "CASCADE"
+    },
+    {
+      "TABLE_NAME": "workout_imports",
+      "CONSTRAINT_NAME": "workout_imports_ibfk_2",
+      "REFERENCED_TABLE_NAME": "workout_sessions",
+      "DELETE_RULE": "CASCADE"
+    },
+    {
+      "TABLE_NAME": "workout_import_exercises",
+      "CONSTRAINT_NAME": "workout_import_exercises_ibfk_1",
+      "REFERENCED_TABLE_NAME": "users",
+      "DELETE_RULE": "CASCADE"
+    },
+    {
+      "TABLE_NAME": "workout_import_exercises",
+      "CONSTRAINT_NAME": "workout_import_exercises_ibfk_2",
+      "REFERENCED_TABLE_NAME": "exercises",
+      "DELETE_RULE": "CASCADE"
+    },
+    {
+      "TABLE_NAME": "workout_media",
+      "CONSTRAINT_NAME": "workout_media_ibfk_1",
+      "REFERENCED_TABLE_NAME": "users",
+      "DELETE_RULE": "CASCADE"
+    },
+    {
+      "TABLE_NAME": "workout_media",
+      "CONSTRAINT_NAME": "workout_media_ibfk_2",
+      "REFERENCED_TABLE_NAME": "workout_sessions",
+      "DELETE_RULE": "CASCADE"
+    },
+    {
+      "TABLE_NAME": "workout_media",
+      "CONSTRAINT_NAME": "workout_media_ibfk_3",
+      "REFERENCED_TABLE_NAME": "exercises",
+      "DELETE_RULE": "CASCADE"
+    },
+    {
+      "TABLE_NAME": "workout_plans",
+      "CONSTRAINT_NAME": "workout_plans_ibfk_2",
+      "REFERENCED_TABLE_NAME": "users",
+      "DELETE_RULE": "CASCADE"
+    },
+    {
+      "TABLE_NAME": "workout_preferences",
+      "CONSTRAINT_NAME": "workout_preferences_ibfk_1",
+      "REFERENCED_TABLE_NAME": "users",
+      "DELETE_RULE": "CASCADE"
+    },
+    {
+      "TABLE_NAME": "workout_schedule_dates",
+      "CONSTRAINT_NAME": "workout_schedule_dates_ibfk_1",
+      "REFERENCED_TABLE_NAME": "users",
+      "DELETE_RULE": "CASCADE"
+    },
+    {
+      "TABLE_NAME": "workout_schedule",
+      "CONSTRAINT_NAME": "workout_schedule_ibfk_1",
+      "REFERENCED_TABLE_NAME": "users",
+      "DELETE_RULE": "CASCADE"
+    },
+    {
+      "TABLE_NAME": "workout_schedule",
+      "CONSTRAINT_NAME": "workout_schedule_ibfk_2",
+      "REFERENCED_TABLE_NAME": "workout_days",
+      "DELETE_RULE": "CASCADE"
+    },
+    {
+      "TABLE_NAME": "workout_sessions",
+      "CONSTRAINT_NAME": "workout_sessions_ibfk_1",
+      "REFERENCED_TABLE_NAME": "workout_plans",
+      "DELETE_RULE": "CASCADE"
+    },
+    {
+      "TABLE_NAME": "workout_sessions",
+      "CONSTRAINT_NAME": "workout_sessions_ibfk_2",
+      "REFERENCED_TABLE_NAME": "workout_days",
+      "DELETE_RULE": "SET NULL"
+    },
+    {
+      "TABLE_NAME": "workout_sessions",
+      "CONSTRAINT_NAME": "workout_sessions_ibfk_3",
+      "REFERENCED_TABLE_NAME": "users",
+      "DELETE_RULE": "CASCADE"
+    },
+    {
+      "TABLE_NAME": "workout_sets",
+      "CONSTRAINT_NAME": "workout_sets_ibfk_1",
+      "REFERENCED_TABLE_NAME": "workout_sessions",
+      "DELETE_RULE": "CASCADE"
+    },
+    {
+      "TABLE_NAME": "workout_sets",
+      "CONSTRAINT_NAME": "workout_sets_ibfk_2",
+      "REFERENCED_TABLE_NAME": "exercises",
+      "DELETE_RULE": "RESTRICT"
+    }
+  ],
+  "indexes": [
+    {
+      "TABLE_NAME": "exercises",
+      "INDEX_NAME": "fk_workout_exercise_owner",
+      "COLUMN_NAME": "ownerID",
+      "SEQ_IN_INDEX": 1,
+      "NON_UNIQUE": 1
+    },
+    {
+      "TABLE_NAME": "exercises",
+      "INDEX_NAME": "idx_exercise_filter",
+      "COLUMN_NAME": "muscleGroup",
+      "SEQ_IN_INDEX": 1,
+      "NON_UNIQUE": 1
+    },
+    {
+      "TABLE_NAME": "exercises",
+      "INDEX_NAME": "idx_exercise_filter",
+      "COLUMN_NAME": "equipment",
+      "SEQ_IN_INDEX": 2,
+      "NON_UNIQUE": 1
+    },
+    {
+      "TABLE_NAME": "exercises",
+      "INDEX_NAME": "idx_exercise_filter",
+      "COLUMN_NAME": "exerciseType",
+      "SEQ_IN_INDEX": 3,
+      "NON_UNIQUE": 1
+    },
+    {
+      "TABLE_NAME": "exercises",
+      "INDEX_NAME": "PRIMARY",
+      "COLUMN_NAME": "id",
+      "SEQ_IN_INDEX": 1,
+      "NON_UNIQUE": 0
+    },
+    {
+      "TABLE_NAME": "exercises",
+      "INDEX_NAME": "uq_exercise_source",
+      "COLUMN_NAME": "externalSource",
+      "SEQ_IN_INDEX": 1,
+      "NON_UNIQUE": 0
+    },
+    {
+      "TABLE_NAME": "exercises",
+      "INDEX_NAME": "uq_exercise_source",
+      "COLUMN_NAME": "externalId",
+      "SEQ_IN_INDEX": 2,
+      "NON_UNIQUE": 0
+    },
+    {
+      "TABLE_NAME": "workout_alerts",
+      "INDEX_NAME": "idx_workout_alert_due",
+      "COLUMN_NAME": "deliveredAt",
+      "SEQ_IN_INDEX": 1,
+      "NON_UNIQUE": 1
+    },
+    {
+      "TABLE_NAME": "workout_alerts",
+      "INDEX_NAME": "idx_workout_alert_due",
+      "COLUMN_NAME": "dueAt",
+      "SEQ_IN_INDEX": 2,
+      "NON_UNIQUE": 1
+    },
+    {
+      "TABLE_NAME": "workout_alerts",
+      "INDEX_NAME": "PRIMARY",
+      "COLUMN_NAME": "id",
+      "SEQ_IN_INDEX": 1,
+      "NON_UNIQUE": 0
+    },
+    {
+      "TABLE_NAME": "workout_alerts",
+      "INDEX_NAME": "sessionID",
+      "COLUMN_NAME": "sessionID",
+      "SEQ_IN_INDEX": 1,
+      "NON_UNIQUE": 1
+    },
+    {
+      "TABLE_NAME": "workout_alerts",
+      "INDEX_NAME": "uq_workout_alert",
+      "COLUMN_NAME": "userID",
+      "SEQ_IN_INDEX": 1,
+      "NON_UNIQUE": 0
+    },
+    {
+      "TABLE_NAME": "workout_alerts",
+      "INDEX_NAME": "uq_workout_alert",
+      "COLUMN_NAME": "alertKey",
+      "SEQ_IN_INDEX": 2,
+      "NON_UNIQUE": 0
+    },
+    {
+      "TABLE_NAME": "workout_days",
+      "INDEX_NAME": "PRIMARY",
+      "COLUMN_NAME": "id",
+      "SEQ_IN_INDEX": 1,
+      "NON_UNIQUE": 0
+    },
+    {
+      "TABLE_NAME": "workout_days",
+      "INDEX_NAME": "workoutPlanID",
+      "COLUMN_NAME": "workoutPlanID",
+      "SEQ_IN_INDEX": 1,
+      "NON_UNIQUE": 1
+    },
+    {
+      "TABLE_NAME": "workout_exercise_preferences",
+      "INDEX_NAME": "exerciseID",
+      "COLUMN_NAME": "exerciseID",
+      "SEQ_IN_INDEX": 1,
+      "NON_UNIQUE": 1
+    },
+    {
+      "TABLE_NAME": "workout_exercise_preferences",
+      "INDEX_NAME": "PRIMARY",
+      "COLUMN_NAME": "userID",
+      "SEQ_IN_INDEX": 1,
+      "NON_UNIQUE": 0
+    },
+    {
+      "TABLE_NAME": "workout_exercise_preferences",
+      "INDEX_NAME": "PRIMARY",
+      "COLUMN_NAME": "exerciseID",
+      "SEQ_IN_INDEX": 2,
+      "NON_UNIQUE": 0
+    },
+    {
+      "TABLE_NAME": "workout_exercises",
+      "INDEX_NAME": "exerciseID",
+      "COLUMN_NAME": "exerciseID",
+      "SEQ_IN_INDEX": 1,
+      "NON_UNIQUE": 1
+    },
+    {
+      "TABLE_NAME": "workout_exercises",
+      "INDEX_NAME": "PRIMARY",
+      "COLUMN_NAME": "id",
+      "SEQ_IN_INDEX": 1,
+      "NON_UNIQUE": 0
+    },
+    {
+      "TABLE_NAME": "workout_exercises",
+      "INDEX_NAME": "workoutDayID",
+      "COLUMN_NAME": "workoutDayID",
+      "SEQ_IN_INDEX": 1,
+      "NON_UNIQUE": 1
+    },
+    {
+      "TABLE_NAME": "workout_import_exercises",
+      "INDEX_NAME": "exerciseID",
+      "COLUMN_NAME": "exerciseID",
+      "SEQ_IN_INDEX": 1,
+      "NON_UNIQUE": 1
+    },
+    {
+      "TABLE_NAME": "workout_import_exercises",
+      "INDEX_NAME": "PRIMARY",
+      "COLUMN_NAME": "userID",
+      "SEQ_IN_INDEX": 1,
+      "NON_UNIQUE": 0
+    },
+    {
+      "TABLE_NAME": "workout_import_exercises",
+      "INDEX_NAME": "PRIMARY",
+      "COLUMN_NAME": "sourceKey",
+      "SEQ_IN_INDEX": 2,
+      "NON_UNIQUE": 0
+    },
+    {
+      "TABLE_NAME": "workout_imports",
+      "INDEX_NAME": "PRIMARY",
+      "COLUMN_NAME": "userID",
+      "SEQ_IN_INDEX": 1,
+      "NON_UNIQUE": 0
+    },
+    {
+      "TABLE_NAME": "workout_imports",
+      "INDEX_NAME": "PRIMARY",
+      "COLUMN_NAME": "fingerprint",
+      "SEQ_IN_INDEX": 2,
+      "NON_UNIQUE": 0
+    },
+    {
+      "TABLE_NAME": "workout_imports",
+      "INDEX_NAME": "sessionID",
+      "COLUMN_NAME": "sessionID",
+      "SEQ_IN_INDEX": 1,
+      "NON_UNIQUE": 1
+    },
+    {
+      "TABLE_NAME": "workout_media",
+      "INDEX_NAME": "exerciseID",
+      "COLUMN_NAME": "exerciseID",
+      "SEQ_IN_INDEX": 1,
+      "NON_UNIQUE": 1
+    },
+    {
+      "TABLE_NAME": "workout_media",
+      "INDEX_NAME": "filename",
+      "COLUMN_NAME": "filename",
+      "SEQ_IN_INDEX": 1,
+      "NON_UNIQUE": 0
+    },
+    {
+      "TABLE_NAME": "workout_media",
+      "INDEX_NAME": "ownerID",
+      "COLUMN_NAME": "ownerID",
+      "SEQ_IN_INDEX": 1,
+      "NON_UNIQUE": 1
+    },
+    {
+      "TABLE_NAME": "workout_media",
+      "INDEX_NAME": "PRIMARY",
+      "COLUMN_NAME": "id",
+      "SEQ_IN_INDEX": 1,
+      "NON_UNIQUE": 0
+    },
+    {
+      "TABLE_NAME": "workout_media",
+      "INDEX_NAME": "sessionID",
+      "COLUMN_NAME": "sessionID",
+      "SEQ_IN_INDEX": 1,
+      "NON_UNIQUE": 1
+    },
+    {
+      "TABLE_NAME": "workout_plans",
+      "INDEX_NAME": "idx_workout_client",
+      "COLUMN_NAME": "clientID",
+      "SEQ_IN_INDEX": 1,
+      "NON_UNIQUE": 1
+    },
+    {
+      "TABLE_NAME": "workout_plans",
+      "INDEX_NAME": "idx_workout_client",
+      "COLUMN_NAME": "status",
+      "SEQ_IN_INDEX": 2,
+      "NON_UNIQUE": 1
+    },
+    {
+      "TABLE_NAME": "workout_plans",
+      "INDEX_NAME": "idx_workout_coach_client",
+      "COLUMN_NAME": "coachID",
+      "SEQ_IN_INDEX": 1,
+      "NON_UNIQUE": 1
+    },
+    {
+      "TABLE_NAME": "workout_plans",
+      "INDEX_NAME": "idx_workout_coach_client",
+      "COLUMN_NAME": "clientID",
+      "SEQ_IN_INDEX": 2,
+      "NON_UNIQUE": 1
+    },
+    {
+      "TABLE_NAME": "workout_plans",
+      "INDEX_NAME": "idx_workout_coach_client",
+      "COLUMN_NAME": "status",
+      "SEQ_IN_INDEX": 3,
+      "NON_UNIQUE": 1
+    },
+    {
+      "TABLE_NAME": "workout_plans",
+      "INDEX_NAME": "PRIMARY",
+      "COLUMN_NAME": "id",
+      "SEQ_IN_INDEX": 1,
+      "NON_UNIQUE": 0
+    },
+    {
+      "TABLE_NAME": "workout_preferences",
+      "INDEX_NAME": "PRIMARY",
+      "COLUMN_NAME": "userID",
+      "SEQ_IN_INDEX": 1,
+      "NON_UNIQUE": 0
+    },
+    {
+      "TABLE_NAME": "workout_schedule",
+      "INDEX_NAME": "PRIMARY",
+      "COLUMN_NAME": "userID",
+      "SEQ_IN_INDEX": 1,
+      "NON_UNIQUE": 0
+    },
+    {
+      "TABLE_NAME": "workout_schedule",
+      "INDEX_NAME": "PRIMARY",
+      "COLUMN_NAME": "workoutDate",
+      "SEQ_IN_INDEX": 2,
+      "NON_UNIQUE": 0
+    },
+    {
+      "TABLE_NAME": "workout_schedule",
+      "INDEX_NAME": "PRIMARY",
+      "COLUMN_NAME": "workoutDayID",
+      "SEQ_IN_INDEX": 3,
+      "NON_UNIQUE": 0
+    },
+    {
+      "TABLE_NAME": "workout_schedule",
+      "INDEX_NAME": "workoutDayID",
+      "COLUMN_NAME": "workoutDayID",
+      "SEQ_IN_INDEX": 1,
+      "NON_UNIQUE": 1
+    },
+    {
+      "TABLE_NAME": "workout_schedule_dates",
+      "INDEX_NAME": "PRIMARY",
+      "COLUMN_NAME": "userID",
+      "SEQ_IN_INDEX": 1,
+      "NON_UNIQUE": 0
+    },
+    {
+      "TABLE_NAME": "workout_schedule_dates",
+      "INDEX_NAME": "PRIMARY",
+      "COLUMN_NAME": "workoutDate",
+      "SEQ_IN_INDEX": 2,
+      "NON_UNIQUE": 0
+    },
+    {
+      "TABLE_NAME": "workout_sessions",
+      "INDEX_NAME": "idx_workout_session_date",
+      "COLUMN_NAME": "clientID",
+      "SEQ_IN_INDEX": 1,
+      "NON_UNIQUE": 1
+    },
+    {
+      "TABLE_NAME": "workout_sessions",
+      "INDEX_NAME": "idx_workout_session_date",
+      "COLUMN_NAME": "startedAt",
+      "SEQ_IN_INDEX": 2,
+      "NON_UNIQUE": 1
+    },
+    {
+      "TABLE_NAME": "workout_sessions",
+      "INDEX_NAME": "idx_workout_session_history",
+      "COLUMN_NAME": "clientID",
+      "SEQ_IN_INDEX": 1,
+      "NON_UNIQUE": 1
+    },
+    {
+      "TABLE_NAME": "workout_sessions",
+      "INDEX_NAME": "idx_workout_session_history",
+      "COLUMN_NAME": "status",
+      "SEQ_IN_INDEX": 2,
+      "NON_UNIQUE": 1
+    },
+    {
+      "TABLE_NAME": "workout_sessions",
+      "INDEX_NAME": "idx_workout_session_history",
+      "COLUMN_NAME": "startedAt",
+      "SEQ_IN_INDEX": 3,
+      "NON_UNIQUE": 1
+    },
+    {
+      "TABLE_NAME": "workout_sessions",
+      "INDEX_NAME": "idx_workout_session_history",
+      "COLUMN_NAME": "id",
+      "SEQ_IN_INDEX": 4,
+      "NON_UNIQUE": 1
+    },
+    {
+      "TABLE_NAME": "workout_sessions",
+      "INDEX_NAME": "PRIMARY",
+      "COLUMN_NAME": "id",
+      "SEQ_IN_INDEX": 1,
+      "NON_UNIQUE": 0
+    },
+    {
+      "TABLE_NAME": "workout_sessions",
+      "INDEX_NAME": "uq_workout_active_client",
+      "COLUMN_NAME": "activeClientID",
+      "SEQ_IN_INDEX": 1,
+      "NON_UNIQUE": 0
+    },
+    {
+      "TABLE_NAME": "workout_sessions",
+      "INDEX_NAME": "workoutDayID",
+      "COLUMN_NAME": "workoutDayID",
+      "SEQ_IN_INDEX": 1,
+      "NON_UNIQUE": 1
+    },
+    {
+      "TABLE_NAME": "workout_sessions",
+      "INDEX_NAME": "workoutPlanID",
+      "COLUMN_NAME": "workoutPlanID",
+      "SEQ_IN_INDEX": 1,
+      "NON_UNIQUE": 1
+    },
+    {
+      "TABLE_NAME": "workout_sets",
+      "INDEX_NAME": "idx_workout_set_exercise_session",
+      "COLUMN_NAME": "exerciseID",
+      "SEQ_IN_INDEX": 1,
+      "NON_UNIQUE": 1
+    },
+    {
+      "TABLE_NAME": "workout_sets",
+      "INDEX_NAME": "idx_workout_set_exercise_session",
+      "COLUMN_NAME": "workoutSessionID",
+      "SEQ_IN_INDEX": 2,
+      "NON_UNIQUE": 1
+    },
+    {
+      "TABLE_NAME": "workout_sets",
+      "INDEX_NAME": "idx_workout_set_exercise_session",
+      "COLUMN_NAME": "workoutExerciseID",
+      "SEQ_IN_INDEX": 3,
+      "NON_UNIQUE": 1
+    },
+    {
+      "TABLE_NAME": "workout_sets",
+      "INDEX_NAME": "idx_workout_set_exercise_session",
+      "COLUMN_NAME": "setNumber",
+      "SEQ_IN_INDEX": 4,
+      "NON_UNIQUE": 1
+    },
+    {
+      "TABLE_NAME": "workout_sets",
+      "INDEX_NAME": "PRIMARY",
+      "COLUMN_NAME": "id",
+      "SEQ_IN_INDEX": 1,
+      "NON_UNIQUE": 0
+    },
+    {
+      "TABLE_NAME": "workout_sets",
+      "INDEX_NAME": "uq_workout_set",
+      "COLUMN_NAME": "workoutSessionID",
+      "SEQ_IN_INDEX": 1,
+      "NON_UNIQUE": 0
+    },
+    {
+      "TABLE_NAME": "workout_sets",
+      "INDEX_NAME": "uq_workout_set",
+      "COLUMN_NAME": "workoutExerciseID",
+      "SEQ_IN_INDEX": 2,
+      "NON_UNIQUE": 0
+    },
+    {
+      "TABLE_NAME": "workout_sets",
+      "INDEX_NAME": "uq_workout_set",
+      "COLUMN_NAME": "setNumber",
+      "SEQ_IN_INDEX": 3,
+      "NON_UNIQUE": 0
+    }
+  ],
+  "orphans": {
+    "exercises.ownerID": 0,
+    "workout_alerts.userID": 0,
+    "workout_alerts.sessionID": 0,
+    "workout_days.workoutPlanID": 0,
+    "workout_exercise_preferences.userID": 0,
+    "workout_exercise_preferences.exerciseID": 0,
+    "workout_exercises.workoutDayID": 0,
+    "workout_exercises.exerciseID": 0,
+    "workout_import_exercises.userID": 0,
+    "workout_import_exercises.exerciseID": 0,
+    "workout_imports.userID": 0,
+    "workout_imports.sessionID": 0,
+    "workout_media.ownerID": 0,
+    "workout_media.sessionID": 0,
+    "workout_media.exerciseID": 0,
+    "workout_plans.coachID": 0,
+    "workout_plans.clientID": 0,
+    "workout_preferences.userID": 0,
+    "workout_schedule.userID": 0,
+    "workout_schedule.workoutDayID": 0,
+    "workout_schedule_dates.userID": 0,
+    "workout_sessions.workoutPlanID": 0,
+    "workout_sessions.workoutDayID": 0,
+    "workout_sessions.clientID": 0,
+    "workout_sets.workoutSessionID": 0,
+    "workout_sets.exerciseID": 0
+  },
+  "explain": {
+    "planQuery": [
+      {
+        "id": 1,
+        "select_type": "SIMPLE",
+        "table": "workout_plans",
+        "partitions": null,
+        "type": "ref",
+        "possible_keys": "idx_workout_client,idx_workout_coach_client",
+        "key": "idx_workout_client",
+        "key_len": "9",
+        "ref": "const,const",
+        "rows": 1,
+        "filtered": 100,
+        "Extra": "Using where"
+      }
+    ],
+    "historyQuery": [
+      {
+        "id": 1,
+        "select_type": "SIMPLE",
+        "table": "workout_sessions",
+        "partitions": null,
+        "type": "ref",
+        "possible_keys": "idx_workout_session_date,idx_workout_session_history",
+        "key": "idx_workout_session_date",
+        "key_len": "8",
+        "ref": "const",
+        "rows": 1,
+        "filtered": 100,
+        "Extra": "Using where"
+      }
+    ]
+  }
+}

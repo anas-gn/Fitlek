@@ -1176,12 +1176,12 @@ class _RegisterScreenState extends State<RegisterScreen>
                       strokeWidth: 2.5,
                     ),
                   )
-                : Row(
+                : const Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(Icons.apple_rounded, color: Colors.black, size: 26),
-                      const SizedBox(width: 10),
-                      const Text(
+                      Icon(Icons.apple_rounded, color: Colors.black, size: 26),
+                      SizedBox(width: 10),
+                      Text(
                         'CONTINUE WITH APPLE',
                         style: TextStyle(
                           color: Colors.black,

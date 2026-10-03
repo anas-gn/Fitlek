@@ -1,4 +1,4 @@
-import 'package:socket_io_client/socket_io_client.dart' as IO;
+import 'package:socket_io_client/socket_io_client.dart' as io;
 import 'package:flutter/foundation.dart';
 import '../constants/urls.dart' as urls;
 
@@ -7,7 +7,7 @@ class SocketService {
   factory SocketService() => _instance;
   SocketService._internal();
 
-  IO.Socket? _socket;
+  io.Socket? _socket;
 
   /// Connect to the socket server
   void connect() {
@@ -15,7 +15,7 @@ class SocketService {
 
     final socketUrl = urls.baseUrl.replaceAll('/api', '');
     
-    _socket = IO.io(socketUrl, IO.OptionBuilder()
+    _socket = io.io(socketUrl, io.OptionBuilder()
       .setTransports(['websocket'])
       .disableAutoConnect()
       .build()

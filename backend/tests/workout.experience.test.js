@@ -4,6 +4,10 @@ import {nextTarget,validatePreferences,dailyReminderKey} from '../services/worko
 import {validateSet,validateConfiguration,setVolume,estimated1RM} from '../services/workoutDomain.js';
 const exercise={id:1,exerciseType:'reps',isBodyweight:0,targetSets:2,targetReps:10,targetWeight:60,configuration:{progression:'linear',increment:2.5}};
 const successful={target:exercise,sets:[{reps:10,weight:60},{reps:10,weight:60}]};
+test('routine glyphs persist as bounded configuration without changing progression',()=>{
+  assert.equal(validateConfiguration({icon:'mobility',progression:'double'}).icon,'mobility');
+  assert.throws(()=>validateConfiguration({icon:'external-brand'}),{status:400});
+});
 test('progression increases only completed working sets and deloads repeated misses',()=>{
   assert.equal(nextTarget(exercise,[successful]).weight,62.5);
   const failed={target:exercise,sets:[{reps:8,weight:60},{reps:7,weight:60}]};

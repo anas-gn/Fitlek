@@ -12,6 +12,7 @@ import 'workout_media.dart';
 import 'package:flutter/services.dart';
 import 'workout_ui.dart';
 import 'exercise_library.dart';
+import 'workout_muscles.dart';
 
 // Round-robin sets for contiguous supersets, straight sets for other exercises.
 List<(WorkoutExercise, int, bool)> workoutSequence(
@@ -884,8 +885,11 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen>
         Navigator.pop(context);
         return;
       }
-      await Navigator.pushReplacement(context,
-          WorkoutRoute(builder: (_) => WorkoutCompletionScreen(summary: r)));
+      await Navigator.pushReplacement(
+          context,
+          WorkoutRoute(
+              builder: (_) =>
+                  WorkoutCompletionScreen(summary: r, session: _session)));
     } catch (e) {
       if (mounted) workoutError(context, e);
     } finally {
@@ -1426,7 +1430,9 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen>
 
 class WorkoutCompletionScreen extends StatelessWidget {
   final Map<String, dynamic> summary;
-  const WorkoutCompletionScreen({super.key, required this.summary});
+  final WorkoutSession? session;
+  const WorkoutCompletionScreen(
+      {super.key, required this.summary, this.session});
   @override
   Widget build(BuildContext context) => WorkoutScaffold(
       appBar: AppBar(title: const WorkoutLabel('Workout completed')),
@@ -1447,6 +1453,10 @@ class WorkoutCompletionScreen extends StatelessWidget {
                 trailing: WorkoutLabel(e.value,
                     style: Theme.of(context).textTheme.titleMedium)))),
         const SizedBox(height: 24),
+        if (session != null)
+          WorkoutMuscleCoverage(
+              load: workoutMuscleCoverage(session!.exercises,
+                  performed: session!.sets)),
         ElevatedButton(
             onPressed: () => Navigator.pop(context),
             child: const WorkoutLabel('Done')),

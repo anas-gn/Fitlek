@@ -14,7 +14,7 @@ import '../../components/ENG/audioPlayerWidget.dart';
 import '../../components/ENG/imagePreview.dart';
 import '../../services/socketService.dart';
 import 'package:flutter/foundation.dart'; // Add kIsWeb
-import 'package:http/http.dart' as http; // Add http
+// Add http
 
 
 class _Message {
@@ -985,7 +985,10 @@ class _ClientConversationScreenState extends State<ClientConversationScreen> {
           backgroundColor: context.fitlek.card,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           title: Text('Report $name', style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 16)),
-          content: Column(
+          content: RadioGroup<String>(
+            groupValue: selectedReason,
+            onChanged: (val) => setDialogState(() => selectedReason = val),
+            child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               Text('Why are you reporting this user? We take these reports seriously.', style: TextStyle(color: context.fitlek.textMuted, fontSize: 13)),
@@ -993,14 +996,12 @@ class _ClientConversationScreenState extends State<ClientConversationScreen> {
               ...reasons.map((r) => RadioListTile<String>(
                 title: Text(r, style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 13)),
                 value: r,
-                groupValue: selectedReason,
                 activeColor: Theme.of(context).colorScheme.primary,
                 contentPadding: EdgeInsets.zero,
                 dense: true,
-                onChanged: (val) => setDialogState(() => selectedReason = val),
               )),
             ],
-          ),
+          )),
           actions: [
             TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Cancel', style: TextStyle(color: context.fitlek.textMuted))),
             TextButton(

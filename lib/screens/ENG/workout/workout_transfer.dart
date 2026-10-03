@@ -24,7 +24,7 @@ class _WorkoutTransferScreenState extends State<WorkoutTransferScreen> {
     try {
       final picked = await FilePicker.platform.pickFiles(
           type: FileType.custom,
-          allowedExtensions: ['csv', 'json'],
+          allowedExtensions: ['csv', 'json', 'xml'],
           withData: true);
       if (picked == null) return;
       final file = picked.files.single;
@@ -37,7 +37,7 @@ class _WorkoutTransferScreenState extends State<WorkoutTransferScreen> {
           file.extension == 'json'
               ? {'history': jsonDecode(content)}
               : {
-                  'csv': content,
+                  file.extension == 'xml' ? 'xml' : 'csv': content,
                   'unit': WorkoutService.unit,
                   'timeZone': WorkoutService.preferences['timeZone'] ?? 'UTC'
                 });
@@ -131,7 +131,7 @@ class _WorkoutTransferScreenState extends State<WorkoutTransferScreen> {
         body: ListView(padding: const EdgeInsets.all(20), children: [
           if (widget.clientID == null) ...[
             const WorkoutLabel(
-                'Import Strong, Hevy or FitNotes CSV, or SIRVYA history JSON.'),
+                'Import Strong, Hevy or FitNotes CSV, Apple Health bodyweight XML, or SIRVYA history JSON.'),
             const SizedBox(height: 12),
             OutlinedButton.icon(
                 onPressed: _busy ? null : _read,

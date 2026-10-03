@@ -464,7 +464,7 @@ class _LoginScreenState extends State<LoginScreen>
   }
 
   Widget _buildHeader() {
-    return Row(
+    return const Row(
       children: [],
     );
   }
@@ -610,13 +610,13 @@ class _LoginScreenState extends State<LoginScreen>
                     strokeWidth: 2.5,
                   ),
                 )
-              : Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
+              : const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 12),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(Icons.login_rounded, color: AppColors.cyprus, size: 18),
-                      const SizedBox(width: 10),
+                      Icon(Icons.login_rounded, color: AppColors.cyprus, size: 18),
+                      SizedBox(width: 10),
                       Flexible(
                         child: Text(
                           'LOG IN',
@@ -700,7 +700,7 @@ class _LoginScreenState extends State<LoginScreen>
                         height: 20,
                       ),
                       const SizedBox(width: 12),
-                      Flexible(
+                      const Flexible(
                         child: Text(
                           'CONTINUE WITH GOOGLE',
                           overflow: TextOverflow.ellipsis,
@@ -850,11 +850,11 @@ class _LoginScreenState extends State<LoginScreen>
                   width: 1.5,
                 ),
               ),
-              child: Row(
+              child: const Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.person_add_rounded, color: AppColors.sand, size: 18),
-                  const SizedBox(width: 10),
+                  Icon(Icons.person_add_rounded, color: AppColors.sand, size: 18),
+                  SizedBox(width: 10),
                   Flexible(
                     child: Text(
                       'CREATE AN ACCOUNT',

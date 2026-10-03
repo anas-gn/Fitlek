@@ -1,13 +1,18 @@
 import {json,summarize,isWorkSet,setDetails,setVolume,estimated1RM} from './workoutDomain.js';
 
-export function buildTrainingStats(sessions,allSets,{now=new Date(),bodyweight=null}={}) {
+export function buildTrainingStats(sessions,allSets,{now=new Date(),bodyweight=null,since=null,timeZone='UTC'}={}) {
   sessions=[...sessions].sort((a,b)=>new Date(a.startedAt)-new Date(b.startedAt)||Number(a.id)-Number(b.id));
+  const baselineSessions=since?sessions.filter(s=>new Date(s.startedAt)<since):[];
+  const baseline=baselineSessions.length?buildTrainingStats(baselineSessions,allSets,{now,bodyweight,timeZone}):null;
+  if(since)sessions=sessions.filter(s=>new Date(s.startedAt)>=since);
   const bySession=new Map();for(const s of allSets){const id=Number(s.workoutSessionID);if(!bySession.has(id))bySession.set(id,[]);bySession.get(id).push(s);}
-  const records=new Map(),frequency=new Map(),activity=[],muscles=new Map(),effort={rpe:[],rir:[]},personalRecords=[];
+  const records=new Map((baseline?.records??[]).map(r=>[Number(r.exerciseID),{...r,points:[]}])),frequency=new Map(),activity=[],muscles=new Map(),effort={rpe:[],rir:[]},personalRecords=[];
+  const recordedBefore=new Set(records.keys());
+  const localDate=new Intl.DateTimeFormat('en-CA',{timeZone,year:'numeric',month:'2-digit',day:'2-digit'});
   let volume=0,setCount=0,totalReps=0,hardSets=0;
   for(const session of sessions){
-    const prescription=json(session.prescription);if(session.execution)prescription.exercises=json(session.execution);
-    const sets=bySession.get(Number(session.id))||[],summary=summarize(sets,prescription),date=new Date(session.startedAt).toISOString().slice(0,10);
+    const prescription={...json(session.prescription)};if(session.execution)prescription.exercises=json(session.execution);
+    const sets=bySession.get(Number(session.id))||[],summary=summarize(sets,prescription),date=localDate.format(new Date(session.startedAt));
     volume+=summary.volume;setCount+=sets.length;frequency.set(date,(frequency.get(date)||0)+1);
     activity.push({date,sessionID:session.id,durationSeconds:Number(session.durationSeconds||0),volume:summary.volume,setCount:sets.length});
     const perExercise=new Map();
@@ -40,7 +45,7 @@ export function buildTrainingStats(sessions,allSets,{now=new Date(),bodyweight=n
       record.bestSpeedKmh=Math.max(record.bestSpeedKmh,speedKmh||0);
       const metrics=e.exerciseType==='cardio'?['bestSpeedKmh','durationSeconds']:e.exerciseType!=='reps'?['durationSeconds']:e.isBodyweight?['reps']:['weight','estimated1RM','bestVolume'];
       const improved=metrics.filter(k=>Number(record[k]||0)>Number(before[k]||0));
-      if(improved.length)personalRecords.push({sessionID:session.id,exerciseID:e.exerciseID,name:e.name,date,metrics:improved,firstRecorded:before.points.length===0});
+      if(improved.length)personalRecords.push({sessionID:session.id,exerciseID:e.exerciseID,name:e.name,date,metrics:improved,firstRecorded:before.points.length===0&&!recordedBefore.has(Number(e.exerciseID))});
       record.relativeStrength=bodyweight&&record.estimated1RM?record.estimated1RM/bodyweight:null;
       record.points.push({date,sessionID:session.id,weight:Math.max(...work.map(s=>Number(s.weight||0))),reps:Math.max(...work.map(s=>Number(s.reps||0))),durationSeconds:Math.max(...work.map(s=>Number(s.durationSeconds||0))),estimated1RM:bestRM,volume:sessionVolume,distanceMeters,speedKmh});
       records.set(Number(e.exerciseID),record);
@@ -49,12 +54,16 @@ export function buildTrainingStats(sessions,allSets,{now=new Date(),bodyweight=n
   const totalDurationSeconds=sessions.reduce((n,s)=>n+Number(s.durationSeconds||0),0);
   const trainingDates=[...frequency.keys()].sort();let longestStreak=0,currentStreak=0,previousDate;
   for(const date of trainingDates){currentStreak=previousDate&&new Date(date)-new Date(previousDate)===86400000?currentStreak+1:1;longestStreak=Math.max(longestStreak,currentStreak);previousDate=date;}
-  if(!previousDate||new Date(now.toISOString().slice(0,10))-new Date(previousDate)>86400000)currentStreak=0;
+  if(!previousDate||new Date(localDate.format(now))-new Date(previousDate)>86400000)currentStreak=0;
+  const monday=date=>{const d=new Date(`${date}T12:00:00Z`);d.setUTCDate(d.getUTCDate()-(d.getUTCDay()+6)%7);return d.toISOString().slice(0,10);};
+  const weeks=[...new Set(trainingDates.map(monday))].sort();let longestWeeklyStreak=0,currentWeeklyStreak=0,previousWeek;
+  for(const week of weeks){currentWeeklyStreak=previousWeek&&new Date(week)-new Date(previousWeek)===604800000?currentWeeklyStreak+1:1;longestWeeklyStreak=Math.max(longestWeeklyStreak,currentWeeklyStreak);previousWeek=week;}
+  if(!previousWeek||new Date(monday(localDate.format(now)))-new Date(previousWeek)>604800000)currentWeeklyStreak=0;
   const recent=activity.filter(a=>new Date(a.date)>=new Date(now.getTime()-7*86400000)),prior=activity.filter(a=>new Date(a.date)<new Date(now.getTime()-7*86400000)&&new Date(a.date)>=new Date(now.getTime()-14*86400000));
   const workload={recentSets:recent.reduce((n,a)=>n+a.setCount,0),previousSets:prior.reduce((n,a)=>n+a.setCount,0),recentVolume:recent.reduce((n,a)=>n+a.volume,0),previousVolume:prior.reduce((n,a)=>n+a.volume,0)};
   const effortDistribution=Object.fromEntries(['rpe','rir'].map(k=>[k,effort[k].reduce((bins,v)=>{const key=String(Math.floor(v));bins[key]=(bins[key]||0)+1;return bins;},{})]));
   return {workoutCount:sessions.length,setCount,volume,totalReps,hardSets,totalDurationSeconds,averageDurationSeconds:sessions.length?Math.round(totalDurationSeconds/sessions.length):0,
-    frequency:[...frequency].map(([date,count])=>({date,count})),activity,records:[...records.values()],muscles:[...muscles.values()].sort((a,b)=>b.sets-a.sets),effort,effortDistribution,personalRecords,prCount:personalRecords.length,longestStreak,currentStreak,workload};
+    frequency:[...frequency].map(([date,count])=>({date,count})),activity,records:[...records.values()].filter(r=>r.points.length),muscles:[...muscles.values()].sort((a,b)=>b.sets-a.sets),effort,effortDistribution,personalRecords,prCount:personalRecords.length,longestStreak,currentStreak,longestWeeklyStreak,currentWeeklyStreak,workload};
 }
 
 // Schedule adherence is measured against the currently assigned schedule.

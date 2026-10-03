@@ -1,0 +1,23 @@
+{
+  "workflow": "native Coach builder -> assignment -> Client sets -> recovery -> completion -> Coach review",
+  "authentication": "real SIRVYA password login API and restored session; login form not exercised",
+  "prescribed": {
+    "weight": 60,
+    "reps": 10
+  },
+  "performed": {
+    "weight": 57.5,
+    "reps": 9
+  },
+  "savedSets": 3,
+  "volumeKg": 517.5,
+  "timedActualSeconds": 45,
+  "verifiedAt": "2026-10-03T21:15:30.737Z",
+  "statistics": {
+    "workouts": 1,
+    "sets": 3,
+    "volumeKg": 517.5,
+    "weeklyStreak": 1
+  },
+  "unauthenticatedStatus": 401
+}

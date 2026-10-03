@@ -9,7 +9,6 @@ import 'package:image_picker/image_picker.dart';
 import 'package:record/record.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import '../../components/ENG/audioPlayerWidget.dart';
 import '../../components/ENG/imagePreview.dart';
 import '../../services/socketService.dart';
@@ -32,7 +31,6 @@ class _CoachChatState extends State<CoachChat> {
 
   final AudioRecorder _audioRecorder = AudioRecorder();
   bool _isRecording = false;
-  String? _recordedFilePath;
   bool _isUploadingMedia = false;
 
   @override
@@ -554,7 +552,7 @@ class _CoachChatState extends State<CoachChat> {
           child: Container(width: 46, height: 46,
             decoration: BoxDecoration(color: Colors.redAccent, shape: BoxShape.circle,
               boxShadow: [BoxShadow(color: Colors.redAccent.withValues(alpha: 0.35), blurRadius: 12, offset: const Offset(0, 4))]),
-            child: Icon(Icons.stop_rounded, color: Colors.white, size: 20)))
+            child: const Icon(Icons.stop_rounded, color: Colors.white, size: 20)))
       else
         GestureDetector(onTap: _sendMessage,
           child: Container(width: 46, height: 46,
@@ -615,7 +613,10 @@ class _CoachChatState extends State<CoachChat> {
           backgroundColor: context.fitlek.card,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           title: Text('Report $name', style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 16)),
-          content: Column(
+          content: RadioGroup<String>(
+            groupValue: selectedReason,
+            onChanged: (val) => setDialogState(() => selectedReason = val),
+            child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               Text('Why are you reporting this user? We take these reports seriously.', style: TextStyle(color: context.fitlek.textMuted, fontSize: 13)),
@@ -623,14 +624,12 @@ class _CoachChatState extends State<CoachChat> {
               ...reasons.map((r) => RadioListTile<String>(
                 title: Text(r, style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 13)),
                 value: r,
-                groupValue: selectedReason,
                 activeColor: Theme.of(context).colorScheme.primary,
                 contentPadding: EdgeInsets.zero,
                 dense: true,
-                onChanged: (val) => setDialogState(() => selectedReason = val),
               )),
             ],
-          ),
+          )),
           actions: [
             TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Cancel', style: TextStyle(color: context.fitlek.textMuted))),
             TextButton(
@@ -653,13 +652,14 @@ class _CoachChatState extends State<CoachChat> {
         'reason': reason,
         'type': 'conversation',
       });
+      if (!mounted) return;
       if (res['ok'] == true) {
         ApiService.showSuccess(context, 'Report submitted successfully.');
       } else {
         ApiService.showError(context, 'Failed to submit report');
       }
     } catch (_) {
-      ApiService.showError(context, 'Network error');
+      if (mounted) ApiService.showError(context, 'Network error');
     }
   }
 
@@ -692,6 +692,7 @@ class _CoachChatState extends State<CoachChat> {
   Future<void> _submitBlock() async {
     try {
       final res = await ApiService.post('/ugc/block-conversation', {'conversationID': int.tryParse(widget.conversation.id) ?? 0});
+      if (!mounted) return;
       if (res['ok'] == true) {
         ApiService.showSuccess(context, 'User blocked.');
         if (mounted) Navigator.pop(context);
@@ -699,7 +700,7 @@ class _CoachChatState extends State<CoachChat> {
         ApiService.showError(context, 'Failed to block user');
       }
     } catch (_) {
-      ApiService.showError(context, 'Network error');
+      if (mounted) ApiService.showError(context, 'Network error');
     }
   }
 }

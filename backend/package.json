@@ -4,7 +4,7 @@
   "type": "module",
   "main": "index.js",
   "scripts": {
-    "test": "node --test tests/workout.domain.test.js tests/workout.experience.test.js tests/workout.demonstrations.test.js tests/workout.import.test.js tests/workout.stats.test.js tests/workout.integration.test.js tests/google-auth.integration.test.js tests/app.integration.test.js",
+    "test": "node --test tests/workout.domain.test.js tests/workout.experience.test.js tests/workout.demonstrations.test.js tests/workout.import.test.js tests/workout.stats.test.js tests/workout.queries.test.js tests/workout.integration.test.js tests/google-auth.integration.test.js tests/app.integration.test.js",
     "dev": "nodemon index.js",
     "start": "node index.js"
   },

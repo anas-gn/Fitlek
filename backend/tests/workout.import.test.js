@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {csvRows,parseWorkoutCSV} from '../services/workoutImport.js';
+import {csvRows,parseWorkoutCSV,parseBodyweightXML} from '../services/workoutImport.js';
 
 test('CSV preserves quoted commas, escaped quotes and multiline notes',()=>{
   assert.deepEqual(csvRows('\uFEFFa,b\r\n"a,b","a ""quote""\nline"\r\n'),[['a','b'],['a,b','a "quote"\nline']]);
@@ -32,4 +32,15 @@ test('invalid calendar dates, DST gaps and malformed numbers are rejected',()=>{
 test('bodyweight CSV retains the local calendar day and converts pounds once',()=>{
   const result=parseWorkoutCSV('Date,Weight,Note\n2024-01-01,176.36981,Morning',{unit:'lb',timeZone:'Africa/Casablanca'});
   assert.equal(result.sessions.length,0);assert.equal(result.bodyweight[0].recordedAt,'2024-01-01');assert.ok(Math.abs(result.bodyweight[0].weight-80)<0.001);
+});
+
+test('Apple Health imports only body mass, converts units and retains the latest local daily measurement',()=>{
+  const xml=`<HealthData><Record type="HKQuantityTypeIdentifierStepCount" value="9000"/><Record type="HKQuantityTypeIdentifierBodyMass" unit="lb" value="176.36981" startDate="2024-01-01 23:30:00 +0000"/><Record type='HKQuantityTypeIdentifierBodyMass' unit='g' value='81000' startDate='2024-01-02 01:00:00 +0000'/></HealthData>`;
+  const result=parseBodyweightXML(xml,{timeZone:'Africa/Casablanca'});
+  assert.equal(result.source,'Apple Health');assert.deepEqual(result.sessions,[]);
+  assert.deepEqual(result.bodyweight,[{recordedAt:'2024-01-02',weight:81,note:'Imported from Apple Health'}]);
+});
+test('Apple Health rejects DTDs, external entities, invalid units and dates, and oversized documents',()=>{
+  const record=(unit='kg',value='80',date='2024-01-01 10:00:00 +0000')=>`<HealthData><Record type="HKQuantityTypeIdentifierBodyMass" unit="${unit}" value="${value}" startDate="${date}"/></HealthData>`;
+  for(const xml of ['<!DOCTYPE HealthData>'+record(),'<!ENTITY remote SYSTEM "https://example.invalid">'+record(),record('stone'),record('kg','-1'),record('kg','80','2024-02-30 10:00:00 +0000'),'<HealthData></HealthData>',record()+' '.repeat(8*1024*1024)])assert.throws(()=>parseBodyweightXML(xml));
 });

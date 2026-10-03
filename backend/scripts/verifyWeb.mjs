@@ -3,8 +3,10 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { once } from 'node:events';
+import {randomBytes} from 'node:crypto';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
+import assert from 'node:assert/strict';
 import db from '../config/db.js';
 
 const root = path.resolve('..');
@@ -13,6 +15,34 @@ const mode = process.argv[2] || 'inspect';
 const args = process.argv.slice(3);
 if (!['localhost','127.0.0.1','::1'].includes(process.env.DB_HOST)) throw new Error('Browser fixtures require local MySQL');
 const debugPort = Number(process.env.WEB_DEBUG_PORT || 64423);
+if(mode==='verify'){
+  try{
+    const fixture=JSON.parse(fs.readFileSync(stateFile,'utf8'));
+    const client=fixture.users.find(u=>u.role==='client'),coach=fixture.users.find(u=>u.role==='coach');
+    const [[plan]]=await db.query("SELECT * FROM workout_plans WHERE clientID=? AND coachID=? AND name='QA strength plan'",[client.id,coach.id]);
+    assert.equal(plan.status,'assigned');
+    const [[session]]=await db.query("SELECT * FROM workout_sessions WHERE workoutPlanID=? AND clientID=? AND status='completed' ORDER BY id DESC LIMIT 1",[plan.id,client.id]);
+    const [sets]=await db.query('SELECT * FROM workout_sets WHERE workoutSessionID=? ORDER BY workoutExerciseID',[session.id]);
+    const prescription=typeof session.prescription==='string'?JSON.parse(session.prescription):session.prescription;
+    const bench=prescription.exercises.find(e=>e.name==='barbell bench press');
+    const actual=sets.find(s=>Number(s.workoutExerciseID)===Number(bench.id));
+    assert.equal(Number(bench.targetWeight),60);assert.equal(bench.targetReps,10);
+    assert.equal(Number(actual.weight),57.5);assert.equal(actual.reps,9);assert.equal(sets.length,3);
+    const timed=prescription.exercises.find(e=>e.exerciseType==='timed');
+    assert.ok(sets.find(s=>Number(s.workoutExerciseID)===Number(timed.id)).durationSeconds>0);
+    const login=await fetch('http://localhost:3000/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:client.email,password:fixture.password})});
+    assert.equal(login.status,200);const auth=await login.json();
+    const statsResponse=await fetch('http://localhost:3000/api/workout/stats?days=90',{headers:{Authorization:`Bearer ${auth.accessToken}`}});
+    assert.equal(statsResponse.status,200);const stats=await statsResponse.json();
+    assert.equal(stats.workoutCount,1);assert.equal(stats.setCount,3);assert.equal(Number(stats.volume),517.5);assert.equal(stats.currentWeeklyStreak,1);
+    const denied=await fetch('http://localhost:3000/api/workout/stats');assert.equal(denied.status,401);
+    const proof={workflow:'native Coach builder -> assignment -> Client sets -> recovery -> completion -> Coach review',authentication:'real SIRVYA password login API and restored session; login form not exercised',prescribed:{weight:60,reps:10},performed:{weight:57.5,reps:9},savedSets:sets.length,volumeKg:57.5*9,timedActualSeconds:sets.find(s=>Number(s.workoutExerciseID)===Number(timed.id)).durationSeconds,verifiedAt:new Date().toISOString()};
+    proof.statistics={workouts:stats.workoutCount,sets:stats.setCount,volumeKg:stats.volume,weeklyStreak:stats.currentWeeklyStreak};proof.unauthenticatedStatus=denied.status;
+    fs.writeFileSync(path.join(root,'docs/verification/workout-browser-audit.json'),JSON.stringify(proof,null,2)+'\n');
+    console.log(JSON.stringify(proof,null,2));
+  }finally{await db.end();}
+  process.exit(0);
+}
 // Disposal must also work when the verification browser is no longer running.
 if(mode==='cleanup'){
   if(fs.existsSync(stateFile)){
@@ -58,7 +88,7 @@ let state;
 try {
   if (mode === 'setup') {
     if (fs.existsSync(stateFile)) throw new Error('Existing verification fixtures must be cleaned first');
-    state = {prefix:`web-verification-${Date.now()}`,password:'LocalBrowserFixture123',users:[]};
+    state = {prefix:`web-verification-${Date.now()}`,password:randomBytes(24).toString('base64url'),users:[]};
     fs.writeFileSync(stateFile,JSON.stringify(state));
     const hash = await bcrypt.hash(state.password,10);
     for (const role of ['client','coach']) {
@@ -103,10 +133,19 @@ try {
     }
     if(mode==='reload'){await send('Page.reload',{ignoreCache:true});await delay(7000);}
     await evaluate("document.querySelector('flt-semantics-placeholder')?.click()"); await delay(500);
-    if(mode==='tap') {
-      const coords=await evaluate(`(()=>{const wanted=${JSON.stringify(args[0])};const elements=[...document.querySelectorAll('flt-semantics,[role],input')];const candidates=elements.filter(e=>((e.getAttribute('aria-label')||e.innerText||'').trim()===wanted)&&e.getBoundingClientRect().width>0);candidates.sort((a,b)=>{const x=a.getBoundingClientRect(),y=b.getBoundingClientRect();return x.width*x.height-y.width*y.height});const e=candidates[0];if(!e)throw Error('Control not found: '+wanted);const r=e.getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+r.height/2};})()`);
+    if(mode==='tap'||mode==='fill'||mode==='fill-at') {
+      const coords=mode==='fill-at'?{x:Number(args[0]),y:Number(args[1])}:await evaluate(`(()=>{const wanted=${JSON.stringify(args[0])};const elements=[...document.querySelectorAll('flt-semantics,[role],input,textarea')];const candidates=elements.filter(e=>((e.getAttribute('aria-label')||e.innerText||'').trim()===wanted)&&e.getBoundingClientRect().width>0);candidates.sort((a,b)=>{const x=a.getBoundingClientRect(),y=b.getBoundingClientRect();return x.width*x.height-y.width*y.height});const e=candidates[0];if(!e)throw Error('Control not found: '+wanted);const r=e.getBoundingClientRect();return {x:r.x+r.width/2,y:r.y+r.height/2};})()`);
       await send('Input.dispatchMouseEvent',{type:'mousePressed',button:'left',clickCount:1,...coords});
-      await send('Input.dispatchMouseEvent',{type:'mouseReleased',button:'left',clickCount:1,...coords});await delay(1500);
+      await send('Input.dispatchMouseEvent',{type:'mouseReleased',button:'left',clickCount:1,...coords});
+      if(mode==='fill'||mode==='fill-at'){
+        await send('Input.dispatchKeyEvent',{type:'keyDown',modifiers:2,key:'Control',code:'ControlLeft',windowsVirtualKeyCode:17});
+        await send('Input.dispatchKeyEvent',{type:'keyDown',modifiers:2,key:'a',code:'KeyA',windowsVirtualKeyCode:65});
+        await send('Input.dispatchKeyEvent',{type:'keyUp',modifiers:2,key:'a',code:'KeyA',windowsVirtualKeyCode:65});
+        await send('Input.dispatchKeyEvent',{type:'keyUp',key:'Control',code:'ControlLeft',windowsVirtualKeyCode:17});
+        await evaluate("document.activeElement?.select?.()");
+        await send('Input.insertText',{text:mode==='fill-at'?args[2]:args[1]});
+      }
+      await delay(1500);
     }
     if(mode==='click') {
       const x=Number(args[0]),y=Number(args[1]);

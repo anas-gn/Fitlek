@@ -122,8 +122,8 @@ class _DiscoverScreenState extends State<DiscoverScreen>
   int? _selectedCategoryId;
   double? _selectedMinRating;
   Set<int> _favoriteCoachIds = {};
-  Map<int, double> _coachAvgRatings = {};
-  Map<int, int> _coachReviewCounts = {};
+  final Map<int, double> _coachAvgRatings = {};
+  final Map<int, int> _coachReviewCounts = {};
 
   final List<_CategoryItem> _categories = const [
     _CategoryItem(id: 1, name: 'Musculation', icon: Icons.fitness_center_rounded),

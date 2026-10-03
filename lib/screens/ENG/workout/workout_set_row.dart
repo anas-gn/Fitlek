@@ -36,6 +36,15 @@ class _WorkoutSetRowState extends State<WorkoutSetRow> {
   bool _dirty = false;
   bool _loadDirty = false;
   bool _addedLoad = false;
+  // An existing rating keeps its original scale when preferences change.
+  // Drafts also retain their scale across navigation/offline recovery.
+  String get _effortScale => widget.saved?.rpe != null
+      ? 'rpe'
+      : widget.saved?.rir != null
+          ? 'rir'
+          : ['rpe', 'rir'].contains(widget.draft?['effortScale'])
+              ? '${widget.draft!['effortScale']}'
+              : '${WorkoutService.preferences['effort'] ?? 'off'}';
   bool get _showLoad =>
       widget.exercise.supportsLoad &&
       (widget.exercise.hasPrescribedLoad ||
@@ -47,7 +56,7 @@ class _WorkoutSetRowState extends State<WorkoutSetRow> {
     _load = TextEditingController();
     _count = TextEditingController();
     _effort = TextEditingController(
-        text: WorkoutService.preferences['effort'] == 'rpe'
+        text: _effortScale == 'rpe'
             ? workoutValue(widget.saved?.rpe).replaceAll('—', '')
             : '${widget.saved?.rir ?? ''}');
     _fill();
@@ -67,7 +76,7 @@ class _WorkoutSetRowState extends State<WorkoutSetRow> {
         widget.saved?.weight ?? e.weight ?? widget.previous?.weight ?? 0));
     _count.text =
         '${e.exercise.isTimed ? widget.saved?.durationSeconds ?? e.durationSeconds ?? 30 : widget.saved?.reps ?? e.reps ?? 10}';
-    _effort.text = WorkoutService.preferences['effort'] == 'rpe'
+    _effort.text = _effortScale == 'rpe'
         ? workoutValue(widget.saved?.rpe).replaceAll('—', '')
         : '${widget.saved?.rir ?? ''}';
   }
@@ -107,7 +116,7 @@ class _WorkoutSetRowState extends State<WorkoutSetRow> {
       return;
     }
     final effort = _effort.text.isEmpty ? null : double.tryParse(_effort.text);
-    final scale = WorkoutService.preferences['effort'];
+    final scale = _effortScale;
     if (_effort.text.isNotEmpty &&
         (effort == null ||
             !effort.isFinite ||
@@ -175,6 +184,7 @@ class _WorkoutSetRowState extends State<WorkoutSetRow> {
                       'load': _load.text,
                       'count': _count.text,
                       'effort': _effort.text,
+                      'effortScale': _effortScale,
                       'loadDirty': _loadDirty,
                       'addedLoad': _addedLoad
                     });
@@ -207,15 +217,15 @@ class _WorkoutSetRowState extends State<WorkoutSetRow> {
                             'load': _load.text,
                             'count': _count.text,
                             'effort': _effort.text,
+                            'effortScale': _effortScale,
                             'loadDirty': _loadDirty,
                             'addedLoad': true
                           });
                         }),
                 icon: const Icon(Icons.add_rounded, size: 18)),
           _input(_count, timed ? 'SEC' : 'REPS'),
-          if (['rpe', 'rir'].contains(WorkoutService.preferences['effort']))
-            _input(_effort,
-                '${WorkoutService.preferences['effort']}'.toUpperCase()),
+          if (['rpe', 'rir'].contains(_effortScale))
+            _input(_effort, _effortScale.toUpperCase()),
           SizedBox(
               width: 48,
               child: IconButton(

@@ -1,5 +1,28 @@
 import {fail,text,number} from './workoutDomain.js';
 
+// Read only Apple Health body-mass records. No XML entities, DTDs or remote
+// resources are interpreted; the bounded text is never passed to an XML engine.
+export function parseBodyweightXML(input,{timeZone='UTC'}={}){
+  if(typeof input!=='string'||Buffer.byteLength(input)>8*1024*1024||/<!DOCTYPE|<!ENTITY/i.test(input)||!/<HealthData\b/.test(input)||!/<\/HealthData\s*>/.test(input))fail('invalid_import');
+  let formatter;try{formatter=new Intl.DateTimeFormat('en-CA',{timeZone,year:'numeric',month:'2-digit',day:'2-digit'});}catch{fail('invalid_import_date');}
+  const byDay=new Map();
+  for(const match of input.matchAll(/<Record\b([^<>]*)\/?>/g)){
+    const attrs=Object.fromEntries([...match[1].matchAll(/([A-Za-z][\w]*)\s*=\s*(?:"([^"<>]*)"|'([^'<>]*)')/g)].map(m=>[m[1],m[2]??m[3]]));
+    if(attrs.type!=='HKQuantityTypeIdentifierBodyMass')continue;
+    const source=attrs.startDate??attrs.creationDate;
+    if(typeof source!=='string'||!/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} [+-]\d{4}$/.test(source))fail('invalid_import_date');
+    const date=localDate(source.replace(' ','T').replace(/ ([+-]\d{2})(\d{2})$/,'$1:$2'),timeZone);
+    if(date>Date.now()+60000||date.getUTCFullYear()<1900)fail('invalid_import_date');
+    const factor={kg:1,lb:0.45359237,g:0.001}[attrs.unit];
+    if(factor==null||!/^\d+(?:\.\d+)?$/.test(attrs.value??''))fail('invalid_import');
+    const weight=number(Number(attrs.value)*factor,1,500),recordedAt=formatter.format(date);
+    if(!byDay.has(recordedAt)||byDay.get(recordedAt).time<date.getTime())byDay.set(recordedAt,{recordedAt,weight,note:'Imported from Apple Health',time:date.getTime()});
+    if(byDay.size>1000)fail('invalid_import');
+  }
+  if(!byDay.size)fail('invalid_import');
+  return {format:'sirvya-workout-history',source:'Apple Health',version:1,unit:'kg',sessions:[],bodyweight:[...byDay.values()].sort((a,b)=>a.time-b.time).map(({time,...row})=>row)};
+}
+
 // Independent CSV parser. Quoted fields, escaped quotes, BOM and line breaks.
 export function csvRows(input){
   if(typeof input!=='string'||Buffer.byteLength(input)>8*1024*1024)fail('invalid_import');
@@ -21,6 +44,8 @@ export function csvRows(input){
 function localDate(value,timeZone){
   const source=value.trim();
   if(/^\d{4}-\d{2}-\d{2}T.*(?:Z|[+-]\d\d:\d\d)$/.test(source)){
+    const calendar=source.slice(0,10),nominal=new Date(`${calendar}T00:00:00Z`);
+    if(Number.isNaN(nominal.getTime())||nominal.toISOString().slice(0,10)!==calendar)fail('invalid_import_date');
     const d=new Date(source);if(Number.isNaN(d.getTime()))fail('invalid_import_date');return d;
   }
   let match=/^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{1,2}):(\d{2})(?::(\d{2}))?)?$/.exec(source),parts;

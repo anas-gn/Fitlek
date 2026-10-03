@@ -5,6 +5,13 @@ import '../login.dart';
 import '../../../localization/workout_localizations.dart';
 export '../../../localization/workout_localizations.dart';
 
+const workoutRoutineIcons = <String, IconData>{
+  'strength': Icons.fitness_center_rounded,
+  'cardio': Icons.directions_run_rounded,
+  'recovery': Icons.spa_rounded,
+  'mobility': Icons.self_improvement_rounded
+};
+
 // Scoped to Workout. SIRVYA's other screens retain their existing design.
 ThemeData workoutTheme(BuildContext context) {
   final dark = Theme.of(context).brightness == Brightness.dark;

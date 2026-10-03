@@ -48,6 +48,15 @@ test('SIRVYA Workout HTTP / MySQL lifecycle and existing endpoint regression', {
     const conversationBaseline = await request(client, `/conversations?userID=${client.id}&role=client`);
     assert.equal(conversationBaseline.status,200,JSON.stringify(conversationBaseline.body));
     let planID, sessionID, originalExerciseID, secondDayID, body;
+    await t.test('malformed workout collections, history rows and tokens fail safely',async()=>{
+      for(const workoutDayIDs of ['1',{},1])assert.equal((await request(client,'/workout/sessions','POST',{workoutDayIDs})).status,400);
+      for(const token of ['malformed',jwt.sign(client,process.env.JWT_SECRET,{expiresIn:-1})]){
+        const response=await fetch(origin+'/workout/exercises',{headers:{Authorization:`Bearer ${token}`}});
+        assert.equal(response.status,401);
+      }
+      assert.equal((await request(client,`/workout/stats?clientID=${otherClient.id}`)).status,403);
+      assert.equal((await request(otherCoach,`/workout/history?clientID=${client.id}`)).status,403);
+    });
     await t.test('JWT, roles and existing SIRVYA screens still use the same users', async () => {
       assert.equal((await request(null, '/workout/exercises')).status, 401);
       assert.equal((await request(manager, '/workout/exercises')).status, 403);
@@ -255,6 +264,10 @@ test('SIRVYA Workout HTTP / MySQL lifecycle and existing endpoint regression', {
       assert.equal((await request(client,path+'/rest-alert','PUT',{seconds:60})).status,404);
       const completed=await request(otherClient,path,'PUT',{status:'completed',allowIncomplete:true});assert.equal(completed.status,200);
       const finished=(await request(otherClient,path)).body;
+      for(const row of [null,[],5]){
+        assert.equal((await request(otherClient,path+'/history','PUT',{revision:finished.revision,sets:[row]})).status,400);
+        assert.equal((await request(otherClient,path)).body.sets.length,1,'invalid edits roll back all set changes');
+      }
       const correction={revision:finished.revision,startedAt:'2026-09-30T10:00:00Z',durationSeconds:1800,notes:'Corrected',sets:[{...set,weight:55,details:{phase:'work',type:'straight'}}]};
       assert.equal((await request(otherClient,path+'/history','PUT',correction)).status,200);
       assert.equal((await request(otherClient,path+'/history','PUT',correction)).status,409);
@@ -338,6 +351,9 @@ test('SIRVYA Workout HTTP / MySQL lifecycle and existing endpoint regression', {
       const exercise=(await request(otherClient,'/workout/exercises?search=bench&equipment=barbell')).body.data.find(e=>e.externalSource==='sirvya');
       const preview=await request(otherClient,'/workout/history/import-preview','POST',{csv:'Date,Exercise,Weight,Reps\n2024-01-01,Bench Press,60,10'});assert.equal(preview.status,200);
       const input={...preview.body,mappings:{'Bench Press':exercise.id},createUnmatched:false};
+      assert.equal((await request(otherClient,'/workout/history/import-preview','POST',{history:{format:'sirvya-workout-history',version:1,sessions:[null]}})).status,400);
+      assert.equal((await request(otherClient,'/workout/history/import','POST',{...input,sessions:[{...input.sessions[0],exercises:[{...input.sessions[0].exercises[0],sets:[null]}]}]})).status,400);
+      assert.equal((await request(otherClient,'/workout/history/import','POST',{format:'sirvya-workout-history',version:1,sessions:[],bodyweight:[null]})).status,400);
       assert.equal((await request(coach,'/workout/history/import','POST',input)).status,403);
       const first=await request(otherClient,'/workout/history/import','POST',input);assert.equal(first.status,201,JSON.stringify(first.body));assert.equal(first.body.imported,1);
       assert.equal((await request(otherClient,'/workout/history/import','POST',input)).body.skipped,1);
@@ -352,6 +368,9 @@ test('SIRVYA Workout HTTP / MySQL lifecycle and existing endpoint regression', {
       assert.ok(exported.body.sessions.some(s=>s.startedAt.startsWith('2024-01-01')));
       assert.equal((await request(client,`/workout/history/export?clientID=${otherClient.id}`)).status,403);
       const weights={format:'sirvya-workout-history',version:1,sessions:[],bodyweight:[{recordedAt:'2024-01-01',weight:80,note:'Fixture'}]};
+      const xmlPreview=await request(otherClient,'/workout/history/import-preview','POST',{xml:'<HealthData><Record type="HKQuantityTypeIdentifierBodyMass" unit="kg" value="79" startDate="2024-01-02 10:00:00 +0000"/></HealthData>'});
+      assert.equal(xmlPreview.status,200);assert.equal((await request(otherClient,'/workout/history/import','POST',xmlPreview.body)).body.bodyweightImported,1);
+      assert.equal((await request(otherClient,'/workout/history/import','POST',xmlPreview.body)).body.bodyweightImported,0);
       assert.equal((await request(otherClient,'/workout/history/import','POST',weights)).body.bodyweightImported,1);
       assert.equal((await request(otherClient,'/workout/history/import','POST',weights)).body.bodyweightImported,0);
       const [[record]]=await db.query('SELECT weight FROM weighthistory WHERE clientID=? AND recordedAt=?',[otherClient.id,'2024-01-01']);assert.equal(Number(record.weight),80);

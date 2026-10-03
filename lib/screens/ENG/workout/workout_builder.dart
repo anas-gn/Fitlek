@@ -3,6 +3,7 @@ import '../../../models/workout.dart';
 import '../../../services/workout_service.dart';
 import 'workout_ui.dart';
 import 'exercise_library.dart';
+import 'workout_muscles.dart';
 
 class WorkoutBuilderScreen extends StatefulWidget {
   final int? clientID;
@@ -81,6 +82,7 @@ class _WorkoutBuilderScreenState extends State<WorkoutBuilderScreen> {
     final form = GlobalKey<FormState>();
     int? weekday = day?.dayOfWeek;
     String progression = day?.configuration['progression'] ?? 'off';
+    String icon = day?.configuration['icon'] ?? 'strength';
     final yes = await workoutDialog<bool>(
         context: context,
         builder: (context) => StatefulBuilder(
@@ -122,6 +124,24 @@ class _WorkoutBuilderScreenState extends State<WorkoutBuilderScreen> {
                                       ],
                                       onChanged: (v) => update(
                                           () => weekday = v == 0 ? null : v)),
+                                  const SizedBox(height: 12),
+                                  DropdownButtonFormField<String>(
+                                      initialValue: icon,
+                                      isExpanded: true,
+                                      decoration: InputDecoration(
+                                          labelText: 'Routine icon'
+                                              .workoutTr(context)),
+                                      items: workoutRoutineIcons.entries
+                                          .map((entry) => DropdownMenuItem(
+                                              value: entry.key,
+                                              child: Row(children: [
+                                                Icon(entry.value),
+                                                const SizedBox(width: 12),
+                                                WorkoutLabel(entry.key)
+                                              ])))
+                                          .toList(),
+                                      onChanged: (value) =>
+                                          update(() => icon = value!)),
                                   const SizedBox(height: 12),
                                   DropdownButtonFormField<String>(
                                       isExpanded: true,
@@ -173,13 +193,14 @@ class _WorkoutBuilderScreenState extends State<WorkoutBuilderScreen> {
           _days.add(WorkoutDay(
               name: name.text.trim(),
               dayOfWeek: weekday,
-              configuration: {'progression': progression}));
+              configuration: {'progression': progression, 'icon': icon}));
         } else {
           day.name = name.text.trim();
           day.dayOfWeek = weekday;
           day.configuration = {
             ...day.configuration,
-            'progression': progression
+            'progression': progression,
+            'icon': icon
           };
         }
       });
@@ -290,6 +311,10 @@ class _WorkoutBuilderScreenState extends State<WorkoutBuilderScreen> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Row(children: [
+                                      Icon(workoutRoutineIcons[
+                                              d.configuration['icon']] ??
+                                          workoutRoutineIcons['strength']),
+                                      const SizedBox(width: 8),
                                       Expanded(
                                           child: WorkoutLabel(d.name,
                                               style: Theme.of(context)
@@ -380,6 +405,10 @@ class _WorkoutBuilderScreenState extends State<WorkoutBuilderScreen> {
                                         icon: const Icon(Icons.add_rounded),
                                         label:
                                             const WorkoutLabel('Add exercise')),
+                                    if (d.exercises.isNotEmpty)
+                                      WorkoutMuscleCoverage(
+                                          load: workoutMuscleCoverage(
+                                              d.exercises)),
                                   ])));
                     }),
                     OutlinedButton.icon(

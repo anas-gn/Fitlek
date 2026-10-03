@@ -1,0 +1,404 @@
+{
+  "verifiedAt": "2026-10-03T22:04:15.799Z",
+  "featureCounts": {
+    "verified": 141,
+    "total": 152,
+    "partial": 11,
+    "missing": 0
+  },
+  "tests": {
+    "backend": {
+      "passed": 68,
+      "failed": 0,
+      "skipped": 0
+    },
+    "flutter": {
+      "passed": 46,
+      "failed": 0,
+      "skipped": 0
+    },
+    "responsiveLayouts": 72
+  },
+  "commands": [
+    {
+      "command": "flutter pub get",
+      "initial": "PASS",
+      "retest": "PASS",
+      "fix": "No dependency changes required."
+    },
+    {
+      "command": "npm ci --no-audit --no-fund (backend)",
+      "initial": "PASS",
+      "retest": "PASS",
+      "fix": "Lockfile dependency installation; existing deprecation notices."
+    },
+    {
+      "command": "npm test; WORKOUT_TEST_MYSQL=APP_TEST_MYSQL=AUTH_TEST_MYSQL=1",
+      "initial": "PASS: 60",
+      "retest": "PASS: 68, zero skips",
+      "fix": "Added meaningful regressions and fixed invalid inputs, chronology, query batching and progression configuration."
+    },
+    {
+      "command": "node --test tests/workout.stats.test.js tests/workout.integration.test.js (regressions)",
+      "initial": "FAIL",
+      "retest": "PASS in full suite",
+      "fix": "Invalid workoutDayIDs returned 500; filtered stats ignored the period/baseline. Fixed both."
+    },
+    {
+      "command": "node --test tests/workout.integration.test.js (malformed import regression)",
+      "initial": "FAIL",
+      "retest": "PASS in full suite",
+      "fix": "Null import collections returned 500. Added validation and verified rollback."
+    },
+    {
+      "command": "flutter analyze",
+      "initial": "FAIL: 60 findings; later one duplicate translation key",
+      "retest": "PASS: no issues",
+      "fix": "Safe lint/dead-code/lifecycle/RadioGroup fixes; removed duplicate new translation."
+    },
+    {
+      "command": "flutter test --concurrency=2; WORKOUT_CAPTURE_SCREENSHOTS=1",
+      "initial": "PASS: 34; UI addition initially failed compilation",
+      "retest": "PASS: 46, zero skips",
+      "fix": "Corrected new translation-key collision. Nine size/language cases now render eight screens: 72 layouts."
+    },
+    {
+      "command": "flutter test test/workout_logging_test.dart (effort preservation regression)",
+      "initial": "FAIL: existing rating erased",
+      "retest": "PASS in full suite",
+      "fix": "Editing reps now retains the effort scale originally recorded, regardless of changed preferences; drafts retain their scale."
+    },
+    {
+      "command": "node --check (all backend JavaScript/modules)",
+      "initial": "PASS",
+      "retest": "PASS: 96 files",
+      "fix": "No separate backend build/lint script exists; real API startup and MySQL suite also pass."
+    },
+    {
+      "command": "flutter build web --release --dart-define=API_BASE_URL=http://localhost:3000/api",
+      "initial": "PASS",
+      "retest": "PASS",
+      "fix": "Latest code: 169.6 seconds. JS web build; WASM compatibility warnings do not prevent this target."
+    },
+    {
+      "command": "flutter build apk --debug --target-platform android-arm64 --dart-define=API_BASE_URL=http://localhost:3000/api",
+      "initial": "PASS",
+      "retest": "PASS",
+      "fix": "Latest code: 49.9 seconds with Java 17; original global Java 25 setting restored."
+    },
+    {
+      "command": "node scripts/auditWorkoutSchema.mjs",
+      "initial": "PASS",
+      "retest": "PASS: 14 tables / 26 FKs / zero orphans",
+      "fix": "Primary keys, nullable ownership, deletion rules, indexes and EXPLAIN inspected against actual MySQL."
+    },
+    {
+      "command": "node scripts/verifyWeb.mjs (browser flow + verify)",
+      "initial": "Initial pilot selectors failed",
+      "retest": "PASS",
+      "fix": "Corrected semantic/textarea/selection/scroll harness; exercised native builder, assignment, three sets, recovery, timers, summary, Coach review and stats. Fixtures cleaned."
+    },
+    {
+      "command": "node scripts/auditWorkoutRepository.mjs",
+      "initial": "Current-tree scan PASS; deeper history FAIL",
+      "retest": "FAIL: archived credential finding",
+      "fix": "255 current source/config files have no findings. Older archive still reachable in Git; existing backups quarantined in ignored local directory."
+    },
+    {
+      "command": "curl.exe -I --connect-timeout 5 --max-time 10 https://51.170.143.251/api",
+      "initial": "FAIL: timeout",
+      "retest": "FAIL: external deployment blocker",
+      "fix": "Legacy default remains HTTP. No verified HTTPS endpoint available to substitute safely."
+    },
+    {
+      "command": "git diff --check",
+      "initial": "PASS",
+      "retest": "PASS",
+      "fix": "No patch whitespace errors."
+    },
+    {
+      "command": "Local web/API smoke: HEAD :8080 and protected GET :3000/api/workout/exercises",
+      "initial": "PASS",
+      "retest": "PASS: 200 / 401",
+      "fix": "Preview and existing backend remain running for user testing."
+    }
+  ],
+  "checklists": {
+    "ARCHITECTURE": {
+      "Single SIRVYA application": "PASS",
+      "Single authentication": "PASS",
+      "Existing users reused": "PASS",
+      "Existing MySQL reused": "PASS",
+      "Workout architecture clean": "PASS",
+      "Coach/Client integration correct": "PASS",
+      "No openGym backend duplication": "PASS",
+      "No React/WebView integration": "PASS"
+    },
+    "WORKOUT": {
+      "Exercise Library": "PARTIAL",
+      "Search": "PASS",
+      "Filters": "PASS",
+      "Routines": "PASS",
+      "Active Workout": "PASS",
+      "Set Tracking": "PASS",
+      "Rest Timer": "PARTIAL",
+      "Supersets": "PASS",
+      "Timed Exercises": "PASS",
+      "Bodyweight": "PASS",
+      "Previous Performance": "PASS",
+      "RPE/RIR": "PASS",
+      "History": "PASS",
+      "Exercise History": "PASS",
+      "PRs": "PASS",
+      "Volume": "PASS",
+      "1RM": "PARTIAL",
+      "Statistics": "PARTIAL",
+      "Progress": "PASS",
+      "Notifications": "PARTIAL"
+    },
+    "COACH": {
+      "Select Client": "PASS",
+      "Create Plan": "PASS",
+      "Edit Plan": "PASS",
+      "Add Exercise": "PASS",
+      "Configure Workout": "PASS",
+      "Assign Plan": "PASS",
+      "View Client History": "PASS",
+      "View Client Progress": "PASS",
+      "Prescribed vs Performed": "PASS"
+    },
+    "UI / UX": {
+      "openGym-inspired visual design": "PARTIAL",
+      "openGym-inspired interactions": "PARTIAL",
+      "Mobile adaptation": "PASS",
+      "Active Workout UX": "PASS",
+      "Timer UX": "PARTIAL",
+      "History UX": "PASS",
+      "Statistics UX": "PARTIAL",
+      "Coach Workout UX": "PASS"
+    },
+    "SECURITY": {
+      "Authentication": "PASS",
+      "Client isolation": "PASS",
+      "Coach authorization": "PASS",
+      "Role enforcement": "PASS",
+      "Ownership validation": "PASS",
+      "Input validation": "PASS",
+      "No exposed secrets": "FAIL"
+    },
+    "QUALITY": {
+      "Backend builds": "PASS",
+      "Flutter analyzes": "PASS",
+      "Tests pass": "PASS",
+      "Flutter build": "PASS",
+      "No critical runtime errors": "PASS",
+      "No major regression": "PASS",
+      "No critical TODOs": "PASS",
+      "No production mock data": "PASS"
+    }
+  },
+  "remaining": [
+    {
+      "severity": "HIGH",
+      "feature": "Historical credentials",
+      "problem": "An older tracked archive contains Firebase private key material and backend environment data. Current files are clean, but removing the archive from HEAD did not remove history.",
+      "blocker": "External credential ownership; coordinated history rewrite required.",
+      "nextAction": "Rotate archived credentials; remove sensitive historical archive/data across relevant refs using a reviewed cleanup plan."
+    },
+    {
+      "severity": "HIGH",
+      "feature": "Production transport",
+      "problem": "Legacy default is http://51.170.143.251/api; HTTPS probe timed out.",
+      "blocker": "Verified TLS/DNS deployment required.",
+      "nextAction": "Configure a valid HTTPS endpoint and API_BASE_URL before production release."
+    },
+    {
+      "severity": "MEDIUM",
+      "feature": "Exercise demonstrations",
+      "problem": "24 of 1,348 identities have reviewed bundled illustrations.",
+      "blocker": "Additional properly licensed exercise media required.",
+      "nextAction": "Add legal matching demonstrations with stable IDs and attribution."
+    },
+    {
+      "severity": "MEDIUM",
+      "feature": "Device alerts/wake lock/print",
+      "problem": "Sound/vibration/flash, wake lock, daily reminders, rest push and physical print/share delivery are not proved on hardware.",
+      "blocker": "No Android/iOS device, live provider-delivery or printer test available.",
+      "nextAction": "Run native permission/background/notification-action/codec/print tests. Local preview reminder dispatch is disabled."
+    },
+    {
+      "severity": "MEDIUM",
+      "feature": "Statistics/UI parity",
+      "problem": "Primary schematic coverage works; finer anatomy/secondary effective sets, exact winning-1RM-set attribution and weekly effort trend differ from reference.",
+      "blocker": "Remaining implementation detail; no external blocker claimed.",
+      "nextAction": "Extend the independently implemented metrics/visuals and add focused tests."
+    },
+    {
+      "severity": "MEDIUM",
+      "feature": "Workout transfers",
+      "problem": "SIRVYA plan/history transfers work; combined preferences/plan/history backup restoration is incomplete. Apple Health reader limits input to 8 MiB.",
+      "blocker": "Remaining transfer scope and bounded import design.",
+      "nextAction": "Add versioned combined workout-only backup and a bounded streaming path for large Health exports."
+    },
+    {
+      "severity": "LOW",
+      "feature": "Upstream supplement presets",
+      "problem": "Custom balance protocols work; published named ratio tables were not imported. Outside requested-fork denominator.",
+      "blocker": "Independent source/license review.",
+      "nextAction": "Verify and document preset sources before shipping their data."
+    },
+    {
+      "severity": "LOW",
+      "feature": "Existing intro video",
+      "problem": "Headless Chrome reports an unsupported intro codec; app navigation continues.",
+      "blocker": "Browser codec compatibility outside Workout.",
+      "nextAction": "Verify interactive supported browsers and re-encode the existing asset if needed."
+    },
+    {
+      "severity": "LOW",
+      "feature": "Scale/maintenance/toolchain",
+      "problem": "Statistics read all completed history to establish real PR baselines; start/finish perform bounded exercise-history reads. Active screen remains large. Java 17 is required by the existing Android wrapper.",
+      "blocker": "Larger-scale profiling and normal toolchain maintenance.",
+      "nextAction": "Profile real user histories, extract useful workflow services and maintain the supported Android toolchain."
+    }
+  ],
+  "filesModified": {
+    "Flutter": [
+      "lib/components/ENG/audioPlayerWidget.dart",
+      "lib/localization/workout_strings.dart",
+      "lib/screens/ENG/clientCoachDetail.dart",
+      "lib/screens/ENG/clientConversation.dart",
+      "lib/screens/ENG/clientHome.dart",
+      "lib/screens/ENG/clientList.dart",
+      "lib/screens/ENG/clientProfil.dart",
+      "lib/screens/ENG/coachChat.dart",
+      "lib/screens/ENG/coachClientDetail.dart",
+      "lib/screens/ENG/coachEditProfile.dart",
+      "lib/screens/ENG/login.dart",
+      "lib/screens/ENG/register.dart",
+      "lib/screens/ENG/workout/active_workout.dart",
+      "lib/screens/ENG/workout/workout_builder.dart",
+      "lib/screens/ENG/workout/workout_home.dart",
+      "lib/screens/ENG/workout/workout_muscles.dart",
+      "lib/screens/ENG/workout/workout_progress.dart",
+      "lib/screens/ENG/workout/workout_set_row.dart",
+      "lib/screens/ENG/workout/workout_transfer.dart",
+      "lib/screens/ENG/workout/workout_ui.dart",
+      "lib/services/notification_service.dart",
+      "lib/services/socketService.dart"
+    ],
+    "Backend": [
+      "backend/routes/anas/workout.js",
+      "backend/scripts/verifyWeb.mjs",
+      "backend/services/workoutDomain.js",
+      "backend/services/workoutHistoryTransfer.js",
+      "backend/services/workoutImport.js",
+      "backend/services/workoutStats.js",
+      "backend/scripts/auditWorkoutRepository.mjs",
+      "backend/scripts/auditWorkoutSchema.mjs",
+      "backend/services/workoutQueries.js"
+    ],
+    "Database": [
+      "backend/config/workoutSchema.js",
+      "backend/migrations/2026_workout_audit_indexes.sql"
+    ],
+    "Tests": [
+      "backend/tests/workout.experience.test.js",
+      "backend/tests/workout.import.test.js",
+      "backend/tests/workout.integration.test.js",
+      "backend/tests/workout.stats.test.js",
+      "test/workout_logging_test.dart",
+      "backend/tests/workout.queries.test.js",
+      "test/workout_audit_test.dart"
+    ],
+    "Configuration": [
+      "backend/index.js",
+      "backend/package.json"
+    ],
+    "Documentation": [
+      "docs/WORKOUT_PARITY.md",
+      "docs/verification/native-coach-builder.png",
+      "docs/verification/native-dashboard.png",
+      "docs/verification/native-progress.png",
+      "docs/WORKOUT_AUDIT.md",
+      "docs/WORKOUT_AUDIT_MATRIX.json",
+      "docs/WORKOUT_AUDIT_MATRIX.md",
+      "docs/verification/audit-client-active.png",
+      "docs/verification/audit-client-rest.png",
+      "docs/verification/audit-client-summary.png",
+      "docs/verification/audit-coach-builder.png",
+      "docs/verification/audit-coach-progress.png",
+      "docs/verification/audit-coach-review.png",
+      "docs/verification/audit-exercise-demonstration.png",
+      "docs/verification/audit-muscle-coverage.png",
+      "docs/verification/workout-audit-results.json",
+      "docs/verification/workout-browser-audit.json",
+      "docs/verification/workout-repository-audit.json",
+      "docs/verification/workout-schema-audit.json"
+    ]
+  },
+  "androidArtifact": {
+    "file": "build/app/outputs/flutter-apk/app-debug.apk",
+    "bytes": 186008603,
+    "sha256": "ec5fdb05ea956a9fbf152d80ef6a0f7db21e3754e32e3d24ad3d30bd70fa9f29",
+    "package": "com.sirvya.app",
+    "label": "SIRVYA",
+    "version": "1.0.2 (10)",
+    "jdk": 17
+  },
+  "preview": {
+    "url": "http://localhost:8080",
+    "api": "http://localhost:3000/api",
+    "reminderDispatch": false
+  },
+  "schema": {
+    "tables": 14,
+    "foreignKeys": 26,
+    "orphans": {
+      "exercises.ownerID": 0,
+      "workout_alerts.userID": 0,
+      "workout_alerts.sessionID": 0,
+      "workout_days.workoutPlanID": 0,
+      "workout_exercise_preferences.userID": 0,
+      "workout_exercise_preferences.exerciseID": 0,
+      "workout_exercises.workoutDayID": 0,
+      "workout_exercises.exerciseID": 0,
+      "workout_import_exercises.userID": 0,
+      "workout_import_exercises.exerciseID": 0,
+      "workout_imports.userID": 0,
+      "workout_imports.sessionID": 0,
+      "workout_media.ownerID": 0,
+      "workout_media.sessionID": 0,
+      "workout_media.exerciseID": 0,
+      "workout_plans.coachID": 0,
+      "workout_plans.clientID": 0,
+      "workout_preferences.userID": 0,
+      "workout_schedule.userID": 0,
+      "workout_schedule.workoutDayID": 0,
+      "workout_schedule_dates.userID": 0,
+      "workout_sessions.workoutPlanID": 0,
+      "workout_sessions.workoutDayID": 0,
+      "workout_sessions.clientID": 0,
+      "workout_sets.workoutSessionID": 0,
+      "workout_sets.exerciseID": 0
+    }
+  },
+  "repositorySecurity": {
+    "currentFindings": 0,
+    "historyFindings": [
+      {
+        "file": "backend.tar.gz",
+        "commit": "9bc7f1e8",
+        "category": "Firebase private key / backend environment archive in Git history",
+        "remediation": "Rotate archived credentials; coordinate history removal. No secret values are included in this report."
+      }
+    ]
+  },
+  "verificationLimits": [
+    "Physical Android/iOS notification delivery, actions, sound/vibration, background OS termination and wake lock",
+    "Physical print/share and all codecs",
+    "Real Google OAuth identity provider (mocked only in tests); manual login form entry not exercised",
+    "Production deployment/HTTPS and archived-credential rotation",
+    "No claim of all existing production UI flows manually replayed or pixel-perfect parity"
+  ]
+}

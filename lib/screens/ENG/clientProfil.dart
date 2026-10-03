@@ -671,7 +671,7 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                         ),
                         child: Center(
                           child: loading
-                              ? SizedBox(
+                              ? const SizedBox(
                                   width: 18, height: 18,
                                   child: CircularProgressIndicator(
                                     color: Colors.white, strokeWidth: 2),
@@ -838,7 +838,7 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                           ),
                           child: Center(
                             child: loading
-                                ? SizedBox(
+                                ? const SizedBox(
                                     width: 18, height: 18,
                                     child: CircularProgressIndicator(
                                       color: Colors.white, strokeWidth: 2),

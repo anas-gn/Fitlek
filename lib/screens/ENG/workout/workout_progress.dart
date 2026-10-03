@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../../../models/workout.dart';
 import '../../../services/workout_service.dart';
 import 'workout_ui.dart';
+import 'workout_muscles.dart';
 import 'workout_charts.dart';
 import 'workout_set_row.dart';
 import 'workout_builder.dart';
@@ -506,8 +507,15 @@ class _WorkoutProgressScreenState extends State<WorkoutProgressScreen> {
                               child: ListTile(
                                   leading: const Icon(
                                       Icons.local_fire_department_outlined),
-                                  title: WorkoutLabel(
-                                      'Training streak: ${stats['currentStreak'] ?? 0} days'),
+                                  title: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        WorkoutLabel(
+                                            'Training streak: ${stats['currentStreak'] ?? 0} days'),
+                                        WorkoutLabel(
+                                            'Weekly streak: ${stats['currentWeeklyStreak'] ?? 0} weeks')
+                                      ]),
                                   subtitle: WorkoutLabel(
                                       'Longest streak: ${stats['longestStreak'] ?? 0} days · ${stats['prCount'] ?? 0} record events'))),
                           if (stats['workload'] != null)
@@ -640,6 +648,14 @@ class _WorkoutProgressScreenState extends State<WorkoutProgressScreen> {
                                                   fontSize: 17,
                                                   fontWeight: FontWeight.w600)),
                                           const SizedBox(height: 12),
+                                          WorkoutMuscleCoverage(load: {
+                                            for (final muscle in workoutRows(
+                                                stats['muscles']))
+                                              '${muscle['name']}':
+                                                  workoutNumber(
+                                                          muscle['sets']) ??
+                                                      0
+                                          }),
                                           ...workoutRows(stats['muscles']).map(
                                               (m) => Padding(
                                                   padding: const EdgeInsets

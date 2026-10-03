@@ -1,5 +1,12 @@
 # SIRVYA Workout implementation map
 
+Independent audit: see [WORKOUT_AUDIT.md](WORKOUT_AUDIT.md) and the
+[counted feature matrix](WORKOUT_AUDIT_MATRIX.md). The audit verifies 141 / 152
+requested-fork workout behaviors, with 11 partial. Historical credential
+exposure and the legacy production HTTP default prevent a security sign-off.
+The older grouped inventory below is implementation context; the counted matrix
+is the current source of truth for verification and limitations.
+
 Baseline: SIRVYA `main` / `origin/main` `23d3665` (latest fetched main).
 Requested reference: arvids-unavailable/openGym `c42ba6b98e3776af5981f20c05ba392238799670`
 (HEAD verified on 2026-10-03). Its README points to DuarteSantos8/openGym.
@@ -123,15 +130,13 @@ login endpoint and restores its session; manual login form entry was not exercis
 
 ## Verification limits
 
-Local backend regression: 60 tests passed, no skips, with disposable users in the
-existing MySQL database. The full Flutter suite passes 34 tests with screenshot
+Local backend regression: 68 tests passed, no skips, with disposable users in the
+existing MySQL database. The full Flutter suite passes 46 tests with screenshot
 capture enabled and no skips. Native navigation, recovery, forms, timers, rich
 sets, bounded caches, year heatmaps, licensed demonstrations and scoped Client
 balance protocol creation/edit/selection/deletion are covered.
 The release web build passes; all 38 bundled demonstration frame hashes match
-the audited originals. Workout scoped analysis is clean. Repository-wide
-analysis retains 60 existing warnings/lints in other screens and no compilation
-errors.
+the audited originals. Full repository-wide Flutter analysis is now clean.
 
 Android debug APK build passes with Java 17 and the Flutter ARM64 target after
 disk space became available. Earlier attempts failed during native-library
@@ -139,8 +144,8 @@ extraction/merging due to insufficient disk space; generated files from those
 failed app builds were removed. The APK retains package `com.sirvya.app`, label
 SIRVYA, version 1.0.2 (10), and includes all 38 audited illustration frames plus
 their full license. Artifact: `build/app/outputs/flutter-apk/app-debug.apk`
-(144,481,288 bytes). SHA-256:
-`fbd3b40cf516ec3c2899283a1e7cb2cb2abf776d7e74dc438a1da1a4340a68f2`.
+(186,008,603 bytes). SHA-256:
+`ec5fdb05ea956a9fbf152d80ef6a0f7db21e3754e32e3d24ad3d30bd70fa9f29`.
 This local verification build uses `API_BASE_URL=http://localhost:3000/api`;
 an attached Android device needs `adb reverse tcp:3000 tcp:3000` to reach the
 local backend. No physical device was attached. The original global Java 25

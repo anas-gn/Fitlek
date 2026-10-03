@@ -1,4 +1,3 @@
-import 'clientConversation.dart';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -12,9 +11,7 @@ import 'clientSessions.dart';
 import 'clientList.dart';
 import 'clientProfil.dart';
 import 'clientNotifications.dart';
-import 'clientSessionDetail.dart';
 import 'clientQrScanner.dart';
-import 'clientBooking.dart';
 
 import '../../theme/fitlek_theme_extension.dart';
 import '../../components/sirvya_logo.dart';
@@ -109,33 +106,6 @@ class _CategoryItem {
       );
 }
 
-IconData _mapCategoryIcon(String iconName) {
-  switch (iconName) {
-    case 'fitness_center':
-      return Icons.fitness_center_rounded;
-    case 'monitor_weight':
-      return Icons.monitor_weight_rounded;
-    case 'self_improvement':
-      return Icons.self_improvement_rounded;
-    case 'sports_gymnastics':
-      return Icons.sports_gymnastics_rounded;
-    case 'sports_mma':
-      return Icons.sports_martial_arts_rounded;
-    case 'restaurant':
-      return Icons.apple;
-    case 'accessibility_new':
-      return Icons.sports_gymnastics_rounded;
-    case 'directions_run':
-      return Icons.directions_run_rounded;
-    case 'straighten':
-      return Icons.straighten_rounded;
-    case 'sports_kabaddi':
-      return Icons.sports_kabaddi_rounded;
-    default:
-      return Icons.fitness_center_rounded;
-  }
-}
-
 class HomeScreen extends StatefulWidget {
   final int clientID;
   final String token;
@@ -179,15 +149,13 @@ class _HomeScreenState extends State<HomeScreen> {
     const _CategoryItem(id: 6, name: 'Nutrition', icon: 'restaurant'),
   ];
   Set<int> _favoriteCoachIds = {};
-  Map<int, double> _coachAvgRatings = {};
-  Map<int, int> _coachReviewCounts = {};
-  String? _avatarUrl;
+  final Map<int, double> _coachAvgRatings = {};
+  final Map<int, int> _coachReviewCounts = {};
   String? _clientVille;
   int _unreadMessagesCount = 0;
 
   bool _loadingCoaches = true;
   bool _loadingAdvisors = true;
-  bool _loadingCategories = false;
   bool _loadingSessions = true;
   String? _coachError;
   String? _advisorError;
@@ -286,7 +254,6 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _fetchCategories() async {
-    setState(() => _loadingCategories = true);
     try {
       final res = await http
           .get(Uri.parse('$baseUrl/categories'), headers: _headers)
@@ -296,14 +263,11 @@ class _HomeScreenState extends State<HomeScreen> {
         if (mounted) {
           setState(() {
             _categories = data.map((e) => _CategoryItem.fromJson(e as Map<String, dynamic>)).toList();
-            _loadingCategories = false;
           });
         }
-      } else {
-        if (mounted) setState(() => _loadingCategories = false);
       }
     } catch (_) {
-      if (mounted) setState(() => _loadingCategories = false);
+      // Keep the existing default categories if the request fails.
     }
   }
 
@@ -364,7 +328,6 @@ class _HomeScreenState extends State<HomeScreen> {
         final data = jsonDecode(res.body) as Map<String, dynamic>;
         if (mounted) {
           setState(() {
-            _avatarUrl = data['avatarUrl'] as String?;
             _clientVille = data['ville'] as String?;
           });
         }
@@ -447,78 +410,6 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
 
-  void _openConversationWithCoach(
-    int coachID,
-    String coachName,
-    String? coachAvatar,
-    String? coachSpeciality,
-  ) async {
-    try {
-      final res = await http
-          .get(
-            Uri.parse(
-                '$baseUrl/conversations?userID=${widget.clientID}&coachID=$coachID&role=client'),
-            headers: _headers,
-          )
-          .timeout(const Duration(seconds: 10));
-
-      if (res.statusCode == 200) {
-        final List convs = jsonDecode(res.body);
-        final match = convs.firstWhere(
-          (c) => c['coachID'] == coachID,
-          orElse: () => null,
-        );
-
-        if (match != null) {
-          if (!mounted) return;
-          await Navigator.push(
-            context,
-            _fadeSlide(
-              ClientConversationScreen(
-                conversationID: match['id'],
-                clientID: widget.clientID,
-                token: widget.token,
-                coachName: coachName,
-                coachAvatar: coachAvatar,
-                coachSpeciality: coachSpeciality,
-              ),
-            ),
-          );
-          _fetchUnreadMessagesCount();
-        } else {
-          final createRes = await http
-              .post(
-                Uri.parse('$baseUrl/conversations/find-or-create'),
-                headers: _headers,
-                body: jsonEncode({
-                  'clientID': widget.clientID,
-                  'coachID': coachID,
-                }),
-              )
-              .timeout(const Duration(seconds: 10));
-
-          if (createRes.statusCode == 201) {
-            final newConv = jsonDecode(createRes.body);
-            if (!mounted) return;
-            await Navigator.push(
-              context,
-              _fadeSlide(
-                ClientConversationScreen(
-                  conversationID: newConv['id'],
-                  clientID: widget.clientID,
-                  token: widget.token,
-                  coachName: coachName,
-                  coachAvatar: coachAvatar,
-                  coachSpeciality: coachSpeciality,
-                ),
-              ),
-            );
-            _fetchUnreadMessagesCount();
-          }
-        }
-      }
-    } catch (_) {}
-  }
 
   void _openCoachDetail(CoachModel coach) {
     final session = ReservationModel(
@@ -972,7 +863,7 @@ const SizedBox(width: 8),
       (Icons.qr_code_scanner_rounded, 'Scan\nQR', () {
         Navigator.push(
           context,
-          _fadeSlide(ClientQrScannerScreen()),
+          _fadeSlide(const ClientQrScannerScreen()),
         );
       }),
     ];
@@ -1553,7 +1444,7 @@ class _CoachCard extends StatelessWidget {
                       color: Colors.black.withValues(alpha: 0.55),
                       borderRadius: BorderRadius.circular(20),
                     ),
-                    child: Row(
+                    child: const Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                      
@@ -1714,7 +1605,6 @@ class _CompanyCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final double rating = advisor.rating ?? 0.0;
     final int totalReviews = advisor.totalReviews ?? 0;
     final bool hasRating = totalReviews > 0;
 

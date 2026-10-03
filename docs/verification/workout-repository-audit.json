@@ -1,0 +1,24 @@
+{
+  "scannedFiles": 255,
+  "findings": [],
+  "historyFindings": [
+    {
+      "file": "backend.tar.gz",
+      "commit": "9bc7f1e8",
+      "category": "Firebase private key / backend environment archive in Git history",
+      "remediation": "Rotate archived credentials; coordinate history removal. No secret values are included in this report."
+    }
+  ],
+  "bundledEnvKeys": [
+    "_baseUrl",
+    "GOOGLE_CLIENT_ID_ANDROID",
+    "GOOGLE_CLIENT_ID_WEB",
+    "GOOGLE_SERVER_CLIENT_ID"
+  ],
+  "trackedEnvFiles": [
+    "assets/config.env",
+    "backend/.env.example"
+  ],
+  "trackedBackupPaths": [],
+  "localBackupLocation": "workout_tmp/local-backups (ignored; existing backups retained)"
+}

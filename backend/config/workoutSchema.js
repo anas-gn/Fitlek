@@ -32,6 +32,12 @@ export async function ensureWorkoutSchema(db) {
   }
   const extra = await readFile(new URL('../migrations/2026_workout_experience.sql', import.meta.url), 'utf8');
   for (const statement of extra.split(';').map(s => s.trim()).filter(Boolean)) await db.query(statement);
+  const indexes=await readFile(new URL('../migrations/2026_workout_audit_indexes.sql',import.meta.url),'utf8');
+  for(const statement of indexes.split(';').map(s=>s.trim()).filter(Boolean)){
+    const [,name,table]=statement.match(/^CREATE INDEX ([a-z_]+) ON ([a-z_]+)/);
+    const [existing]=await db.query('SELECT INDEX_NAME FROM information_schema.STATISTICS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=? AND INDEX_NAME=?',[table,name]);
+    if(!existing.length)await db.query(statement);
+  }
   const [alertColumns]=await db.query("SELECT COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='workout_alerts'");
   if(!alertColumns.some(c=>c.COLUMN_NAME==='claimedAt'))await db.query('ALTER TABLE workout_alerts ADD COLUMN claimedAt DATETIME NULL');
   for (const e of exercises) {

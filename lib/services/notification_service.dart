@@ -264,7 +264,7 @@ class NotificationService {
           if (details.actionId == null ||
               details.actionId!.isEmpty ||
               restControlsSessionID == null) {
-            _handleNotificationClick(details.payload);
+            handleNotificationClick(details.payload);
           }
         },
       );
@@ -318,7 +318,7 @@ class NotificationService {
       if (kDebugMode) {
         print('A new onMessageOpenedApp event was published!');
       }
-      _handleNotificationClick(jsonEncode(message.data));
+      handleNotificationClick(jsonEncode(message.data));
     });
 
     // 7. Check if app was opened from a terminated state via a notification
@@ -327,7 +327,7 @@ class NotificationService {
       if (kDebugMode) {
         print('App opened from terminated state via notification');
       }
-      _handleNotificationClick(jsonEncode(initialMessage.data));
+      handleNotificationClick(jsonEncode(initialMessage.data));
     }
 
     // 8. Log FCM Token for development/testing
@@ -354,7 +354,7 @@ class NotificationService {
   }
 
   /// Handle actions on notification click
-  void _handleNotificationClick(String? payload) {
+  void handleNotificationClick(String? payload) {
     if (payload == null) return;
     try {
       _pendingClick = Map<String, dynamic>.from(jsonDecode(payload));
@@ -374,6 +374,12 @@ class NotificationService {
     }
     _pendingClick = null;
     final id = int.tryParse('${click['relatedEntityID']}');
+    // A notification tap must not mount a second timer/listener for the active
+    // workout that is already present in the navigator.
+    if (click['type'] == 'workout_rest' &&
+        id != null && restControlsSessionID == id) {
+      return;
+    }
     final role = await ApiService.getRole();
     navigator.push(WorkoutRoute(
         builder: (_) => click['type'] == 'workout_rest' && id != null

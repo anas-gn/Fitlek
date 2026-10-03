@@ -622,7 +622,7 @@ class _CoachEditProfileState extends State<CoachEditProfile> {
           _labeledField(
             label: 'Primary Coaching Category',
             child: DropdownButtonFormField<int>(
-              value: _selectedCategoryId,
+              initialValue: _selectedCategoryId,
               hint: Text('Select a category', style: TextStyle(color: f.textMuted)),
               items: _categories
                   .map((cat) => DropdownMenuItem<int>(

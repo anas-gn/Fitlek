@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
-import '../../theme/fitlek_theme_extension.dart';
 import '../../services/audioManager.dart';
 
 class AudioPlayerWidget extends StatefulWidget {
@@ -127,9 +126,13 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
 
   void _toggleSpeed() {
     setState(() {
-      if (_playbackRate == 1.0) _playbackRate = 1.5;
-      else if (_playbackRate == 1.5) _playbackRate = 2.0;
-      else _playbackRate = 1.0;
+      if (_playbackRate == 1.0) {
+        _playbackRate = 1.5;
+      } else if (_playbackRate == 1.5) {
+        _playbackRate = 2.0;
+      } else {
+        _playbackRate = 1.0;
+      }
     });
     _player.setPlaybackRate(_playbackRate);
   }
@@ -144,7 +147,6 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final f = context.fitlek;
     final fgColor = widget.isMe ? cs.onPrimary : cs.onSurface;
 
     if (widget.isExpired && _localCacheExpired) {

@@ -245,7 +245,8 @@ app.use('/api/premium/workouts', requireAuth, premiumWorkoutRoutes);
 app.use('/api/coach/premium', requireAuth, premiumCoachRoutes);
 app.use('/api/workout', createWorkoutRouter(db, {ready: workoutReady, notify: createAndSendNotification}));
 app.use('/api/notifications',notificationsRoutes);
-startWorkoutReminders(db,createAndSendNotification,workoutReady);
+// Local QA can suppress scheduled outbound delivery while exercising the API.
+if(process.env.WORKOUT_REMINDERS_DISABLED!=='1')startWorkoutReminders(db,createAndSendNotification,workoutReady);
 startWorkoutMediaCleanup(db,workoutReady);
 
 const PORT = process.env.PORT || 3000;

@@ -96,7 +96,9 @@ export function validateConfiguration(input = {}) {
   const progression = input.progression || 'off';
   if (!['off','inherit','linear','double','greyskull','time'].includes(progression)) fail('invalid_workout');
   if (input.targetRpe != null && input.targetRir != null) fail('invalid_effort');
-  return {progression, increment: number(input.increment, 0.1, 100) ?? 2.5,
+  const icon=input.icon??'strength';
+  if(!['strength','cardio','recovery','mobility'].includes(icon))fail('invalid_workout');
+  return {progression, icon, increment: number(input.increment, 0.1, 100) ?? 2.5,
     minReps: number(input.minReps, 1, 1000, true), deloadFactor: number(input.deloadFactor, 0.5, 0.95) ?? 0.9,
     bodyweightRepCeiling: integer(input.bodyweightRepCeiling ?? 30, 1, 1000),
     maxBodyweightSets: integer(input.maxBodyweightSets ?? 6, 1, 30),

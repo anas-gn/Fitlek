@@ -1,5 +1,23 @@
 // Independently authored SIRVYA translations.
 const workoutStrings = <String, List<String>>{
+  'Routine icon': ['Icône de la routine', 'Icono de rutina'],
+  'strength': ['force', 'fuerza'],
+  'recovery': ['récupération', 'recuperación'],
+  'mobility': ['mobilité', 'movilidad'],
+  'Weekly streak: {0} weeks': [
+    'Série hebdomadaire : {0} semaines',
+    'Racha semanal: {0} semanas'
+  ],
+  'Muscle coverage': ['Muscles sollicités', 'Músculos trabajados'],
+  'Primary muscles · working sets': [
+    'Muscles principaux · séries de travail',
+    'Músculos principales · series de trabajo'
+  ],
+  'Import Strong, Hevy or FitNotes CSV, Apple Health bodyweight XML, or SIRVYA history JSON.':
+      [
+    'Importez un CSV Strong, Hevy ou FitNotes, un XML de poids Apple Santé ou un historique JSON SIRVYA.',
+    'Importa CSV de Strong, Hevy o FitNotes, XML de peso de Apple Salud o un historial JSON de SIRVYA.'
+  ],
   'Workout alerts': ['Alertes d’entraînement', 'Alertas de entrenamiento'],
   'Balance protocol': ['Protocole d’équilibre', 'Protocolo de equilibrio'],
   'Custom targets': ['Objectifs personnalisés', 'Objetivos personalizados'],

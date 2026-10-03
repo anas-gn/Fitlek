@@ -388,7 +388,10 @@ class _CoachDetailScreenState extends State<CoachDetailScreen>
                   color: Theme.of(context).colorScheme.onSurface,
                   fontSize: 16,
                   fontWeight: FontWeight.w800)),
-          content: Column(
+          content: RadioGroup<String>(
+            groupValue: selectedReason,
+            onChanged: (val) => setDialogState(() => selectedReason = val),
+            child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
@@ -402,15 +405,12 @@ class _CoachDetailScreenState extends State<CoachDetailScreen>
                             color: Theme.of(context).colorScheme.onSurface,
                             fontSize: 13)),
                     value: r,
-                    groupValue: selectedReason,
                     activeColor: Theme.of(context).colorScheme.primary,
                     contentPadding: EdgeInsets.zero,
                     dense: true,
-                    onChanged: (val) =>
-                        setDialogState(() => selectedReason = val),
                   )),
             ],
-          ),
+          )),
           actions: [
             TextButton(
                 onPressed: () => Navigator.pop(ctx),

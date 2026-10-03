@@ -1,0 +1,3718 @@
+{
+  "reference": {
+    "url": "https://github.com/arvids-unavailable/openGym",
+    "revision": "c42ba6b98e3776af5981f20c05ba392238799670"
+  },
+  "countingRule": "One explicit in-scope behavior per row. Verified means DONE under local code/API/widget/browser evidence; PARTIAL is not counted. Exclusions and SIRVYA/upstream extensions are outside the denominator.",
+  "counts": {
+    "verified": 141,
+    "total": 152,
+    "partial": 11,
+    "missing": 0
+  },
+  "features": [
+    {
+      "id": "W001",
+      "origin": "requested openGym fork",
+      "area": "Dashboard",
+      "feature": "Workout dashboard and today card",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/views/Home.jsx"
+      ],
+      "implementation": [
+        "lib/screens/ENG/workout/workout_home.dart"
+      ],
+      "evidence": [
+        "test/workout_tools_test.dart",
+        "backend/tests/workout.integration.test.js"
+      ],
+      "note": ""
+    },
+    {
+      "id": "W002",
+      "origin": "requested openGym fork",
+      "area": "Dashboard",
+      "feature": "Weekly calendar navigation",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/views/Home.jsx"
+      ],
+      "implementation": [
+        "lib/screens/ENG/workout/workout_home.dart"
+      ],
+      "evidence": [
+        "test/workout_tools_test.dart",
+        "backend/tests/workout.integration.test.js"
+      ],
+      "note": ""
+    },
+    {
+      "id": "W003",
+      "origin": "requested openGym fork",
+      "area": "Dashboard",
+      "feature": "Assigned/current routines",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/views/Home.jsx"
+      ],
+      "implementation": [
+        "lib/screens/ENG/workout/workout_home.dart"
+      ],
+      "evidence": [
+        "test/workout_tools_test.dart",
+        "backend/tests/workout.integration.test.js"
+      ],
+      "note": ""
+    },
+    {
+      "id": "W004",
+      "origin": "requested openGym fork",
+      "area": "Dashboard",
+      "feature": "Date overrides and rescheduling",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/views/Home.jsx"
+      ],
+      "implementation": [
+        "lib/screens/ENG/workout/workout_home.dart"
+      ],
+      "evidence": [
+        "test/workout_tools_test.dart",
+        "backend/tests/workout.integration.test.js"
+      ],
+      "note": ""
+    },
+    {
+      "id": "W005",
+      "origin": "requested openGym fork",
+      "area": "Dashboard",
+      "feature": "Explicit rest days",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/views/Home.jsx"
+      ],
+      "implementation": [
+        "lib/screens/ENG/workout/workout_home.dart"
+      ],
+      "evidence": [
+        "test/workout_tools_test.dart",
+        "backend/tests/workout.integration.test.js"
+      ],
+      "note": ""
+    },
+    {
+      "id": "W006",
+      "origin": "requested openGym fork",
+      "area": "Dashboard",
+      "feature": "Recent workouts and activity",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/views/Home.jsx"
+      ],
+      "implementation": [
+        "lib/screens/ENG/workout/workout_home.dart"
+      ],
+      "evidence": [
+        "test/workout_tools_test.dart",
+        "backend/tests/workout.integration.test.js"
+      ],
+      "note": ""
+    },
+    {
+      "id": "W007",
+      "origin": "requested openGym fork",
+      "area": "Dashboard",
+      "feature": "Bodyweight check-in before workout when enabled",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/views/Home.jsx"
+      ],
+      "implementation": [
+        "lib/screens/ENG/workout/workout_home.dart"
+      ],
+      "evidence": [
+        "test/workout_tools_test.dart",
+        "backend/tests/workout.integration.test.js"
+      ],
+      "note": ""
+    },
+    {
+      "id": "W008",
+      "origin": "requested openGym fork",
+      "area": "Exercise library",
+      "feature": "Exercise catalog with stable identifiers",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/views/Library.jsx",
+        "frontend/src/lib/exercises.js"
+      ],
+      "implementation": [
+        "lib/screens/ENG/workout/exercise_library.dart"
+      ],
+      "evidence": [
+        "backend/tests/workout.integration.test.js",
+        "test/workout_library_test.dart",
+        "backend/tests/workout.demonstrations.test.js"
+      ],
+      "note": "1,348 entries: 1,324 MIT metadata plus 24 original seeds."
+    },
+    {
+      "id": "W009",
+      "origin": "requested openGym fork",
+      "area": "Exercise library",
+      "feature": "Debounced search and pagination",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/views/Library.jsx",
+        "frontend/src/lib/exercises.js"
+      ],
+      "implementation": [
+        "lib/screens/ENG/workout/exercise_library.dart"
+      ],
+      "evidence": [
+        "backend/tests/workout.integration.test.js",
+        "test/workout_library_test.dart",
+        "backend/tests/workout.demonstrations.test.js"
+      ],
+      "note": ""
+    },
+    {
+      "id": "W010",
+      "origin": "requested openGym fork",
+      "area": "Exercise library",
+      "feature": "Primary muscle filters",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/views/Library.jsx",
+        "frontend/src/lib/exercises.js"
+      ],
+      "implementation": [
+        "lib/screens/ENG/workout/exercise_library.dart"
+      ],
+      "evidence": [
+        "backend/tests/workout.integration.test.js",
+        "test/workout_library_test.dart",
+        "backend/tests/workout.demonstrations.test.js"
+      ],
+      "note": ""
+    },
+    {
+      "id": "W011",
+      "origin": "requested openGym fork",
+      "area": "Exercise library",
+      "feature": "Secondary muscle filters",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/views/Library.jsx",
+        "frontend/src/lib/exercises.js"
+      ],
+      "implementation": [
+        "lib/screens/ENG/workout/exercise_library.dart"
+      ],
+      "evidence": [
+        "backend/tests/workout.integration.test.js",
+        "test/workout_library_test.dart",
+        "backend/tests/workout.demonstrations.test.js"
+      ],
+      "note": ""
+    },
+    {
+      "id": "W012",
+      "origin": "requested openGym fork",
+      "area": "Exercise library",
+      "feature": "Adaptive equipment filters",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/views/Library.jsx",
+        "frontend/src/lib/exercises.js"
+      ],
+      "implementation": [
+        "lib/screens/ENG/workout/exercise_library.dart"
+      ],
+      "evidence": [
+        "backend/tests/workout.integration.test.js",
+        "test/workout_library_test.dart",
+        "backend/tests/workout.demonstrations.test.js"
+      ],
+      "note": ""
+    },
+    {
+      "id": "W013",
+      "origin": "requested openGym fork",
+      "area": "Exercise library",
+      "feature": "Exercise measurement/type filters",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/views/Library.jsx",
+        "frontend/src/lib/exercises.js"
+      ],
+      "implementation": [
+        "lib/screens/ENG/workout/exercise_library.dart"
+      ],
+      "evidence": [
+        "backend/tests/workout.integration.test.js",
+        "test/workout_library_test.dart",
+        "backend/tests/workout.demonstrations.test.js"
+      ],
+      "note": ""
+    },
+    {
+      "id": "W014",
+      "origin": "requested openGym fork",
+      "area": "Exercise library",
+      "feature": "Bodyweight filter",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/views/Library.jsx",
+        "frontend/src/lib/exercises.js"
+      ],
+      "implementation": [
+        "lib/screens/ENG/workout/exercise_library.dart"
+      ],
+      "evidence": [
+        "backend/tests/workout.integration.test.js",
+        "test/workout_library_test.dart",
+        "backend/tests/workout.demonstrations.test.js"
+      ],
+      "note": ""
+    },
+    {
+      "id": "W015",
+      "origin": "requested openGym fork",
+      "area": "Exercise library",
+      "feature": "Favorites",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/views/Library.jsx",
+        "frontend/src/lib/exercises.js"
+      ],
+      "implementation": [
+        "lib/screens/ENG/workout/exercise_library.dart"
+      ],
+      "evidence": [
+        "backend/tests/workout.integration.test.js",
+        "test/workout_library_test.dart",
+        "backend/tests/workout.demonstrations.test.js"
+      ],
+      "note": ""
+    },
+    {
+      "id": "W016",
+      "origin": "requested openGym fork",
+      "area": "Exercise library",
+      "feature": "Exercise details",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/views/Library.jsx",
+        "frontend/src/lib/exercises.js"
+      ],
+      "implementation": [
+        "lib/screens/ENG/workout/exercise_library.dart"
+      ],
+      "evidence": [
+        "backend/tests/workout.integration.test.js",
+        "test/workout_library_test.dart",
+        "backend/tests/workout.demonstrations.test.js"
+      ],
+      "note": ""
+    },
+    {
+      "id": "W017",
+      "origin": "requested openGym fork",
+      "area": "Exercise library",
+      "feature": "Localized instructions",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/views/Library.jsx",
+        "frontend/src/lib/exercises.js"
+      ],
+      "implementation": [
+        "lib/screens/ENG/workout/exercise_library.dart"
+      ],
+      "evidence": [
+        "backend/tests/workout.integration.test.js",
+        "test/workout_library_test.dart",
+        "backend/tests/workout.demonstrations.test.js"
+      ],
+      "note": "EN/FR/ES use SIRVYA localization."
+    },
+    {
+      "id": "W018",
+      "origin": "requested openGym fork",
+      "area": "Exercise library",
+      "feature": "Demonstration media throughout the library",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "PARTIAL",
+      "reference": [
+        "frontend/src/views/Library.jsx",
+        "frontend/src/lib/exercises.js"
+      ],
+      "implementation": [
+        "lib/screens/ENG/workout/exercise_library.dart"
+      ],
+      "evidence": [
+        "backend/tests/workout.integration.test.js",
+        "test/workout_library_test.dart",
+        "backend/tests/workout.demonstrations.test.js"
+      ],
+      "note": "Licensed illustrations cover 24 exercise identities, not the entire catalog. Unlicensed reference media is excluded separately."
+    },
+    {
+      "id": "W019",
+      "origin": "requested openGym fork",
+      "area": "Exercise library",
+      "feature": "Private custom exercise creation",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/views/Library.jsx",
+        "frontend/src/lib/exercises.js"
+      ],
+      "implementation": [
+        "lib/screens/ENG/workout/exercise_library.dart"
+      ],
+      "evidence": [
+        "backend/tests/workout.integration.test.js",
+        "test/workout_library_test.dart",
+        "backend/tests/workout.demonstrations.test.js"
+      ],
+      "note": ""
+    },
+    {
+      "id": "W020",
+      "origin": "requested openGym fork",
+      "area": "Exercise library",
+      "feature": "Private custom exercise editing",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/views/Library.jsx",
+        "frontend/src/lib/exercises.js"
+      ],
+      "implementation": [
+        "lib/screens/ENG/workout/exercise_library.dart"
+      ],
+      "evidence": [
+        "backend/tests/workout.integration.test.js",
+        "test/workout_library_test.dart",
+        "backend/tests/workout.demonstrations.test.js"
+      ],
+      "note": ""
+    },
+    {
+      "id": "W021",
+      "origin": "requested openGym fork",
+      "area": "Exercise library",
+      "feature": "Private custom exercise removal",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/views/Library.jsx",
+        "frontend/src/lib/exercises.js"
+      ],
+      "implementation": [
+        "lib/screens/ENG/workout/exercise_library.dart"
+      ],
+      "evidence": [
+        "backend/tests/workout.integration.test.js",
+        "test/workout_library_test.dart",
+        "backend/tests/workout.demonstrations.test.js"
+      ],
+      "note": "Archives preserve stable references in plans/history."
+    },
+    {
+      "id": "W022",
+      "origin": "requested openGym fork",
+      "area": "Exercise library",
+      "feature": "Personal exercise notes",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/views/Library.jsx",
+        "frontend/src/lib/exercises.js"
+      ],
+      "implementation": [
+        "lib/screens/ENG/workout/exercise_library.dart"
+      ],
+      "evidence": [
+        "backend/tests/workout.integration.test.js",
+        "test/workout_library_test.dart",
+        "backend/tests/workout.demonstrations.test.js"
+      ],
+      "note": ""
+    },
+    {
+      "id": "W023",
+      "origin": "requested openGym fork",
+      "area": "Exercise library",
+      "feature": "Exercise detail to routine action",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/views/Library.jsx",
+        "frontend/src/lib/exercises.js"
+      ],
+      "implementation": [
+        "lib/screens/ENG/workout/exercise_library.dart"
+      ],
+      "evidence": [
+        "backend/tests/workout.integration.test.js",
+        "test/workout_library_test.dart",
+        "backend/tests/workout.demonstrations.test.js"
+      ],
+      "note": ""
+    },
+    {
+      "id": "W024",
+      "origin": "requested openGym fork",
+      "area": "Exercise library",
+      "feature": "Native muscle explorer filtering",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/views/Library.jsx",
+        "frontend/src/lib/exercises.js"
+      ],
+      "implementation": [
+        "lib/screens/ENG/workout/exercise_library.dart"
+      ],
+      "evidence": [
+        "backend/tests/workout.integration.test.js",
+        "test/workout_library_test.dart",
+        "backend/tests/workout.demonstrations.test.js"
+      ],
+      "note": ""
+    },
+    {
+      "id": "W025",
+      "origin": "requested openGym fork",
+      "area": "Routines",
+      "feature": "Create personal routines",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/views/Plan.jsx",
+        "frontend/src/views/RoutineEdit.jsx",
+        "frontend/src/sheets.jsx"
+      ],
+      "implementation": [
+        "lib/screens/ENG/workout/workout_builder.dart",
+        "backend/routes/anas/workout.js"
+      ],
+      "evidence": [
+        "backend/tests/workout.integration.test.js",
+        "backend/tests/workout.domain.test.js",
+        "test/workout_tools_test.dart",
+        "test/workout_audit_test.dart"
+      ],
+      "note": ""
+    },
+    {
+      "id": "W026",
+      "origin": "requested openGym fork",
+      "area": "Routines",
+      "feature": "Edit routines",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/views/Plan.jsx",
+        "frontend/src/views/RoutineEdit.jsx",
+        "frontend/src/sheets.jsx"
+      ],
+      "implementation": [
+        "lib/screens/ENG/workout/workout_builder.dart",
+        "backend/routes/anas/workout.js"
+      ],
+      "evidence": [
+        "backend/tests/workout.integration.test.js",
+        "backend/tests/workout.domain.test.js",
+        "test/workout_tools_test.dart",
+        "test/workout_audit_test.dart"
+      ],
+      "note": ""
+    },
+    {
+      "id": "W027",
+      "origin": "requested openGym fork",
+      "area": "Routines",
+      "feature": "Delete/archive routines",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/views/Plan.jsx",
+        "frontend/src/views/RoutineEdit.jsx",
+        "frontend/src/sheets.jsx"
+      ],
+      "implementation": [
+        "lib/screens/ENG/workout/workout_builder.dart",
+        "backend/routes/anas/workout.js"
+      ],
+      "evidence": [
+        "backend/tests/workout.integration.test.js",
+        "backend/tests/workout.domain.test.js",
+        "test/workout_tools_test.dart",
+        "test/workout_audit_test.dart"
+      ],
+      "note": "Archiving preserves recorded workouts."
+    },
+    {
+      "id": "W028",
+      "origin": "requested openGym fork",
+      "area": "Routines",
+      "feature": "Duplicate routines",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/views/Plan.jsx",
+        "frontend/src/views/RoutineEdit.jsx",
+        "frontend/src/sheets.jsx"
+      ],
+      "implementation": [
+        "lib/screens/ENG/workout/workout_builder.dart",
+        "backend/routes/anas/workout.js"
+      ],
+      "evidence": [
+        "backend/tests/workout.integration.test.js",
+        "backend/tests/workout.domain.test.js",
+        "test/workout_tools_test.dart",
+        "test/workout_audit_test.dart"
+      ],
+      "note": ""
+    },
+    {
+      "id": "W029",
+      "origin": "requested openGym fork",
+      "area": "Routines",
+      "feature": "Starter Push/Pull/Legs templates",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/views/Plan.jsx",
+        "frontend/src/views/RoutineEdit.jsx",
+        "frontend/src/sheets.jsx"
+      ],
+      "implementation": [
+        "lib/screens/ENG/workout/workout_builder.dart",
+        "backend/routes/anas/workout.js"
+      ],
+      "evidence": [
+        "backend/tests/workout.integration.test.js",
+        "backend/tests/workout.domain.test.js",
+        "test/workout_tools_test.dart",
+        "test/workout_audit_test.dart"
+      ],
+      "note": ""
+    },
+    {
+      "id": "W030",
+      "origin": "requested openGym fork",
+      "area": "Routines",
+      "feature": "Weekly day assignments",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/views/Plan.jsx",
+        "frontend/src/views/RoutineEdit.jsx",
+        "frontend/src/sheets.jsx"
+      ],
+      "implementation": [
+        "lib/screens/ENG/workout/workout_builder.dart",
+        "backend/routes/anas/workout.js"
+      ],
+      "evidence": [
+        "backend/tests/workout.integration.test.js",
+        "backend/tests/workout.domain.test.js",
+        "test/workout_tools_test.dart",
+        "test/workout_audit_test.dart"
+      ],
+      "note": ""
+    },
+    {
+      "id": "W031",
+      "origin": "requested openGym fork",
+      "area": "Routines",
+      "feature": "Workout day creation/edit/removal",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/views/Plan.jsx",
+        "frontend/src/views/RoutineEdit.jsx",
+        "frontend/src/sheets.jsx"
+      ],
+      "implementation": [
+        "lib/screens/ENG/workout/workout_builder.dart",
+        "backend/routes/anas/workout.js"
+      ],
+      "evidence": [
+        "backend/tests/workout.integration.test.js",
+        "backend/tests/workout.domain.test.js",
+        "test/workout_tools_test.dart",
+        "test/workout_audit_test.dart"
+      ],
+      "note": ""
+    },
+    {
+      "id": "W032",
+      "origin": "requested openGym fork",
+      "area": "Routines",
+      "feature": "Add exercises",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/views/Plan.jsx",
+        "frontend/src/views/RoutineEdit.jsx",
+        "frontend/src/sheets.jsx"
+      ],
+      "implementation": [
+        "lib/screens/ENG/workout/workout_builder.dart",
+        "backend/routes/anas/workout.js"
+      ],
+      "evidence": [
+        "backend/tests/workout.integration.test.js",
+        "backend/tests/workout.domain.test.js",
+        "test/workout_tools_test.dart",
+        "test/workout_audit_test.dart"
+      ],
+      "note": ""
+    },
+    {
+      "id": "W033",
+      "origin": "requested openGym fork",
+      "area": "Routines",
+      "feature": "Remove exercises",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/views/Plan.jsx",
+        "frontend/src/views/RoutineEdit.jsx",
+        "frontend/src/sheets.jsx"
+      ],
+      "implementation": [
+        "lib/screens/ENG/workout/workout_builder.dart",
+        "backend/routes/anas/workout.js"
+      ],
+      "evidence": [
+        "backend/tests/workout.integration.test.js",
+        "backend/tests/workout.domain.test.js",
+        "test/workout_tools_test.dart",
+        "test/workout_audit_test.dart"
+      ],
+      "note": ""
+    },
+    {
+      "id": "W034",
+      "origin": "requested openGym fork",
+      "area": "Routines",
+      "feature": "Reorder exercises and contiguous groups",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/views/Plan.jsx",
+        "frontend/src/views/RoutineEdit.jsx",
+        "frontend/src/sheets.jsx"
+      ],
+      "implementation": [
+        "lib/screens/ENG/workout/workout_builder.dart",
+        "backend/routes/anas/workout.js"
+      ],
+      "evidence": [
+        "backend/tests/workout.integration.test.js",
+        "backend/tests/workout.domain.test.js",
+        "test/workout_tools_test.dart",
+        "test/workout_audit_test.dart"
+      ],
+      "note": ""
+    },
+    {
+      "id": "W035",
+      "origin": "requested openGym fork",
+      "area": "Routines",
+      "feature": "Set count targets",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/views/Plan.jsx",
+        "frontend/src/views/RoutineEdit.jsx",
+        "frontend/src/sheets.jsx"
+      ],
+      "implementation": [
+        "lib/screens/ENG/workout/workout_builder.dart",
+        "backend/routes/anas/workout.js"
+      ],
+      "evidence": [
+        "backend/tests/workout.integration.test.js",
+        "backend/tests/workout.domain.test.js",
+        "test/workout_tools_test.dart",
+        "test/workout_audit_test.dart"
+      ],
+      "note": ""
+    },
+    {
+      "id": "W036",
+      "origin": "requested openGym fork",
+      "area": "Routines",
+      "feature": "Repetition targets",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/views/Plan.jsx",
+        "frontend/src/views/RoutineEdit.jsx",
+        "frontend/src/sheets.jsx"
+      ],
+      "implementation": [
+        "lib/screens/ENG/workout/workout_builder.dart",
+        "backend/routes/anas/workout.js"
+      ],
+      "evidence": [
+        "backend/tests/workout.integration.test.js",
+        "backend/tests/workout.domain.test.js",
+        "test/workout_tools_test.dart",
+        "test/workout_audit_test.dart"
+      ],
+      "note": ""
+    },
+    {
+      "id": "W037",
+      "origin": "requested openGym fork",
+      "area": "Routines",
+      "feature": "Weight targets",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/views/Plan.jsx",
+        "frontend/src/views/RoutineEdit.jsx",
+        "frontend/src/sheets.jsx"
+      ],
+      "implementation": [
+        "lib/screens/ENG/workout/workout_builder.dart",
+        "backend/routes/anas/workout.js"
+      ],
+      "evidence": [
+        "backend/tests/workout.integration.test.js",
+        "backend/tests/workout.domain.test.js",
+        "test/workout_tools_test.dart",
+        "test/workout_audit_test.dart"
+      ],
+      "note": ""
+    },
+    {
+      "id": "W038",
+      "origin": "requested openGym fork",
+      "area": "Routines",
+      "feature": "Duration targets",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/views/Plan.jsx",
+        "frontend/src/views/RoutineEdit.jsx",
+        "frontend/src/sheets.jsx"
+      ],
+      "implementation": [
+        "lib/screens/ENG/workout/workout_builder.dart",
+        "backend/routes/anas/workout.js"
+      ],
+      "evidence": [
+        "backend/tests/workout.integration.test.js",
+        "backend/tests/workout.domain.test.js",
+        "test/workout_tools_test.dart",
+        "test/workout_audit_test.dart"
+      ],
+      "note": ""
+    },
+    {
+      "id": "W039",
+      "origin": "requested openGym fork",
+      "area": "Routines",
+      "feature": "Exercise rest configuration",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/views/Plan.jsx",
+        "frontend/src/views/RoutineEdit.jsx",
+        "frontend/src/sheets.jsx"
+      ],
+      "implementation": [
+        "lib/screens/ENG/workout/workout_builder.dart",
+        "backend/routes/anas/workout.js"
+      ],
+      "evidence": [
+        "backend/tests/workout.integration.test.js",
+        "backend/tests/workout.domain.test.js",
+        "test/workout_tools_test.dart",
+        "test/workout_audit_test.dart"
+      ],
+      "note": ""
+    },
+    {
+      "id": "W040",
+      "origin": "requested openGym fork",
+      "area": "Routines",
+      "feature": "Coach/exercise notes",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/views/Plan.jsx",
+        "frontend/src/views/RoutineEdit.jsx",
+        "frontend/src/sheets.jsx"
+      ],
+      "implementation": [
+        "lib/screens/ENG/workout/workout_builder.dart",
+        "backend/routes/anas/workout.js"
+      ],
+      "evidence": [
+        "backend/tests/workout.integration.test.js",
+        "backend/tests/workout.domain.test.js",
+        "test/workout_tools_test.dart",
+        "test/workout_audit_test.dart"
+      ],
+      "note": ""
+    },
+    {
+      "id": "W041",
+      "origin": "requested openGym fork",
+      "area": "Routines",
+      "feature": "Create and persist supersets",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/views/Plan.jsx",
+        "frontend/src/views/RoutineEdit.jsx",
+        "frontend/src/sheets.jsx"
+      ],
+      "implementation": [
+        "lib/screens/ENG/workout/workout_builder.dart",
+        "backend/routes/anas/workout.js"
+      ],
+      "evidence": [
+        "backend/tests/workout.integration.test.js",
+        "backend/tests/workout.domain.test.js",
+        "test/workout_tools_test.dart",
+        "test/workout_audit_test.dart"
+      ],
+      "note": ""
+    },
+    {
+      "id": "W042",
+      "origin": "requested openGym fork",
+      "area": "Routines",
+      "feature": "Routine progression with exercise overrides",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/views/Plan.jsx",
+        "frontend/src/views/RoutineEdit.jsx",
+        "frontend/src/sheets.jsx"
+      ],
+      "implementation": [
+        "lib/screens/ENG/workout/workout_builder.dart",
+        "backend/routes/anas/workout.js"
+      ],
+      "evidence": [
+        "backend/tests/workout.integration.test.js",
+        "backend/tests/workout.domain.test.js",
+        "test/workout_tools_test.dart",
+        "test/workout_audit_test.dart"
+      ],
+      "note": ""
+    },
+    {
+      "id": "W043",
+      "origin": "requested openGym fork",
+      "area": "Routines",
+      "feature": "Routine icon selection",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/views/Plan.jsx",
+        "frontend/src/views/RoutineEdit.jsx",
+        "frontend/src/sheets.jsx"
+      ],
+      "implementation": [
+        "lib/screens/ENG/workout/workout_builder.dart",
+        "backend/routes/anas/workout.js"
+      ],
+      "evidence": [
+        "backend/tests/workout.integration.test.js",
+        "backend/tests/workout.domain.test.js",
+        "test/workout_tools_test.dart",
+        "test/workout_audit_test.dart"
+      ],
+      "note": "Four native SIRVYA glyphs; independent icons and persistent configuration."
+    },
+    {
+      "id": "W044",
+      "origin": "requested openGym fork",
+      "area": "Routines",
+      "feature": "Planned muscle coverage preview",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/views/Plan.jsx",
+        "frontend/src/views/RoutineEdit.jsx",
+        "frontend/src/sheets.jsx"
+      ],
+      "implementation": [
+        "lib/screens/ENG/workout/workout_builder.dart",
+        "backend/routes/anas/workout.js"
+      ],
+      "evidence": [
+        "backend/tests/workout.integration.test.js",
+        "backend/tests/workout.domain.test.js",
+        "test/workout_tools_test.dart",
+        "test/workout_audit_test.dart"
+      ],
+      "note": "Primary working sets, native original front/back schematic; detailed secondary anatomy remains partial below."
+    },
+    {
+      "id": "W045",
+      "origin": "requested openGym fork",
+      "area": "Routines",
+      "feature": "Plan JSON sharing and merge import",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/views/Plan.jsx",
+        "frontend/src/views/RoutineEdit.jsx",
+        "frontend/src/sheets.jsx"
+      ],
+      "implementation": [
+        "lib/screens/ENG/workout/workout_builder.dart",
+        "backend/routes/anas/workout.js"
+      ],
+      "evidence": [
+        "backend/tests/workout.integration.test.js",
+        "backend/tests/workout.domain.test.js",
+        "test/workout_tools_test.dart",
+        "test/workout_audit_test.dart"
+      ],
+      "note": "SIRVYA stable source identities; no account/history copied with a plan."
+    },
+    {
+      "id": "W046",
+      "origin": "requested openGym fork",
+      "area": "Routines",
+      "feature": "Generate native plan PDF",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/views/Plan.jsx",
+        "frontend/src/views/RoutineEdit.jsx",
+        "frontend/src/sheets.jsx"
+      ],
+      "implementation": [
+        "lib/screens/ENG/workout/workout_builder.dart",
+        "backend/routes/anas/workout.js"
+      ],
+      "evidence": [
+        "backend/tests/workout.integration.test.js",
+        "backend/tests/workout.domain.test.js",
+        "test/workout_tools_test.dart",
+        "test/workout_audit_test.dart"
+      ],
+      "note": ""
+    },
+    {
+      "id": "W047",
+      "origin": "requested openGym fork",
+      "area": "Routines",
+      "feature": "Device print/share integration",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "PARTIAL",
+      "reference": [
+        "frontend/src/views/Plan.jsx",
+        "frontend/src/views/RoutineEdit.jsx",
+        "frontend/src/sheets.jsx"
+      ],
+      "implementation": [
+        "lib/screens/ENG/workout/workout_builder.dart",
+        "backend/routes/anas/workout.js"
+      ],
+      "evidence": [
+        "backend/tests/workout.integration.test.js",
+        "backend/tests/workout.domain.test.js",
+        "test/workout_tools_test.dart",
+        "test/workout_audit_test.dart"
+      ],
+      "note": "PDF generation is tested; physical printer/native share-sheet delivery needs a device."
+    },
+    {
+      "id": "W048",
+      "origin": "requested openGym fork",
+      "area": "Active workout",
+      "feature": "Start assigned/personal workout",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/views/Workout.jsx",
+        "frontend/src/lib/history.js",
+        "frontend/src/lib/progression.js"
+      ],
+      "implementation": [
+        "lib/screens/ENG/workout/active_workout.dart",
+        "lib/services/workout_recovery.dart"
+      ],
+      "evidence": [
+        "backend/tests/workout.integration.test.js",
+        "test/workout_test.dart",
+        "test/workout_experience_test.dart",
+        "test/workout_logging_test.dart",
+        "docs/verification/workout-browser-audit.json"
+      ],
+      "note": ""
+    },
+    {
+      "id": "W049",
+      "origin": "requested openGym fork",
+      "area": "Active workout",
+      "feature": "Combine multiple routines",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/views/Workout.jsx",
+        "frontend/src/lib/history.js",
+        "frontend/src/lib/progression.js"
+      ],
+      "implementation": [
+        "lib/screens/ENG/workout/active_workout.dart",
+        "lib/services/workout_recovery.dart"
+      ],
+      "evidence": [
+        "backend/tests/workout.integration.test.js",
+        "test/workout_test.dart",
+        "test/workout_experience_test.dart",
+        "test/workout_logging_test.dart",
+        "docs/verification/workout-browser-audit.json"
+      ],
+      "note": ""
+    },
+    {
+      "id": "W050",
+      "origin": "requested openGym fork",
+      "area": "Active workout",
+      "feature": "Freestyle workout",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/views/Workout.jsx",
+        "frontend/src/lib/history.js",
+        "frontend/src/lib/progression.js"
+      ],
+      "implementation": [
+        "lib/screens/ENG/workout/active_workout.dart",
+        "lib/services/workout_recovery.dart"
+      ],
+      "evidence": [
+        "backend/tests/workout.integration.test.js",
+        "test/workout_test.dart",
+        "test/workout_experience_test.dart",
+        "test/workout_logging_test.dart",
+        "docs/verification/workout-browser-audit.json"
+      ],
+      "note": ""
+    },
+    {
+      "id": "W051",
+      "origin": "requested openGym fork",
+      "area": "Active workout",
+      "feature": "Log past workout with date/duration",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/views/Workout.jsx",
+        "frontend/src/lib/history.js",
+        "frontend/src/lib/progression.js"
+      ],
+      "implementation": [
+        "lib/screens/ENG/workout/active_workout.dart",
+        "lib/services/workout_recovery.dart"
+      ],
+      "evidence": [
+        "backend/tests/workout.integration.test.js",
+        "test/workout_test.dart",
+        "test/workout_experience_test.dart",
+        "test/workout_logging_test.dart",
+        "docs/verification/workout-browser-audit.json"
+      ],
+      "note": ""
+    },
+    {
+      "id": "W052",
+      "origin": "requested openGym fork",
+      "area": "Active workout",
+      "feature": "Resume after navigation",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/views/Workout.jsx",
+        "frontend/src/lib/history.js",
+        "frontend/src/lib/progression.js"
+      ],
+      "implementation": [
+        "lib/screens/ENG/workout/active_workout.dart",
+        "lib/services/workout_recovery.dart"
+      ],
+      "evidence": [
+        "backend/tests/workout.integration.test.js",
+        "test/workout_test.dart",
+        "test/workout_experience_test.dart",
+        "test/workout_logging_test.dart",
+        "docs/verification/workout-browser-audit.json"
+      ],
+      "note": ""
+    },
+    {
+      "id": "W053",
+      "origin": "requested openGym fork",
+      "area": "Active workout",
+      "feature": "Resume after browser restart/reload",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/views/Workout.jsx",
+        "frontend/src/lib/history.js",
+        "frontend/src/lib/progression.js"
+      ],
+      "implementation": [
+        "lib/screens/ENG/workout/active_workout.dart",
+        "lib/services/workout_recovery.dart"
+      ],
+      "evidence": [
+        "backend/tests/workout.integration.test.js",
+        "test/workout_test.dart",
+        "test/workout_experience_test.dart",
+        "test/workout_logging_test.dart",
+        "docs/verification/workout-browser-audit.json"
+      ],
+      "note": "Native app recovery storage is tested; OS termination on physical devices not exercised."
+    },
+    {
+      "id": "W054",
+      "origin": "requested openGym fork",
+      "area": "Active workout",
+      "feature": "Account-scoped offline drafts and set outbox",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/views/Workout.jsx",
+        "frontend/src/lib/history.js",
+        "frontend/src/lib/progression.js"
+      ],
+      "implementation": [
+        "lib/screens/ENG/workout/active_workout.dart",
+        "lib/services/workout_recovery.dart"
+      ],
+      "evidence": [
+        "backend/tests/workout.integration.test.js",
+        "test/workout_test.dart",
+        "test/workout_experience_test.dart",
+        "test/workout_logging_test.dart",
+        "docs/verification/workout-browser-audit.json"
+      ],
+      "note": ""
+    },
+    {
+      "id": "W055",
+      "origin": "requested openGym fork",
+      "area": "Active workout",
+      "feature": "Idempotent set submission and retry",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/views/Workout.jsx",
+        "frontend/src/lib/history.js",
+        "frontend/src/lib/progression.js"
+      ],
+      "implementation": [
+        "lib/screens/ENG/workout/active_workout.dart",
+        "lib/services/workout_recovery.dart"
+      ],
+      "evidence": [
+        "backend/tests/workout.integration.test.js",
+        "test/workout_test.dart",
+        "test/workout_experience_test.dart",
+        "test/workout_logging_test.dart",
+        "docs/verification/workout-browser-audit.json"
+      ],
+      "note": ""
+    },
+    {
+      "id": "W056",
+      "origin": "requested openGym fork",
+      "area": "Active workout",
+      "feature": "Explicit conflict/error feedback",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/views/Workout.jsx",
+        "frontend/src/lib/history.js",
+        "frontend/src/lib/progression.js"
+      ],
+      "implementation": [
+        "lib/screens/ENG/workout/active_workout.dart",
+        "lib/services/workout_recovery.dart"
+      ],
+      "evidence": [
+        "backend/tests/workout.integration.test.js",
+        "test/workout_test.dart",
+        "test/workout_experience_test.dart",
+        "test/workout_logging_test.dart",
+        "docs/verification/workout-browser-audit.json"
+      ],
+      "note": ""
+    },
+    {
+      "id": "W057",
+      "origin": "requested openGym fork",
+      "area": "Active workout",
+      "feature": "Cancel workout",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/views/Workout.jsx",
+        "frontend/src/lib/history.js",
+        "frontend/src/lib/progression.js"
+      ],
+      "implementation": [
+        "lib/screens/ENG/workout/active_workout.dart",
+        "lib/services/workout_recovery.dart"
+      ],
+      "evidence": [
+        "backend/tests/workout.integration.test.js",
+        "test/workout_test.dart",
+        "test/workout_experience_test.dart",
+        "test/workout_logging_test.dart",
+        "docs/verification/workout-browser-audit.json"
+      ],
+      "note": ""
+    },
+    {
+      "id": "W058",
+      "origin": "requested openGym fork",
+      "area": "Active workout",
+      "feature": "Finish workout and incomplete confirmation",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/views/Workout.jsx",
+        "frontend/src/lib/history.js",
+        "frontend/src/lib/progression.js"
+      ],
+      "implementation": [
+        "lib/screens/ENG/workout/active_workout.dart",
+        "lib/services/workout_recovery.dart"
+      ],
+      "evidence": [
+        "backend/tests/workout.integration.test.js",
+        "test/workout_test.dart",
+        "test/workout_experience_test.dart",
+        "test/workout_logging_test.dart",
+        "docs/verification/workout-browser-audit.json"
+      ],
+      "note": ""
+    },
+    {
+      "id": "W059",
+      "origin": "requested openGym fork",
+      "area": "Active workout",
+      "feature": "Current exercise and current set",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/views/Workout.jsx",
+        "frontend/src/lib/history.js",
+        "frontend/src/lib/progression.js"
+      ],
+      "implementation": [
+        "lib/screens/ENG/workout/active_workout.dart",
+        "lib/services/workout_recovery.dart"
+      ],
+      "evidence": [
+        "backend/tests/workout.integration.test.js",
+        "test/workout_test.dart",
+        "test/workout_experience_test.dart",
+        "test/workout_logging_test.dart",
+        "docs/verification/workout-browser-audit.json"
+      ],
+      "note": ""
+    },
+    {
+      "id": "W060",
+      "origin": "requested openGym fork",
+      "area": "Active workout",
+      "feature": "Previous/next exercise navigation",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/views/Workout.jsx",
+        "frontend/src/lib/history.js",
+        "frontend/src/lib/progression.js"
+      ],
+      "implementation": [
+        "lib/screens/ENG/workout/active_workout.dart",
+        "lib/services/workout_recovery.dart"
+      ],
+      "evidence": [
+        "backend/tests/workout.integration.test.js",
+        "test/workout_test.dart",
+        "test/workout_experience_test.dart",
+        "test/workout_logging_test.dart",
+        "docs/verification/workout-browser-audit.json"
+      ],
+      "note": ""
+    },
+    {
+      "id": "W061",
+      "origin": "requested openGym fork",
+      "area": "Active workout",
+      "feature": "Complete set",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/views/Workout.jsx",
+        "frontend/src/lib/history.js",
+        "frontend/src/lib/progression.js"
+      ],
+      "implementation": [
+        "lib/screens/ENG/workout/active_workout.dart",
+        "lib/services/workout_recovery.dart"
+      ],
+      "evidence": [
+        "backend/tests/workout.integration.test.js",
+        "test/workout_test.dart",
+        "test/workout_experience_test.dart",
+        "test/workout_logging_test.dart",
+        "docs/verification/workout-browser-audit.json"
+      ],
+      "note": ""
+    },
+    {
+      "id": "W062",
+      "origin": "requested openGym fork",
+      "area": "Active workout",
+      "feature": "Edit recorded set",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/views/Workout.jsx",
+        "frontend/src/lib/history.js",
+        "frontend/src/lib/progression.js"
+      ],
+      "implementation": [
+        "lib/screens/ENG/workout/active_workout.dart",
+        "lib/services/workout_recovery.dart"
+      ],
+      "evidence": [
+        "backend/tests/workout.integration.test.js",
+        "test/workout_test.dart",
+        "test/workout_experience_test.dart",
+        "test/workout_logging_test.dart",
+        "docs/verification/workout-browser-audit.json"
+      ],
+      "note": ""
+    },
+    {
+      "id": "W063",
+      "origin": "requested openGym fork",
+      "area": "Active workout",
+      "feature": "Undo set",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/views/Workout.jsx",
+        "frontend/src/lib/history.js",
+        "frontend/src/lib/progression.js"
+      ],
+      "implementation": [
+        "lib/screens/ENG/workout/active_workout.dart",
+        "lib/services/workout_recovery.dart"
+      ],
+      "evidence": [
+        "backend/tests/workout.integration.test.js",
+        "test/workout_test.dart",
+        "test/workout_experience_test.dart",
+        "test/workout_logging_test.dart",
+        "docs/verification/workout-browser-audit.json"
+      ],
+      "note": ""
+    },
+    {
+      "id": "W064",
+      "origin": "requested openGym fork",
+      "area": "Active workout",
+      "feature": "Skip exercise/set where appropriate",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/views/Workout.jsx",
+        "frontend/src/lib/history.js",
+        "frontend/src/lib/progression.js"
+      ],
+      "implementation": [
+        "lib/screens/ENG/workout/active_workout.dart",
+        "lib/services/workout_recovery.dart"
+      ],
+      "evidence": [
+        "backend/tests/workout.integration.test.js",
+        "test/workout_test.dart",
+        "test/workout_experience_test.dart",
+        "test/workout_logging_test.dart",
+        "docs/verification/workout-browser-audit.json"
+      ],
+      "note": ""
+    },
+    {
+      "id": "W065",
+      "origin": "requested openGym fork",
+      "area": "Active workout",
+      "feature": "Workout progress indicator",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/views/Workout.jsx",
+        "frontend/src/lib/history.js",
+        "frontend/src/lib/progression.js"
+      ],
+      "implementation": [
+        "lib/screens/ENG/workout/active_workout.dart",
+        "lib/services/workout_recovery.dart"
+      ],
+      "evidence": [
+        "backend/tests/workout.integration.test.js",
+        "test/workout_test.dart",
+        "test/workout_experience_test.dart",
+        "test/workout_logging_test.dart",
+        "docs/verification/workout-browser-audit.json"
+      ],
+      "note": ""
+    },
+    {
+      "id": "W066",
+      "origin": "requested openGym fork",
+      "area": "Active workout",
+      "feature": "Guided view",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/views/Workout.jsx",
+        "frontend/src/lib/history.js",
+        "frontend/src/lib/progression.js"
+      ],
+      "implementation": [
+        "lib/screens/ENG/workout/active_workout.dart",
+        "lib/services/workout_recovery.dart"
+      ],
+      "evidence": [
+        "backend/tests/workout.integration.test.js",
+        "test/workout_test.dart",
+        "test/workout_experience_test.dart",
+        "test/workout_logging_test.dart",
+        "docs/verification/workout-browser-audit.json"
+      ],
+      "note": ""
+    },
+    {
+      "id": "W067",
+      "origin": "requested openGym fork",
+      "area": "Active workout",
+      "feature": "Cards and compact view",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/views/Workout.jsx",
+        "frontend/src/lib/history.js",
+        "frontend/src/lib/progression.js"
+      ],
+      "implementation": [
+        "lib/screens/ENG/workout/active_workout.dart",
+        "lib/services/workout_recovery.dart"
+      ],
+      "evidence": [
+        "backend/tests/workout.integration.test.js",
+        "test/workout_test.dart",
+        "test/workout_experience_test.dart",
+        "test/workout_logging_test.dart",
+        "docs/verification/workout-browser-audit.json"
+      ],
+      "note": ""
+    },
+    {
+      "id": "W068",
+      "origin": "requested openGym fork",
+      "area": "Active workout",
+      "feature": "Native keyboard/stepper controls",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/views/Workout.jsx",
+        "frontend/src/lib/history.js",
+        "frontend/src/lib/progression.js"
+      ],
+      "implementation": [
+        "lib/screens/ENG/workout/active_workout.dart",
+        "lib/services/workout_recovery.dart"
+      ],
+      "evidence": [
+        "backend/tests/workout.integration.test.js",
+        "test/workout_test.dart",
+        "test/workout_experience_test.dart",
+        "test/workout_logging_test.dart",
+        "docs/verification/workout-browser-audit.json"
+      ],
+      "note": ""
+    },
+    {
+      "id": "W069",
+      "origin": "requested openGym fork",
+      "area": "Active workout",
+      "feature": "Active exercise add/remove/swap/reorder",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/views/Workout.jsx",
+        "frontend/src/lib/history.js",
+        "frontend/src/lib/progression.js"
+      ],
+      "implementation": [
+        "lib/screens/ENG/workout/active_workout.dart",
+        "lib/services/workout_recovery.dart"
+      ],
+      "evidence": [
+        "backend/tests/workout.integration.test.js",
+        "test/workout_test.dart",
+        "test/workout_experience_test.dart",
+        "test/workout_logging_test.dart",
+        "docs/verification/workout-browser-audit.json"
+      ],
+      "note": ""
+    },
+    {
+      "id": "W070",
+      "origin": "requested openGym fork",
+      "area": "Active workout",
+      "feature": "Additional actual sets",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/views/Workout.jsx",
+        "frontend/src/lib/history.js",
+        "frontend/src/lib/progression.js"
+      ],
+      "implementation": [
+        "lib/screens/ENG/workout/active_workout.dart",
+        "lib/services/workout_recovery.dart"
+      ],
+      "evidence": [
+        "backend/tests/workout.integration.test.js",
+        "test/workout_test.dart",
+        "test/workout_experience_test.dart",
+        "test/workout_logging_test.dart",
+        "docs/verification/workout-browser-audit.json"
+      ],
+      "note": ""
+    },
+    {
+      "id": "W071",
+      "origin": "requested openGym fork",
+      "area": "Active workout",
+      "feature": "Workout notes",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/views/Workout.jsx",
+        "frontend/src/lib/history.js",
+        "frontend/src/lib/progression.js"
+      ],
+      "implementation": [
+        "lib/screens/ENG/workout/active_workout.dart",
+        "lib/services/workout_recovery.dart"
+      ],
+      "evidence": [
+        "backend/tests/workout.integration.test.js",
+        "test/workout_test.dart",
+        "test/workout_experience_test.dart",
+        "test/workout_logging_test.dart",
+        "docs/verification/workout-browser-audit.json"
+      ],
+      "note": ""
+    },
+    {
+      "id": "W072",
+      "origin": "requested openGym fork",
+      "area": "Active workout",
+      "feature": "Actual sets do not overwrite prescription",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/views/Workout.jsx",
+        "frontend/src/lib/history.js",
+        "frontend/src/lib/progression.js"
+      ],
+      "implementation": [
+        "lib/screens/ENG/workout/active_workout.dart",
+        "lib/services/workout_recovery.dart"
+      ],
+      "evidence": [
+        "backend/tests/workout.integration.test.js",
+        "test/workout_test.dart",
+        "test/workout_experience_test.dart",
+        "test/workout_logging_test.dart",
+        "docs/verification/workout-browser-audit.json"
+      ],
+      "note": ""
+    },
+    {
+      "id": "W073",
+      "origin": "requested openGym fork",
+      "area": "Active workout",
+      "feature": "Completion duration/exercise/set/volume/PR summary",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/views/Workout.jsx",
+        "frontend/src/lib/history.js",
+        "frontend/src/lib/progression.js"
+      ],
+      "implementation": [
+        "lib/screens/ENG/workout/active_workout.dart",
+        "lib/services/workout_recovery.dart"
+      ],
+      "evidence": [
+        "backend/tests/workout.integration.test.js",
+        "test/workout_test.dart",
+        "test/workout_experience_test.dart",
+        "test/workout_logging_test.dart",
+        "docs/verification/workout-browser-audit.json"
+      ],
+      "note": ""
+    },
+    {
+      "id": "W074",
+      "origin": "requested openGym fork",
+      "area": "Active workout",
+      "feature": "Completed muscle coverage",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/views/Workout.jsx",
+        "frontend/src/lib/history.js",
+        "frontend/src/lib/progression.js"
+      ],
+      "implementation": [
+        "lib/screens/ENG/workout/active_workout.dart",
+        "lib/services/workout_recovery.dart"
+      ],
+      "evidence": [
+        "backend/tests/workout.integration.test.js",
+        "test/workout_test.dart",
+        "test/workout_experience_test.dart",
+        "test/workout_logging_test.dart",
+        "docs/verification/workout-browser-audit.json"
+      ],
+      "note": "Actual working sets; warmups excluded."
+    },
+    {
+      "id": "W075",
+      "origin": "requested openGym fork",
+      "area": "Tracking",
+      "feature": "Actual weight and repetitions",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/lib/history.js",
+        "frontend/src/lib/effort.js",
+        "frontend/src/lib/onerm.js"
+      ],
+      "implementation": [
+        "lib/screens/ENG/workout/workout_set_row.dart",
+        "backend/services/workoutDomain.js"
+      ],
+      "evidence": [
+        "backend/tests/workout.domain.test.js",
+        "backend/tests/workout.experience.test.js",
+        "test/workout_logging_test.dart",
+        "docs/verification/workout-browser-audit.json"
+      ],
+      "note": ""
+    },
+    {
+      "id": "W076",
+      "origin": "requested openGym fork",
+      "area": "Tracking",
+      "feature": "Bodyweight repetitions without mandatory load",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/lib/history.js",
+        "frontend/src/lib/effort.js",
+        "frontend/src/lib/onerm.js"
+      ],
+      "implementation": [
+        "lib/screens/ENG/workout/workout_set_row.dart",
+        "backend/services/workoutDomain.js"
+      ],
+      "evidence": [
+        "backend/tests/workout.domain.test.js",
+        "backend/tests/workout.experience.test.js",
+        "test/workout_logging_test.dart",
+        "docs/verification/workout-browser-audit.json"
+      ],
+      "note": ""
+    },
+    {
+      "id": "W077",
+      "origin": "requested openGym fork",
+      "area": "Tracking",
+      "feature": "Optional external bodyweight load",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/lib/history.js",
+        "frontend/src/lib/effort.js",
+        "frontend/src/lib/onerm.js"
+      ],
+      "implementation": [
+        "lib/screens/ENG/workout/workout_set_row.dart",
+        "backend/services/workoutDomain.js"
+      ],
+      "evidence": [
+        "backend/tests/workout.domain.test.js",
+        "backend/tests/workout.experience.test.js",
+        "test/workout_logging_test.dart",
+        "docs/verification/workout-browser-audit.json"
+      ],
+      "note": ""
+    },
+    {
+      "id": "W078",
+      "origin": "requested openGym fork",
+      "area": "Tracking",
+      "feature": "Timed exercises without forced repetitions",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/lib/history.js",
+        "frontend/src/lib/effort.js",
+        "frontend/src/lib/onerm.js"
+      ],
+      "implementation": [
+        "lib/screens/ENG/workout/workout_set_row.dart",
+        "backend/services/workoutDomain.js"
+      ],
+      "evidence": [
+        "backend/tests/workout.domain.test.js",
+        "backend/tests/workout.experience.test.js",
+        "test/workout_logging_test.dart",
+        "docs/verification/workout-browser-audit.json"
+      ],
+      "note": ""
+    },
+    {
+      "id": "W079",
+      "origin": "requested openGym fork",
+      "area": "Tracking",
+      "feature": "Loaded timed exercises",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/lib/history.js",
+        "frontend/src/lib/effort.js",
+        "frontend/src/lib/onerm.js"
+      ],
+      "implementation": [
+        "lib/screens/ENG/workout/workout_set_row.dart",
+        "backend/services/workoutDomain.js"
+      ],
+      "evidence": [
+        "backend/tests/workout.domain.test.js",
+        "backend/tests/workout.experience.test.js",
+        "test/workout_logging_test.dart",
+        "docs/verification/workout-browser-audit.json"
+      ],
+      "note": ""
+    },
+    {
+      "id": "W080",
+      "origin": "requested openGym fork",
+      "area": "Tracking",
+      "feature": "Cardio duration/distance/speed",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/lib/history.js",
+        "frontend/src/lib/effort.js",
+        "frontend/src/lib/onerm.js"
+      ],
+      "implementation": [
+        "lib/screens/ENG/workout/workout_set_row.dart",
+        "backend/services/workoutDomain.js"
+      ],
+      "evidence": [
+        "backend/tests/workout.domain.test.js",
+        "backend/tests/workout.experience.test.js",
+        "test/workout_logging_test.dart",
+        "docs/verification/workout-browser-audit.json"
+      ],
+      "note": ""
+    },
+    {
+      "id": "W081",
+      "origin": "requested openGym fork",
+      "area": "Tracking",
+      "feature": "Per-side repetitions and actual side loads",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/lib/history.js",
+        "frontend/src/lib/effort.js",
+        "frontend/src/lib/onerm.js"
+      ],
+      "implementation": [
+        "lib/screens/ENG/workout/workout_set_row.dart",
+        "backend/services/workoutDomain.js"
+      ],
+      "evidence": [
+        "backend/tests/workout.domain.test.js",
+        "backend/tests/workout.experience.test.js",
+        "test/workout_logging_test.dart",
+        "docs/verification/workout-browser-audit.json"
+      ],
+      "note": ""
+    },
+    {
+      "id": "W082",
+      "origin": "requested openGym fork",
+      "area": "Tracking",
+      "feature": "Optional RPE",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/lib/history.js",
+        "frontend/src/lib/effort.js",
+        "frontend/src/lib/onerm.js"
+      ],
+      "implementation": [
+        "lib/screens/ENG/workout/workout_set_row.dart",
+        "backend/services/workoutDomain.js"
+      ],
+      "evidence": [
+        "backend/tests/workout.domain.test.js",
+        "backend/tests/workout.experience.test.js",
+        "test/workout_logging_test.dart",
+        "docs/verification/workout-browser-audit.json"
+      ],
+      "note": ""
+    },
+    {
+      "id": "W083",
+      "origin": "requested openGym fork",
+      "area": "Tracking",
+      "feature": "Optional RIR",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/lib/history.js",
+        "frontend/src/lib/effort.js",
+        "frontend/src/lib/onerm.js"
+      ],
+      "implementation": [
+        "lib/screens/ENG/workout/workout_set_row.dart",
+        "backend/services/workoutDomain.js"
+      ],
+      "evidence": [
+        "backend/tests/workout.domain.test.js",
+        "backend/tests/workout.experience.test.js",
+        "test/workout_logging_test.dart",
+        "docs/verification/workout-browser-audit.json"
+      ],
+      "note": ""
+    },
+    {
+      "id": "W084",
+      "origin": "requested openGym fork",
+      "area": "Tracking",
+      "feature": "Previous real weights/repetitions/sets",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/lib/history.js",
+        "frontend/src/lib/effort.js",
+        "frontend/src/lib/onerm.js"
+      ],
+      "implementation": [
+        "lib/screens/ENG/workout/workout_set_row.dart",
+        "backend/services/workoutDomain.js"
+      ],
+      "evidence": [
+        "backend/tests/workout.domain.test.js",
+        "backend/tests/workout.experience.test.js",
+        "test/workout_logging_test.dart",
+        "docs/verification/workout-browser-audit.json"
+      ],
+      "note": ""
+    },
+    {
+      "id": "W085",
+      "origin": "requested openGym fork",
+      "area": "Tracking",
+      "feature": "Estimated 1RM calculator and eligibility",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/lib/history.js",
+        "frontend/src/lib/effort.js",
+        "frontend/src/lib/onerm.js"
+      ],
+      "implementation": [
+        "lib/screens/ENG/workout/workout_set_row.dart",
+        "backend/services/workoutDomain.js"
+      ],
+      "evidence": [
+        "backend/tests/workout.domain.test.js",
+        "backend/tests/workout.experience.test.js",
+        "test/workout_logging_test.dart",
+        "docs/verification/workout-browser-audit.json"
+      ],
+      "note": "Canonical Epley, 1–12 loaded resistance reps; one actual rep uses its actual load."
+    },
+    {
+      "id": "W086",
+      "origin": "requested openGym fork",
+      "area": "Tracking",
+      "feature": "Best estimated-1RM set attribution",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "PARTIAL",
+      "reference": [
+        "frontend/src/lib/history.js",
+        "frontend/src/lib/effort.js",
+        "frontend/src/lib/onerm.js"
+      ],
+      "implementation": [
+        "lib/screens/ENG/workout/workout_set_row.dart",
+        "backend/services/workoutDomain.js"
+      ],
+      "evidence": [
+        "backend/tests/workout.domain.test.js",
+        "backend/tests/workout.experience.test.js",
+        "test/workout_logging_test.dart",
+        "docs/verification/workout-browser-audit.json"
+      ],
+      "note": "Estimate and curve exist; record detail does not identify the exact winning set like the reference."
+    },
+    {
+      "id": "W087",
+      "origin": "requested openGym fork",
+      "area": "Timers",
+      "feature": "Automatic rest after eligible sets",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/components/RestTimer.jsx",
+        "frontend/src/views/Workout.jsx",
+        "frontend/src/lib/sound.js",
+        "frontend/src/lib/wakelock.js"
+      ],
+      "implementation": [
+        "lib/services/workout_timer.dart",
+        "lib/screens/ENG/workout/active_workout.dart"
+      ],
+      "evidence": [
+        "test/workout_test.dart",
+        "test/workout_tools_test.dart",
+        "test/workout_experience_test.dart",
+        "test/workout_audit_test.dart",
+        "backend/tests/workout.integration.test.js"
+      ],
+      "note": ""
+    },
+    {
+      "id": "W088",
+      "origin": "requested openGym fork",
+      "area": "Timers",
+      "feature": "Superset round-robin and rest after group",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/components/RestTimer.jsx",
+        "frontend/src/views/Workout.jsx",
+        "frontend/src/lib/sound.js",
+        "frontend/src/lib/wakelock.js"
+      ],
+      "implementation": [
+        "lib/services/workout_timer.dart",
+        "lib/screens/ENG/workout/active_workout.dart"
+      ],
+      "evidence": [
+        "test/workout_test.dart",
+        "test/workout_tools_test.dart",
+        "test/workout_experience_test.dart",
+        "test/workout_audit_test.dart",
+        "backend/tests/workout.integration.test.js"
+      ],
+      "note": ""
+    },
+    {
+      "id": "W089",
+      "origin": "requested openGym fork",
+      "area": "Timers",
+      "feature": "Uneven superset counts",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/components/RestTimer.jsx",
+        "frontend/src/views/Workout.jsx",
+        "frontend/src/lib/sound.js",
+        "frontend/src/lib/wakelock.js"
+      ],
+      "implementation": [
+        "lib/services/workout_timer.dart",
+        "lib/screens/ENG/workout/active_workout.dart"
+      ],
+      "evidence": [
+        "test/workout_test.dart",
+        "test/workout_tools_test.dart",
+        "test/workout_experience_test.dart",
+        "test/workout_audit_test.dart",
+        "backend/tests/workout.integration.test.js"
+      ],
+      "note": ""
+    },
+    {
+      "id": "W090",
+      "origin": "requested openGym fork",
+      "area": "Timers",
+      "feature": "Rest countdown",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/components/RestTimer.jsx",
+        "frontend/src/views/Workout.jsx",
+        "frontend/src/lib/sound.js",
+        "frontend/src/lib/wakelock.js"
+      ],
+      "implementation": [
+        "lib/services/workout_timer.dart",
+        "lib/screens/ENG/workout/active_workout.dart"
+      ],
+      "evidence": [
+        "test/workout_test.dart",
+        "test/workout_tools_test.dart",
+        "test/workout_experience_test.dart",
+        "test/workout_audit_test.dart",
+        "backend/tests/workout.integration.test.js"
+      ],
+      "note": ""
+    },
+    {
+      "id": "W091",
+      "origin": "requested openGym fork",
+      "area": "Timers",
+      "feature": "Extend rest",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/components/RestTimer.jsx",
+        "frontend/src/views/Workout.jsx",
+        "frontend/src/lib/sound.js",
+        "frontend/src/lib/wakelock.js"
+      ],
+      "implementation": [
+        "lib/services/workout_timer.dart",
+        "lib/screens/ENG/workout/active_workout.dart"
+      ],
+      "evidence": [
+        "test/workout_test.dart",
+        "test/workout_tools_test.dart",
+        "test/workout_experience_test.dart",
+        "test/workout_audit_test.dart",
+        "backend/tests/workout.integration.test.js"
+      ],
+      "note": ""
+    },
+    {
+      "id": "W092",
+      "origin": "requested openGym fork",
+      "area": "Timers",
+      "feature": "Skip rest",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/components/RestTimer.jsx",
+        "frontend/src/views/Workout.jsx",
+        "frontend/src/lib/sound.js",
+        "frontend/src/lib/wakelock.js"
+      ],
+      "implementation": [
+        "lib/services/workout_timer.dart",
+        "lib/screens/ENG/workout/active_workout.dart"
+      ],
+      "evidence": [
+        "test/workout_test.dart",
+        "test/workout_tools_test.dart",
+        "test/workout_experience_test.dart",
+        "test/workout_audit_test.dart",
+        "backend/tests/workout.integration.test.js"
+      ],
+      "note": ""
+    },
+    {
+      "id": "W093",
+      "origin": "requested openGym fork",
+      "area": "Timers",
+      "feature": "Pause/resume rest",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/components/RestTimer.jsx",
+        "frontend/src/views/Workout.jsx",
+        "frontend/src/lib/sound.js",
+        "frontend/src/lib/wakelock.js"
+      ],
+      "implementation": [
+        "lib/services/workout_timer.dart",
+        "lib/screens/ENG/workout/active_workout.dart"
+      ],
+      "evidence": [
+        "test/workout_test.dart",
+        "test/workout_tools_test.dart",
+        "test/workout_experience_test.dart",
+        "test/workout_audit_test.dart",
+        "backend/tests/workout.integration.test.js"
+      ],
+      "note": ""
+    },
+    {
+      "id": "W094",
+      "origin": "requested openGym fork",
+      "area": "Timers",
+      "feature": "Deadline-based recovery/background elapsed time",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/components/RestTimer.jsx",
+        "frontend/src/views/Workout.jsx",
+        "frontend/src/lib/sound.js",
+        "frontend/src/lib/wakelock.js"
+      ],
+      "implementation": [
+        "lib/services/workout_timer.dart",
+        "lib/screens/ENG/workout/active_workout.dart"
+      ],
+      "evidence": [
+        "test/workout_test.dart",
+        "test/workout_tools_test.dart",
+        "test/workout_experience_test.dart",
+        "test/workout_audit_test.dart",
+        "backend/tests/workout.integration.test.js"
+      ],
+      "note": ""
+    },
+    {
+      "id": "W095",
+      "origin": "requested openGym fork",
+      "area": "Timers",
+      "feature": "Single active timer/notification route",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/components/RestTimer.jsx",
+        "frontend/src/views/Workout.jsx",
+        "frontend/src/lib/sound.js",
+        "frontend/src/lib/wakelock.js"
+      ],
+      "implementation": [
+        "lib/services/workout_timer.dart",
+        "lib/screens/ENG/workout/active_workout.dart"
+      ],
+      "evidence": [
+        "test/workout_test.dart",
+        "test/workout_tools_test.dart",
+        "test/workout_experience_test.dart",
+        "test/workout_audit_test.dart",
+        "backend/tests/workout.integration.test.js"
+      ],
+      "note": ""
+    },
+    {
+      "id": "W096",
+      "origin": "requested openGym fork",
+      "area": "Timers",
+      "feature": "Timed work countdown and actual elapsed hold",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/components/RestTimer.jsx",
+        "frontend/src/views/Workout.jsx",
+        "frontend/src/lib/sound.js",
+        "frontend/src/lib/wakelock.js"
+      ],
+      "implementation": [
+        "lib/services/workout_timer.dart",
+        "lib/screens/ENG/workout/active_workout.dart"
+      ],
+      "evidence": [
+        "test/workout_test.dart",
+        "test/workout_tools_test.dart",
+        "test/workout_experience_test.dart",
+        "test/workout_audit_test.dart",
+        "backend/tests/workout.integration.test.js"
+      ],
+      "note": ""
+    },
+    {
+      "id": "W097",
+      "origin": "requested openGym fork",
+      "area": "Timers",
+      "feature": "Work timer pause/stop/overtime",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/components/RestTimer.jsx",
+        "frontend/src/views/Workout.jsx",
+        "frontend/src/lib/sound.js",
+        "frontend/src/lib/wakelock.js"
+      ],
+      "implementation": [
+        "lib/services/workout_timer.dart",
+        "lib/screens/ENG/workout/active_workout.dart"
+      ],
+      "evidence": [
+        "test/workout_test.dart",
+        "test/workout_tools_test.dart",
+        "test/workout_experience_test.dart",
+        "test/workout_audit_test.dart",
+        "backend/tests/workout.integration.test.js"
+      ],
+      "note": ""
+    },
+    {
+      "id": "W098",
+      "origin": "requested openGym fork",
+      "area": "Timers",
+      "feature": "Timer sound/vibration/flash on devices",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "PARTIAL",
+      "reference": [
+        "frontend/src/components/RestTimer.jsx",
+        "frontend/src/views/Workout.jsx",
+        "frontend/src/lib/sound.js",
+        "frontend/src/lib/wakelock.js"
+      ],
+      "implementation": [
+        "lib/services/workout_timer.dart",
+        "lib/screens/ENG/workout/active_workout.dart"
+      ],
+      "evidence": [
+        "test/workout_test.dart",
+        "test/workout_tools_test.dart",
+        "test/workout_experience_test.dart",
+        "test/workout_audit_test.dart",
+        "backend/tests/workout.integration.test.js"
+      ],
+      "note": "Preference hooks exist; actual hardware behavior requires Android/iOS."
+    },
+    {
+      "id": "W099",
+      "origin": "requested openGym fork",
+      "area": "Timers",
+      "feature": "Keep screen awake on devices",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "PARTIAL",
+      "reference": [
+        "frontend/src/components/RestTimer.jsx",
+        "frontend/src/views/Workout.jsx",
+        "frontend/src/lib/sound.js",
+        "frontend/src/lib/wakelock.js"
+      ],
+      "implementation": [
+        "lib/services/workout_timer.dart",
+        "lib/screens/ENG/workout/active_workout.dart"
+      ],
+      "evidence": [
+        "test/workout_test.dart",
+        "test/workout_tools_test.dart",
+        "test/workout_experience_test.dart",
+        "test/workout_audit_test.dart",
+        "backend/tests/workout.integration.test.js"
+      ],
+      "note": "Native wake-lock hook exists; physical-device verification unavailable."
+    },
+    {
+      "id": "W100",
+      "origin": "requested openGym fork",
+      "area": "Progression",
+      "feature": "Linear progression",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/lib/progression.js"
+      ],
+      "implementation": [
+        "backend/services/workoutExperience.js"
+      ],
+      "evidence": [
+        "backend/tests/workout.experience.test.js",
+        "backend/tests/workout.integration.test.js"
+      ],
+      "note": ""
+    },
+    {
+      "id": "W101",
+      "origin": "requested openGym fork",
+      "area": "Progression",
+      "feature": "Double progression and rep range",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/lib/progression.js"
+      ],
+      "implementation": [
+        "backend/services/workoutExperience.js"
+      ],
+      "evidence": [
+        "backend/tests/workout.experience.test.js",
+        "backend/tests/workout.integration.test.js"
+      ],
+      "note": ""
+    },
+    {
+      "id": "W102",
+      "origin": "requested openGym fork",
+      "area": "Progression",
+      "feature": "Greyskull AMRAP progression",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/lib/progression.js"
+      ],
+      "implementation": [
+        "backend/services/workoutExperience.js"
+      ],
+      "evidence": [
+        "backend/tests/workout.experience.test.js",
+        "backend/tests/workout.integration.test.js"
+      ],
+      "note": ""
+    },
+    {
+      "id": "W103",
+      "origin": "requested openGym fork",
+      "area": "Progression",
+      "feature": "Timed progression",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/lib/progression.js"
+      ],
+      "implementation": [
+        "backend/services/workoutExperience.js"
+      ],
+      "evidence": [
+        "backend/tests/workout.experience.test.js",
+        "backend/tests/workout.integration.test.js"
+      ],
+      "note": ""
+    },
+    {
+      "id": "W104",
+      "origin": "requested openGym fork",
+      "area": "Progression",
+      "feature": "Bodyweight rep ceiling and set cap",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/lib/progression.js"
+      ],
+      "implementation": [
+        "backend/services/workoutExperience.js"
+      ],
+      "evidence": [
+        "backend/tests/workout.experience.test.js",
+        "backend/tests/workout.integration.test.js"
+      ],
+      "note": ""
+    },
+    {
+      "id": "W105",
+      "origin": "requested openGym fork",
+      "area": "Progression",
+      "feature": "Failure/stall deload",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/lib/progression.js"
+      ],
+      "implementation": [
+        "backend/services/workoutExperience.js"
+      ],
+      "evidence": [
+        "backend/tests/workout.experience.test.js",
+        "backend/tests/workout.integration.test.js"
+      ],
+      "note": ""
+    },
+    {
+      "id": "W106",
+      "origin": "requested openGym fork",
+      "area": "Progression",
+      "feature": "Explain suggested targets",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/lib/progression.js"
+      ],
+      "implementation": [
+        "backend/services/workoutExperience.js"
+      ],
+      "evidence": [
+        "backend/tests/workout.experience.test.js",
+        "backend/tests/workout.integration.test.js"
+      ],
+      "note": ""
+    },
+    {
+      "id": "W107",
+      "origin": "requested openGym fork",
+      "area": "Progression",
+      "feature": "Exclude workouts/exercises from progression",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/lib/progression.js"
+      ],
+      "implementation": [
+        "backend/services/workoutExperience.js"
+      ],
+      "evidence": [
+        "backend/tests/workout.experience.test.js",
+        "backend/tests/workout.integration.test.js"
+      ],
+      "note": ""
+    },
+    {
+      "id": "W108",
+      "origin": "requested openGym fork",
+      "area": "Progression",
+      "feature": "Separate repeated stable exercise slots",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/lib/progression.js"
+      ],
+      "implementation": [
+        "backend/services/workoutExperience.js"
+      ],
+      "evidence": [
+        "backend/tests/workout.experience.test.js",
+        "backend/tests/workout.integration.test.js"
+      ],
+      "note": ""
+    },
+    {
+      "id": "W109",
+      "origin": "requested openGym fork",
+      "area": "History",
+      "feature": "Paginated workout history",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/views/History.jsx",
+        "frontend/src/sheets.jsx"
+      ],
+      "implementation": [
+        "lib/screens/ENG/workout/workout_progress.dart",
+        "backend/routes/anas/workout.js"
+      ],
+      "evidence": [
+        "backend/tests/workout.integration.test.js",
+        "test/workout_test.dart",
+        "test/workout_continuation_test.dart",
+        "docs/verification/workout-browser-audit.json"
+      ],
+      "note": ""
+    },
+    {
+      "id": "W110",
+      "origin": "requested openGym fork",
+      "area": "History",
+      "feature": "Workout details with real sets",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/views/History.jsx",
+        "frontend/src/sheets.jsx"
+      ],
+      "implementation": [
+        "lib/screens/ENG/workout/workout_progress.dart",
+        "backend/routes/anas/workout.js"
+      ],
+      "evidence": [
+        "backend/tests/workout.integration.test.js",
+        "test/workout_test.dart",
+        "test/workout_continuation_test.dart",
+        "docs/verification/workout-browser-audit.json"
+      ],
+      "note": ""
+    },
+    {
+      "id": "W111",
+      "origin": "requested openGym fork",
+      "area": "History",
+      "feature": "Workout date and duration",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/views/History.jsx",
+        "frontend/src/sheets.jsx"
+      ],
+      "implementation": [
+        "lib/screens/ENG/workout/workout_progress.dart",
+        "backend/routes/anas/workout.js"
+      ],
+      "evidence": [
+        "backend/tests/workout.integration.test.js",
+        "test/workout_test.dart",
+        "test/workout_continuation_test.dart",
+        "docs/verification/workout-browser-audit.json"
+      ],
+      "note": ""
+    },
+    {
+      "id": "W112",
+      "origin": "requested openGym fork",
+      "area": "History",
+      "feature": "Prescribed versus performed review",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/views/History.jsx",
+        "frontend/src/sheets.jsx"
+      ],
+      "implementation": [
+        "lib/screens/ENG/workout/workout_progress.dart",
+        "backend/routes/anas/workout.js"
+      ],
+      "evidence": [
+        "backend/tests/workout.integration.test.js",
+        "test/workout_test.dart",
+        "test/workout_continuation_test.dart",
+        "docs/verification/workout-browser-audit.json"
+      ],
+      "note": ""
+    },
+    {
+      "id": "W113",
+      "origin": "requested openGym fork",
+      "area": "History",
+      "feature": "History notes",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/views/History.jsx",
+        "frontend/src/sheets.jsx"
+      ],
+      "implementation": [
+        "lib/screens/ENG/workout/workout_progress.dart",
+        "backend/routes/anas/workout.js"
+      ],
+      "evidence": [
+        "backend/tests/workout.integration.test.js",
+        "test/workout_test.dart",
+        "test/workout_continuation_test.dart",
+        "docs/verification/workout-browser-audit.json"
+      ],
+      "note": ""
+    },
+    {
+      "id": "W114",
+      "origin": "requested openGym fork",
+      "area": "History",
+      "feature": "Correct historical date/duration/notes/sets",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/views/History.jsx",
+        "frontend/src/sheets.jsx"
+      ],
+      "implementation": [
+        "lib/screens/ENG/workout/workout_progress.dart",
+        "backend/routes/anas/workout.js"
+      ],
+      "evidence": [
+        "backend/tests/workout.integration.test.js",
+        "test/workout_test.dart",
+        "test/workout_continuation_test.dart",
+        "docs/verification/workout-browser-audit.json"
+      ],
+      "note": ""
+    },
+    {
+      "id": "W115",
+      "origin": "requested openGym fork",
+      "area": "History",
+      "feature": "Delete workout without orphan sets",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/views/History.jsx",
+        "frontend/src/sheets.jsx"
+      ],
+      "implementation": [
+        "lib/screens/ENG/workout/workout_progress.dart",
+        "backend/routes/anas/workout.js"
+      ],
+      "evidence": [
+        "backend/tests/workout.integration.test.js",
+        "test/workout_test.dart",
+        "test/workout_continuation_test.dart",
+        "docs/verification/workout-browser-audit.json"
+      ],
+      "note": ""
+    },
+    {
+      "id": "W116",
+      "origin": "requested openGym fork",
+      "area": "History",
+      "feature": "Exercise history pagination and charts",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/views/History.jsx",
+        "frontend/src/sheets.jsx"
+      ],
+      "implementation": [
+        "lib/screens/ENG/workout/workout_progress.dart",
+        "backend/routes/anas/workout.js"
+      ],
+      "evidence": [
+        "backend/tests/workout.integration.test.js",
+        "test/workout_test.dart",
+        "test/workout_continuation_test.dart",
+        "docs/verification/workout-browser-audit.json"
+      ],
+      "note": ""
+    },
+    {
+      "id": "W117",
+      "origin": "requested openGym fork",
+      "area": "History",
+      "feature": "History remains intact after plan edits/removal",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/views/History.jsx",
+        "frontend/src/sheets.jsx"
+      ],
+      "implementation": [
+        "lib/screens/ENG/workout/workout_progress.dart",
+        "backend/routes/anas/workout.js"
+      ],
+      "evidence": [
+        "backend/tests/workout.integration.test.js",
+        "test/workout_test.dart",
+        "test/workout_continuation_test.dart",
+        "docs/verification/workout-browser-audit.json"
+      ],
+      "note": ""
+    },
+    {
+      "id": "W118",
+      "origin": "requested openGym fork",
+      "area": "Statistics",
+      "feature": "Total workouts",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/views/Stats.jsx",
+        "frontend/src/lib/muscles.js",
+        "frontend/src/lib/effort.js",
+        "frontend/src/lib/onerm.js"
+      ],
+      "implementation": [
+        "backend/services/workoutStats.js",
+        "lib/screens/ENG/workout/workout_progress.dart"
+      ],
+      "evidence": [
+        "backend/tests/workout.stats.test.js",
+        "backend/tests/workout.domain.test.js",
+        "test/workout_experience_test.dart",
+        "test/workout_tools_test.dart",
+        "test/workout_audit_test.dart"
+      ],
+      "note": ""
+    },
+    {
+      "id": "W119",
+      "origin": "requested openGym fork",
+      "area": "Statistics",
+      "feature": "Workout frequency",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/views/Stats.jsx",
+        "frontend/src/lib/muscles.js",
+        "frontend/src/lib/effort.js",
+        "frontend/src/lib/onerm.js"
+      ],
+      "implementation": [
+        "backend/services/workoutStats.js",
+        "lib/screens/ENG/workout/workout_progress.dart"
+      ],
+      "evidence": [
+        "backend/tests/workout.stats.test.js",
+        "backend/tests/workout.domain.test.js",
+        "test/workout_experience_test.dart",
+        "test/workout_tools_test.dart",
+        "test/workout_audit_test.dart"
+      ],
+      "note": ""
+    },
+    {
+      "id": "W120",
+      "origin": "requested openGym fork",
+      "area": "Statistics",
+      "feature": "Total sets and repetitions",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/views/Stats.jsx",
+        "frontend/src/lib/muscles.js",
+        "frontend/src/lib/effort.js",
+        "frontend/src/lib/onerm.js"
+      ],
+      "implementation": [
+        "backend/services/workoutStats.js",
+        "lib/screens/ENG/workout/workout_progress.dart"
+      ],
+      "evidence": [
+        "backend/tests/workout.stats.test.js",
+        "backend/tests/workout.domain.test.js",
+        "test/workout_experience_test.dart",
+        "test/workout_tools_test.dart",
+        "test/workout_audit_test.dart"
+      ],
+      "note": ""
+    },
+    {
+      "id": "W121",
+      "origin": "requested openGym fork",
+      "area": "Statistics",
+      "feature": "Actual meaningful training volume",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/views/Stats.jsx",
+        "frontend/src/lib/muscles.js",
+        "frontend/src/lib/effort.js",
+        "frontend/src/lib/onerm.js"
+      ],
+      "implementation": [
+        "backend/services/workoutStats.js",
+        "lib/screens/ENG/workout/workout_progress.dart"
+      ],
+      "evidence": [
+        "backend/tests/workout.stats.test.js",
+        "backend/tests/workout.domain.test.js",
+        "test/workout_experience_test.dart",
+        "test/workout_tools_test.dart",
+        "test/workout_audit_test.dart"
+      ],
+      "note": ""
+    },
+    {
+      "id": "W122",
+      "origin": "requested openGym fork",
+      "area": "Statistics",
+      "feature": "Total and average workout duration",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/views/Stats.jsx",
+        "frontend/src/lib/muscles.js",
+        "frontend/src/lib/effort.js",
+        "frontend/src/lib/onerm.js"
+      ],
+      "implementation": [
+        "backend/services/workoutStats.js",
+        "lib/screens/ENG/workout/workout_progress.dart"
+      ],
+      "evidence": [
+        "backend/tests/workout.stats.test.js",
+        "backend/tests/workout.domain.test.js",
+        "test/workout_experience_test.dart",
+        "test/workout_tools_test.dart",
+        "test/workout_audit_test.dart"
+      ],
+      "note": ""
+    },
+    {
+      "id": "W123",
+      "origin": "requested openGym fork",
+      "area": "Statistics",
+      "feature": "Date period filters and local calendar dates",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/views/Stats.jsx",
+        "frontend/src/lib/muscles.js",
+        "frontend/src/lib/effort.js",
+        "frontend/src/lib/onerm.js"
+      ],
+      "implementation": [
+        "backend/services/workoutStats.js",
+        "lib/screens/ENG/workout/workout_progress.dart"
+      ],
+      "evidence": [
+        "backend/tests/workout.stats.test.js",
+        "backend/tests/workout.domain.test.js",
+        "test/workout_experience_test.dart",
+        "test/workout_tools_test.dart",
+        "test/workout_audit_test.dart"
+      ],
+      "note": ""
+    },
+    {
+      "id": "W124",
+      "origin": "requested openGym fork",
+      "area": "Statistics",
+      "feature": "Activity heatmap with year coverage",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/views/Stats.jsx",
+        "frontend/src/lib/muscles.js",
+        "frontend/src/lib/effort.js",
+        "frontend/src/lib/onerm.js"
+      ],
+      "implementation": [
+        "backend/services/workoutStats.js",
+        "lib/screens/ENG/workout/workout_progress.dart"
+      ],
+      "evidence": [
+        "backend/tests/workout.stats.test.js",
+        "backend/tests/workout.domain.test.js",
+        "test/workout_experience_test.dart",
+        "test/workout_tools_test.dart",
+        "test/workout_audit_test.dart"
+      ],
+      "note": ""
+    },
+    {
+      "id": "W125",
+      "origin": "requested openGym fork",
+      "area": "Statistics",
+      "feature": "Daily and weekly workout streaks",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/views/Stats.jsx",
+        "frontend/src/lib/muscles.js",
+        "frontend/src/lib/effort.js",
+        "frontend/src/lib/onerm.js"
+      ],
+      "implementation": [
+        "backend/services/workoutStats.js",
+        "lib/screens/ENG/workout/workout_progress.dart"
+      ],
+      "evidence": [
+        "backend/tests/workout.stats.test.js",
+        "backend/tests/workout.domain.test.js",
+        "test/workout_experience_test.dart",
+        "test/workout_tools_test.dart",
+        "test/workout_audit_test.dart"
+      ],
+      "note": ""
+    },
+    {
+      "id": "W126",
+      "origin": "requested openGym fork",
+      "area": "Statistics",
+      "feature": "Load/reps/duration/volume progression charts",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/views/Stats.jsx",
+        "frontend/src/lib/muscles.js",
+        "frontend/src/lib/effort.js",
+        "frontend/src/lib/onerm.js"
+      ],
+      "implementation": [
+        "backend/services/workoutStats.js",
+        "lib/screens/ENG/workout/workout_progress.dart"
+      ],
+      "evidence": [
+        "backend/tests/workout.stats.test.js",
+        "backend/tests/workout.domain.test.js",
+        "test/workout_experience_test.dart",
+        "test/workout_tools_test.dart",
+        "test/workout_audit_test.dart"
+      ],
+      "note": ""
+    },
+    {
+      "id": "W127",
+      "origin": "requested openGym fork",
+      "area": "Statistics",
+      "feature": "Estimated 1RM progression",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/views/Stats.jsx",
+        "frontend/src/lib/muscles.js",
+        "frontend/src/lib/effort.js",
+        "frontend/src/lib/onerm.js"
+      ],
+      "implementation": [
+        "backend/services/workoutStats.js",
+        "lib/screens/ENG/workout/workout_progress.dart"
+      ],
+      "evidence": [
+        "backend/tests/workout.stats.test.js",
+        "backend/tests/workout.domain.test.js",
+        "test/workout_experience_test.dart",
+        "test/workout_tools_test.dart",
+        "test/workout_audit_test.dart"
+      ],
+      "note": ""
+    },
+    {
+      "id": "W128",
+      "origin": "requested openGym fork",
+      "area": "Statistics",
+      "feature": "Weight/estimated-1RM/volume/bodyweight-duration PRs",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/views/Stats.jsx",
+        "frontend/src/lib/muscles.js",
+        "frontend/src/lib/effort.js",
+        "frontend/src/lib/onerm.js"
+      ],
+      "implementation": [
+        "backend/services/workoutStats.js",
+        "lib/screens/ENG/workout/workout_progress.dart"
+      ],
+      "evidence": [
+        "backend/tests/workout.stats.test.js",
+        "backend/tests/workout.domain.test.js",
+        "test/workout_experience_test.dart",
+        "test/workout_tools_test.dart",
+        "test/workout_audit_test.dart"
+      ],
+      "note": ""
+    },
+    {
+      "id": "W129",
+      "origin": "requested openGym fork",
+      "area": "Statistics",
+      "feature": "Earlier-history PR baseline and no duplicated stored PRs",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/views/Stats.jsx",
+        "frontend/src/lib/muscles.js",
+        "frontend/src/lib/effort.js",
+        "frontend/src/lib/onerm.js"
+      ],
+      "implementation": [
+        "backend/services/workoutStats.js",
+        "lib/screens/ENG/workout/workout_progress.dart"
+      ],
+      "evidence": [
+        "backend/tests/workout.stats.test.js",
+        "backend/tests/workout.domain.test.js",
+        "test/workout_experience_test.dart",
+        "test/workout_tools_test.dart",
+        "test/workout_audit_test.dart"
+      ],
+      "note": "PRs are derived from real completed sets, not a second mutable PR ledger."
+    },
+    {
+      "id": "W130",
+      "origin": "requested openGym fork",
+      "area": "Statistics",
+      "feature": "Warmup exclusion from records",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/views/Stats.jsx",
+        "frontend/src/lib/muscles.js",
+        "frontend/src/lib/effort.js",
+        "frontend/src/lib/onerm.js"
+      ],
+      "implementation": [
+        "backend/services/workoutStats.js",
+        "lib/screens/ENG/workout/workout_progress.dart"
+      ],
+      "evidence": [
+        "backend/tests/workout.stats.test.js",
+        "backend/tests/workout.domain.test.js",
+        "test/workout_experience_test.dart",
+        "test/workout_tools_test.dart",
+        "test/workout_audit_test.dart"
+      ],
+      "note": ""
+    },
+    {
+      "id": "W131",
+      "origin": "requested openGym fork",
+      "area": "Statistics",
+      "feature": "Effort distributions and hard-set counts",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/views/Stats.jsx",
+        "frontend/src/lib/muscles.js",
+        "frontend/src/lib/effort.js",
+        "frontend/src/lib/onerm.js"
+      ],
+      "implementation": [
+        "backend/services/workoutStats.js",
+        "lib/screens/ENG/workout/workout_progress.dart"
+      ],
+      "evidence": [
+        "backend/tests/workout.stats.test.js",
+        "backend/tests/workout.domain.test.js",
+        "test/workout_experience_test.dart",
+        "test/workout_tools_test.dart",
+        "test/workout_audit_test.dart"
+      ],
+      "note": ""
+    },
+    {
+      "id": "W132",
+      "origin": "requested openGym fork",
+      "area": "Statistics",
+      "feature": "Full muscle map and secondary-muscle balance",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "PARTIAL",
+      "reference": [
+        "frontend/src/views/Stats.jsx",
+        "frontend/src/lib/muscles.js",
+        "frontend/src/lib/effort.js",
+        "frontend/src/lib/onerm.js"
+      ],
+      "implementation": [
+        "backend/services/workoutStats.js",
+        "lib/screens/ENG/workout/workout_progress.dart"
+      ],
+      "evidence": [
+        "backend/tests/workout.stats.test.js",
+        "backend/tests/workout.domain.test.js",
+        "test/workout_experience_test.dart",
+        "test/workout_tools_test.dart",
+        "test/workout_audit_test.dart"
+      ],
+      "note": "Original front/back primary-set schematic and primary/hard-set totals exist; finer anatomy and secondary effective-set weighting differ."
+    },
+    {
+      "id": "W133",
+      "origin": "requested openGym fork",
+      "area": "Statistics",
+      "feature": "Recent training load",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/views/Stats.jsx",
+        "frontend/src/lib/muscles.js",
+        "frontend/src/lib/effort.js",
+        "frontend/src/lib/onerm.js"
+      ],
+      "implementation": [
+        "backend/services/workoutStats.js",
+        "lib/screens/ENG/workout/workout_progress.dart"
+      ],
+      "evidence": [
+        "backend/tests/workout.stats.test.js",
+        "backend/tests/workout.domain.test.js",
+        "test/workout_experience_test.dart",
+        "test/workout_tools_test.dart",
+        "test/workout_audit_test.dart"
+      ],
+      "note": ""
+    },
+    {
+      "id": "W134",
+      "origin": "requested openGym fork",
+      "area": "Statistics",
+      "feature": "Relative strength",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/views/Stats.jsx",
+        "frontend/src/lib/muscles.js",
+        "frontend/src/lib/effort.js",
+        "frontend/src/lib/onerm.js"
+      ],
+      "implementation": [
+        "backend/services/workoutStats.js",
+        "lib/screens/ENG/workout/workout_progress.dart"
+      ],
+      "evidence": [
+        "backend/tests/workout.stats.test.js",
+        "backend/tests/workout.domain.test.js",
+        "test/workout_experience_test.dart",
+        "test/workout_tools_test.dart",
+        "test/workout_audit_test.dart"
+      ],
+      "note": ""
+    },
+    {
+      "id": "W135",
+      "origin": "requested openGym fork",
+      "area": "Statistics",
+      "feature": "Bodyweight history, goal and trend",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/views/Stats.jsx",
+        "frontend/src/lib/muscles.js",
+        "frontend/src/lib/effort.js",
+        "frontend/src/lib/onerm.js"
+      ],
+      "implementation": [
+        "backend/services/workoutStats.js",
+        "lib/screens/ENG/workout/workout_progress.dart"
+      ],
+      "evidence": [
+        "backend/tests/workout.stats.test.js",
+        "backend/tests/workout.domain.test.js",
+        "test/workout_experience_test.dart",
+        "test/workout_tools_test.dart",
+        "test/workout_audit_test.dart"
+      ],
+      "note": "Reuses SIRVYA weighthistory."
+    },
+    {
+      "id": "W136",
+      "origin": "requested openGym fork",
+      "area": "Statistics",
+      "feature": "Weekly average-effort trend chart",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "PARTIAL",
+      "reference": [
+        "frontend/src/views/Stats.jsx",
+        "frontend/src/lib/muscles.js",
+        "frontend/src/lib/effort.js",
+        "frontend/src/lib/onerm.js"
+      ],
+      "implementation": [
+        "backend/services/workoutStats.js",
+        "lib/screens/ENG/workout/workout_progress.dart"
+      ],
+      "evidence": [
+        "backend/tests/workout.stats.test.js",
+        "backend/tests/workout.domain.test.js",
+        "test/workout_experience_test.dart",
+        "test/workout_tools_test.dart",
+        "test/workout_audit_test.dart"
+      ],
+      "note": "Effort distributions exist; the reference weekly average-effort chart is incomplete."
+    },
+    {
+      "id": "W137",
+      "origin": "requested openGym fork",
+      "area": "Transfers and preferences",
+      "feature": "Strong history import",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/views/Settings.jsx",
+        "frontend/src/lib/import-csv.js",
+        "frontend/src/lib/plan-share.js"
+      ],
+      "implementation": [
+        "backend/services/workoutImport.js",
+        "backend/services/workoutHistoryTransfer.js",
+        "lib/screens/ENG/workout/workout_preferences.dart",
+        "lib/screens/ENG/workout/workout_transfer.dart"
+      ],
+      "evidence": [
+        "backend/tests/workout.import.test.js",
+        "backend/tests/workout.integration.test.js",
+        "test/workout_tools_test.dart"
+      ],
+      "note": ""
+    },
+    {
+      "id": "W138",
+      "origin": "requested openGym fork",
+      "area": "Transfers and preferences",
+      "feature": "Hevy history import",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/views/Settings.jsx",
+        "frontend/src/lib/import-csv.js",
+        "frontend/src/lib/plan-share.js"
+      ],
+      "implementation": [
+        "backend/services/workoutImport.js",
+        "backend/services/workoutHistoryTransfer.js",
+        "lib/screens/ENG/workout/workout_preferences.dart",
+        "lib/screens/ENG/workout/workout_transfer.dart"
+      ],
+      "evidence": [
+        "backend/tests/workout.import.test.js",
+        "backend/tests/workout.integration.test.js",
+        "test/workout_tools_test.dart"
+      ],
+      "note": ""
+    },
+    {
+      "id": "W139",
+      "origin": "requested openGym fork",
+      "area": "Transfers and preferences",
+      "feature": "FitNotes history import",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/views/Settings.jsx",
+        "frontend/src/lib/import-csv.js",
+        "frontend/src/lib/plan-share.js"
+      ],
+      "implementation": [
+        "backend/services/workoutImport.js",
+        "backend/services/workoutHistoryTransfer.js",
+        "lib/screens/ENG/workout/workout_preferences.dart",
+        "lib/screens/ENG/workout/workout_transfer.dart"
+      ],
+      "evidence": [
+        "backend/tests/workout.import.test.js",
+        "backend/tests/workout.integration.test.js",
+        "test/workout_tools_test.dart"
+      ],
+      "note": ""
+    },
+    {
+      "id": "W140",
+      "origin": "requested openGym fork",
+      "area": "Transfers and preferences",
+      "feature": "Bodyweight CSV import",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/views/Settings.jsx",
+        "frontend/src/lib/import-csv.js",
+        "frontend/src/lib/plan-share.js"
+      ],
+      "implementation": [
+        "backend/services/workoutImport.js",
+        "backend/services/workoutHistoryTransfer.js",
+        "lib/screens/ENG/workout/workout_preferences.dart",
+        "lib/screens/ENG/workout/workout_transfer.dart"
+      ],
+      "evidence": [
+        "backend/tests/workout.import.test.js",
+        "backend/tests/workout.integration.test.js",
+        "test/workout_tools_test.dart"
+      ],
+      "note": ""
+    },
+    {
+      "id": "W141",
+      "origin": "requested openGym fork",
+      "area": "Transfers and preferences",
+      "feature": "Apple Health bodyweight XML import",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "PARTIAL",
+      "reference": [
+        "frontend/src/views/Settings.jsx",
+        "frontend/src/lib/import-csv.js",
+        "frontend/src/lib/plan-share.js"
+      ],
+      "implementation": [
+        "backend/services/workoutImport.js",
+        "backend/services/workoutHistoryTransfer.js",
+        "lib/screens/ENG/workout/workout_preferences.dart",
+        "lib/screens/ENG/workout/workout_transfer.dart"
+      ],
+      "evidence": [
+        "backend/tests/workout.import.test.js",
+        "backend/tests/workout.integration.test.js",
+        "test/workout_tools_test.dart"
+      ],
+      "note": "Bounded 8 MiB import is now tested; typical whole-health exports can exceed this limit. Latest daily measurement retained."
+    },
+    {
+      "id": "W142",
+      "origin": "requested openGym fork",
+      "area": "Transfers and preferences",
+      "feature": "Import preview/exercise mapping/private unmatched exercises",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/views/Settings.jsx",
+        "frontend/src/lib/import-csv.js",
+        "frontend/src/lib/plan-share.js"
+      ],
+      "implementation": [
+        "backend/services/workoutImport.js",
+        "backend/services/workoutHistoryTransfer.js",
+        "lib/screens/ENG/workout/workout_preferences.dart",
+        "lib/screens/ENG/workout/workout_transfer.dart"
+      ],
+      "evidence": [
+        "backend/tests/workout.import.test.js",
+        "backend/tests/workout.integration.test.js",
+        "test/workout_tools_test.dart"
+      ],
+      "note": ""
+    },
+    {
+      "id": "W143",
+      "origin": "requested openGym fork",
+      "area": "Transfers and preferences",
+      "feature": "Atomic import batches and duplicate detection",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/views/Settings.jsx",
+        "frontend/src/lib/import-csv.js",
+        "frontend/src/lib/plan-share.js"
+      ],
+      "implementation": [
+        "backend/services/workoutImport.js",
+        "backend/services/workoutHistoryTransfer.js",
+        "lib/screens/ENG/workout/workout_preferences.dart",
+        "lib/screens/ENG/workout/workout_transfer.dart"
+      ],
+      "evidence": [
+        "backend/tests/workout.import.test.js",
+        "backend/tests/workout.integration.test.js",
+        "test/workout_tools_test.dart"
+      ],
+      "note": ""
+    },
+    {
+      "id": "W144",
+      "origin": "requested openGym fork",
+      "area": "Transfers and preferences",
+      "feature": "Complete workout backup/restore",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "PARTIAL",
+      "reference": [
+        "frontend/src/views/Settings.jsx",
+        "frontend/src/lib/import-csv.js",
+        "frontend/src/lib/plan-share.js"
+      ],
+      "implementation": [
+        "backend/services/workoutImport.js",
+        "backend/services/workoutHistoryTransfer.js",
+        "lib/screens/ENG/workout/workout_preferences.dart",
+        "lib/screens/ENG/workout/workout_transfer.dart"
+      ],
+      "evidence": [
+        "backend/tests/workout.import.test.js",
+        "backend/tests/workout.integration.test.js",
+        "test/workout_tools_test.dart"
+      ],
+      "note": "Plan and history transfers exist in SIRVYA format; combined one-file preferences/plan/history restore is incomplete. openGym account data intentionally excluded."
+    },
+    {
+      "id": "W145",
+      "origin": "requested openGym fork",
+      "area": "Transfers and preferences",
+      "feature": "Workout-only default rest preferences",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/views/Settings.jsx",
+        "frontend/src/lib/import-csv.js",
+        "frontend/src/lib/plan-share.js"
+      ],
+      "implementation": [
+        "backend/services/workoutImport.js",
+        "backend/services/workoutHistoryTransfer.js",
+        "lib/screens/ENG/workout/workout_preferences.dart",
+        "lib/screens/ENG/workout/workout_transfer.dart"
+      ],
+      "evidence": [
+        "backend/tests/workout.import.test.js",
+        "backend/tests/workout.integration.test.js",
+        "test/workout_tools_test.dart"
+      ],
+      "note": ""
+    },
+    {
+      "id": "W146",
+      "origin": "requested openGym fork",
+      "area": "Transfers and preferences",
+      "feature": "Workout timer behavior preferences",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/views/Settings.jsx",
+        "frontend/src/lib/import-csv.js",
+        "frontend/src/lib/plan-share.js"
+      ],
+      "implementation": [
+        "backend/services/workoutImport.js",
+        "backend/services/workoutHistoryTransfer.js",
+        "lib/screens/ENG/workout/workout_preferences.dart",
+        "lib/screens/ENG/workout/workout_transfer.dart"
+      ],
+      "evidence": [
+        "backend/tests/workout.import.test.js",
+        "backend/tests/workout.integration.test.js",
+        "test/workout_tools_test.dart"
+      ],
+      "note": ""
+    },
+    {
+      "id": "W147",
+      "origin": "requested openGym fork",
+      "area": "Transfers and preferences",
+      "feature": "Weight-unit conversion for entry/tools",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/views/Settings.jsx",
+        "frontend/src/lib/import-csv.js",
+        "frontend/src/lib/plan-share.js"
+      ],
+      "implementation": [
+        "backend/services/workoutImport.js",
+        "backend/services/workoutHistoryTransfer.js",
+        "lib/screens/ENG/workout/workout_preferences.dart",
+        "lib/screens/ENG/workout/workout_transfer.dart"
+      ],
+      "evidence": [
+        "backend/tests/workout.import.test.js",
+        "backend/tests/workout.integration.test.js",
+        "test/workout_tools_test.dart"
+      ],
+      "note": ""
+    },
+    {
+      "id": "W148",
+      "origin": "requested openGym fork",
+      "area": "Transfers and preferences",
+      "feature": "Effort scale preferences",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/views/Settings.jsx",
+        "frontend/src/lib/import-csv.js",
+        "frontend/src/lib/plan-share.js"
+      ],
+      "implementation": [
+        "backend/services/workoutImport.js",
+        "backend/services/workoutHistoryTransfer.js",
+        "lib/screens/ENG/workout/workout_preferences.dart",
+        "lib/screens/ENG/workout/workout_transfer.dart"
+      ],
+      "evidence": [
+        "backend/tests/workout.import.test.js",
+        "backend/tests/workout.integration.test.js",
+        "test/workout_tools_test.dart"
+      ],
+      "note": ""
+    },
+    {
+      "id": "W149",
+      "origin": "requested openGym fork",
+      "area": "Transfers and preferences",
+      "feature": "Equipment profiles",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/views/Settings.jsx",
+        "frontend/src/lib/import-csv.js",
+        "frontend/src/lib/plan-share.js"
+      ],
+      "implementation": [
+        "backend/services/workoutImport.js",
+        "backend/services/workoutHistoryTransfer.js",
+        "lib/screens/ENG/workout/workout_preferences.dart",
+        "lib/screens/ENG/workout/workout_transfer.dart"
+      ],
+      "evidence": [
+        "backend/tests/workout.import.test.js",
+        "backend/tests/workout.integration.test.js",
+        "test/workout_tools_test.dart"
+      ],
+      "note": ""
+    },
+    {
+      "id": "W150",
+      "origin": "requested openGym fork",
+      "area": "Transfers and preferences",
+      "feature": "Bodyweight check-in/goal preferences",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "DONE",
+      "reference": [
+        "frontend/src/views/Settings.jsx",
+        "frontend/src/lib/import-csv.js",
+        "frontend/src/lib/plan-share.js"
+      ],
+      "implementation": [
+        "backend/services/workoutImport.js",
+        "backend/services/workoutHistoryTransfer.js",
+        "lib/screens/ENG/workout/workout_preferences.dart",
+        "lib/screens/ENG/workout/workout_transfer.dart"
+      ],
+      "evidence": [
+        "backend/tests/workout.import.test.js",
+        "backend/tests/workout.integration.test.js",
+        "test/workout_tools_test.dart"
+      ],
+      "note": ""
+    },
+    {
+      "id": "W151",
+      "origin": "requested openGym fork",
+      "area": "Notifications",
+      "feature": "Daily scheduled workout reminders",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "PARTIAL",
+      "reference": [
+        "frontend/src/views/Settings.jsx",
+        "frontend/src/lib/push.js",
+        "frontend/src/lib/mobile.js"
+      ],
+      "implementation": [
+        "backend/services/workoutReminders.js",
+        "lib/services/notification_service.dart"
+      ],
+      "evidence": [
+        "backend/tests/workout.integration.test.js",
+        "test/workout_audit_test.dart"
+      ],
+      "note": "Durable scheduling, timezone/rest-day handling and retry/dedup tested; FCM/local delivery on hardware unverified."
+    },
+    {
+      "id": "W152",
+      "origin": "requested openGym fork",
+      "area": "Notifications",
+      "feature": "Background/rest completion notification delivery",
+      "classification": "MIGRATE / REIMPLEMENT",
+      "status": "PARTIAL",
+      "reference": [
+        "frontend/src/views/Settings.jsx",
+        "frontend/src/lib/push.js",
+        "frontend/src/lib/mobile.js"
+      ],
+      "implementation": [
+        "backend/services/workoutReminders.js",
+        "lib/services/notification_service.dart"
+      ],
+      "evidence": [
+        "backend/tests/workout.integration.test.js",
+        "test/workout_audit_test.dart"
+      ],
+      "note": "Existing SIRVYA FCM/local infrastructure reused; native delivery requires device/provider test."
+    }
+  ],
+  "excluded": [
+    {
+      "id": "E1",
+      "feature": "Login/registration/passkeys/WebAuthn/session cookies",
+      "status": "EXCLUDED — AUTH",
+      "note": "SIRVYA JWT and users replace the reference identity."
+    },
+    {
+      "id": "E2",
+      "feature": "Profiles/account/admin user management",
+      "status": "EXCLUDED — ACCOUNT",
+      "note": "Existing SIRVYA roles/profiles own identity and account management."
+    },
+    {
+      "id": "E3",
+      "feature": "Theme/accent/body-diagram appearance settings",
+      "status": "EXCLUDED — GENERAL SETTINGS",
+      "note": "SIRVYA theme/branding and original schematic replace global appearance customization."
+    },
+    {
+      "id": "E4",
+      "feature": "Reference exercise GIFs/media without reuse grant",
+      "status": "EXCLUDED — LICENSE",
+      "note": "Independent licensed replacement; coverage remains partial in W-library row."
+    },
+    {
+      "id": "E5",
+      "feature": "Standalone React/Capacitor/PWA/self-host/guest app",
+      "status": "EXCLUDED — NOT WORKOUT RELATED",
+      "note": "One existing Flutter app and Express/MySQL architecture."
+    },
+    {
+      "id": "E6",
+      "feature": "Reference language/account preferences",
+      "status": "REPLACED BY SIRVYA",
+      "note": "Existing EN/FR/ES app localization reused."
+    },
+    {
+      "id": "E7",
+      "feature": "Reference separate push credentials/storage/database",
+      "status": "REPLACED BY SIRVYA",
+      "note": "Existing SIRVYA FCM, MySQL, API and identity."
+    },
+    {
+      "id": "E8",
+      "feature": "Gym access wallet and AI-provider/account setup (upstream supplement)",
+      "status": "EXCLUDED — NOT WORKOUT RELATED",
+      "note": "Not features in the requested fork; human SIRVYA Coaches remain the supported coaching identity."
+    }
+  ],
+  "extensions": [
+    {
+      "id": "S1",
+      "feature": "Existing Coach/client selection, plan ownership and assignment",
+      "status": "DONE",
+      "note": "Existing coachclients and server-enforced relationship."
+    },
+    {
+      "id": "S2",
+      "feature": "Coach actual results/history/progress/adherence review",
+      "status": "DONE",
+      "note": "Native browser + HTTP/MySQL ownership tests."
+    },
+    {
+      "id": "S3",
+      "feature": "Assigned plan stored notification",
+      "status": "DONE",
+      "note": "Existing SIRVYA notification record; live FCM delivery remains unverified."
+    },
+    {
+      "id": "S4",
+      "feature": "Private authorized exercise/workout photo/video uploads",
+      "status": "DONE",
+      "note": "File validation/ownership/download ticket security covered by API tests; device codec delivery not universal."
+    },
+    {
+      "id": "S5",
+      "feature": "Warmups, dropsets, rest-pause and richer actual side tracking",
+      "status": "DONE",
+      "note": "Domain, metrics and widget/API tests; extensions beyond the requested fork UI."
+    },
+    {
+      "id": "S6",
+      "feature": "Custom structural balance protocols",
+      "status": "DONE",
+      "note": "Stable anchors and scoped Coach/client protocol workflows tested."
+    },
+    {
+      "id": "S7",
+      "feature": "Published structural-balance preset tables",
+      "status": "PARTIAL",
+      "note": "Upstream supplement only; independent source/license review required before shipping named tables."
+    }
+  ]
+}

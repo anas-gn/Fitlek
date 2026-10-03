@@ -1,14 +1,14 @@
 import {createHash,randomUUID} from 'node:crypto';
 import {requireRole} from '../middleware/auth.js';
 import {fail,integer,text,number,json,validateSet,validateConfiguration} from './workoutDomain.js';
-import {parseWorkoutCSV} from './workoutImport.js';
+import {parseWorkoutCSV,parseBodyweightXML} from './workoutImport.js';
 
 export function installWorkoutHistoryTransfer(router,db,{run,transaction,visibleExercise,clientScope}){
   router.post('/history/import-preview',requireRole('client'),run(async(req,res)=>{
-    const data=req.body.csv!=null?parseWorkoutCSV(req.body.csv,{unit:req.body.unit,timeZone:req.body.timeZone}):req.body.history;
+    const data=req.body.xml!=null?parseBodyweightXML(req.body.xml,{timeZone:req.body.timeZone}):req.body.csv!=null?parseWorkoutCSV(req.body.csv,{unit:req.body.unit,timeZone:req.body.timeZone}):req.body.history;
     if(!data||data.format!=='sirvya-workout-history'||data.version!==1||!Array.isArray(data.sessions)||data.sessions.length>1000)fail('invalid_import');
     const names=new Map();
-    for(const s of data.sessions){if(!Array.isArray(s.exercises))fail('invalid_import');for(const e of s.exercises){const key=e.sourceKey??`${e.externalSource}:${e.externalId}`;if(!names.has(key))names.set(key,{sourceKey:key,name:text(e.name,160,true),exerciseType:e.exerciseType,matches:[]});}}
+    for(const s of data.sessions){if(!s||!Array.isArray(s.exercises))fail('invalid_import');for(const e of s.exercises){if(!e||typeof e!=='object'||Array.isArray(e))fail('invalid_import');const key=e.sourceKey??`${e.externalSource}:${e.externalId}`;if(!names.has(key))names.set(key,{sourceKey:key,name:text(e.name,160,true),exerciseType:e.exerciseType,matches:[]});}}
     for(const item of names.values()){
       const [rows]=await db.query('SELECT id FROM exercises WHERE name=? ORDER BY ownerID IS NULL DESC,id LIMIT 20',[item.name]);
       for(const row of rows){try{const e=await visibleExercise(db,req.user,row.id);if(e.exerciseType===item.exerciseType)item.matches.push({id:e.id,name:e.name,equipment:e.equipment});}catch(error){if(error.code!=='exercise_not_found')throw error;}}
@@ -24,6 +24,7 @@ export function installWorkoutHistoryTransfer(router,db,{run,transaction,visible
       if(input.bodyweight!=null){
         if(!Array.isArray(input.bodyweight)||input.bodyweight.length>1000)fail('invalid_import');
         for(const entry of input.bodyweight){
+          if(!entry||typeof entry!=='object'||Array.isArray(entry))fail('invalid_import');
           const date=text(entry.recordedAt,10,true);const parsed=new Date(`${date}T12:00:00Z`);
           if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||Number.isNaN(parsed.getTime())||parsed.toISOString().slice(0,10)!==date||parsed>Date.now()+86400000)fail('invalid_import_date');
           const weight=number(entry.weight,1,500);if(weight==null)fail('invalid_import');const note=text(entry.note,2000);
@@ -33,6 +34,7 @@ export function installWorkoutHistoryTransfer(router,db,{run,transaction,visible
       }
       for(const raw of input.sessions){
         if(!raw||!Array.isArray(raw.exercises)||!raw.exercises.length||raw.exercises.length>50)fail('invalid_import');
+        if(typeof raw.startedAt!=='string')fail('invalid_import_date');
         const name=text(raw.name,160,true),startedAt=new Date(raw.startedAt),durationSeconds=integer(raw.durationSeconds??0,0,604800);
         if(Number.isNaN(startedAt.getTime())||startedAt.getTime()>Date.now()+60000||startedAt.getUTCFullYear()<1900)fail('invalid_import_date');
         const fingerprint=createHash('sha256').update(JSON.stringify({source:input.source??'SIRVYA',...raw})).digest('hex');
@@ -41,6 +43,7 @@ export function installWorkoutHistoryTransfer(router,db,{run,transaction,visible
         const exercises=[],actual=[];let n=0;
         for(const r of raw.exercises){
           if(!r||!Array.isArray(r.sets)||!r.sets.length||r.sets.length>60)fail('invalid_import');
+          if(r.sets.some(s=>!s||typeof s!=='object'||Array.isArray(s)))fail('invalid_set');
           const key=r.sourceKey??`${r.externalSource}:${r.externalId}`;
           let exerciseID=input.mappings?.[key]??r.exerciseID;
           if(!exerciseID&&r.externalSource&&r.externalId){

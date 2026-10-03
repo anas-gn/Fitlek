@@ -334,6 +334,9 @@ class _WorkoutHomeScreenState extends State<WorkoutHomeScreen> {
                                           'No workout scheduled today. You can choose a day from your plan.'))),
                             ...scheduled.map((d) => Card(
                                 child: ListTile(
+                                    leading: Icon(workoutRoutineIcons[
+                                            d.configuration['icon']] ??
+                                        workoutRoutineIcons['strength']),
                                     title: WorkoutLabel(d.name),
                                     subtitle: WorkoutLabel(
                                         '${d.exercises.length} exercises'),
@@ -511,6 +514,10 @@ class _WorkoutHomeScreenState extends State<WorkoutHomeScreen> {
                                           WorkoutLabel(p.description),
                                         ...p.days.map((d) => ListTile(
                                             contentPadding: EdgeInsets.zero,
+                                            leading: Icon(workoutRoutineIcons[
+                                                    d.configuration['icon']] ??
+                                                workoutRoutineIcons[
+                                                    'strength']),
                                             title: WorkoutLabel(d.name),
                                             subtitle: WorkoutLabel(
                                                 '${d.exercises.length} exercises${d.dayOfWeek == null ? '' : ' · ${WorkoutText.weekdays[d.dayOfWeek! - 1]}'}'),
