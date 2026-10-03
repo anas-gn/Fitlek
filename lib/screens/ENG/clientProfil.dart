@@ -1,3 +1,4 @@
+import '../../services/locale_service.dart';
 import 'dart:convert';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
@@ -1715,7 +1716,7 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
             );
           }
         ),
-        _actionTile(Icons.language_rounded, 'Language — English', onTap: () {}),
+        _actionTile(Icons.language_rounded, 'Language — ${LocaleService.instance.locale.languageCode.toUpperCase()}', onTap: () => LocaleService.instance.showPicker(context)),
         const SizedBox(height: 12),
         ThemeSelectorTile(controller: ThemeControllerScope.of(context)),
         const SizedBox(height: 20),

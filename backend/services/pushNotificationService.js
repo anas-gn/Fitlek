@@ -11,6 +11,10 @@ let isFirebaseInitialized = false;
 
 function initFirebase() {
   if (isFirebaseInitialized) return true;
+  if (admin.apps.length > 0) {
+    isFirebaseInitialized = true;
+    return true;
+  }
   try {
     let serviceAccount;
     if (process.env.FIREBASE_SERVICE_ACCOUNT) {
@@ -100,17 +104,19 @@ export async function createAndSendNotification({
   relatedEntityID = null,
   actorName = null,
   actorAvatar = null,
-  uniqueKey = null
+  uniqueKey = null,
+  requirePersistence = false
 }) {
   try {
     // 1. Insert in-app notification into MySQL
     const key = uniqueKey || `${type}:${Date.now()}:${recipientUserID}`;
-    await db.query(
+    const [inserted] = await db.query(
       `INSERT IGNORE INTO notifications
          (recipientUserID, type, title, body, relatedEntityID, actorName, actorAvatar, uniqueKey)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
       [recipientUserID, type, title, body, relatedEntityID, actorName, actorAvatar, key]
     );
+    if (!inserted.affectedRows) return;
 
     // 2. Send FCM Push Notification
     await sendPushNotification({
@@ -121,9 +127,11 @@ export async function createAndSendNotification({
         type,
         relatedEntityID: relatedEntityID || '',
         actorName: actorName || '',
+        userID: recipientUserID,
       }
     });
   } catch (err) {
     console.error('createAndSendNotification error:', err.message);
+    if (requirePersistence) throw err;
   }
 }

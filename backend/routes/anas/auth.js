@@ -744,15 +744,7 @@ router.post('/set-password', requireAuth, async (req, res) => {
       "UPDATE users SET passwordHash = ?, authProvider = 'both' WHERE id = ?",
       [passwordHash, req.user.id]
     );
-    const { token } = req.body;
-    if (!token) return res.status(400).json({ error: 'Token is required' });
-
-    await db.query(
-      'UPDATE users SET fcmToken = ? WHERE id = ?',
-      [token, req.user.id]
-    );
-
-    res.json({ success: true, message: 'FCM Token updated successfully.' });
+    res.json({ message: 'Password set successfully. You can now log in with your email and password.' });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

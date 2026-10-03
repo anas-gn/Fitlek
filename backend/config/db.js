@@ -18,8 +18,7 @@ const pool = mysql.createPool({
 
 // Test connection non-blockingly
 pool.query('SELECT 1').then(() => {
-  console.log("✅ Database connected (51.170.143.251)");
-  console.log("______________________");
+  console.log('Database connected');
 }).catch((error) => {
   console.error("❌ Database connection failed:", error.message);
 });

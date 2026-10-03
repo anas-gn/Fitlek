@@ -17,7 +17,7 @@ router.get('/:conversationId', requireAuth, requireRole('coach'), async (req, re
     const [messages] = await pool.query(
       `SELECT id, senderID, body, mediaUrl, mediaType, mediaExpired, isRead, createdAt
        FROM messages WHERE conversationID = ?
-       ORDER BY createdAt ASC`,
+       ORDER BY createdAt ASC, id ASC`,
       [conversationId]
     );
     await pool.query(

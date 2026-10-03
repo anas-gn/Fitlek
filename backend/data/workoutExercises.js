@@ -1,0 +1,29 @@
+// Original SIRVYA starter catalog. No third-party instructions or media.
+const exercise = (externalId, name, muscleGroup, equipment, instructions, secondaryMuscles = [], isBodyweight = false, exerciseType = 'reps') =>
+  ({externalId, name, muscleGroup, equipment, instructions, secondaryMuscles, isBodyweight, exerciseType, isTimed: exerciseType !== 'reps'});
+export default [
+  exercise('bench-press', 'Bench Press', 'chest', 'barbell', ['Lie on the bench with feet planted and shoulder blades supported.', 'Lower the bar with control toward your chest.', 'Press upward while keeping your wrists over your elbows.'], ['triceps', 'shoulders']),
+  exercise('dumbbell-press', 'Dumbbell Chest Press', 'chest', 'dumbbell', ['Support your back on a bench and hold the dumbbells beside your chest.', 'Press both weights upward with control.', 'Lower to a comfortable range without bouncing.'], ['triceps']),
+  exercise('push-up', 'Push-up', 'chest', 'bodyweight', ['Place hands under your shoulders and brace your trunk.', 'Lower your body as one unit.', 'Push back up while keeping your hips aligned.'], ['triceps', 'core'], true),
+  exercise('squat', 'Back Squat', 'legs', 'barbell', ['Set the bar securely across your upper back.', 'Brace and bend hips and knees together.', 'Stand back up with your feet firmly planted.'], ['glutes', 'core']),
+  exercise('goblet-squat', 'Goblet Squat', 'legs', 'dumbbell', ['Hold a dumbbell close to your chest.', 'Sit down between your hips through a comfortable range.', 'Drive through your feet to stand.'], ['glutes']),
+  exercise('lunge', 'Reverse Lunge', 'legs', 'bodyweight', ['Stand tall and step one foot backward.', 'Lower both knees with control.', 'Return to standing and alternate legs. Count total repetitions.'], ['glutes'], true),
+  exercise('deadlift', 'Deadlift', 'back', 'barbell', ['Stand close to the bar and grip it outside your legs.', 'Brace your trunk and push through your feet.', 'Extend your hips, then lower the bar with control.'], ['glutes', 'hamstrings']),
+  exercise('romanian-deadlift', 'Romanian Deadlift', 'hamstrings', 'barbell', ['Hold the bar in front of your thighs with knees softly bent.', 'Move your hips backward while keeping the bar close.', 'Return upright by extending your hips.'], ['glutes', 'back']),
+  exercise('pull-up', 'Pull-up', 'back', 'pull-up bar', ['Hang from the bar with a secure grip.', 'Pull your chest toward the bar without swinging.', 'Lower slowly to a comfortable hanging position.'], ['biceps'], true),
+  exercise('lat-pulldown', 'Lat Pulldown', 'back', 'cable', ['Sit with your thighs supported under the pad.', 'Pull the handle toward your upper chest.', 'Return upward slowly without leaning far backward.'], ['biceps']),
+  exercise('row', 'Seated Cable Row', 'back', 'cable', ['Sit upright with your feet supported.', 'Pull the handle toward your torso with elbows close.', 'Extend your arms slowly while keeping your trunk steady.'], ['biceps']),
+  exercise('dumbbell-row', 'Dumbbell Row', 'back', 'dumbbell', ['Support one hand on a bench and keep your back steady.', 'Draw the dumbbell toward your hip.', 'Lower slowly and repeat on both sides. Count total repetitions.'], ['biceps']),
+  exercise('overhead-press', 'Overhead Press', 'shoulders', 'barbell', ['Hold the bar at shoulder height and brace your trunk.', 'Press overhead without arching your lower back.', 'Lower the bar with control.'], ['triceps']),
+  exercise('lateral-raise', 'Lateral Raise', 'shoulders', 'dumbbell', ['Hold light dumbbells at your sides.', 'Raise your arms out to the sides with elbows softly bent.', 'Lower slowly without swinging.']),
+  exercise('curl', 'Dumbbell Curl', 'biceps', 'dumbbell', ['Stand tall with your elbows beside your torso.', 'Curl the weights without moving your upper arms.', 'Lower slowly through a comfortable range.']),
+  exercise('triceps-pushdown', 'Triceps Pushdown', 'triceps', 'cable', ['Hold the cable attachment with elbows near your sides.', 'Extend your elbows to press the handle down.', 'Return slowly while keeping your upper arms steady.']),
+  exercise('calf-raise', 'Standing Calf Raise', 'calves', 'bodyweight', ['Stand with support available for balance.', 'Rise onto the balls of your feet.', 'Lower your heels slowly.'], [], true),
+  exercise('glute-bridge', 'Glute Bridge', 'glutes', 'bodyweight', ['Lie on your back with feet planted and knees bent.', 'Lift your hips while keeping your ribs relaxed.', 'Lower with control.'], ['hamstrings'], true),
+  exercise('plank', 'Plank', 'core', 'bodyweight', ['Support yourself on forearms and toes.', 'Keep your trunk braced and hips aligned.', 'Breathe steadily and record the time held.'], [], true, 'timed'),
+  exercise('side-plank', 'Side Plank', 'core', 'bodyweight', ['Lie on your side with your elbow below your shoulder.', 'Raise your hips and hold a straight body line.', 'Record the time and train both sides.'], [], true, 'timed'),
+  exercise('wall-sit', 'Wall Sit', 'legs', 'bodyweight', ['Support your back against a wall.', 'Slide down to a comfortable knee angle.', 'Hold the position and record the time.'], [], true, 'timed'),
+  exercise('farmer-carry', 'Farmer Carry', 'core', 'dumbbell', ['Hold weights at your sides and stand tall.', 'Walk with controlled steps and steady breathing.', 'Record the total time carrying the weights.'], ['forearms'], false, 'timed'),
+  exercise('cycling', 'Stationary Cycling', 'cardio', 'bike', ['Adjust the seat so your knees remain slightly bent at the bottom.', 'Pedal smoothly at your planned effort.', 'Record the duration of the interval.'], ['legs'], false, 'cardio'),
+  exercise('running', 'Running', 'cardio', 'none', ['Begin at an easy pace.', 'Keep your stride comfortable and breathing steady.', 'Record the duration of the interval.'], ['legs'], false, 'cardio'),
+];

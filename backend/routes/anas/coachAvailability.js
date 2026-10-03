@@ -7,7 +7,10 @@ router.get('/:coachID', async (req, res) => {
     const { date } = req.query;
     let sql = 'SELECT * FROM coachavailabilityblocks WHERE coachID=?';
     const params = [req.params.coachID];
-    if (date) { sql += ' AND blockedDate=?'; params.push(date); }
+    if (date) {
+      sql += ' AND (blockedDate=? OR (blockedDate IS NULL AND isRecurring=1 AND dayOfWeek=DAYNAME(?)))';
+      params.push(date, date);
+    }
     sql += ' ORDER BY blockedDate, startTime';
     const [rows] = await db.query(sql, params);
     res.json(rows);
@@ -22,7 +25,7 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ error: 'coachID, blockedDate, startTime and endTime required' });
 
     const [result] = await db.query(
-      'INSERT INTO coachavailabilityblocks (coachID, blockedDate, startTime, endTime, note) VALUES (?,?,?,?,?)',
+      'INSERT INTO coachavailabilityblocks (coachID, blockedDate, startTime, endTime, note, isRecurring) VALUES (?,?,?,?,?,0)',
       [coachID, blockedDate, startTime, endTime, note || null]
     );
     res.status(201).json({ message: 'Block created', id: result.insertId });

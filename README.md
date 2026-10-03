@@ -1,5 +1,11 @@
 # SIRVYA 🏋️‍♂️
 
+**SIRVYA Workout** est intégré nativement à l’application Flutter existante,
+avec l’authentification, les utilisateurs, les relations Coach/Client et MySQL
+de SIRVYA. Voir [le guide Workout](docs/SIRVYA_WORKOUT.md),
+[la matrice de fonctionnalités](docs/WORKOUT_PARITY.md) et
+[les licences](docs/THIRD_PARTY_WORKOUT.md).
+
 Plateforme complète de coaching sportif pour le marché marocain, composée d'une application mobile **Flutter**, d'un portail web **Next.js** pour les advisors (salles de sport / gérants), et d'une API backend **Node.js / Express** avec base de données **MySQL**.
 
 ---
@@ -36,7 +42,7 @@ SIRVYA/
 ### Backend
 
 - **Auth :** `middleware/auth.js` exporte `{ authenticate, authorize(...roles) }`
-- **Base de données :** pool `mysql2` en mode promesse (`.query()` uniquement — pas de transactions sauf extension du pool)
+- **Base de données :** pool `mysql2` en mode promesse ; les écritures Workout utilisent une connexion dédiée et des transactions natives.
 
 
 **Routes principales :**
@@ -123,11 +129,30 @@ npm run dev
 
 ## 🔑 Variables d'environnement (backend)
 
+Sirvya Premium uses Stripe for subscription checkout. Copy `backend/.env.example`
+to the backend environment file, set the Stripe test keys and price ID, then
+apply `backend/migrations/2026_premium_subscriptions.sql` and
+`backend/migrations/2026_premium_workouts.sql` and
+`backend/migrations/2026_premium_exercise_seed.sql` to the same MySQL database.
+For databases that already applied the workout migration, also apply
+`backend/migrations/2026_premium_superset_upgrade.sql`.
+Configure Stripe to send signed events to
+`/api/stripe/webhook`; the webhook secret must stay on the backend.
+
+The current Premium workout API supports exercise search, personal routines,
+starting sessions, saving sets, finishing sessions, and workout history under
+`/api/premium/workouts`. Every request requires the existing Fitlek JWT and an
+active Stripe Premium subscription.
+
+The guided workout UI includes set entry and a rest timer. The workout migration
+also supports body weight and routine superset grouping; advanced progression
+and media imports remain separate product work.
+
 
 
 ## 📌 Bonnes pratiques du projet
 
-- Aucune transaction SQL native disponible — simuler un rollback manuellement si nécessaire (ex : supprimer l'utilisateur si l'insertion du profil échoue)
+- Pour les écritures liées, utiliser `pool.getConnection()`, `beginTransaction()`, `commit()`/`rollback()` et libérer la connexion dans `finally`.
 - Les endpoints de réservation nécessitent toujours `userID` **et** `role` en query params pour le filtrage
 - Toujours vérifier le champ réel `avatarUrl` avant de recourir aux initiales UI-Avatars
 - Ne pas coder en dur des noms de police non déclarés dans `pubspec.yaml` (rendu en damier)

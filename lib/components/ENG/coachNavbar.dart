@@ -54,6 +54,12 @@ class CoachNavbar extends StatelessWidget {
                 onTap: () => onTap(1),
               ),
               _NavItem(
+                icon: Icons.fitness_center_rounded,
+                label: 'Workout',
+                isSelected: currentIndex == 5,
+                onTap: () => onTap(5),
+              ),
+              _NavItem(
                 icon: Icons.chat_bubble_rounded,
                 label: 'Chats',
                 isSelected: currentIndex == 2,
@@ -102,7 +108,7 @@ class _NavItem extends StatelessWidget {
       behavior: HitTestBehavior.opaque,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
         decoration: BoxDecoration(
           color: isSelected ? cs.primary.withValues(alpha: 0.1) : Colors.transparent,
           borderRadius: BorderRadius.circular(12),

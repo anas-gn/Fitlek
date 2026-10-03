@@ -2,6 +2,20 @@ import express from 'express';
 const router = express.Router();
 import db from '../../config/db.js';
 import { createAndSendNotification } from '../../services/pushNotificationService.js';
+router.use('/:conversationID', async (req, res, next) => {
+  try {
+    const [conversations] = await db.query(
+      'SELECT id FROM conversations WHERE id=? AND (clientID=? OR coachID=?)',
+      [req.params.conversationID,req.user.id,req.user.id]
+    );
+    if (!conversations.length) return res.status(404).json({error:'Conversation not found or access denied'});
+    if ((req.query.readerID && Number(req.query.readerID) !== Number(req.user.id)) ||
+        (req.body?.senderID && Number(req.body.senderID) !== Number(req.user.id))) {
+      return res.status(403).json({error:'Access denied'});
+    }
+    next();
+  } catch (err) { res.status(500).json({error:err.message}); }
+});
 // GET /messages/:conversationID
 router.get('/:conversationID', async (req, res) => {
   try {
@@ -12,7 +26,7 @@ router.get('/:conversationID', async (req, res) => {
       `SELECT m.id, m.conversationID, m.senderID, m.body, m.mediaUrl, m.mediaType, m.mediaExpired, m.isRead, m.createdAt,
               CONCAT(u.firstName,' ',u.lastName) AS senderName, u.avatarUrl AS senderAvatar
        FROM messages m JOIN users u ON u.id = m.senderID
-       WHERE m.conversationID=? ORDER BY m.createdAt ASC LIMIT ? OFFSET ?`,
+       WHERE m.conversationID=? ORDER BY m.createdAt ASC, m.id ASC LIMIT ? OFFSET ?`,
       [req.params.conversationID, Number(limit), Number(offset)]
     );
 

@@ -1,23 +1,13 @@
-import fs from 'fs';
-import mysql from 'mysql2/promise';
+import {readFile} from 'node:fs/promises';
+import db from './config/db.js';
 
-async function run() {
-  try {
-    const sql = fs.readFileSync('migrations/2026_categories_favorites.sql', 'utf8');
-    const conn = await mysql.createConnection({
-      host: '51.170.143.251',
-      user: 'sirvya',
-      password: 'Sirvya@Backend2026',
-      database: 'sirvya',
-      port: 3306,
-      multipleStatements: true
-    });
-    console.log('Connected to DB');
-    const [results] = await conn.query(sql);
-    console.log('Migration executed successfully');
-    conn.end();
-  } catch (e) {
-    console.error('Migration failed:', e);
-  }
+try {
+  const sql = await readFile(new URL('./migrations/2026_categories_favorites.sql', import.meta.url), 'utf8');
+  for (const statement of sql.split(';').map(s => s.trim()).filter(Boolean)) await db.query(statement);
+  console.log('Migration executed successfully');
+} catch (error) {
+  console.error('Migration failed:', error.code || error.message);
+  process.exitCode = 1;
+} finally {
+  await db.end();
 }
-run();

@@ -44,8 +44,22 @@ import weightHistoryRoutes from './routes/anas/weightHistory.js';
 import uploadRoutes from './routes/anas/upload.js';
 import appVersionRoutes from './routes/anas/appVersion.js';
 import ugcRoutes from './routes/anas/ugc.js';
+import categoryRoutes from './routes/anas/categories.js';
+import favoriteRoutes from './routes/anas/favorites.js';
+import premiumRoutes from './routes/anas/premium.js';
+import premiumWorkoutRoutes from './routes/anas/premiumWorkouts.js';
+import premiumCoachRoutes from './routes/anas/premiumCoach.js';
+import db from './config/db.js';
+import { ensureGoogleAuthSchema } from './config/googleAuthSchema.js';
+import { ensureAppCompatibilitySchema } from './config/appCompatibilitySchema.js';
+import { ensureWorkoutSchema } from './config/workoutSchema.js';
+import { createWorkoutRouter } from './routes/anas/workout.js';
+import { createAndSendNotification } from './services/pushNotificationService.js';
 
 import express from 'express';
+import notificationsRoutes from './routes/anas/notifications.js';
+import {startWorkoutReminders} from './services/workoutReminders.js';
+import {startWorkoutMediaCleanup} from './services/workoutMediaCleanup.js';
 import path from 'path';
 import cors from 'cors';
 import dotenv from 'dotenv';
@@ -68,6 +82,18 @@ import { startMediaCleanupJob } from './cron/mediaCleanup.js';
 dotenv.config();
 initFirebase();
 startMediaCleanupJob();
+
+// Auth routes must not accept requests against a partially migrated schema.
+await ensureGoogleAuthSchema(db);
+await ensureAppCompatibilitySchema(db);
+
+let resolveWorkoutSchema;
+let rejectWorkoutSchema;
+const workoutReady = new Promise((resolve, reject) => {
+  resolveWorkoutSchema = resolve;
+  rejectWorkoutSchema = reject;
+});
+workoutReady.catch(() => {});
 
 // Run schema ensures sequentially — Clever Cloud allows only ~5 MySQL
 // connections; parallel ensure* calls race the pool and cause ECONNRESET.
@@ -127,6 +153,13 @@ startMediaCleanupJob();
   } catch (e) {
     console.error('❌ Coach images schema ensure failed:', e.message);
   }
+  try {
+    await ensureWorkoutSchema(db);
+    resolveWorkoutSchema();
+  } catch (e) {
+    console.error('Workout schema ensure failed:', e.message);
+    rejectWorkoutSchema(e);
+  }
 })();
 
 
@@ -140,6 +173,9 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization'],
 }));
 
+// Large workout transfers are authenticated before parsing; other APIs retain
+// their existing request-size limit.
+app.use(['/api/workout/history/import-preview','/api/workout/history/import'],requireAuth,express.json({limit:'10mb'}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -202,6 +238,15 @@ app.use('/api/weight-history', requireAuth, weightHistoryRoutes);
 app.use('/api/upload',        requireAuth, uploadRoutes);
 app.use('/api/app-version',   appVersionRoutes);
 app.use('/api/ugc',           requireAuth, ugcRoutes);
+app.use('/api/categories',    requireAuth, categoryRoutes);
+app.use('/api/favorites',     requireAuth, favoriteRoutes);
+app.use('/api/premium',       requireAuth, premiumRoutes);
+app.use('/api/premium/workouts', requireAuth, premiumWorkoutRoutes);
+app.use('/api/coach/premium', requireAuth, premiumCoachRoutes);
+app.use('/api/workout', createWorkoutRouter(db, {ready: workoutReady, notify: createAndSendNotification}));
+app.use('/api/notifications',notificationsRoutes);
+startWorkoutReminders(db,createAndSendNotification,workoutReady);
+startWorkoutMediaCleanup(db,workoutReady);
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`✅ Fitlek API running on port ${PORT}`));

@@ -1,6 +1,24 @@
 import express from 'express';
 const router = express.Router();
 import db from '../../config/db.js';
+// Scope Client/Coach identifiers to the authenticated account, including callers
+// that attempt to change the list's role or one side of a conversation pair.
+router.use((req, res, next) => {
+  if (!['client','coach'].includes(req.user.role)) return next();
+  if ((req.query.userID && Number(req.query.userID) !== Number(req.user.id)) ||
+      (req.query.role && req.query.role !== req.user.role)) {
+    return res.status(403).json({error:'Access denied'});
+  }
+  const pair = req.method === 'POST' ? req.body : req.query;
+  const ownID = req.user.role === 'client' ? pair.clientID : pair.coachID;
+  if (ownID !== undefined && Number(ownID) !== Number(req.user.id)) {
+    return res.status(403).json({error:'Access denied'});
+  }
+  if (req.method === 'GET' && req.path === '/') {
+    req.authenticatedConversationScope = {userID:req.user.id,role:req.user.role};
+  }
+  next();
+});
 // GET /conversations/unread-total
 router.get('/unread-total', async (req, res) => {
   try {
@@ -22,12 +40,12 @@ router.get('/unread-total', async (req, res) => {
 // GET /conversations
 router.get('/', async (req, res) => {
   try {
-    const { userID, role } = req.query;
+    const { userID, role } = req.authenticatedConversationScope || req.query;
     const requesterID = req.user.id;
     let sql, params;
     if (role === 'client') {
       sql = `SELECT cv.*, CONCAT(co.firstName,' ',co.lastName) AS otherName, co.avatarUrl AS otherAvatar,
-               (SELECT body FROM messages m WHERE m.conversationID = cv.id ORDER BY m.createdAt DESC LIMIT 1) AS lastMessage,
+               (SELECT body FROM messages m WHERE m.conversationID = cv.id ORDER BY m.createdAt DESC, m.id DESC LIMIT 1) AS lastMessage,
                (SELECT COUNT(*) FROM messages m WHERE m.conversationID = cv.id AND m.senderID != cv.clientID AND m.isRead = 0) AS unreadCount
              FROM conversations cv JOIN users co ON co.id = cv.coachID
              WHERE cv.clientID=? 
@@ -37,7 +55,7 @@ router.get('/', async (req, res) => {
       params = [userID, requesterID, requesterID];
     } else if (role === 'coach') {
       sql = `SELECT cv.*, CONCAT(c.firstName,' ',c.lastName) AS otherName, c.avatarUrl AS otherAvatar,
-               (SELECT body FROM messages m WHERE m.conversationID = cv.id ORDER BY m.createdAt DESC LIMIT 1) AS lastMessage,
+               (SELECT body FROM messages m WHERE m.conversationID = cv.id ORDER BY m.createdAt DESC, m.id DESC LIMIT 1) AS lastMessage,
                (SELECT COUNT(*) FROM messages m WHERE m.conversationID = cv.id AND m.senderID != cv.coachID AND m.isRead = 0) AS unreadCount
              FROM conversations cv JOIN users c ON c.id = cv.clientID
              WHERE cv.coachID=? 

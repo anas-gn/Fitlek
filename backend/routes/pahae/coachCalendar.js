@@ -112,8 +112,8 @@ router.post('/availability', requireAuth, requireRole('coach'), async (req, res)
   }
   try {
     const [result] = await pool.query(
-      `INSERT INTO coachavailabilityblocks (coachID, blockedDate, startTime, endTime, note)
-       VALUES (?, ?, ?, ?, ?)`,
+      `INSERT INTO coachavailabilityblocks (coachID, blockedDate, startTime, endTime, note, isRecurring)
+       VALUES (?, ?, ?, ?, ?, 0)`,
       [coachID, blockedDate, startTime, endTime, note || null]
     );
     res.status(201).json({ id: result.insertId });

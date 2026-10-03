@@ -12,6 +12,7 @@ import 'screens/ENG/coachChat.dart';
 import 'models/coachConversation.dart';
 import 'screens/ENG/login.dart';
 import 'services/apiService.dart';
+import 'screens/ENG/workout/workout_home.dart';
 class MainLayoutCoach extends StatefulWidget {
   const MainLayoutCoach({super.key});
 
@@ -196,6 +197,7 @@ class _MainLayoutCoachState extends State<MainLayoutCoach> with WidgetsBindingOb
         onLogout: _handleLogout,
         onProfileUpdated: _loadCoachProfile,
       ),
+      const WorkoutHomeScreen(coach: true),
     ];
 
     return Scaffold(

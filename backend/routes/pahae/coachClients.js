@@ -9,7 +9,7 @@ router.get('/', requireAuth, requireRole('coach'), async (req, res) => {
   try {
     const [rows] = await pool.query(
       `SELECT u.id, u.firstName, u.lastName, u.email, u.avatarUrl, u.isPremium,
-              cc.createdAt AS linkedAt
+              cc.assignedAt AS linkedAt
        FROM coachclients cc
        JOIN users u ON u.id = cc.clientID
        WHERE cc.coachID = ?
@@ -28,7 +28,7 @@ router.get('/:clientId', requireAuth, requireRole('coach'), async (req, res) => 
   const { clientId } = req.params;
   try {
     const [[rel]] = await pool.query(
-      `SELECT createdAt AS linkedAt FROM coachclients WHERE coachID = ? AND clientID = ?`,
+      `SELECT assignedAt AS linkedAt FROM coachclients WHERE coachID = ? AND clientID = ?`,
       [coachID, clientId]
     );
     if (!rel) return res.status(403).json({ message: 'This client is not linked to you.' });

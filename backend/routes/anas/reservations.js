@@ -5,11 +5,14 @@ import { createAndSendNotification } from '../../services/pushNotificationServic
 // GET /reservations
 router.get('/', async (req, res) => {
   try {
-    const { userID, role, status, page = 1, limit = 20 } = req.query;
+    const { status, page = 1, limit = 20, upcoming } = req.query;
+    const role = ['client','coach'].includes(req.user.role) ? req.user.role : req.query.role;
+    const userID = ['client','coach'].includes(req.user.role) ? req.user.id : req.query.userID;
     const offset = (page - 1) * limit;
     let sql = `SELECT r.*,
                CONCAT(c.firstName,' ',c.lastName)  AS clientName, c.avatarUrl  AS clientAvatar,
-               CONCAT(co.firstName,' ',co.lastName) AS coachName,  co.avatarUrl AS coachAvatar
+               CONCAT(co.firstName,' ',co.lastName) AS coachName, co.avatarUrl AS coachAvatar,
+               CONCAT(DATE_FORMAT(r.reservedDate,'%Y-%m-%d'),'T',TIME_FORMAT(r.reservedTime,'%H:%i:%s')) AS sessionStart
                FROM reservations r
                JOIN users c  ON c.id  = r.clientID
                JOIN users co ON co.id = r.coachID
@@ -18,7 +21,10 @@ router.get('/', async (req, res) => {
     if (role === 'client') { sql += ' AND r.clientID=?'; params.push(userID); }
     if (role === 'coach')  { sql += ' AND r.coachID=?';  params.push(userID); }
     if (status) { sql += ' AND r.status=?'; params.push(status); }
-    sql += ' ORDER BY r.reservedDate DESC, r.reservedTime DESC LIMIT ? OFFSET ?';
+    if (upcoming === 'true') sql += ' AND TIMESTAMP(r.reservedDate,r.reservedTime) > NOW()';
+    sql += upcoming === 'true'
+      ? ' ORDER BY r.reservedDate ASC, r.reservedTime ASC LIMIT ? OFFSET ?'
+      : ' ORDER BY r.reservedDate DESC, r.reservedTime DESC LIMIT ? OFFSET ?';
     params.push(Number(limit), Number(offset));
     const [rows] = await db.query(sql, params);
     res.json(rows);
@@ -95,8 +101,10 @@ router.post('/', async (req, res) => {
     // Vérifier créneau bloqué par le coach
     const [blocks] = await db.query(
       `SELECT id FROM coachavailabilityblocks
-       WHERE coachID=? AND blockedDate=? AND startTime <= ? AND endTime > ?`,
-      [coachID, reservedDate, reservedTime, reservedTime]
+       WHERE coachID=?
+         AND (blockedDate=? OR (blockedDate IS NULL AND isRecurring=1 AND dayOfWeek=DAYNAME(?)))
+         AND startTime <= ? AND endTime > ?`,
+      [coachID, reservedDate, reservedDate, reservedTime, reservedTime]
     );
     if (blocks.length) return res.status(409).json({ error: 'Coach not available at this time' });
 

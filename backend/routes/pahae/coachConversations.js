@@ -14,7 +14,7 @@ router.get('/', requireAuth, requireRole('coach'), async (req, res) => {
          u.firstName, u.lastName, u.avatarUrl,
          c.lastMessageAt,
          (SELECT body FROM messages m WHERE m.conversationID = c.id
-          ORDER BY m.createdAt DESC LIMIT 1) AS lastMessage,
+          ORDER BY m.createdAt DESC, m.id DESC LIMIT 1) AS lastMessage,
          (SELECT COUNT(*) FROM messages m
           WHERE m.conversationID = c.id AND m.senderID != ? AND m.isRead = 0) AS unreadCount
        FROM conversations c

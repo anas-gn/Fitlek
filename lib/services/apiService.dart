@@ -20,13 +20,27 @@ class ApiService {
     if (kDebugMode) debugPrint('TOKEN SAVED');
   }
 
+  static Future<void> Function()? onLogout;
   static Future<void> clearToken() async {
     final prefs = await SharedPreferences.getInstance();
+    await onLogout?.call();
+    final language = prefs.getString('sirvya_language'),
+        theme = prefs.getString('app_theme_mode');
+    final workoutRecovery = {
+      for (final key in prefs.getKeys())
+        if (key.startsWith('sirvya_workout_')) key: prefs.getString(key)
+    };
     await prefs.remove('token');
     await prefs.remove('role');
     await prefs.remove('userId');
     await prefs.remove('firstName');
     await prefs.clear();
+    // Pending results stay isolated by account and can sync after signing in again.
+    for (final entry in workoutRecovery.entries) {
+      if (entry.value != null) await prefs.setString(entry.key, entry.value!);
+    }
+    if (language != null) await prefs.setString('sirvya_language', language);
+    if (theme != null) await prefs.setString('app_theme_mode', theme);
     if (kDebugMode) debugPrint('TOKEN CLEARED FULLY');
   }
 
@@ -78,10 +92,13 @@ class ApiService {
           ? '/coach/profile'
           : role == 'manager'
               ? '/manager/profile'
-              : '/client/profile';
+              : '/clients/me';
 
-      final result = await get(path);
-      if (kDebugMode) debugPrint('SESSION RESULT: $result');
+      final userData = await getUserData();
+      final sessionPath =
+          role == 'client' ? '$path?userID=${userData?['id'] ?? ''}' : path;
+      final result = await get(sessionPath);
+      if (kDebugMode) debugPrint('SESSION RESULT: ${result['ok']}');
 
       if (result['ok'] == true) return role;
 
@@ -124,7 +141,7 @@ class ApiService {
       if (token != null && token.isNotEmpty) {
         headers['Authorization'] = 'Bearer $token';
         if (kDebugMode) {
-          debugPrint('AUTH HEADER: Bearer ${token.substring(0, 30)}...');
+          debugPrint('AUTH HEADER: Bearer token present');
         }
       } else {
         if (kDebugMode) debugPrint('NO TOKEN - Request will be unauthorized');
@@ -146,7 +163,6 @@ class ApiService {
 
       if (kDebugMode) {
         debugPrint('GET $path -> ${response.statusCode}');
-        debugPrint('BODY: ${response.body.substring(0, response.body.length > 200 ? 200 : response.body.length)}');
       }
 
       return _handle(response);
@@ -180,7 +196,6 @@ class ApiService {
 
       if (kDebugMode) {
         debugPrint('POST $path -> ${response.statusCode}');
-        debugPrint('BODY: ${response.body.substring(0, response.body.length > 200 ? 200 : response.body.length)}');
       }
 
       return _handle(response);
@@ -204,7 +219,8 @@ class ApiService {
     try {
       final headers = await _headers();
       final response = await http
-          .put(Uri.parse('$baseUrl$path'), headers: headers, body: jsonEncode(body))
+          .put(Uri.parse('$baseUrl$path'),
+              headers: headers, body: jsonEncode(body))
           .timeout(const Duration(seconds: 15));
       return _handle(response);
     } catch (e) {
@@ -271,7 +287,8 @@ class ApiService {
         contentType: MediaType(parts[0], parts.length > 1 ? parts[1] : '*'),
       ));
 
-      final streamed = await request.send().timeout(const Duration(seconds: 30));
+      final streamed =
+          await request.send().timeout(const Duration(seconds: 30));
       final response = await http.Response.fromStream(streamed);
       return _handle(response);
     } catch (e) {
@@ -303,10 +320,14 @@ class ApiService {
         'status': response.statusCode,
       };
     } on FormatException {
-      if (kDebugMode) debugPrint('API returned non-JSON response (HTML): ${response.statusCode}');
+      if (kDebugMode) {
+        debugPrint(
+            'API returned non-JSON response (HTML): ${response.statusCode}');
+      }
       return {
         'ok': false,
-        'message': 'Server error (${response.statusCode}). Please verify backend server is running.',
+        'message':
+            'Server error (${response.statusCode}). Please verify backend server is running.',
         'status': response.statusCode,
       };
     } catch (e) {
@@ -318,7 +339,8 @@ class ApiService {
     }
   }
 
-  static Future<Map<String, dynamic>> saveFcmTokenToServer(String fcmToken) async {
+  static Future<Map<String, dynamic>> saveFcmTokenToServer(
+      String fcmToken) async {
     return await post('/auth/fcm-token', {'token': fcmToken});
   }
 

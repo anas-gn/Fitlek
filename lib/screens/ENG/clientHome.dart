@@ -14,12 +14,13 @@ import 'clientProfil.dart';
 import 'clientNotifications.dart';
 import 'clientSessionDetail.dart';
 import 'clientQrScanner.dart';
-import 'clientList.dart';
 import 'clientBooking.dart';
 
 import '../../theme/fitlek_theme_extension.dart';
 import '../../components/sirvya_logo.dart';
 import '../../constants/app_colors.dart';
+import '../../premium/screens/premium_paywall_screen.dart';
+import 'workout/workout_home.dart';
 
 class _AdvisorItem {
   final int id;
@@ -155,6 +156,15 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _navIndex = 0;
+
+  void _openPremium() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => PremiumPaywallScreen(clientID: widget.clientID),
+      ),
+    );
+  }
 
   List<CoachModel> _coaches = [];
   List<CoachModel> _allCoaches = [];
@@ -601,6 +611,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 token: widget.token,
                 onLogout: widget.onLogout,
               ),
+              const WorkoutHomeScreen(),
             ],
           ),
         ],
@@ -817,6 +828,11 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
           const SizedBox(width: 8),
+          IconButton(
+            tooltip: 'Sirvya Premium',
+            onPressed: _openPremium,
+            icon: const Icon(Icons.workspace_premium_outlined, color: Colors.white),
+          ),
           GestureDetector(
   onTap: () async {
     await Navigator.push(
@@ -1382,10 +1398,10 @@ const SizedBox(width: 8),
         Positioned(
           top: -8,
           child: GestureDetector(
-            onTap: () => setState(() => _navIndex = 0),
+            onTap: () => setState(() => _navIndex = 4),
             child: Container(
-              width: 54,
-              height: 54,
+              width: 70,
+              height: 66,
               decoration: BoxDecoration(
                 boxShadow: [
                   BoxShadow(
@@ -1398,8 +1414,14 @@ const SizedBox(width: 8),
                   ),
                 ],
               ),
-              child: const Center(
-                child: SirvyaLogo(variant: SirvyaLogoVariant.mark, height: 105),
+              child: Column(
+                children: [
+                  Icon(Icons.fitness_center_rounded, size: 32,
+                    color: _navIndex == 4 ? Theme.of(context).colorScheme.primary : context.fitlek.navUnselected),
+                  const SizedBox(height: 4),
+                  Text('Workout', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700,
+                    color: _navIndex == 4 ? Theme.of(context).colorScheme.primary : context.fitlek.navUnselected)),
+                ],
               ),
             ),
           ),
@@ -1415,7 +1437,7 @@ const SizedBox(width: 8),
       behavior: HitTestBehavior.opaque,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
         decoration: BoxDecoration(
           color: active
               ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.12)
