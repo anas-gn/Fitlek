@@ -80,6 +80,9 @@ class _CoachDetailScreenState extends State<CoachDetailScreen>
   final _commentCtrl = TextEditingController();
   bool _showReviewForm = false;
 
+  bool _isFavorite = false;
+  bool _togglingFavorite = false;
+
   bool _sendingInvite = false;
   String _inviteStatus = 'none';
   int? _conversationID;
@@ -95,6 +98,7 @@ class _CoachDetailScreenState extends State<CoachDetailScreen>
     _fadeAnim = CurvedAnimation(parent: _animCtrl, curve: Curves.easeOut);
     _fetchAll();
     _checkInvitationStatus();
+    _fetchFavoriteStatus();
   }
 
   @override
@@ -102,6 +106,60 @@ class _CoachDetailScreenState extends State<CoachDetailScreen>
     _animCtrl.dispose();
     _commentCtrl.dispose();
     super.dispose();
+  }
+
+  Future<void> _fetchFavoriteStatus() async {
+    try {
+      final res = await http.get(
+        Uri.parse('$baseUrl/favorites?clientID=${widget.clientID}'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ${widget.token}',
+        },
+      ).timeout(const Duration(seconds: 8));
+      if (res.statusCode == 200) {
+        final List data = jsonDecode(res.body);
+        final ids = data.map((e) => e as int).toSet();
+        if (mounted) {
+          setState(() => _isFavorite = ids.contains(widget.session.coachID));
+        }
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _toggleFavorite() async {
+    if (_togglingFavorite) return;
+    final previous = _isFavorite;
+    setState(() {
+      _togglingFavorite = true;
+      _isFavorite = !previous;
+    });
+    try {
+      final res = await http
+          .post(
+            Uri.parse('$baseUrl/favorites/toggle'),
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer ${widget.token}',
+            },
+            body: jsonEncode({
+              'clientID': widget.clientID,
+              'coachID': widget.session.coachID,
+            }),
+          )
+          .timeout(const Duration(seconds: 8));
+      if (res.statusCode == 200 || res.statusCode == 201) {
+        _showSnack(previous ? 'Removed from favorites' : 'Added to favorites ✓');
+      } else {
+        if (mounted) setState(() => _isFavorite = previous);
+        _showSnack('Failed to update favorites', isError: true);
+      }
+    } catch (_) {
+      if (mounted) setState(() => _isFavorite = previous);
+      _showSnack('Connection failed', isError: true);
+    } finally {
+      if (mounted) setState(() => _togglingFavorite = false);
+    }
   }
 
   Future<void> _fetchAll() async {
@@ -762,6 +820,25 @@ class _CoachDetailScreenState extends State<CoachDetailScreen>
                                 fontWeight: FontWeight.w900,
                                 letterSpacing: 1.4)),
                       ]),
+                    ),
+                    const SizedBox(width: 8),
+                    GestureDetector(
+                      onTap: _toggleFavorite,
+                      child: Container(
+                        width: 34,
+                        height: 34,
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.45),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          _isFavorite
+                              ? Icons.favorite_rounded
+                              : Icons.favorite_border_rounded,
+                          color: _isFavorite ? Colors.redAccent : Colors.white,
+                          size: 18,
+                        ),
+                      ),
                     ),
                     const SizedBox(width: 8),
                     _buildMoreMenu(c),

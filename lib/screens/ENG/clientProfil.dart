@@ -7,6 +7,7 @@ import 'package:fitlek1/constants/urls.dart';
 import 'package:fitlek1/services/apiService.dart';
 import 'welcome.dart';
 import 'blockedUsersList.dart';
+import 'clientCoachFavorites.dart';
 import '../../components/theme_selector.dart';
 import '../../theme/fitlek_theme_extension.dart';
 import '../../components/sirvya_logo.dart';
@@ -35,6 +36,7 @@ class _WeightStats {
     this.total = 0,
   });
 }
+
 class ClientProfileScreen extends StatefulWidget {
   final int clientID;
   final String token;
@@ -61,13 +63,9 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
   bool _saveSuccess = false;
   bool _isEditing = false;
 
-  // ── Account deletion state ────────────────────────────────────────
-
-  // ── Avatar ────────────────────────────────────────────────────────
   String? _avatarUrl;
   bool _uploadingAvatar = false;
 
-  // ── Form controllers ──────────────────────────────────────────────
   final _firstNameCtrl = TextEditingController();
   final _lastNameCtrl = TextEditingController();
   final _emailCtrl = TextEditingController();
@@ -79,15 +77,12 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
   String _selectedGender = 'Female';
   bool _isPremium = false;
 
-  // ── Weight data (remote) ──────────────────────────────────────────
   List<_WeightEntry> _weightData = [];
   _WeightStats _weightStats = const _WeightStats();
   bool _loadingWeight = false;
 
-  // ── Stats ─────────────────────────────────────────────────────────
   int _sessionsCount = 0;
 
-  // ── Headers ───────────────────────────────────────────────────────
   Map<String, String> get _headers => {
         'Content-Type': 'application/json',
         'Authorization': 'Bearer ${widget.token}',
@@ -100,12 +95,9 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
     return null;
   }
 
-  // ── Lifecycle ─────────────────────────────────────────────────────
-
   @override
   void initState() {
     super.initState();
-    // ✅ FIX: length=2 car on a exactement 2 onglets (PROFIL / PROGRESSION)
     _tabController = TabController(length: 2, vsync: this);
     _tabController.addListener(() {
       if (_tabController.indexIsChanging) return;
@@ -114,8 +106,6 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
       }
     });
     _fetchProfile();
-    // ✅ FIX: on charge les données de poids dès le démarrage,
-    // sans attendre que l'utilisateur clique sur l'onglet PROGRESSION.
     _fetchWeightData();
   }
 
@@ -129,7 +119,6 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
     _goalCtrl.dispose();
     super.dispose();
   }
-
 
   Future<void> _fetchProfile() async {
     setState(() {
@@ -179,7 +168,6 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
     _heightCtrl.text = h != null ? h.toStringAsFixed(1) : '165.0';
   }
 
-
   Future<void> _fetchSessionsCount() async {
     try {
       final res = await http
@@ -197,8 +185,6 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
       }
     } catch (_) {}
   }
-
-  // ── GET weight history ────────────────────────────────────────────
 
   Future<void> _fetchWeightData() async {
     if (_loadingWeight) return;
@@ -264,8 +250,6 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
     }
   }
 
-  // ── POST weight entry ─────────────────────────────────────────────
-
   Future<void> _addWeight(double weight) async {
     final errorColor = context.fitlek.error;
     try {
@@ -279,7 +263,7 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
 
       if (res.statusCode == 201) {
         _showSnack('Weight saved ✓');
-        await _fetchWeightData(); // refresh
+        await _fetchWeightData();
       } else {
         _showSnack('Error while saving', color: errorColor);
       }
@@ -287,7 +271,6 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
       _showSnack('Unable to reach the server.', color: errorColor);
     }
   }
-
 
   Future<void> _pickAndUploadAvatar() async {
     final errorColor = context.fitlek.error;
@@ -322,7 +305,7 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
             'avatar',
             bytes,
             filename: file.name,
-            contentType: MediaType.parse(mime), // ← c'est ça qui manque
+            contentType: MediaType.parse(mime),
           ),
         );
       } else {
@@ -367,8 +350,6 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
       if (mounted) setState(() => _uploadingAvatar = false);
     }
   }
-
-  // ── PUT /api/clients/me ───────────────────────────────────────────
 
   Future<void> _saveProfile() async {
     final errorColor = context.fitlek.error;
@@ -417,16 +398,25 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
   void _toggleEdit() =>
       _isEditing ? _saveProfile() : setState(() => _isEditing = true);
 
-  // ── Account Deletion Flow ─────────────────────────────────────────
+  void _openFavorites() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ClientCoachFavoriteScreen(
+          clientID: widget.clientID,
+          token: widget.token,
+        ),
+      ),
+    );
+  }
 
   void _showDeleteAccountSheet() {
-    // Step 1: Warning confirmation. Step 2: OTP entry.
     int step = 1;
     bool understood = false;
     bool loading = false;
     String? errorMsg;
     String otpValue = '';
-    int secondsLeft = 600; // 10 min countdown
+    int secondsLeft = 600;
     bool canResend = false;
 
     showModalBottomSheet(
@@ -437,7 +427,6 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
       enableDrag: false,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setSheet) {
-          // ── OTP countdown ticker ───────────────────────────────────
           Future<void> startCountdown() async {
             setSheet(() {
               secondsLeft = 600;
@@ -451,7 +440,6 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
             if (ctx.mounted) setSheet(() => canResend = true);
           }
 
-          // ── Step 1 → request OTP ───────────────────────────────────
           Future<void> requestOtp() async {
             setSheet(() { loading = true; errorMsg = null; });
             try {
@@ -475,7 +463,6 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                 });
                 return;
               }
-              // OTP sent → go to step 2
               setSheet(() { loading = false; step = 2; otpValue = ''; errorMsg = null; });
               startCountdown();
             } catch (_) {
@@ -483,7 +470,6 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
             }
           }
 
-          // ── Step 2 → confirm deletion ──────────────────────────────
           Future<void> confirmDelete() async {
             if (otpValue.length != 6) {
               setSheet(() => errorMsg = 'Please enter the full 6-digit code.');
@@ -518,12 +504,10 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
           final textMuted  = context.fitlek.textMuted;
           final cs = Theme.of(context).colorScheme;
 
-          // ── STEP 1: Warning + checkbox ─────────────────────────────
           Widget buildStep1() => Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Handle
               Center(
                 child: Container(
                   width: 40, height: 4,
@@ -531,7 +515,6 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                 ),
               ),
               const SizedBox(height: 20),
-              // Header
               Row(
                 children: [
                   Container(
@@ -555,7 +538,6 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                 ],
               ),
               const SizedBox(height: 20),
-              // Warning box
               Container(
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
@@ -587,7 +569,6 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                 ),
               ),
               const SizedBox(height: 16),
-              // I understand checkbox
               GestureDetector(
                 onTap: () => setSheet(() => understood = !understood),
                 child: Row(
@@ -635,7 +616,6 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                 ),
               ],
               const SizedBox(height: 20),
-              // Buttons row
               Row(
                 children: [
                   Expanded(
@@ -686,7 +666,6 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
             ],
           );
 
-          // ── STEP 2: OTP entry ──────────────────────────────────────
           Widget buildStep2() {
             final mins = (secondsLeft ~/ 60).toString().padLeft(2, '0');
             final secs = (secondsLeft % 60).toString().padLeft(2, '0');
@@ -701,7 +680,6 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                   ),
                 ),
                 const SizedBox(height: 20),
-                // Header
                 Row(
                   children: [
                     Container(
@@ -730,7 +708,6 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                   style: TextStyle(color: textMuted, fontSize: 13, height: 1.5),
                 ),
                 const SizedBox(height: 16),
-                // OTP input
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   decoration: BoxDecoration(
@@ -762,7 +739,6 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                   ),
                 ),
                 const SizedBox(height: 10),
-                // Countdown + resend
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -920,8 +896,6 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
     final h = (double.tryParse(_heightCtrl.text) ?? 165.0) / 100;
     return (w / (h * h)).toStringAsFixed(1);
   }
-
-  // ── Pop-up Changer mot de passe ───────────────────────────────────
 
   void _showChangePasswordSheet() {
     final oldCtrl = TextEditingController();
@@ -1180,8 +1154,6 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
     );
   }
 
-  // ── Build ─────────────────────────────────────────────────────────
-
   @override
   Widget build(BuildContext context) {
     if (_loadingProfile) return _buildLoading();
@@ -1277,8 +1249,6 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
           ),
         ),
       );
-
-  // ── Header ────────────────────────────────────────────────────────
 
   Widget _buildHeader() => Padding(
         padding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
@@ -1402,8 +1372,6 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
         ),
       );
 
-  // ── Profile hero avec avatar cliquable ────────────────────────────
-
   Widget _buildProfileHero() {
     final hasAvatar = _avatarUrl != null && _avatarUrl!.isNotEmpty;
 
@@ -1474,7 +1442,6 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                           ),
                   ),
                 ),
-                // Badge caméra — toujours visible (pas seulement en mode edit)
                 Positioned(
                   bottom: 0,
                   right: 0,
@@ -1554,8 +1521,6 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
     );
   }
 
-  // ── Stats row ─────────────────────────────────────────────────────
-
   Widget _buildStatsRow() {
     final currentW =
         _weightStats.current ?? double.tryParse(_heightCtrl.text) ?? 68.0;
@@ -1621,8 +1586,6 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
     );
   }
 
-  // ── Tab bar ───────────────────────────────────────────────────────
-
   Widget _buildTabBar() => Padding(
         padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
         child: Container(
@@ -1658,8 +1621,6 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
           ),
         ),
       );
-
-  // ── ONGLET 1 : Profil ─────────────────────────────────────────────
 
   Widget _buildProfileTab() {
     return ListView(
@@ -1706,14 +1667,19 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
           onTap: () {},
         ),
         _actionTile(
-          Icons.block_rounded, 
-          'Blocked Users', 
+          Icons.favorite_rounded,
+          'My Favorite Coaches',
+          onTap: _openFavorites,
+        ),
+        _actionTile(
+          Icons.block_rounded,
+          'Blocked Users',
           onTap: () {
             Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => BlockedUsersList(token: widget.token)),
             );
-          }
+          },
         ),
         _actionTile(Icons.language_rounded, 'Language — English', onTap: () {}),
         const SizedBox(height: 12),
@@ -1749,7 +1715,6 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
           ),
         ),
         const SizedBox(height: 10),
-        // ── Delete Account ─────────────────────────────────────────────
         GestureDetector(
           onTap: _showDeleteAccountSheet,
           child: Container(
@@ -1990,8 +1955,6 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
     );
   }
 
-  // ── ONGLET 2 : Progression ────────────────────────────────────────
-
   Widget _buildProgressTab() {
     if (_loadingWeight && _weightData.isEmpty) {
       return Center(
@@ -2024,7 +1987,6 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
       child: ListView(
         padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
         children: [
-          // Stats row
           Row(
             children: [
               _progressStat(
@@ -2050,8 +2012,6 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
             ],
           ),
           const SizedBox(height: 20),
-
-          // Chart
           _sectionLabel('WEIGHT TREND'),
           const SizedBox(height: 14),
           if (hasSeries)
@@ -2093,8 +2053,6 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
               ),
             ),
           const SizedBox(height: 20),
-
-          // Tableau historique
           if (_weightData.isNotEmpty) ...[
             _sectionLabel('HISTORY — TABLE'),
             const SizedBox(height: 12),
@@ -2106,7 +2064,6 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
               ),
               child: Column(
                 children: [
-                  // Header
                   Container(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 16,
@@ -2158,7 +2115,6 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                       ],
                     ),
                   ),
-                  // Rows
                   ..._weightData.asMap().entries.map((e) {
                     final prev = e.key > 0
                         ? _weightData[e.key - 1].weight
@@ -2264,8 +2220,6 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
             ),
             const SizedBox(height: 20),
           ],
-
-          // Add weight
           _sectionLabel('ADD AN ENTRY'),
           const SizedBox(height: 12),
           _AddWeightWidget(onAdd: _addWeight),
@@ -2307,8 +2261,6 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
     );
   }
 
-  // ── Helpers généraux ──────────────────────────────────────────────
-
   Widget _sectionLabel(String label) => Row(
         children: [
           Container(
@@ -2328,10 +2280,6 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
         ],
       );
 }
-
-// ─────────────────────────────────────────────
-//  Add Weight Widget
-// ─────────────────────────────────────────────
 
 class _AddWeightWidget extends StatefulWidget {
   final Future<void> Function(double) onAdd;
@@ -2432,10 +2380,6 @@ class _AddWeightWidgetState extends State<_AddWeightWidget> {
     );
   }
 }
-
-// ─────────────────────────────────────────────
-//  Weight Chart Painter
-// ─────────────────────────────────────────────
 
 class _WeightChartPainter extends CustomPainter {
   final List<_WeightEntry> data;

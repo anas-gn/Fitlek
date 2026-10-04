@@ -14,7 +14,6 @@ import 'clientProfil.dart';
 import 'clientNotifications.dart';
 import 'clientSessionDetail.dart';
 import 'clientQrScanner.dart';
-import 'clientList.dart';
 import 'clientBooking.dart';
 
 import '../../theme/fitlek_theme_extension.dart';
@@ -158,6 +157,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   List<CoachModel> _coaches = [];
   List<CoachModel> _allCoaches = [];
+  List<CoachModel> _favoriteCoaches = [];
   List<_AdvisorItem> _advisors = [];
   List<_UpcomingSession> _upcomingSessions = [];
   List<_CategoryItem> _categories = [
@@ -169,6 +169,7 @@ class _HomeScreenState extends State<HomeScreen> {
     const _CategoryItem(id: 6, name: 'Nutrition', icon: 'restaurant'),
   ];
   Set<int> _favoriteCoachIds = {};
+  final Set<int> _togglingFavorites = {};
   Map<int, double> _coachAvgRatings = {};
   Map<int, int> _coachReviewCounts = {};
   String? _avatarUrl;
@@ -200,8 +201,12 @@ class _HomeScreenState extends State<HomeScreen> {
     _fetchUnreadMessagesCount();
     _fetchUpcomingSessions();
   }
+
   Future<void> _fetchCoachRatings() async {
-    final ids = _allCoaches.map((c) => c.id).toSet();
+    final ids = <int>{
+      ..._allCoaches.map((c) => c.id),
+      ..._favoriteCoaches.map((c) => c.id),
+    };
     final results = await Future.wait(ids.map((id) async {
       try {
         final res = await http
@@ -301,44 +306,86 @@ class _HomeScreenState extends State<HomeScreen> {
     try {
       final res = await http
           .get(
-            Uri.parse('$baseUrl/favorites?clientID=${widget.clientID}'),
+            Uri.parse('$baseUrl/favorites/coaches?clientID=${widget.clientID}'),
             headers: _headers,
           )
-          .timeout(const Duration(seconds: 8));
+          .timeout(const Duration(seconds: 10));
       if (res.statusCode == 200) {
         final List data = jsonDecode(res.body);
-        if (mounted) {
-          setState(() => _favoriteCoachIds = data.map((e) => e as int).toSet());
-        }
+        final list = data
+            .map((e) => CoachModel.fromJson(e as Map<String, dynamic>))
+            .toList();
+        if (!mounted) return;
+        setState(() {
+          _favoriteCoaches = list;
+          _favoriteCoachIds = list.map((c) => c.id).toSet();
+        });
+        _fetchCoachRatings();
       }
     } catch (_) {}
   }
 
-  Future<void> _toggleFavorite(int coachId) async {
+  Future<void> _toggleFavorite(CoachModel coach) async {
+    final coachId = coach.id;
+    if (_togglingFavorites.contains(coachId)) return;
+    _togglingFavorites.add(coachId);
+
+    final wasFavorite = _favoriteCoachIds.contains(coachId);
     setState(() {
-      if (_favoriteCoachIds.contains(coachId)) {
+      if (wasFavorite) {
         _favoriteCoachIds.remove(coachId);
+        _favoriteCoaches.removeWhere((c) => c.id == coachId);
       } else {
         _favoriteCoachIds.add(coachId);
+        _favoriteCoaches.insert(0, coach);
       }
     });
 
     try {
-      await http
+      final res = await http
           .post(
             Uri.parse('$baseUrl/favorites/toggle'),
             headers: _headers,
             body: jsonEncode({'clientID': widget.clientID, 'coachID': coachId}),
           )
           .timeout(const Duration(seconds: 8));
+
+      if (res.statusCode != 200) {
+        throw Exception('status ${res.statusCode}');
+      }
+
+      final data = jsonDecode(res.body) as Map<String, dynamic>;
+      final favorited = data['favorited'] == true;
+      if (favorited != !wasFavorite && mounted) {
+        await _fetchFavorites();
+      }
     } catch (_) {
+      if (!mounted) {
+        _togglingFavorites.remove(coachId);
+        return;
+      }
       setState(() {
-        if (_favoriteCoachIds.contains(coachId)) {
-          _favoriteCoachIds.remove(coachId);
-        } else {
+        if (wasFavorite) {
           _favoriteCoachIds.add(coachId);
+          if (!_favoriteCoaches.any((c) => c.id == coachId)) {
+            _favoriteCoaches.insert(0, coach);
+          }
+        } else {
+          _favoriteCoachIds.remove(coachId);
+          _favoriteCoaches.removeWhere((c) => c.id == coachId);
         }
       });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Unable to update favorites'),
+          backgroundColor: context.fitlek.error,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          margin: const EdgeInsets.all(16),
+        ),
+      );
+    } finally {
+      _togglingFavorites.remove(coachId);
     }
   }
 
@@ -435,7 +482,6 @@ class _HomeScreenState extends State<HomeScreen> {
     setState(() => _selectedCategoryId = categoryId);
     _fetchCoaches();
   }
-
 
   void _openConversationWithCoach(
     int coachID,
@@ -535,7 +581,7 @@ class _HomeScreenState extends State<HomeScreen> {
           clientID: widget.clientID,
         ),
       ),
-    );
+    ).then((_) => _fetchFavorites());
   }
 
   void _openCompanyDetail(_AdvisorItem advisor) {
@@ -566,7 +612,6 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         transitionDuration: const Duration(milliseconds: 400),
       );
-
 
   @override
   Widget build(BuildContext context) {
@@ -609,7 +654,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-
   Widget _buildHomeBody() {
     return RefreshIndicator(
       color: Theme.of(context).colorScheme.primary,
@@ -628,6 +672,10 @@ class _HomeScreenState extends State<HomeScreen> {
         slivers: [
           SliverToBoxAdapter(child: _buildHeroBanner()),
           SliverToBoxAdapter(child: _buildQuickActions()),
+          if (_favoriteCoaches.isNotEmpty) ...[
+            SliverToBoxAdapter(child: _sectionHeader('My Favorites')),
+            SliverToBoxAdapter(child: _buildFavoriteList()),
+          ],
           SliverToBoxAdapter(
             child: _sectionHeader(
               'Recommended for You',
@@ -657,7 +705,6 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
-
 
   Widget _buildHeroBanner() {
     return Stack(
@@ -764,7 +811,6 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-
   Widget _buildHeader() {
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
@@ -818,65 +864,65 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           const SizedBox(width: 8),
           GestureDetector(
-  onTap: () async {
-    await Navigator.push(
-      context,
-      _fadeSlide(
-        ClientConversationsListScreen(
-          clientID: widget.clientID,
-          token: widget.token,
-        ),
-      ),
-    );
-    _fetchUnreadMessagesCount();
-  },
-  child: Stack(
-    children: [
-      Container(
-        width: 40,
-        height: 40,
-        decoration: BoxDecoration(
-          color: Colors.black.withValues(alpha: 0.35),
-          shape: BoxShape.circle,
-          border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
-        ),
-        child: const Icon(
-          Icons.chat_bubble_outline_rounded,
-          color: Colors.white,
-          size: 18,
-        ),
-      ),
-      if (_unreadMessagesCount > 0)
-        Positioned(
-          top: 0,
-          right: 0,
-          child: Container(
-            width: 16,
-            height: 16,
-            decoration: BoxDecoration(
-              color: Colors.redAccent,
-              shape: BoxShape.circle,
-              border: Border.all(
-                color: Theme.of(context).scaffoldBackgroundColor,
-                width: 2,
-              ),
-            ),
-            child: Center(
-              child: Text(
-                _unreadMessagesCount > 9 ? '9+' : '$_unreadMessagesCount',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 8,
-                  fontWeight: FontWeight.w900,
+            onTap: () async {
+              await Navigator.push(
+                context,
+                _fadeSlide(
+                  ClientConversationsListScreen(
+                    clientID: widget.clientID,
+                    token: widget.token,
+                  ),
                 ),
-              ),
+              );
+              _fetchUnreadMessagesCount();
+            },
+            child: Stack(
+              children: [
+                Container(
+                  width: 40,
+                  height: 40,
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.35),
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
+                  ),
+                  child: const Icon(
+                    Icons.chat_bubble_outline_rounded,
+                    color: Colors.white,
+                    size: 18,
+                  ),
+                ),
+                if (_unreadMessagesCount > 0)
+                  Positioned(
+                    top: 0,
+                    right: 0,
+                    child: Container(
+                      width: 16,
+                      height: 16,
+                      decoration: BoxDecoration(
+                        color: Colors.redAccent,
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: Theme.of(context).scaffoldBackgroundColor,
+                          width: 2,
+                        ),
+                      ),
+                      child: Center(
+                        child: Text(
+                          _unreadMessagesCount > 9 ? '9+' : '$_unreadMessagesCount',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 8,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
             ),
           ),
-        ),
-    ],
-  ),
-),
-const SizedBox(width: 8),
+          const SizedBox(width: 8),
           GestureDetector(
             onTap: () async {
               await Navigator.push(
@@ -937,7 +983,6 @@ const SizedBox(width: 8),
     );
   }
 
-
   Widget _buildQuickActions() {
     final actions = [
       (Icons.calendar_today_rounded, 'Book a\nSession', () {
@@ -951,8 +996,7 @@ const SizedBox(width: 8),
       (Icons.person_search_rounded, 'Find a\nCoach', () {
         setState(() => _navIndex = 1);
       }),
-      (Icons.location_on_rounded, 'Gyms\nNear You', () {
-      }),
+      (Icons.location_on_rounded, 'Gyms\nNear You', () {}),
       (Icons.qr_code_scanner_rounded, 'Scan\nQR', () {
         Navigator.push(
           context,
@@ -1007,7 +1051,6 @@ const SizedBox(width: 8),
     );
   }
 
-
   Widget _sectionHeader(String title, {VoidCallback? onSeeAll}) => Padding(
         padding: const EdgeInsets.fromLTRB(16, 24, 16, 12),
         child: Row(
@@ -1043,7 +1086,6 @@ const SizedBox(width: 8),
           ],
         ),
       );
-
 
   Widget _buildCategoryPills() {
     return SizedBox(
@@ -1094,6 +1136,24 @@ const SizedBox(width: 8),
     );
   }
 
+  Widget _buildFavoriteList() {
+    return SizedBox(
+      height: 290,
+      child: ListView.builder(
+        padding: const EdgeInsets.only(left: 16),
+        scrollDirection: Axis.horizontal,
+        itemCount: _favoriteCoaches.length,
+        itemBuilder: (_, i) => _CoachCard(
+          coach: _favoriteCoaches[i],
+          isFavorite: _favoriteCoachIds.contains(_favoriteCoaches[i].id),
+          avgRating: _coachAvgRatings[_favoriteCoaches[i].id] ?? 0.0,
+          reviewCount: _coachReviewCounts[_favoriteCoaches[i].id] ?? 0,
+          onTap: () => _openCoachDetail(_favoriteCoaches[i]),
+          onFavorite: () => _toggleFavorite(_favoriteCoaches[i]),
+        ),
+      ),
+    );
+  }
 
   Widget _buildCoachList() {
     if (_loadingCoaches) {
@@ -1143,13 +1203,12 @@ const SizedBox(width: 8),
             avgRating: _coachAvgRatings[_coaches[i].id] ?? 0.0,
             reviewCount: _coachReviewCounts[_coaches[i].id] ?? 0,
             onTap: () => _openCoachDetail(_coaches[i]),
-            onFavorite: () => _toggleFavorite(_coaches[i].id),
+            onFavorite: () => _toggleFavorite(_coaches[i]),
           ),
         ),
       ),
     );
   }
-
 
   Widget _buildUpcomingSessions() {
     if (_loadingSessions) {
@@ -1294,7 +1353,6 @@ const SizedBox(width: 8),
     return '${dt.day} ${months[dt.month - 1]}';
   }
 
-
   Widget _buildAdvisorList() {
     if (_loadingAdvisors) {
       return SizedBox(
@@ -1339,7 +1397,6 @@ const SizedBox(width: 8),
       ),
     );
   }
-
 
   Widget _buildNavBar() {
     const items = [
@@ -1473,7 +1530,6 @@ class _CoachCard extends StatelessWidget {
     final double rating = avgRating;
     final bool hasRating = reviewCount > 0;
 
-
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -1519,24 +1575,6 @@ class _CoachCard extends StatelessWidget {
                           Colors.black.withValues(alpha: 0.65),
                         ],
                       ),
-                    ),
-                  ),
-                ),
-                Positioned(
-                  top: 8,
-                  left: 8,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withValues(alpha: 0.55),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                     
-                         
-                      ],
                     ),
                   ),
                 ),
@@ -1692,7 +1730,6 @@ class _CompanyCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final double rating = advisor.rating ?? 0.0;
     final int totalReviews = advisor.totalReviews ?? 0;
     final bool hasRating = totalReviews > 0;
 
@@ -1804,9 +1841,7 @@ class _CompanyCard extends StatelessWidget {
                     const SizedBox(height: 3),
                     Row(
                       children: [
-                      
                         const SizedBox(width: 3),
-                       
                         if (hasRating)
                           Text(
                             ' ($totalReviews reviews)',
