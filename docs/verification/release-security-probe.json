@@ -1,0 +1,30 @@
+{
+  "verifiedAt": "2026-10-06T15:28:13.150Z",
+  "scope": "Isolated HTTP server and synthetic local MySQL accounts; no outbound messages; fixtures removed",
+  "checks": [
+    {
+      "issue": "Unauthenticated legacy reset endpoint returns reset token",
+      "status": 200,
+      "confirmed": true
+    },
+    {
+      "issue": "OTP reset accepts no caller OTP or reset capability",
+      "status": 200,
+      "confirmed": true
+    },
+    {
+      "issue": "Verified OTP remains reusable after password reset",
+      "confirmed": true
+    },
+    {
+      "issue": "Unrelated client can forge coach/client relationship",
+      "status": 201,
+      "confirmed": true
+    },
+    {
+      "issue": "Client can create a ban while impersonating another actor",
+      "status": 201,
+      "confirmed": true
+    }
+  ]
+}

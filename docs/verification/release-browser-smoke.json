@@ -1,0 +1,42 @@
+{
+  "verifiedAt": "2026-10-06T15:33:34.7355032Z",
+  "builtApp": true,
+  "fixtureOnly": true,
+  "returnedToSirvya": true,
+  "tabChecks": [
+    {
+      "name": "Plan",
+      "hasTitle": true,
+      "hasContent": true,
+      "noLoadError": true,
+      "hostNavigationAbsent": true
+    },
+    {
+      "name": "Stats",
+      "hasTitle": true,
+      "hasContent": true,
+      "noLoadError": true,
+      "hostNavigationAbsent": true
+    },
+    {
+      "name": "Exercises",
+      "hasTitle": true,
+      "hasContent": true,
+      "noLoadError": true,
+      "hostNavigationAbsent": true
+    }
+  ],
+  "errors": [],
+  "consoleMessages": [
+    "Injecting <script> tag. Using callback.",
+    "TrustedTypes available. Creating policy: gis-dart",
+    "TrustedTypes available. Creating policy: flutterfire-firebase_core",
+    "Initializing Firebase firebase_core",
+    "TrustedTypes available. Creating policy: flutterfire-firebase_auth",
+    "Initializing Firebase firebase_auth",
+    "TrustedTypes available. Creating policy: flutterfire-firebase_messaging",
+    "Initializing Firebase firebase_messaging",
+    "Error initializing intro video: PlatformException(MEDIA_ERR_SRC_NOT_SUPPORTED, MEDIA_ELEMENT_ERROR: Format error, The video has been found to be unsuitable (missing or in a format not supported by your browser)., null)"
+  ],
+  "failedResources": []
+}
