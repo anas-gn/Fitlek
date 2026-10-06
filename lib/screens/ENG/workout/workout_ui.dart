@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import '../../../services/apiService.dart';
 import '../../../services/workout_service.dart';
 import '../login.dart';
@@ -15,41 +16,48 @@ const workoutRoutineIcons = <String, IconData>{
 // Scoped to Workout. SIRVYA's other screens retain their existing design.
 ThemeData workoutTheme(BuildContext context) {
   final dark = Theme.of(context).brightness == Brightness.dark;
-  final surface = dark ? const Color(0xff1d1d20) : Colors.white;
-  final background = dark ? const Color(0xff080809) : const Color(0xfff3f3f8);
-  final accent = dark ? const Color(0xff42d46b) : const Color(0xff248a3d);
+  final surface = dark ? const Color(0xff1c1c1e) : Colors.white;
+  final background = dark ? Colors.black : const Color(0xfff2f2f7);
+  final accent = dark ? const Color(0xff30d158) : const Color(0xff34c759);
   final scheme = ColorScheme.fromSeed(
           seedColor: accent,
           brightness: dark ? Brightness.dark : Brightness.light)
       .copyWith(
           primary: accent,
           surface: surface,
-          onPrimary: dark ? Colors.black : Colors.white);
+          onSurface: dark ? Colors.white : Colors.black,
+          onSurfaceVariant:
+              dark ? const Color(0xff98989f) : const Color(0xff8e8e93),
+          onPrimary: Colors.black);
   return ThemeData(
       fontFamily: 'SirvyaWorkout',
       useMaterial3: true,
       brightness: scheme.brightness,
       colorScheme: scheme,
       scaffoldBackgroundColor: background,
-      textTheme: ThemeData(brightness: scheme.brightness).textTheme.copyWith(
-          headlineLarge: TextStyle(
-              fontSize: 34,
-              fontWeight: FontWeight.w700,
-              letterSpacing: -0.8,
-              color: scheme.onSurface),
-          titleLarge: TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.w600,
-              letterSpacing: -0.4,
-              color: scheme.onSurface),
-          titleMedium: TextStyle(
-              fontSize: 17,
-              fontWeight: FontWeight.w600,
-              color: scheme.onSurface),
-          bodyLarge: TextStyle(
-              fontSize: 17,
-              fontWeight: FontWeight.w400,
-              color: scheme.onSurface)),
+      textTheme: ThemeData(brightness: scheme.brightness)
+          .textTheme
+          .copyWith(
+              headlineLarge: TextStyle(
+                  fontSize: 34,
+                  height: 1.06,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: -0.8,
+                  color: scheme.onSurface),
+              titleLarge: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: -0.4,
+                  color: scheme.onSurface),
+              titleMedium: TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w600,
+                  color: scheme.onSurface),
+              bodyLarge: TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.w400,
+                  color: scheme.onSurface))
+          .apply(fontFamily: 'SirvyaWorkout'),
       appBarTheme: AppBarTheme(
           backgroundColor: background,
           foregroundColor: scheme.onSurface,
@@ -92,25 +100,131 @@ ThemeData workoutTheme(BuildContext context) {
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(22))),
       bottomSheetTheme: BottomSheetThemeData(
-          backgroundColor: surface,
+          backgroundColor: background,
+          constraints: const BoxConstraints(maxWidth: 560),
           showDragHandle: true,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(22))),
-      chipTheme: ChipThemeData(
-          side: BorderSide.none,
-          backgroundColor: scheme.primary.withValues(alpha: 0.12),
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))));
+          shape: const RoundedRectangleBorder(
+              borderRadius: BorderRadius.vertical(top: Radius.circular(24)))),
+      chipTheme:
+          ChipThemeData(side: BorderSide.none, showCheckmark: false, backgroundColor: surface, selectedColor: accent, padding: const EdgeInsets.symmetric(horizontal: 5), labelStyle: TextStyle(fontFamily: 'SirvyaWorkout', fontSize: 14, color: scheme.onSurface), shape: const StadiumBorder()));
+}
+
+class WorkoutPageHeader extends StatelessWidget implements PreferredSizeWidget {
+  final String title;
+  final String? subtitle;
+  final bool back;
+  final double textScale;
+  final List<Widget> actions;
+  const WorkoutPageHeader(
+      {super.key,
+      required this.title,
+      this.subtitle,
+      this.textScale = 1,
+      this.back = false,
+      this.actions = const []});
+
+  @override
+  Size get preferredSize =>
+      Size.fromHeight(76 * textScale.clamp(1, 3) + (textScale > 1 ? 8 : 0));
+
+  @override
+  Widget build(BuildContext context) => SizedBox(
+      height: preferredSize.height + MediaQuery.paddingOf(context).top,
+      child: SafeArea(
+          bottom: false,
+          child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+              child:
+                  Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
+                if (back) ...[
+                  IconButton.filledTonal(
+                      tooltip:
+                          MaterialLocalizations.of(context).backButtonTooltip,
+                      style: IconButton.styleFrom(
+                          backgroundColor:
+                              Theme.of(context).colorScheme.surface),
+                      onPressed: () => Navigator.maybePop(context),
+                      icon: const Icon(Icons.chevron_left, size: 22)),
+                  const SizedBox(width: 12),
+                ],
+                Expanded(
+                    child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                      WorkoutLabel(title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                              fontSize: 34,
+                              height: 1.06,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: -.9)),
+                      if (subtitle != null)
+                        WorkoutLabel(subtitle!,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                                fontSize: 15,
+                                height: 1.2,
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurfaceVariant)),
+                    ])),
+                ...actions,
+              ]))));
+}
+
+class WorkoutSegments<T extends Object> extends StatelessWidget {
+  final T selected;
+  final Map<T, String> choices;
+  final ValueChanged<T> onChanged;
+  const WorkoutSegments(
+      {super.key,
+      required this.selected,
+      required this.choices,
+      required this.onChanged});
+  @override
+  Widget build(BuildContext context) => SizedBox(
+      width: double.infinity,
+      child: CupertinoSlidingSegmentedControl<T>(
+          groupValue: selected,
+          backgroundColor:
+              Theme.of(context).colorScheme.onSurface.withValues(alpha: .08),
+          thumbColor: Theme.of(context).colorScheme.surface,
+          children: {
+            for (final entry in choices.entries)
+              entry.key: Padding(
+                  padding:
+                      const EdgeInsets.symmetric(vertical: 6, horizontal: 4),
+                  child: WorkoutLabel(entry.value,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: selected == entry.key
+                              ? FontWeight.w500
+                              : FontWeight.w400,
+                          color: selected == entry.key
+                              ? Theme.of(context).colorScheme.onSurface
+                              : Theme.of(context)
+                                  .colorScheme
+                                  .onSurfaceVariant)))
+          },
+          onValueChanged: (value) {
+            if (value != null) onChanged(value);
+          }));
 }
 
 class WorkoutScaffold extends StatelessWidget {
   final PreferredSizeWidget? appBar;
   final Widget? body, bottomNavigationBar, floatingActionButton;
+  final double maxWidth;
   const WorkoutScaffold(
       {super.key,
       this.appBar,
       this.body,
       this.bottomNavigationBar,
+      this.maxWidth = 640,
       this.floatingActionButton});
   @override
   Widget build(BuildContext context) => Theme(
@@ -121,7 +235,7 @@ class WorkoutScaffold extends StatelessWidget {
               body: Align(
                   alignment: Alignment.topCenter,
                   child: ConstrainedBox(
-                      constraints: const BoxConstraints(maxWidth: 640),
+                      constraints: BoxConstraints(maxWidth: maxWidth),
                       child: body)),
               bottomNavigationBar: bottomNavigationBar,
               floatingActionButton: floatingActionButton)));
@@ -136,7 +250,7 @@ class WorkoutScope extends StatelessWidget {
 }
 
 class WorkoutRoute<T> extends MaterialPageRoute<T> {
-  WorkoutRoute({required WidgetBuilder builder})
+  WorkoutRoute({required WidgetBuilder builder, super.settings})
       : super(builder: (context) => WorkoutScope(builder: builder));
 }
 
@@ -154,13 +268,21 @@ Future<T?> workoutDialog<T>(
 }
 
 Future<T?> workoutSheet<T>(
-        {required BuildContext context,
-        required WidgetBuilder builder,
-        bool isScrollControlled = false}) =>
-    showModalBottomSheet<T>(
-        context: context,
-        isScrollControlled: isScrollControlled,
-        builder: (context) => WorkoutScope(builder: builder));
+    {required BuildContext context,
+    required WidgetBuilder builder,
+    bool isScrollControlled = false}) async {
+  final navigator = Navigator.of(context, rootNavigator: true);
+  final route = ModalBottomSheetRoute<T>(
+      builder: (context) => WorkoutScope(builder: builder),
+      capturedThemes:
+          InheritedTheme.capture(from: context, to: navigator.context),
+      barrierLabel: MaterialLocalizations.of(context).modalBarrierDismissLabel,
+      isScrollControlled: isScrollControlled,
+      useSafeArea: true);
+  final result = await navigator.push(route);
+  await route.completed;
+  return result;
+}
 
 class WorkoutMetric extends StatelessWidget {
   final String value, label;
@@ -181,6 +303,84 @@ class WorkoutMetric extends StatelessWidget {
                 fontSize: 13,
                 color: Theme.of(context).colorScheme.onSurfaceVariant))
       ]);
+}
+
+class WorkoutMetricGrid extends StatelessWidget {
+  final Map<String, String> metrics;
+  final Map<String, Color> valueColors;
+  const WorkoutMetricGrid(
+      {super.key, required this.metrics, this.valueColors = const {}});
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(
+      builder: (context, size) => GridView.count(
+          shrinkWrap: true,
+          padding: const EdgeInsets.only(bottom: 12),
+          physics: const NeverScrollableScrollPhysics(),
+          crossAxisCount: size.maxWidth >= 800 ? 4 : 2,
+          mainAxisSpacing: 10,
+          crossAxisSpacing: 10,
+          mainAxisExtent: 78 *
+              (MediaQuery.textScalerOf(context).scale(14) / 14).clamp(1, 2),
+          children: metrics.entries
+              .map((m) => Card(
+                  margin: EdgeInsets.zero,
+                  child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(children: [
+                              Icon(
+                                  const {
+                                    'Workouts': Icons.fitness_center,
+                                    'This month': Icons.calendar_today_outlined,
+                                    'Week streak':
+                                        Icons.local_fire_department_outlined,
+                                    'Weight 30d': Icons.monitor_weight_outlined
+                                  }[m.key],
+                                  size: 13,
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurfaceVariant),
+                              const SizedBox(width: 5),
+                              Expanded(
+                                  child: WorkoutLabel(m.key,
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                          fontSize: 13,
+                                          height: 1.2,
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .onSurfaceVariant))),
+                            ]),
+                            const SizedBox(height: 4),
+                            Expanded(
+                                child: FittedBox(
+                                    fit: BoxFit.scaleDown,
+                                    alignment: Alignment.bottomLeft,
+                                    child: WorkoutLabel(m.value,
+                                        style: TextStyle(
+                                            fontSize: 24,
+                                            height: 1.1,
+                                            color: valueColors[m.key],
+                                            fontWeight: FontWeight.w600))))
+                          ]))))
+              .toList()));
+}
+
+class WorkoutColumns extends StatelessWidget {
+  final Widget first, second;
+  const WorkoutColumns({super.key, required this.first, required this.second});
+  @override
+  Widget build(BuildContext context) => LayoutBuilder(
+      builder: (context, size) => size.maxWidth < 800
+          ? Column(children: [first, second])
+          : Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Expanded(child: first),
+              const SizedBox(width: 16),
+              Expanded(child: second)
+            ]));
 }
 
 class WorkoutOfflineNotice extends StatelessWidget {
@@ -231,6 +431,8 @@ class WorkoutText {
       return 'You do not have access to this workout or client.';
     }
     return const {
+          'exercise_name_exists':
+              'An exercise with this name already exists. Choose it from the library or use a different name.',
           'exercise_in_use':
               'This exercise is used in a routine or workout. Keep its measurement type or create a new exercise.',
           'workout_not_found': 'This workout is no longer available.',
@@ -314,3 +516,6 @@ String workoutValue(num? value) =>
     value == null ? '—' : value.toStringAsFixed(value % 1 == 0 ? 0 : 1);
 String workoutClock(int seconds) =>
     '${(seconds ~/ 60).toString().padLeft(2, '0')}:${(seconds % 60).toString().padLeft(2, '0')}';
+
+String workoutExerciseTitle(String value) =>
+    value.replaceAllMapped(RegExp(r'(^|\s)[a-z]'), (m) => m[0]!.toUpperCase());

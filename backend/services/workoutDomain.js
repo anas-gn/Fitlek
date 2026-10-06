@@ -25,22 +25,25 @@ export function text(value, max, required = false) {
 export const json = value => typeof value === 'string' ? JSON.parse(value) : value;
 export function validateCustomExercise(body) {
   if (!body || typeof body !== 'object' || Array.isArray(body)) fail('invalid_workout');
-  const exerciseType = body.exerciseType ?? 'reps';
+  const exerciseType = body.exerciseType ?? (body.bodyPart === 'cardio' ? 'cardio' : 'reps');
+  const instructions=body.instructions??[];
+  const equipment=text(body.equipment,80)??(body.isBodyweight===true?'body weight':'custom');
+  const isBodyweight=body.isBodyweight??equipment==='body weight';
   if (!['reps', 'timed', 'cardio'].includes(exerciseType) ||
-      typeof body.isBodyweight !== 'boolean' || !Array.isArray(body.instructions) ||
-      body.instructions.length > 30 || !Array.isArray(body.secondaryMuscles ?? []) ||
+      typeof isBodyweight !== 'boolean' || !Array.isArray(instructions) ||
+      instructions.length > 30 || !Array.isArray(body.secondaryMuscles ?? []) ||
       (body.secondaryMuscles ?? []).length > 20) fail('invalid_workout');
-  return {name: text(body.name, 160, true), muscleGroup: text(body.muscleGroup, 80, true),
-    equipment: text(body.equipment, 80) ?? 'body weight', exerciseType,
-    isBodyweight: body.isBodyweight, description: text(body.description, 5000),
-    instructions: body.instructions.map(v => text(v, 2000, true)),
+  return {name: text(body.name, 160, true), muscleGroup: text(body.muscleGroup??body.bodyPart, 80, true), bodyPart:text(body.bodyPart,80)??text(body.muscleGroup,80,true),
+    equipment, exerciseType,
+    isBodyweight, description: text(body.description, 5000),
+    instructions: instructions.map(v => text(v, 2000, true)),
     secondaryMuscles: [...new Set((body.secondaryMuscles ?? []).map(v => text(v, 80, true)))]};
 }
-export function validatePlan(body) {
+export function validatePlan(body,{allowEmptyRoutine=false}={}) {
   if (!body || typeof body !== 'object' || Array.isArray(body)) fail('invalid_workout');
   const status = body.status ?? 'draft';
   if (!['draft', 'assigned', 'archived'].includes(status)) fail('invalid_workout');
-  if (!Array.isArray(body.days) || body.days.length > 14) fail('invalid_workout');
+  if (!Array.isArray(body.days) || body.days.length > 100) fail('invalid_workout');
   const days = body.days.map((d, i) => {
     if (!d || !Array.isArray(d.exercises) || d.exercises.length > 50) fail('invalid_workout');
     if (d.exercises.some(e => !e || typeof e !== 'object' || Array.isArray(e))) fail('invalid_workout');
@@ -56,7 +59,11 @@ export function validatePlan(body) {
       configuration: validateConfiguration(e.configuration),
     }));
     // Groups must be contiguous; otherwise execution order is ambiguous.
-    for(const e of exercises)if(e.configuration.progression==='double'&&e.configuration.minReps>e.targetReps)fail('invalid_target');
+    for(const e of exercises){
+      if(e.configuration.mode==='timed'||e.configuration.mode==='cardio')e.configuration.perSide=false;
+      if(e.configuration.perSide&&e.targetReps!=null)e.targetReps=Math.ceil(e.targetReps/2)*2;
+      if(e.configuration.progression==='double'&&e.configuration.minReps>e.targetReps)fail('invalid_target');
+    }
     const seen = new Set(); let previous = null;
     for (const e of exercises) {
       if (e.supersetGroup && e.supersetGroup !== previous && seen.has(e.supersetGroup)) fail('invalid_superset');
@@ -67,7 +74,7 @@ export function validatePlan(body) {
     if(configuration.progression==='inherit')fail('invalid_workout');
     return {id:d.id?integer(d.id):null,name: text(d.name, 160, true), dayOfWeek: number(d.dayOfWeek, 1, 7, true), sortOrder: i, configuration, exercises};
   });
-  if (status === 'assigned' && (!days.length || days.some(d => !d.exercises.length))) fail('empty_plan');
+  if (status === 'assigned' && (!days.length || !allowEmptyRoutine && days.some(d => !d.exercises.length))) fail('empty_plan');
   return {name: text(body.name, 160, true), description: text(body.description, 5000), clientID: integer(body.clientID), status, days};
 }
 export function validateSet(body, prescribed) {
@@ -77,7 +84,7 @@ export function validateSet(body, prescribed) {
   let weight = number(body.weight, 0, 2000);
   const durationSeconds = number(body.durationSeconds, 1, 86400, true);
   const rpe = number(body.rpe, 1, 10);
-  const rir = number(body.rir, 0, 10, true);
+  const rir = number(body.rir, 0, 10);
   if (rpe !== null && rir !== null) fail('invalid_effort');
   const timed = prescribed.exerciseType !== 'reps';
   if ((timed && (durationSeconds === null || reps !== null)) ||
@@ -98,12 +105,21 @@ export function validateConfiguration(input = {}) {
   if (input.targetRpe != null && input.targetRir != null) fail('invalid_effort');
   const icon=input.icon??'strength';
   if(!['strength','cardio','recovery','mobility'].includes(icon))fail('invalid_workout');
-  return {progression, icon, increment: number(input.increment, 0.1, 100) ?? 2.5,
+  const mode=input.mode??null;
+  if(mode!=null&&!['reps','timed','cardio'].includes(mode))fail('invalid_workout');
+  if(input.bodyweight!=null&&typeof input.bodyweight!=='boolean')fail('invalid_workout');
+  return {progression, icon, mode, bodyweight:input.bodyweight??null, speedKmh:number(input.speedKmh,0,100), increment: number(input.increment, 0.1, 100),
     minReps: number(input.minReps, 1, 1000, true), deloadFactor: number(input.deloadFactor, 0.5, 0.95) ?? 0.9,
-    bodyweightRepCeiling: integer(input.bodyweightRepCeiling ?? 30, 1, 1000),
+    bodyweightRepCeiling: integer(input.bodyweightRepCeiling ?? 0, 0, 1000),
     maxBodyweightSets: integer(input.maxBodyweightSets ?? 6, 1, 30),
     perSide: input.perSide === true, excludeFromProgression: input.excludeFromProgression === true,
-    targetRpe: number(input.targetRpe, 1, 10), targetRir: number(input.targetRir, 0, 10, true)};
+    targetRpe: number(input.targetRpe, 1, 10), targetRir: number(input.targetRir, 0, 10)};
+}
+export function exerciseForPrescription(catalog,configuration={}) {
+  const cfg=typeof configuration==='string'?json(configuration):configuration||{};
+  const exerciseType=cfg.mode??catalog.exerciseType;
+  return {...catalog,exerciseType,isTimed:exerciseType==='reps'?0:1,
+    isBodyweight:cfg.bodyweight==null?catalog.isBodyweight:cfg.bodyweight?1:0};
 }
 export function validateSetDetails(input = {}, exercise) {
   if (input == null) input = {};
@@ -119,7 +135,7 @@ export function validateSetDetails(input = {}, exercise) {
     for (const side of ['left','right']) {
       details.sides[side] = {
       reps: integer(input.sides[side].reps, 1, 1000), weight: number(input.sides[side].weight, 0, 2000) ?? 0,
-      rpe: number(input.sides[side].rpe, 1, 10), rir: number(input.sides[side].rir, 0, 10, true)};
+      rpe: number(input.sides[side].rpe, 1, 10), rir: number(input.sides[side].rir, 0, 10)};
       if (details.sides[side].rpe != null && details.sides[side].rir != null) fail('invalid_effort');
     }
   }
@@ -142,7 +158,7 @@ export function estimated1RM(s, e) {
   if (!isWorkSet(s)) return null;
   const sides = setDetails(s).sides;
   if (sides) return Math.max(...Object.values(sides).map(v => estimated1RM(v, e) || 0)) || null;
-  return e.exerciseType === 'reps' && !e.isBodyweight && Number(s.weight) > 0 && s.reps >= 1 && s.reps <= 12
+  return e.exerciseType === 'reps' && Number.isFinite(Number(s.weight)) && Number(s.weight) > 0 && s.reps >= 1 && s.reps <= 12
     ? Number(s.weight) * (s.reps === 1 ? 1 : 1 + s.reps / 30) : null;
 }
 export function summarize(sets, prescription) {

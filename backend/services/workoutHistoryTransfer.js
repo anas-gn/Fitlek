@@ -1,6 +1,6 @@
 import {createHash,randomUUID} from 'node:crypto';
 import {requireRole} from '../middleware/auth.js';
-import {fail,integer,text,number,json,validateSet,validateConfiguration} from './workoutDomain.js';
+import {fail,integer,text,number,json,validateSet,validateConfiguration,exerciseForPrescription} from './workoutDomain.js';
 import {parseWorkoutCSV,parseBodyweightXML} from './workoutImport.js';
 
 export function installWorkoutHistoryTransfer(router,db,{run,transaction,visibleExercise,clientScope}){
@@ -11,7 +11,7 @@ export function installWorkoutHistoryTransfer(router,db,{run,transaction,visible
     for(const s of data.sessions){if(!s||!Array.isArray(s.exercises))fail('invalid_import');for(const e of s.exercises){if(!e||typeof e!=='object'||Array.isArray(e))fail('invalid_import');const key=e.sourceKey??`${e.externalSource}:${e.externalId}`;if(!names.has(key))names.set(key,{sourceKey:key,name:text(e.name,160,true),exerciseType:e.exerciseType,matches:[]});}}
     for(const item of names.values()){
       const [rows]=await db.query('SELECT id FROM exercises WHERE name=? ORDER BY ownerID IS NULL DESC,id LIMIT 20',[item.name]);
-      for(const row of rows){try{const e=await visibleExercise(db,req.user,row.id);if(e.exerciseType===item.exerciseType)item.matches.push({id:e.id,name:e.name,equipment:e.equipment});}catch(error){if(error.code!=='exercise_not_found')throw error;}}
+      for(const row of rows){try{const e=await visibleExercise(db,req.user,row.id);item.matches.push({id:e.id,name:e.name,equipment:e.equipment});}catch(error){if(error.code!=='exercise_not_found')throw error;}}
     }
     res.json({...data,exercises:[...names.values()]});
   }));
@@ -56,11 +56,12 @@ export function installWorkoutHistoryTransfer(router,db,{run,transaction,visible
             if(input.createUnmatched!==true||!['reps','timed','cardio'].includes(r.exerciseType))fail('unmapped_exercise');
             const [custom]=await conn.query(`INSERT INTO exercises(name,muscleGroup,equipment,exerciseType,isBodyweight,isTimed,instructions,secondaryMuscles,externalSource,externalId,ownerID,isPrivate) VALUES(?,'other','other',?,?,?,'[]','[]','sirvya-custom',?,?,1)`,[text(r.name,160,true),r.exerciseType,r.isBodyweight===true?1:0,r.exerciseType==='reps'?0:1,randomUUID(),req.user.id]);exerciseID=custom.insertId;
           }
-          const catalog=await visibleExercise(conn,req.user,exerciseID);
-          if(catalog.exerciseType!==r.exerciseType)fail('invalid_target');
+          if(!['reps','timed','cardio'].includes(r.exerciseType))fail('invalid_target');
+          const configuration=validateConfiguration({...r.configuration,mode:r.exerciseType,...(typeof r.isBodyweight==='boolean'?{bodyweight:r.isBodyweight}:{})});
+          const catalog=exerciseForPrescription(await visibleExercise(conn,req.user,exerciseID),configuration);
           await conn.query('INSERT INTO workout_import_exercises(userID,sourceKey,exerciseID) VALUES(?,?,?) ON DUPLICATE KEY UPDATE exerciseID=VALUES(exerciseID)',[req.user.id,sourceKey,exerciseID]);
           const work=r.sets.filter(s=>s.details?.phase!=='warmup');
-          const e={...catalog,id:++n,exerciseID:Number(exerciseID),targetSets:Math.max(1,...work.map(s=>integer(s.setNumber,1,30))),targetReps:catalog.exerciseType==='reps'?integer(work[0]?.reps??r.sets[0].reps,1,2000):null,targetDurationSeconds:catalog.exerciseType==='reps'?null:integer(work[0]?.durationSeconds??r.sets[0].durationSeconds,1,86400),targetWeight:number(work[0]?.weight??r.sets[0].weight,0,2000),restSeconds:integer(r.restSeconds??90,0,3600),notes:text(r.notes,2000),supersetGroup:text(r.supersetGroup,64),configuration:validateConfiguration(r.configuration),instructions:json(catalog.instructions)};
+          const e={...catalog,id:++n,exerciseID:Number(exerciseID),targetSets:Math.max(1,...work.map(s=>integer(s.setNumber,1,30))),targetReps:catalog.exerciseType==='reps'?integer(work[0]?.reps??r.sets[0].reps,1,2000):null,targetDurationSeconds:catalog.exerciseType==='reps'?null:integer(work[0]?.durationSeconds??r.sets[0].durationSeconds,1,86400),targetWeight:number(work[0]?.weight??r.sets[0].weight,0,2000),restSeconds:integer(r.restSeconds??90,0,3600),notes:text(r.notes,2000),supersetGroup:text(r.supersetGroup,64),configuration,instructions:json(catalog.instructions)};
           exercises.push(e);const unique=new Set();
           for(const row of r.sets){const set=validateSet(row,e);if(unique.has(set.setNumber))fail('invalid_set');unique.add(set.setNumber);actual.push({exercise:e,set});}
         }

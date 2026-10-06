@@ -4,6 +4,12 @@ import {nextTarget,validatePreferences,dailyReminderKey} from '../services/worko
 import {validateSet,validateConfiguration,setVolume,estimated1RM} from '../services/workoutDomain.js';
 const exercise={id:1,exerciseType:'reps',isBodyweight:0,targetSets:2,targetReps:10,targetWeight:60,configuration:{progression:'linear',increment:2.5}};
 const successful={target:exercise,sets:[{reps:10,weight:60},{reps:10,weight:60}]};
+test('workout demonstration size persists without dropping training preferences',()=>{
+  const p=validatePreferences({demonstrationSize:'mini',unit:'lb',bodyweightGoal:78});
+  assert.equal(p.demonstrationSize,'mini'); assert.equal(p.unit,'lb'); assert.equal(p.bodyweightGoal,78);
+  assert.equal(validatePreferences({}).demonstrationSize,'full');
+  assert.throws(()=>validatePreferences({demonstrationSize:'hidden'}),{status:400});
+});
 test('routine glyphs persist as bounded configuration without changing progression',()=>{
   assert.equal(validateConfiguration({icon:'mobility',progression:'double'}).icon,'mobility');
   assert.throws(()=>validateConfiguration({icon:'external-brand'}),{status:400});
@@ -41,7 +47,7 @@ test('bodyweight progression honors the configured rep ceiling and set cap',()=>
   assert.equal(nextTarget(bw,[{...hit,sets:[{reps:11,weight:0}]}]).reason,'repeat');
   const loaded={...bw,targetWeight:10};
   assert.equal(nextTarget(loaded,[{target:loaded,sets:hit.sets.map(s=>({...s,weight:10}))}]).weight,12.5);
-  assert.throws(()=>validateConfiguration({bodyweightRepCeiling:0}));
+  assert.throws(()=>validateConfiguration({bodyweightRepCeiling:-1}));
   assert.throws(()=>validateConfiguration({maxBodyweightSets:31}));
 });
 test('malformed detailed set payloads fail validation rather than throwing server errors',()=>{

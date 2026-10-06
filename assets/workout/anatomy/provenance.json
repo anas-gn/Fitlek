@@ -1,0 +1,9 @@
+{
+  "author": "Melih Colpan",
+  "license": "MIT",
+  "upstream": "https://github.com/melihcolpan/MuscleMap",
+  "referenceCommit": "c42ba6b98e3776af5981f20c05ba392238799670",
+  "referenceAsset": "frontend/src/lib/body-paths.js",
+  "transformation": "Retained coordinate data only; renderer authored natively in Flutter",
+  "sha256": "8ef4db55601a5c958a6d4a6637fb3591e133cfbe5a72f64673f9826df12f5c06"
+}

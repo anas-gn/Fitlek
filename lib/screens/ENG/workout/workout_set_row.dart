@@ -15,6 +15,8 @@ class WorkoutSetRow extends StatefulWidget {
   final Map<String, dynamic>? draft;
   final void Function(Map<String, dynamic>)? onDraft;
   final VoidCallback onUndo, onDetails;
+  final void Function(Map<String, dynamic>)? onStartTimed;
+  final bool workTimerRunning;
   const WorkoutSetRow(
       {super.key,
       required this.exercise,
@@ -26,13 +28,16 @@ class WorkoutSetRow extends StatefulWidget {
       this.draft,
       this.onDraft,
       required this.onUndo,
-      required this.onDetails});
+      required this.onDetails,
+      this.onStartTimed,
+      this.workTimerRunning = false});
   @override
   State<WorkoutSetRow> createState() => _WorkoutSetRowState();
 }
 
 class _WorkoutSetRowState extends State<WorkoutSetRow> {
-  late final TextEditingController _load, _count, _effort;
+  late final TextEditingController _load, _count, _effort, _speed;
+  bool get _cardio => widget.exercise.exercise.type == 'cardio';
   bool _dirty = false;
   bool _loadDirty = false;
   bool _addedLoad = false;
@@ -55,6 +60,7 @@ class _WorkoutSetRowState extends State<WorkoutSetRow> {
     super.initState();
     _load = TextEditingController();
     _count = TextEditingController();
+    _speed = TextEditingController();
     _effort = TextEditingController(
         text: _effortScale == 'rpe'
             ? workoutValue(widget.saved?.rpe).replaceAll('—', '')
@@ -63,6 +69,7 @@ class _WorkoutSetRowState extends State<WorkoutSetRow> {
     if (widget.draft != null) {
       _load.text = widget.draft!['load'] ?? _load.text;
       _count.text = widget.draft!['count'] ?? _count.text;
+      _speed.text = widget.draft!['speed'] ?? _speed.text;
       _effort.text = widget.draft!['effort'] ?? _effort.text;
       _dirty = true;
       _loadDirty = widget.draft!['loadDirty'] == true;
@@ -72,10 +79,21 @@ class _WorkoutSetRowState extends State<WorkoutSetRow> {
 
   void _fill() {
     final e = widget.exercise;
-    _load.text = workoutValue(WorkoutService.displayWeight(
-        widget.saved?.weight ?? e.weight ?? widget.previous?.weight ?? 0));
-    _count.text =
-        '${e.exercise.isTimed ? widget.saved?.durationSeconds ?? e.durationSeconds ?? 30 : widget.saved?.reps ?? e.reps ?? 10}';
+    final prefill =
+        WorkoutSetPrefill(e, saved: widget.saved, previous: widget.previous);
+    _load.text = workoutValue(WorkoutService.displayWeight(prefill.weight));
+    _count.text = _cardio
+        ? workoutValue(prefill.seconds / 60)
+        : '${e.exercise.isTimed ? prefill.seconds : prefill.reps}';
+    final previous = widget.saved ?? widget.previous;
+    _speed.text = workoutValue(_cardio &&
+            previous?.details['distanceMeters'] != null &&
+            (previous?.durationSeconds ?? 0) > 0
+        ? workoutNumber(previous!.details['distanceMeters'])! /
+            previous.durationSeconds! *
+            3.6
+        : workoutNumber(e.configuration['speedKmh']) ?? 8);
+    _addedLoad = prefill.weight > 0;
     _effort.text = _effortScale == 'rpe'
         ? workoutValue(widget.saved?.rpe).replaceAll('—', '')
         : '${widget.saved?.rir ?? ''}';
@@ -94,24 +112,35 @@ class _WorkoutSetRowState extends State<WorkoutSetRow> {
   void dispose() {
     _load.dispose();
     _count.dispose();
+    _speed.dispose();
     _effort.dispose();
     super.dispose();
   }
 
   Future<void> _save() async {
-    if (widget.exercise.configuration['perSide'] == true) {
+    if (widget.saved?.details['sides'] != null && _dirty) {
       widget.onDetails();
       return;
     }
     final w = double.tryParse(_load.text.replaceAll(',', '.')),
-        count = int.tryParse(_count.text);
+        count = double.tryParse(_count.text.replaceAll(',', '.')),
+        speed = double.tryParse(_speed.text.replaceAll(',', '.'));
     if (w == null ||
         !w.isFinite ||
         w < 0 ||
         WorkoutService.storedWeight(w) > 2000 ||
         count == null ||
-        count < 1 ||
-        count > (widget.exercise.exercise.isTimed ? 86400 : 1000)) {
+        !count.isFinite ||
+        count < (_cardio ? 1 / 60 : 1) ||
+        !_cardio && count % 1 != 0 ||
+        _cardio &&
+            (speed == null || !speed.isFinite || speed < 0 || speed > 100) ||
+        count >
+            (_cardio
+                ? 1440
+                : widget.exercise.exercise.isTimed
+                    ? 86400
+                    : 1000)) {
       workoutError(context, const WorkoutApiException('invalid_set', 400));
       return;
     }
@@ -122,8 +151,7 @@ class _WorkoutSetRowState extends State<WorkoutSetRow> {
             !effort.isFinite ||
             effort < 0 ||
             effort > 10 ||
-            scale == 'rpe' && effort < 1 ||
-            scale == 'rir' && effort % 1 != 0)) {
+            scale == 'rpe' && effort < 1)) {
       workoutError(context, const WorkoutApiException('invalid_effort', 400));
       return;
     }
@@ -132,23 +160,27 @@ class _WorkoutSetRowState extends State<WorkoutSetRow> {
       'setNumber': widget.number,
       'weight': _loadDirty
           ? WorkoutService.storedWeight(w)
-          : widget.saved?.weight ??
-              widget.exercise.weight ??
-              widget.previous?.weight ??
-              0,
-      'reps': widget.exercise.exercise.isTimed ? null : count,
-      'durationSeconds': widget.exercise.exercise.isTimed ? count : null,
+          : WorkoutSetPrefill(widget.exercise,
+                  saved: widget.saved, previous: widget.previous)
+              .weight,
+      'reps': widget.exercise.exercise.isTimed ? null : count.toInt(),
+      'durationSeconds': widget.exercise.exercise.isTimed
+          ? (_cardio ? (count * 60).round() : count.toInt())
+          : null,
       'rpe': scale == 'rpe'
           ? effort
           : scale == 'rir'
               ? null
               : widget.saved?.rpe,
       'rir': scale == 'rir'
-          ? effort?.toInt()
+          ? effort
           : scale == 'rpe'
               ? null
               : widget.saved?.rir,
-      'details': widget.saved?.details ?? {}
+      'details': {
+        ...?widget.saved?.details,
+        if (_cardio) 'distanceMeters': count * 60 * speed! / 3.6
+      }
     });
     if (mounted && saved) {
       setState(() {
@@ -158,37 +190,59 @@ class _WorkoutSetRowState extends State<WorkoutSetRow> {
     }
   }
 
-  Widget _input(TextEditingController c, String label) => Expanded(
+  void _changed(TextEditingController controller) => setState(() {
+        _dirty = true;
+        if (controller == _load) _loadDirty = true;
+        widget.onDraft?.call({
+          'load': _load.text,
+          'count': _count.text,
+          'speed': _speed.text,
+          'effort': _effort.text,
+          'effortScale': _effortScale,
+          'loadDirty': _loadDirty,
+          'addedLoad': _addedLoad
+        });
+      });
+
+  Widget _input(TextEditingController controller, String label) => Expanded(
       child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 4),
-          child: TextField(
-              controller: c,
-              onSubmitted: (_) {
-                if (!widget.busy) _save();
-              },
+          padding: const EdgeInsets.symmetric(horizontal: 2),
+          child: WorkoutNumberStepper(
+              controller: controller,
+              label: label,
               enabled: !widget.busy,
-              keyboardType:
-                  const TextInputType.numberWithOptions(decimal: true),
-              textAlign: TextAlign.center,
-              style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w500),
-              decoration: InputDecoration(
-                  isDense: true,
-                  contentPadding:
-                      const EdgeInsets.symmetric(horizontal: 4, vertical: 12),
-                  labelText: ((label)).workoutTr(context),
-                  floatingLabelBehavior: FloatingLabelBehavior.never),
-              onChanged: (_) => setState(() {
-                    _dirty = true;
-                    if (c == _load) _loadDirty = true;
-                    widget.onDraft?.call({
-                      'load': _load.text,
-                      'count': _count.text,
-                      'effort': _effort.text,
-                      'effortScale': _effortScale,
-                      'loadDirty': _loadDirty,
-                      'addedLoad': _addedLoad
-                    });
-                  }))));
+              compact: true,
+              optional: controller == _effort,
+              step: controller == _load
+                  ? 2.5
+                  : controller == _speed
+                      ? .5
+                      : _cardio && controller == _count
+                          ? 1
+                          : controller == _effort
+                              ? .5
+                              : widget.exercise.exercise.isTimed
+                                  ? 5
+                                  : widget.exercise.configuration['perSide'] ==
+                                          true
+                                      ? 2
+                                      : 1,
+              min: controller == _effort && _effortScale == 'rpe' ? 6 : 0,
+              max: controller == _speed
+                  ? 100
+                  : controller == _effort
+                      ? 10
+                      : controller == _count
+                          ? _cardio
+                              ? 1440
+                              : widget.exercise.exercise.isTimed
+                                  ? 86400
+                                  : 1000
+                          : WorkoutService.displayWeight(2000),
+              onChanged: () => _changed(controller),
+              onSubmitted: () {
+                if (!widget.busy) _save();
+              })));
   @override
   Widget build(BuildContext context) {
     final timed = widget.exercise.exercise.isTimed,
@@ -216,6 +270,7 @@ class _WorkoutSetRowState extends State<WorkoutSetRow> {
                           widget.onDraft?.call({
                             'load': _load.text,
                             'count': _count.text,
+                            'speed': _speed.text,
                             'effort': _effort.text,
                             'effortScale': _effortScale,
                             'loadDirty': _loadDirty,
@@ -223,9 +278,55 @@ class _WorkoutSetRowState extends State<WorkoutSetRow> {
                           });
                         }),
                 icon: const Icon(Icons.add_rounded, size: 18)),
-          _input(_count, timed ? 'SEC' : 'REPS'),
-          if (['rpe', 'rir'].contains(_effortScale))
+          _input(
+              _count,
+              _cardio
+                  ? 'MIN'
+                  : timed
+                      ? 'SEC'
+                      : 'REPS'),
+          if (_cardio) _input(_speed, 'KM/H'),
+          if (!timed && ['rpe', 'rir'].contains(_effortScale))
             _input(_effort, _effortScale.toUpperCase()),
+          if (timed && widget.onStartTimed != null)
+            SizedBox(
+                width: 36,
+                child: IconButton(
+                    tooltip: 'Start set'.workoutTr(context),
+                    onPressed: done || widget.busy || widget.workTimerRunning
+                        ? null
+                        : () {
+                            final seconds = int.tryParse(_count.text);
+                            final load = double.tryParse(
+                                _load.text.replaceAll(',', '.'));
+                            if (seconds == null ||
+                                seconds < 1 ||
+                                seconds > 86400 ||
+                                load == null ||
+                                !load.isFinite ||
+                                load < 0 ||
+                                WorkoutService.storedWeight(load) > 2000) {
+                              workoutError(
+                                  context,
+                                  const WorkoutApiException(
+                                      'invalid_set', 400));
+                              return;
+                            }
+                            widget.onStartTimed!({
+                              'workoutExerciseID': widget.exercise.id,
+                              'setNumber': widget.number,
+                              'durationSeconds': seconds,
+                              'weight': _loadDirty
+                                  ? WorkoutService.storedWeight(load)
+                                  : WorkoutSetPrefill(widget.exercise,
+                                          saved: widget.saved,
+                                          previous: widget.previous)
+                                      .weight,
+                              'reps': null,
+                              'details': widget.saved?.details ?? {}
+                            });
+                          },
+                    icon: const Icon(Icons.play_arrow, size: 20))),
           SizedBox(
               width: 48,
               child: IconButton(
@@ -237,22 +338,29 @@ class _WorkoutSetRowState extends State<WorkoutSetRow> {
                           ? widget.onUndo
                           : _save,
                   style: IconButton.styleFrom(
-                      backgroundColor: done
+                      backgroundColor: done && !_dirty
                           ? Theme.of(context).colorScheme.primary
-                          : Theme.of(context)
-                              .colorScheme
-                              .primary
-                              .withValues(alpha: 0.12),
-                      foregroundColor: done
+                          : Colors.transparent,
+                      foregroundColor: done && !_dirty
                           ? Theme.of(context).colorScheme.onPrimary
-                          : Theme.of(context).colorScheme.primary,
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8))),
+                          : Theme.of(context).colorScheme.onSurfaceVariant,
+                      minimumSize: const Size(32, 32),
+                      fixedSize: const Size(32, 32),
+                      padding: EdgeInsets.zero,
+                      shape: CircleBorder(
+                          side: done && !_dirty
+                              ? BorderSide.none
+                              : BorderSide(
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurface
+                                      .withValues(alpha: .16),
+                                  width: 1.5))),
                   icon: Icon(pending
                       ? Icons.cloud_upload_outlined
                       : done && !_dirty
                           ? Icons.check_rounded
-                          : Icons.check_outlined)))
+                          : null)))
         ]));
   }
 }
@@ -262,11 +370,18 @@ class WorkoutNumberStepper extends StatefulWidget {
   final double step, min, max;
   final String label;
   final VoidCallback onChanged;
+  final VoidCallback? onSubmitted;
+  final bool compact, enabled, optional, prominent;
   const WorkoutNumberStepper(
       {super.key,
       required this.controller,
       required this.label,
       required this.onChanged,
+      this.onSubmitted,
+      this.compact = false,
+      this.prominent = false,
+      this.enabled = true,
+      this.optional = false,
       this.step = 1,
       this.min = 0,
       this.max = 2000});
@@ -277,8 +392,22 @@ class WorkoutNumberStepper extends StatefulWidget {
 class _WorkoutNumberStepperState extends State<WorkoutNumberStepper> {
   Timer? _repeat;
   void _step(int direction) {
-    final value =
-        double.tryParse(widget.controller.text.replaceAll(',', '.')) ?? 0;
+    if (!widget.enabled) return;
+    final parsed = double.tryParse(widget.controller.text.replaceAll(',', '.'));
+    if (widget.optional) {
+      if (parsed == null) {
+        if (direction < 0) return;
+        widget.controller.text = workoutValue(widget.min);
+        widget.onChanged();
+        return;
+      }
+      if (parsed + direction * widget.step < widget.min) {
+        widget.controller.clear();
+        widget.onChanged();
+        return;
+      }
+    }
+    final value = parsed ?? 0;
     widget.controller.text = workoutValue(
         (value + direction * widget.step).clamp(widget.min, widget.max));
     widget.onChanged();
@@ -290,31 +419,57 @@ class _WorkoutNumberStepperState extends State<WorkoutNumberStepper> {
     super.dispose();
   }
 
-  Widget _button(int direction) => GestureDetector(
-      onLongPressStart: (_) {
-        _step(direction);
-        _repeat = Timer.periodic(
-            const Duration(milliseconds: 120), (_) => _step(direction));
-      },
-      onLongPressEnd: (_) => _repeat?.cancel(),
-      child: IconButton(
-          tooltip:
-              (('${direction > 0 ? 'Increase' : 'Decrease'} ${widget.label}'))
-                  .workoutTr(context),
-          padding: EdgeInsets.zero,
-          constraints: const BoxConstraints(minWidth: 32, minHeight: 44),
-          onPressed: () => _step(direction),
-          icon: Icon(direction > 0 ? Icons.add : Icons.remove, size: 16)));
+  Widget _button(int direction) => SizedBox(
+      width: widget.prominent
+          ? 48
+          : widget.compact
+              ? 18
+              : 32,
+      height: widget.prominent ? 48 : 44,
+      child: GestureDetector(
+          onLongPressStart: (_) {
+            _step(direction);
+            _repeat = Timer.periodic(
+                const Duration(milliseconds: 120), (_) => _step(direction));
+          },
+          onLongPressEnd: (_) => _repeat?.cancel(),
+          child: IconButton(
+              tooltip:
+                  (('${direction > 0 ? 'Increase' : 'Decrease'} ${widget.label}'))
+                      .workoutTr(context),
+              padding: EdgeInsets.zero,
+              style: widget.prominent
+                  ? IconButton.styleFrom(
+                      backgroundColor: Theme.of(context).colorScheme.surface,
+                      foregroundColor: Theme.of(context).colorScheme.onSurface,
+                      shape: const CircleBorder())
+                  : null,
+              constraints: BoxConstraints(
+                  minWidth: widget.compact ? 20 : 32, minHeight: 44),
+              onPressed: widget.enabled ? () => _step(direction) : null,
+              icon: Icon(direction > 0 ? Icons.add : Icons.remove,
+                  size: widget.prominent ? 24 : 16))));
   @override
   Widget build(BuildContext context) => Row(children: [
         _button(-1),
         Expanded(
             child: TextField(
                 controller: widget.controller,
+                enabled: widget.enabled,
+                onSubmitted: (_) => widget.onSubmitted?.call(),
                 textAlign: TextAlign.center,
+                style: widget.prominent
+                    ? const TextStyle(
+                        fontSize: 48, height: 1.1, fontWeight: FontWeight.w600)
+                    : null,
                 keyboardType:
                     const TextInputType.numberWithOptions(decimal: true),
                 decoration: InputDecoration(
+                    filled: !widget.prominent,
+                    suffixText: widget.prominent ? WorkoutService.unit : null,
+                    suffixStyle: TextStyle(
+                        fontSize: 18,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant),
                     isDense: true,
                     contentPadding: const EdgeInsets.symmetric(vertical: 12),
                     hintText: ((widget.label)).workoutTr(context)),
@@ -376,8 +531,8 @@ class _WorkoutRichSetEditorState extends State<WorkoutRichSetEditor> {
         text: s?.details['distanceMeters'] == null
             ? ''
             : '${s!.details['distanceMeters']}');
-    _perSide =
-        e.configuration['perSide'] == true || s?.details['sides'] != null;
+    _perSide = !e.exercise.isTimed &&
+        (e.configuration['perSide'] == true || s?.details['sides'] != null);
     final sides = Map<String, dynamic>.from(s?.details['sides'] ?? {}),
         left = Map<String, dynamic>.from(sides['left'] ?? {}),
         right = Map<String, dynamic>.from(sides['right'] ?? {});
@@ -387,9 +542,11 @@ class _WorkoutRichSetEditorState extends State<WorkoutRichSetEditor> {
     _rightWeight = TextEditingController(
         text: workoutValue(WorkoutService.displayWeight(
             workoutNumber(right['weight']) ?? e.weight ?? 0)));
-    _leftReps = TextEditingController(text: '${left['reps'] ?? e.reps ?? 10}');
+    final total = s?.reps ?? e.reps ?? 10;
+    _leftReps =
+        TextEditingController(text: '${left['reps'] ?? (total / 2).ceil()}');
     _rightReps =
-        TextEditingController(text: '${right['reps'] ?? e.reps ?? 10}');
+        TextEditingController(text: '${right['reps'] ?? (total / 2).floor()}');
     _originalLoads[_weight] =
         s?.weight ?? (widget.warmup ? (e.weight ?? 0) * 0.5 : e.weight ?? 0);
     _originalLoads[_leftWeight] =
@@ -505,7 +662,7 @@ class _WorkoutRichSetEditorState extends State<WorkoutRichSetEditor> {
               : _n(_reps).toInt(),
       'durationSeconds': timed ? _n(_duration).toInt() : null,
       'rpe': _rpe.text.isEmpty ? null : _n(_rpe),
-      'rir': _rir.text.isEmpty ? null : _n(_rir).toInt(),
+      'rir': _rir.text.isEmpty ? null : _n(_rir),
       'details': {
         'phase': widget.warmup ? 'warmup' : 'work',
         'type': _type,
@@ -584,8 +741,7 @@ class _WorkoutRichSetEditorState extends State<WorkoutRichSetEditor> {
                           max: 1000000, optional: true),
                     _field(_rpe, 'RPE (optional)',
                         min: 1, max: 10, optional: true),
-                    _field(_rir, 'RIR (optional)',
-                        max: 10, whole: true, optional: true),
+                    _field(_rir, 'RIR (optional)', max: 10, optional: true),
                     if (!widget.exercise.exercise.isTimed) ...[
                       DropdownButtonFormField<String>(
                           initialValue: _type,

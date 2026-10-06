@@ -114,7 +114,9 @@ export function parseWorkoutCSV(input,{unit='kg',timeZone='UTC'}={}){
     if((reps?'reps':metres?'cardio':'timed')!==e.exerciseType)fail('invalid_import');
     const setNumber=warmup?1001+e.sets.filter(s=>s.details.phase==='warmup').length:1+e.sets.filter(s=>s.details.phase!=='warmup').length;
     if(setNumber>30&&setNumber<1001||setNumber>1030)fail('invalid_import');
-    e.sets.push({setNumber,weight:normalizedWeight,reps:reps||null,durationSeconds:reps?null:durationSeconds,rpe:number(get('rpe')==='0'?'':get('rpe'),1,10),rir:number(get('rir'),0,10,true),details:{phase:warmup?'warmup':'work',type:'straight',notes:text(get('notes','exercise_notes'),2000),distanceMeters:e.exerciseType==='cardio'?metres:null}});
+    const rir=number(get('rir'),0,10);
+    const rpe=rir==null?number(get('rpe')==='0'?'':get('rpe'),1,10):null;
+    e.sets.push({setNumber,weight:normalizedWeight,reps:reps||null,durationSeconds:reps?null:durationSeconds,rpe,rir,details:{phase:warmup?'warmup':'work',type:'straight',notes:text(get('notes','exercise_notes'),2000),distanceMeters:e.exerciseType==='cardio'?metres:null}});
   }
   if(sessions.size>1000)fail('invalid_import');
   return {source,format:'sirvya-workout-history',version:1,unit:'kg',sessions:[...sessions.values()]};

@@ -1,3 +1,5 @@
+import {buildEffortStats} from './workoutEffort.js';
+import {workoutMuscleWeights,workoutMuscleNames} from './workoutMuscles.js';
 import {json,summarize,isWorkSet,setDetails,setVolume,estimated1RM} from './workoutDomain.js';
 
 export function buildTrainingStats(sessions,allSets,{now=new Date(),bodyweight=null,since=null,timeZone='UTC'}={}) {
@@ -14,30 +16,31 @@ export function buildTrainingStats(sessions,allSets,{now=new Date(),bodyweight=n
     const prescription={...json(session.prescription)};if(session.execution)prescription.exercises=json(session.execution);
     const sets=bySession.get(Number(session.id))||[],summary=summarize(sets,prescription),date=localDate.format(new Date(session.startedAt));
     volume+=summary.volume;setCount+=sets.length;frequency.set(date,(frequency.get(date)||0)+1);
-    activity.push({date,sessionID:session.id,durationSeconds:Number(session.durationSeconds||0),volume:summary.volume,setCount:sets.length});
+    activity.push({date,name:prescription.dayName,sessionID:session.id,durationSeconds:Number(session.durationSeconds||0),volume:summary.volume,setCount:sets.length});
     const perExercise=new Map();
     for(const exercise of prescription.exercises){
       const own=sets.filter(s=>Number(s.workoutExerciseID)===Number(exercise.id));
       if(!own.length)continue;
       if(!perExercise.has(Number(exercise.exerciseID)))perExercise.set(Number(exercise.exerciseID),{exercise,sets:[]});
       perExercise.get(Number(exercise.exerciseID)).sets.push(...own);
-      const group=exercise.muscleGroup||'other';const muscle=muscles.get(group)||{name:group,sets:0,hardSets:0,volume:0,lastTrainedAt:null};
+      const weights=workoutMuscleWeights(exercise);
+      const coverage=Object.entries(weights).map(([group,weight])=>({weight,muscle:muscles.get(group)||{name:group,sets:0,hardSets:0,volume:0,lastTrainedAt:null}}));
       for(const set of own){
         const details=setDetails(set);totalReps+=Number(set.reps||0)+(details.segments||[]).reduce((n,s)=>n+Number(s.reps||0),0);
         if(!isWorkSet(set))continue;
-        muscle.sets++;muscle.volume+=setVolume(set,exercise);muscle.lastTrainedAt=session.startedAt;
+        for(const {weight,muscle} of coverage){muscle.sets+=weight;muscle.volume+=setVolume(set,exercise)*weight;muscle.lastTrainedAt=session.startedAt;}
         if(set.rpe!=null)effort.rpe.push(Number(set.rpe));if(set.rir!=null)effort.rir.push(Number(set.rir));
-        if(set.rpe!=null&&Number(set.rpe)>=7||set.rir!=null&&Number(set.rir)<=3){hardSets++;muscle.hardSets++;}
-      }muscles.set(group,muscle);
+        if(set.rpe!=null&&Number(set.rpe)>=7||set.rir!=null&&Number(set.rir)<=3){hardSets++;for(const {weight,muscle} of coverage)muscle.hardSets+=weight;}
+      }for(const {muscle} of coverage)muscles.set(muscle.name,muscle);
     }
     for(const {exercise:e,sets:own} of perExercise.values()){
       const record=records.get(Number(e.exerciseID))||{exerciseID:e.exerciseID,name:e.name,exerciseType:e.exerciseType,isBodyweight:e.isBodyweight,weight:0,reps:0,durationSeconds:0,estimated1RM:null,bestVolume:0,bestSpeedKmh:0,repsAtLoad:{},points:[]};
       const before={...record};
       const work=own.filter(isWorkSet);if(!work.length)continue;
-      let bestRM=null;for(const set of work){
+      let bestRM=null,bestRMSource=null;for(const set of work){
         const sides=setDetails(set).sides,entries=sides?Object.values(sides):[set];
         for(const v of entries){record.weight=Math.max(record.weight,Number(v.weight||0));record.reps=Math.max(record.reps,Number(v.reps||0));record.durationSeconds=Math.max(record.durationSeconds,Number(v.durationSeconds||0));const key=String(Number(v.weight||0));record.repsAtLoad[key]=Math.max(record.repsAtLoad[key]||0,Number(v.reps||0));}
-        const rm=estimated1RM(set,e);if(rm!=null){record.estimated1RM=Math.max(record.estimated1RM||0,rm);bestRM=Math.max(bestRM||0,rm);}
+        const rm=estimated1RM(set,e);if(rm!=null){if(rm>(record.estimated1RM||0)){record.estimated1RM=rm;record.estimated1RMSource={weight:Number(set.weight),reps:Number(set.reps),date,sessionID:session.id};}if(rm>(bestRM||0)){bestRM=rm;bestRMSource={weight:Number(set.weight),reps:Number(set.reps),date,sessionID:session.id};}}
       }
       const sessionVolume=work.reduce((n,s)=>n+setVolume(s,e),0);record.bestVolume=Math.max(record.bestVolume,sessionVolume);
       const distanceMeters=work.reduce((n,s)=>n+Number(setDetails(s).distanceMeters||0),0),durationSeconds=work.reduce((n,s)=>n+Number(s.durationSeconds||0),0);
@@ -47,7 +50,8 @@ export function buildTrainingStats(sessions,allSets,{now=new Date(),bodyweight=n
       const improved=metrics.filter(k=>Number(record[k]||0)>Number(before[k]||0));
       if(improved.length)personalRecords.push({sessionID:session.id,exerciseID:e.exerciseID,name:e.name,date,metrics:improved,firstRecorded:before.points.length===0&&!recordedBefore.has(Number(e.exerciseID))});
       record.relativeStrength=bodyweight&&record.estimated1RM?record.estimated1RM/bodyweight:null;
-      record.points.push({date,sessionID:session.id,weight:Math.max(...work.map(s=>Number(s.weight||0))),reps:Math.max(...work.map(s=>Number(s.reps||0))),durationSeconds:Math.max(...work.map(s=>Number(s.durationSeconds||0))),estimated1RM:bestRM,volume:sessionVolume,distanceMeters,speedKmh});
+      record.exerciseType=e.exerciseType;record.isBodyweight=e.isBodyweight;
+      record.points.push({date,exerciseType:e.exerciseType,sessionID:session.id,weight:Math.max(...work.map(s=>Number(s.weight||0))),reps:Math.max(...work.map(s=>Number(s.reps||0))),durationSeconds:Math.max(...work.map(s=>Number(s.durationSeconds||0))),estimated1RM:bestRM,estimated1RMSource:bestRMSource,volume:sessionVolume,distanceMeters,speedKmh});
       records.set(Number(e.exerciseID),record);
     }
   }
@@ -63,6 +67,7 @@ export function buildTrainingStats(sessions,allSets,{now=new Date(),bodyweight=n
   const workload={recentSets:recent.reduce((n,a)=>n+a.setCount,0),previousSets:prior.reduce((n,a)=>n+a.setCount,0),recentVolume:recent.reduce((n,a)=>n+a.volume,0),previousVolume:prior.reduce((n,a)=>n+a.volume,0)};
   const effortDistribution=Object.fromEntries(['rpe','rir'].map(k=>[k,effort[k].reduce((bins,v)=>{const key=String(Math.floor(v));bins[key]=(bins[key]||0)+1;return bins;},{})]));
   return {workoutCount:sessions.length,setCount,volume,totalReps,hardSets,totalDurationSeconds,averageDurationSeconds:sessions.length?Math.round(totalDurationSeconds/sessions.length):0,
+    effortSummary:buildEffortStats(sessions,allSets,{timeZone}),missedMuscles:workoutMuscleNames.filter(m=>!muscles.has(m)),
     frequency:[...frequency].map(([date,count])=>({date,count})),activity,records:[...records.values()].filter(r=>r.points.length),muscles:[...muscles.values()].sort((a,b)=>b.sets-a.sets),effort,effortDistribution,personalRecords,prCount:personalRecords.length,longestStreak,currentStreak,longestWeeklyStreak,currentWeeklyStreak,workload};
 }
 

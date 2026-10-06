@@ -1,0 +1,917 @@
+{
+  "now": "2026-10-04T12:00:00.000Z",
+  "plan": {
+    "id": 1,
+    "clientID": 42,
+    "name": "Full body",
+    "coachID": null,
+    "status": "assigned",
+    "revision": 1,
+    "days": [
+      {
+        "id": 2,
+        "name": "Full body",
+        "configuration": {
+          "progression": "off"
+        },
+        "exercises": [
+          {
+            "id": 11,
+            "exerciseID": 1,
+            "name": "barbell bench press",
+            "muscleGroup": "pectorals",
+            "bodyPart": "chest",
+            "equipment": "barbell",
+            "exerciseType": "reps",
+            "isBodyweight": false,
+            "externalSource": "exercises-dataset",
+            "externalId": "0025",
+            "secondaryMuscles": [
+              "triceps",
+              "shoulders"
+            ],
+            "targetSets": 3,
+            "targetReps": 10,
+            "targetWeight": 60,
+            "restSeconds": 90,
+            "configuration": {
+              "progression": "off"
+            }
+          },
+          {
+            "id": 12,
+            "exerciseID": 2,
+            "name": "barbell bent over row",
+            "muscleGroup": "upper back",
+            "bodyPart": "back",
+            "equipment": "barbell",
+            "exerciseType": "reps",
+            "isBodyweight": false,
+            "externalSource": "exercises-dataset",
+            "externalId": "0027",
+            "secondaryMuscles": [
+              "biceps",
+              "forearms"
+            ],
+            "targetSets": 3,
+            "targetReps": 10,
+            "targetWeight": 40,
+            "restSeconds": 90,
+            "configuration": {
+              "progression": "off"
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "stats": {
+    "workoutCount": 1,
+    "setCount": 6,
+    "volume": 2900,
+    "totalReps": 58,
+    "hardSets": 6,
+    "totalDurationSeconds": 1800,
+    "averageDurationSeconds": 1800,
+    "effortSummary": {
+      "done": 6,
+      "rated": 6,
+      "hard": 6,
+      "averageRir": 2,
+      "hardPercent": 100,
+      "preferredScale": "rir",
+      "histogram": [
+        {
+          "rir": 0,
+          "tail": false,
+          "count": 0,
+          "percent": 0
+        },
+        {
+          "rir": 1,
+          "tail": false,
+          "count": 2,
+          "percent": 33
+        },
+        {
+          "rir": 2,
+          "tail": false,
+          "count": 2,
+          "percent": 33
+        },
+        {
+          "rir": 3,
+          "tail": false,
+          "count": 2,
+          "percent": 33
+        },
+        {
+          "rir": 4,
+          "tail": true,
+          "count": 0,
+          "percent": 0
+        }
+      ],
+      "weeks": [
+        {
+          "date": "2026-09-28",
+          "sets": 6,
+          "rated": 6,
+          "rir": 2
+        }
+      ],
+      "exercisePoints": [
+        {
+          "date": "2026-10-02",
+          "sessionID": 1,
+          "exerciseID": 1,
+          "rated": 3,
+          "rir": 2
+        },
+        {
+          "date": "2026-10-02",
+          "sessionID": 1,
+          "exerciseID": 2,
+          "rated": 3,
+          "rir": 2
+        }
+      ]
+    },
+    "missedMuscles": [
+      "traps",
+      "serratus",
+      "abs",
+      "obliques",
+      "lower back",
+      "glutes",
+      "quads",
+      "hamstrings",
+      "adductors",
+      "hip flexors",
+      "calves",
+      "shins"
+    ],
+    "frequency": [
+      {
+        "date": "2026-10-02",
+        "count": 1
+      }
+    ],
+    "activity": [
+      {
+        "date": "2026-10-02",
+        "name": "Full body",
+        "sessionID": 1,
+        "durationSeconds": 1800,
+        "volume": 2900,
+        "setCount": 6
+      }
+    ],
+    "records": [
+      {
+        "exerciseID": 1,
+        "name": "barbell bench press",
+        "exerciseType": "reps",
+        "isBodyweight": false,
+        "weight": 60,
+        "reps": 10,
+        "durationSeconds": 0,
+        "estimated1RM": 80,
+        "bestVolume": 1740,
+        "bestSpeedKmh": 0,
+        "repsAtLoad": {
+          "60": 10
+        },
+        "points": [
+          {
+            "date": "2026-10-02",
+            "exerciseType": "reps",
+            "sessionID": 1,
+            "weight": 60,
+            "reps": 10,
+            "durationSeconds": 0,
+            "estimated1RM": 80,
+            "estimated1RMSource": {
+              "weight": 60,
+              "reps": 10,
+              "date": "2026-10-02",
+              "sessionID": 1
+            },
+            "volume": 1740,
+            "distanceMeters": 0,
+            "speedKmh": null
+          }
+        ],
+        "estimated1RMSource": {
+          "weight": 60,
+          "reps": 10,
+          "date": "2026-10-02",
+          "sessionID": 1
+        },
+        "relativeStrength": 1.0062893081761006
+      },
+      {
+        "exerciseID": 2,
+        "name": "barbell bent over row",
+        "exerciseType": "reps",
+        "isBodyweight": false,
+        "weight": 40,
+        "reps": 10,
+        "durationSeconds": 0,
+        "estimated1RM": 53.33333333333333,
+        "bestVolume": 1160,
+        "bestSpeedKmh": 0,
+        "repsAtLoad": {
+          "40": 10
+        },
+        "points": [
+          {
+            "date": "2026-10-02",
+            "exerciseType": "reps",
+            "sessionID": 1,
+            "weight": 40,
+            "reps": 10,
+            "durationSeconds": 0,
+            "estimated1RM": 53.33333333333333,
+            "estimated1RMSource": {
+              "weight": 40,
+              "reps": 10,
+              "date": "2026-10-02",
+              "sessionID": 1
+            },
+            "volume": 1160,
+            "distanceMeters": 0,
+            "speedKmh": null
+          }
+        ],
+        "estimated1RMSource": {
+          "weight": 40,
+          "reps": 10,
+          "date": "2026-10-02",
+          "sessionID": 1
+        },
+        "relativeStrength": 0.670859538784067
+      }
+    ],
+    "muscles": [
+      {
+        "name": "chest",
+        "sets": 3,
+        "hardSets": 3,
+        "volume": 1740,
+        "lastTrainedAt": "2026-10-02T12:00:00.000Z"
+      },
+      {
+        "name": "upper back",
+        "sets": 3,
+        "hardSets": 3,
+        "volume": 1160,
+        "lastTrainedAt": "2026-10-02T12:00:00.000Z"
+      },
+      {
+        "name": "triceps",
+        "sets": 1.2000000000000002,
+        "hardSets": 1.2000000000000002,
+        "volume": 696,
+        "lastTrainedAt": "2026-10-02T12:00:00.000Z"
+      },
+      {
+        "name": "shoulders",
+        "sets": 1.2000000000000002,
+        "hardSets": 1.2000000000000002,
+        "volume": 696,
+        "lastTrainedAt": "2026-10-02T12:00:00.000Z"
+      },
+      {
+        "name": "biceps",
+        "sets": 1.2000000000000002,
+        "hardSets": 1.2000000000000002,
+        "volume": 464,
+        "lastTrainedAt": "2026-10-02T12:00:00.000Z"
+      },
+      {
+        "name": "forearms",
+        "sets": 1.2000000000000002,
+        "hardSets": 1.2000000000000002,
+        "volume": 464,
+        "lastTrainedAt": "2026-10-02T12:00:00.000Z"
+      }
+    ],
+    "effort": {
+      "rpe": [],
+      "rir": [
+        1,
+        2,
+        3,
+        1,
+        2,
+        3
+      ]
+    },
+    "effortDistribution": {
+      "rpe": {},
+      "rir": {
+        "1": 2,
+        "2": 2,
+        "3": 2
+      }
+    },
+    "personalRecords": [
+      {
+        "sessionID": 1,
+        "exerciseID": 1,
+        "name": "barbell bench press",
+        "date": "2026-10-02",
+        "metrics": [
+          "weight",
+          "estimated1RM",
+          "bestVolume"
+        ],
+        "firstRecorded": true
+      },
+      {
+        "sessionID": 1,
+        "exerciseID": 2,
+        "name": "barbell bent over row",
+        "date": "2026-10-02",
+        "metrics": [
+          "weight",
+          "estimated1RM",
+          "bestVolume"
+        ],
+        "firstRecorded": true
+      }
+    ],
+    "prCount": 2,
+    "longestStreak": 1,
+    "currentStreak": 0,
+    "longestWeeklyStreak": 1,
+    "currentWeeklyStreak": 1,
+    "workload": {
+      "recentSets": 6,
+      "previousSets": 0,
+      "recentVolume": 2900,
+      "previousVolume": 0
+    },
+    "bodyweight": [
+      {
+        "weight": 80,
+        "recordedAt": "2026-09-30T12:00:00Z"
+      },
+      {
+        "weight": 79.5,
+        "recordedAt": "2026-10-03T12:00:00Z"
+      }
+    ],
+    "bodyweightGoal": 78,
+    "yearActivity": [
+      {
+        "date": "2026-10-02",
+        "name": "Full body",
+        "sessionID": 1,
+        "durationSeconds": 1800,
+        "volume": 2900,
+        "setCount": 6
+      }
+    ],
+    "overview": {
+      "workoutCount": 1,
+      "monthWorkouts": 1,
+      "weeklyStreak": 1,
+      "bodyweightDelta30": -0.5
+    }
+  },
+  "history": [
+    {
+      "id": 1,
+      "startedAt": "2026-10-02T12:00:00.000Z",
+      "status": "completed",
+      "durationSeconds": 1800,
+      "prescription": {
+        "dayName": "Full body",
+        "planName": "Full body",
+        "sourceDayIDs": [
+          2
+        ],
+        "exercises": [
+          {
+            "id": 11,
+            "exerciseID": 1,
+            "name": "barbell bench press",
+            "muscleGroup": "pectorals",
+            "bodyPart": "chest",
+            "equipment": "barbell",
+            "exerciseType": "reps",
+            "isBodyweight": false,
+            "externalSource": "exercises-dataset",
+            "externalId": "0025",
+            "secondaryMuscles": [
+              "triceps",
+              "shoulders"
+            ],
+            "targetSets": 3,
+            "targetReps": 10,
+            "targetWeight": 60,
+            "restSeconds": 90,
+            "configuration": {
+              "progression": "off"
+            }
+          },
+          {
+            "id": 12,
+            "exerciseID": 2,
+            "name": "barbell bent over row",
+            "muscleGroup": "upper back",
+            "bodyPart": "back",
+            "equipment": "barbell",
+            "exerciseType": "reps",
+            "isBodyweight": false,
+            "externalSource": "exercises-dataset",
+            "externalId": "0027",
+            "secondaryMuscles": [
+              "biceps",
+              "forearms"
+            ],
+            "targetSets": 3,
+            "targetReps": 10,
+            "targetWeight": 40,
+            "restSeconds": 90,
+            "configuration": {
+              "progression": "off"
+            }
+          }
+        ]
+      },
+      "sets": [
+        {
+          "id": 111,
+          "workoutSessionID": 1,
+          "workoutExerciseID": 11,
+          "exerciseID": 1,
+          "startedAt": "2026-10-02T12:00:00.000Z",
+          "setNumber": 1,
+          "weight": 60,
+          "reps": 10,
+          "rir": 1,
+          "details": {
+            "phase": "work",
+            "type": "straight"
+          }
+        },
+        {
+          "id": 112,
+          "workoutSessionID": 1,
+          "workoutExerciseID": 11,
+          "exerciseID": 1,
+          "startedAt": "2026-10-02T12:00:00.000Z",
+          "setNumber": 2,
+          "weight": 60,
+          "reps": 10,
+          "rir": 2,
+          "details": {
+            "phase": "work",
+            "type": "straight"
+          }
+        },
+        {
+          "id": 113,
+          "workoutSessionID": 1,
+          "workoutExerciseID": 11,
+          "exerciseID": 1,
+          "startedAt": "2026-10-02T12:00:00.000Z",
+          "setNumber": 3,
+          "weight": 60,
+          "reps": 9,
+          "rir": 3,
+          "details": {
+            "phase": "work",
+            "type": "straight"
+          }
+        },
+        {
+          "id": 121,
+          "workoutSessionID": 1,
+          "workoutExerciseID": 12,
+          "exerciseID": 2,
+          "startedAt": "2026-10-02T12:00:00.000Z",
+          "setNumber": 1,
+          "weight": 40,
+          "reps": 10,
+          "rir": 1,
+          "details": {
+            "phase": "work",
+            "type": "straight"
+          }
+        },
+        {
+          "id": 122,
+          "workoutSessionID": 1,
+          "workoutExerciseID": 12,
+          "exerciseID": 2,
+          "startedAt": "2026-10-02T12:00:00.000Z",
+          "setNumber": 2,
+          "weight": 40,
+          "reps": 10,
+          "rir": 2,
+          "details": {
+            "phase": "work",
+            "type": "straight"
+          }
+        },
+        {
+          "id": 123,
+          "workoutSessionID": 1,
+          "workoutExerciseID": 12,
+          "exerciseID": 2,
+          "startedAt": "2026-10-02T12:00:00.000Z",
+          "setNumber": 3,
+          "weight": 40,
+          "reps": 9,
+          "rir": 3,
+          "details": {
+            "phase": "work",
+            "type": "straight"
+          }
+        }
+      ],
+      "summary": {
+        "setCount": 6,
+        "volume": 2900
+      }
+    }
+  ],
+  "schedule": {
+    "data": [],
+    "overrideDates": [],
+    "week": [
+      {
+        "id": 2,
+        "name": "Full body",
+        "dayOfWeek": 1
+      },
+      {
+        "id": 2,
+        "name": "Full body",
+        "dayOfWeek": 3
+      },
+      {
+        "id": 2,
+        "name": "Full body",
+        "dayOfWeek": 7
+      }
+    ]
+  },
+  "active": {
+    "id": 7,
+    "startedAt": "2026-10-04T12:00:00.000Z",
+    "status": "active",
+    "prescription": {
+      "dayName": "Full body",
+      "planName": "Full body",
+      "sourceDayIDs": [
+        2
+      ],
+      "exercises": [
+        {
+          "id": 11,
+          "exerciseID": 1,
+          "name": "barbell bench press",
+          "muscleGroup": "pectorals",
+          "bodyPart": "chest",
+          "equipment": "barbell",
+          "exerciseType": "reps",
+          "isBodyweight": false,
+          "externalSource": "exercises-dataset",
+          "externalId": "0025",
+          "secondaryMuscles": [
+            "triceps",
+            "shoulders"
+          ],
+          "targetSets": 3,
+          "targetReps": 10,
+          "targetWeight": 60,
+          "restSeconds": 90,
+          "configuration": {
+            "progression": "off"
+          }
+        },
+        {
+          "id": 12,
+          "exerciseID": 2,
+          "name": "barbell bent over row",
+          "muscleGroup": "upper back",
+          "bodyPart": "back",
+          "equipment": "barbell",
+          "exerciseType": "reps",
+          "isBodyweight": false,
+          "externalSource": "exercises-dataset",
+          "externalId": "0027",
+          "secondaryMuscles": [
+            "biceps",
+            "forearms"
+          ],
+          "targetSets": 3,
+          "targetReps": 10,
+          "targetWeight": 40,
+          "restSeconds": 90,
+          "configuration": {
+            "progression": "off"
+          }
+        }
+      ]
+    },
+    "sets": [],
+    "previous": {
+      "1": [
+        {
+          "id": 111,
+          "workoutSessionID": 1,
+          "workoutExerciseID": 11,
+          "exerciseID": 1,
+          "startedAt": "2026-10-02T12:00:00.000Z",
+          "setNumber": 1,
+          "weight": 60,
+          "reps": 10,
+          "rir": 1,
+          "details": {
+            "phase": "work",
+            "type": "straight"
+          }
+        },
+        {
+          "id": 112,
+          "workoutSessionID": 1,
+          "workoutExerciseID": 11,
+          "exerciseID": 1,
+          "startedAt": "2026-10-02T12:00:00.000Z",
+          "setNumber": 2,
+          "weight": 60,
+          "reps": 10,
+          "rir": 2,
+          "details": {
+            "phase": "work",
+            "type": "straight"
+          }
+        },
+        {
+          "id": 113,
+          "workoutSessionID": 1,
+          "workoutExerciseID": 11,
+          "exerciseID": 1,
+          "startedAt": "2026-10-02T12:00:00.000Z",
+          "setNumber": 3,
+          "weight": 60,
+          "reps": 9,
+          "rir": 3,
+          "details": {
+            "phase": "work",
+            "type": "straight"
+          }
+        }
+      ],
+      "2": [
+        {
+          "id": 121,
+          "workoutSessionID": 1,
+          "workoutExerciseID": 12,
+          "exerciseID": 2,
+          "startedAt": "2026-10-02T12:00:00.000Z",
+          "setNumber": 1,
+          "weight": 40,
+          "reps": 10,
+          "rir": 1,
+          "details": {
+            "phase": "work",
+            "type": "straight"
+          }
+        },
+        {
+          "id": 122,
+          "workoutSessionID": 1,
+          "workoutExerciseID": 12,
+          "exerciseID": 2,
+          "startedAt": "2026-10-02T12:00:00.000Z",
+          "setNumber": 2,
+          "weight": 40,
+          "reps": 10,
+          "rir": 2,
+          "details": {
+            "phase": "work",
+            "type": "straight"
+          }
+        },
+        {
+          "id": 123,
+          "workoutSessionID": 1,
+          "workoutExerciseID": 12,
+          "exerciseID": 2,
+          "startedAt": "2026-10-02T12:00:00.000Z",
+          "setNumber": 3,
+          "weight": 40,
+          "reps": 9,
+          "rir": 3,
+          "details": {
+            "phase": "work",
+            "type": "straight"
+          }
+        }
+      ]
+    }
+  },
+  "reference": {
+    "theme": "light",
+    "accent": "green",
+    "unit": "kg",
+    "lang": "en",
+    "restSec": 90,
+    "sound": false,
+    "keepAwake": false,
+    "effort": "rir",
+    "targetW": 78,
+    "routines": [
+      {
+        "id": "r1",
+        "name": "Full body",
+        "emoji": "dumbbell",
+        "prog": "off",
+        "ex": [
+          {
+            "id": "0025",
+            "sets": 3,
+            "reps": 10,
+            "weight": 60
+          },
+          {
+            "id": "0027",
+            "sets": 3,
+            "reps": 10,
+            "weight": 40
+          }
+        ]
+      }
+    ],
+    "week": {
+      "0": "r1",
+      "1": "r1",
+      "3": "r1"
+    },
+    "dayPlan": {},
+    "customEx": [],
+    "exWeights": {
+      "0025": {
+        "w": 60
+      },
+      "0027": {
+        "w": 40
+      }
+    },
+    "bodyweight": [
+      {
+        "d": "2026-09-30",
+        "t": 1790769600000,
+        "w": 80
+      },
+      {
+        "d": "2026-10-03",
+        "t": 1791028800000,
+        "w": 79.5
+      }
+    ],
+    "workouts": [
+      {
+        "id": "w1",
+        "d": "2026-10-02",
+        "start": 1790942400000,
+        "end": 1790944200000,
+        "name": "Full body",
+        "routineId": "r1",
+        "bw": 80,
+        "entries": [
+          {
+            "id": "0025",
+            "target": {
+              "id": "0025",
+              "sets": 3,
+              "reps": 10,
+              "weight": 60
+            },
+            "sets": [
+              {
+                "w": 60,
+                "r": 10,
+                "rir": 1,
+                "done": true
+              },
+              {
+                "w": 60,
+                "r": 10,
+                "rir": 2,
+                "done": true
+              },
+              {
+                "w": 60,
+                "r": 9,
+                "rir": 3,
+                "done": true
+              }
+            ]
+          },
+          {
+            "id": "0027",
+            "target": {
+              "id": "0027",
+              "sets": 3,
+              "reps": 10,
+              "weight": 40
+            },
+            "sets": [
+              {
+                "w": 40,
+                "r": 10,
+                "rir": 1,
+                "done": true
+              },
+              {
+                "w": 40,
+                "r": 10,
+                "rir": 2,
+                "done": true
+              },
+              {
+                "w": 40,
+                "r": 9,
+                "rir": 3,
+                "done": true
+              }
+            ]
+          }
+        ],
+        "vol": 2900
+      }
+    ],
+    "active": null
+  },
+  "referenceActive": {
+    "id": "w2",
+    "d": "2026-10-04",
+    "start": 1791115200000,
+    "name": "Full body",
+    "routineId": "r1",
+    "cur": 0,
+    "bw": 79.5,
+    "entries": [
+      {
+        "id": "0025",
+        "target": {
+          "id": "0025",
+          "sets": 3,
+          "reps": 10,
+          "weight": 60
+        },
+        "sets": [
+          {
+            "w": 60,
+            "r": 10,
+            "done": false
+          },
+          {
+            "w": 60,
+            "r": 10,
+            "done": false
+          },
+          {
+            "w": 60,
+            "r": 9,
+            "done": false
+          }
+        ]
+      },
+      {
+        "id": "0027",
+        "target": {
+          "id": "0027",
+          "sets": 3,
+          "reps": 10,
+          "weight": 40
+        },
+        "sets": [
+          {
+            "w": 40,
+            "r": 10,
+            "done": false
+          },
+          {
+            "w": 40,
+            "r": 10,
+            "done": false
+          },
+          {
+            "w": 40,
+            "r": 9,
+            "done": false
+          }
+        ]
+      }
+    ]
+  }
+}

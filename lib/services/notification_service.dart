@@ -44,6 +44,7 @@ class NotificationService {
   Future<bool> scheduleWorkoutRest(int sessionID, int seconds,
       {required String title,
       required String body,
+      bool work = false,
       bool sound = true,
       bool vibration = true}) async {
     if (kIsWeb ||
@@ -62,8 +63,12 @@ class NotificationService {
       if (seconds <= 0) return true;
       tzdata.initializeTimeZones();
       final deadline = DateTime.now().toUtc().add(Duration(seconds: seconds));
+      final android = _localNotifications.resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin>();
+      final precise = defaultTargetPlatform == TargetPlatform.android &&
+          await android?.canScheduleExactNotifications() == true;
       final payload = jsonEncode({
-        'type': 'workout_rest',
+        'type': work ? 'workout_work' : 'workout_rest',
         'relatedEntityID': sessionID,
         'userID': user['id']
       });
@@ -85,23 +90,25 @@ class NotificationService {
                     usesChronometer: true,
                     chronometerCountDown: true,
                     timeoutAfter: seconds * 1000,
-                    actions: [
-                  AndroidNotificationAction(
-                      'pause',
-                      workoutTranslate(
-                          'Pause', LocaleService.instance.locale.languageCode),
-                      showsUserInterface: true),
-                  AndroidNotificationAction(
-                      'extend',
-                      workoutTranslate('+30 sec',
-                          LocaleService.instance.locale.languageCode),
-                      showsUserInterface: true),
-                  AndroidNotificationAction(
-                      'skip',
-                      workoutTranslate(
-                          'Skip', LocaleService.instance.locale.languageCode),
-                      showsUserInterface: true)
-                ])));
+                    actions: work
+                        ? []
+                        : [
+                            AndroidNotificationAction(
+                                'pause',
+                                workoutTranslate('Pause',
+                                    LocaleService.instance.locale.languageCode),
+                                showsUserInterface: true),
+                            AndroidNotificationAction(
+                                'extend',
+                                workoutTranslate('+15 sec',
+                                    LocaleService.instance.locale.languageCode),
+                                showsUserInterface: true),
+                            AndroidNotificationAction(
+                                'skip',
+                                workoutTranslate('Skip',
+                                    LocaleService.instance.locale.languageCode),
+                                showsUserInterface: true)
+                          ])));
       }
       await _localNotifications.zonedSchedule(
           id: id + 1,
@@ -109,7 +116,9 @@ class NotificationService {
           body: body,
           scheduledDate: tz.TZDateTime.from(deadline, tz.UTC),
           payload: payload,
-          androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+          androidScheduleMode: precise
+              ? AndroidScheduleMode.exactAllowWhileIdle
+              : AndroidScheduleMode.inexactAllowWhileIdle,
           notificationDetails: NotificationDetails(
               android: AndroidNotificationDetails(
                   // Android channel sound/vibration are fixed at creation.
@@ -125,6 +134,35 @@ class NotificationService {
       return true;
     } catch (e) {
       if (kDebugMode) debugPrint('Workout timer notification unavailable');
+      return false;
+    }
+  }
+
+  // Requested from the Workout options screen, never during a running set.
+  Future<bool> requestWorkoutTimerAlerts() async {
+    if (kIsWeb ||
+        !{TargetPlatform.android, TargetPlatform.iOS}
+            .contains(defaultTargetPlatform)) {
+      return false;
+    }
+    try {
+      if (!_localReady) return false;
+      if (defaultTargetPlatform == TargetPlatform.android) {
+        final android =
+            _localNotifications.resolvePlatformSpecificImplementation<
+                AndroidFlutterLocalNotificationsPlugin>();
+        if (await android?.requestNotificationsPermission() == false) {
+          return false;
+        }
+        if (await android?.canScheduleExactNotifications() == true) return true;
+        return await android?.requestExactAlarmsPermission() == true;
+      }
+      return await _localNotifications
+              .resolvePlatformSpecificImplementation<
+                  IOSFlutterLocalNotificationsPlugin>()
+              ?.requestPermissions(alert: true, badge: false, sound: true) ==
+          true;
+    } catch (_) {
       return false;
     }
   }
@@ -376,14 +414,17 @@ class NotificationService {
     final id = int.tryParse('${click['relatedEntityID']}');
     // A notification tap must not mount a second timer/listener for the active
     // workout that is already present in the navigator.
-    if (click['type'] == 'workout_rest' &&
-        id != null && restControlsSessionID == id) {
+    if (['workout_rest', 'workout_work'].contains(click['type']) &&
+        id != null &&
+        restControlsSessionID == id) {
       return;
     }
     final role = await ApiService.getRole();
     navigator.push(WorkoutRoute(
-        builder: (_) => click['type'] == 'workout_rest' && id != null
-            ? ActiveWorkoutScreen(sessionID: id)
-            : WorkoutHomeScreen(coach: role == 'coach')));
+        builder: (_) =>
+            ['workout_rest', 'workout_work'].contains(click['type']) &&
+                    id != null
+                ? ActiveWorkoutScreen(sessionID: id)
+                : WorkoutHomeScreen(coach: role == 'coach')));
   }
 }

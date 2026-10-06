@@ -1,9 +1,10 @@
+import {parseWorkoutProgram,portableExercise,starterWorkoutProgram,openGymWorkoutProgram} from '../../services/workoutProgram.js';
 import express from 'express';
 import { requireAuth, requireRole } from '../../middleware/auth.js';
-import { fail, integer, text, json, number, validatePlan, validateSet, validateCustomExercise, summarize, estimated1RM, isWorkSet,setVolume } from '../../services/workoutDomain.js';
+import { fail, integer, text, json, number, validatePlan, validateSet, validateCustomExercise, summarize, estimated1RM, isWorkSet,setVolume,exerciseForPrescription } from '../../services/workoutDomain.js';
 import {defaultWorkoutPreferences, validatePreferences, nextTarget, balancePreferences, balancePreferenceKeys} from '../../services/workoutExperience.js';
 import {buildTrainingStats,scheduleAdherence} from '../../services/workoutStats.js';
-import {readPlanDetails,readSessionSets,readPreviousPerformance} from '../../services/workoutQueries.js';
+import {readPlanDetails,readSessionSets,readPreviousPerformance,readWeeklyDays} from '../../services/workoutQueries.js';
 import {installWorkoutMedia} from '../../services/workoutMedia.js';
 import {installWorkoutHistoryTransfer} from '../../services/workoutHistoryTransfer.js';
 
@@ -94,20 +95,46 @@ export function createWorkoutRouter(db, {ready = Promise.resolve(), notify = asy
 
   router.get('/exercises', run(async (req, res) => {
     const search = text(req.query.search, 160) || '';
-    const where = ['e.archivedAt IS NULL', 'e.name LIKE ?', `((e.ownerID IS NULL AND e.isPrivate=0) OR e.ownerID=? OR EXISTS (SELECT 1 FROM coachclients cc WHERE (cc.coachID=? AND cc.clientID=e.ownerID) OR (cc.clientID=? AND cc.coachID=e.ownerID)))`]; const params = [`%${search}%`,req.user.id,req.user.id,req.user.id];
-    for (const key of ['muscleGroup', 'equipment', 'exerciseType']) {
-      if (req.query[key]) { where.push(`e.${key} = ?`); params.push(text(req.query[key], 80)); }
+    // Usage is scoped to this training account, not to all visible exercises or
+    // a linked Coach's other clients. Count history entries rather than sets.
+    const usageJoin = `LEFT JOIN (SELECT exerciseID,SUM(n) AS usageCount FROM (
+      SELECT we.exerciseID,COUNT(*) AS n FROM workout_exercises we
+      JOIN workout_days wd ON wd.id=we.workoutDayID JOIN workout_plans wp ON wp.id=wd.workoutPlanID
+      WHERE wp.clientID=? AND wp.status<>'archived' GROUP BY we.exerciseID
+      UNION ALL SELECT ws.exerciseID,COUNT(DISTINCT ws.workoutSessionID,ws.workoutExerciseID) AS n
+      FROM workout_sets ws JOIN workout_sessions s ON s.id=ws.workoutSessionID
+      WHERE s.clientID=? AND s.status='completed' GROUP BY ws.exerciseID
+    ) used GROUP BY exerciseID) eu ON eu.exerciseID=e.id`;
+    const catalogue = `FROM exercises e LEFT JOIN workout_exercise_preferences ep ON ep.exerciseID=e.id AND ep.userID=? ${usageJoin}`;
+    const scoped = () => [req.user.id,req.user.id,req.user.id];
+    const where = ['e.archivedAt IS NULL', '(e.name LIKE ? OR e.muscleGroup LIKE ? OR e.equipment LIKE ? OR COALESCE(e.description,\'\') LIKE ? OR CAST(e.secondaryMuscles AS CHAR) LIKE ?)', `((e.ownerID IS NULL AND e.isPrivate=0) OR e.ownerID=? OR EXISTS (SELECT 1 FROM coachclients cc WHERE (cc.coachID=? AND cc.clientID=e.ownerID) OR (cc.clientID=? AND cc.coachID=e.ownerID)))`]; const params = [ ...Array(5).fill(`%${search}%`),req.user.id,req.user.id,req.user.id];
+    for (const key of ['bodyPart','muscleGroup', 'exerciseType']) {
+      if (req.query[key]) { where.push(key==='bodyPart'?'COALESCE(e.bodyPart,e.muscleGroup) = ?':`e.${key} = ?`); params.push(text(req.query[key], 80)); }
     }
     if(req.query.secondaryMuscle){where.push('JSON_CONTAINS(e.secondaryMuscles, JSON_QUOTE(?))');params.push(text(req.query.secondaryMuscle,80));}
     if(req.query.bodyweight==='true')where.push('e.isBodyweight=1');
     if(req.query.favorite==='true')where.push('ep.favorite=1');
+    if(req.query.chosen==='true')where.push('COALESCE(eu.usageCount,0)>0');
     if(req.query.equipmentList){const equipment=text(req.query.equipmentList,2000,true).split(',').slice(0,40);where.push(`e.equipment IN (${equipment.map(()=>'?').join(',')})`);params.push(...equipment);}
-    const page = integer(req.query.page ?? 1, 1, 10000); const limit = 40;
-    const [rows] = await db.query(`SELECT e.*, COALESCE(ep.favorite,0) AS favorite, ep.notes AS personalNotes FROM exercises e LEFT JOIN workout_exercise_preferences ep ON ep.exerciseID=e.id AND ep.userID=? WHERE ${where.join(' AND ')} ORDER BY e.name, e.id LIMIT ? OFFSET ?`, [req.user.id,...params, limit + 1, (page - 1) * limit]);
-    const [filters] = await db.query('SELECT DISTINCT e.muscleGroup,e.equipment,e.exerciseType,e.secondaryMuscles FROM exercises e LEFT JOIN workout_exercise_preferences ep ON ep.exerciseID=e.id AND ep.userID=? WHERE '+where.join(' AND '),[req.user.id,...params]);
-    const [[count]]=await db.query(`SELECT COUNT(*) AS total FROM exercises e LEFT JOIN workout_exercise_preferences ep ON ep.exerciseID=e.id AND ep.userID=? WHERE ${where.join(' AND ')}`,[req.user.id,...params]);
-    res.json({data: rows.slice(0, limit).map(({instructionTranslations,...e}) => ({...e, secondaryMuscles: json(e.secondaryMuscles), instructions: json(e.instructions)})),total:Number(count.total), hasMore: rows.length > limit,
-      filters: {...Object.fromEntries(['muscleGroup', 'equipment', 'exerciseType'].map(k => [k, [...new Set(filters.map(e => e[k]))].sort()])),secondaryMuscle:[...new Set(filters.flatMap(e=>json(e.secondaryMuscles)||[]))].sort()}});
+    // Equipment choices describe the search/body-part base, before equipment is
+    // applied. A search that excludes the selected equipment clears it rather
+    // than trapping the user in an empty result with a stale filter.
+    const [filters] = await db.query(`SELECT DISTINCT e.bodyPart,e.muscleGroup,e.equipment,e.exerciseType,e.secondaryMuscles ${catalogue} WHERE `+where.join(' AND '),[...scoped(),...params]);
+    const [equipmentCounts]=await db.query(`SELECT e.equipment,COUNT(*) AS n ${catalogue} WHERE `+where.join(' AND ')+' GROUP BY e.equipment ORDER BY n DESC,e.equipment',[...scoped(),...params]);
+    const [[chosen]]=await db.query(`SELECT COUNT(*) AS n ${catalogue} WHERE e.archivedAt IS NULL AND COALESCE(eu.usageCount,0)>0`,scoped());
+    const equipmentOptions=equipmentCounts.map(e=>e.equipment);
+    const selectedEquipment=text(req.query.equipment,80);
+    const effectiveEquipment=equipmentOptions.includes(selectedEquipment)?selectedEquipment:null;
+    if(effectiveEquipment){where.push('e.equipment = ?');params.push(effectiveEquipment);}
+    const [bodyParts]=await db.query(`SELECT DISTINCT COALESCE(e.bodyPart,e.muscleGroup) AS bodyPart FROM exercises e WHERE e.archivedAt IS NULL AND ((e.ownerID IS NULL AND e.isPrivate=0) OR e.ownerID=? OR EXISTS (SELECT 1 FROM coachclients cc WHERE (cc.coachID=? AND cc.clientID=e.ownerID) OR (cc.clientID=? AND cc.coachID=e.ownerID))) ORDER BY bodyPart`,[req.user.id,req.user.id,req.user.id]);
+    const page = integer(req.query.page ?? 1, 1, 10000); const limit = req.query.picker === 'true' ? 50 : 40;
+    const [rows] = await db.query(`SELECT e.*, COALESCE(ep.favorite,0) AS favorite, ep.notes AS personalNotes,COALESCE(eu.usageCount,0) AS usageCount,
+      GREATEST(COALESCE(ep.workingWeight,0),COALESCE((SELECT MAX(ws.weight) FROM workout_sets ws JOIN workout_sessions bs ON bs.id=ws.workoutSessionID
+        WHERE bs.clientID=? AND bs.status='completed' AND ws.exerciseID=e.id AND COALESCE(JSON_UNQUOTE(JSON_EXTRACT(ws.details,'$.phase')),'work')='work'),0)) AS bestWeight
+      ${catalogue} WHERE ${where.join(' AND ')} ORDER BY ${req.query.chosen==='true'?'usageCount DESC, ':''}e.name, e.id LIMIT ? OFFSET ?`, [req.user.id,...scoped(),...params, limit + 1, (page - 1) * limit]);
+    const [[count]]=await db.query(`SELECT COUNT(*) AS total ${catalogue} WHERE ${where.join(' AND ')}`,[...scoped(),...params]);
+    res.json({data: rows.slice(0, limit).map(({instructionTranslations,...e}) => ({...e,usageCount:Number(e.usageCount), secondaryMuscles: json(e.secondaryMuscles), instructions: json(e.instructions)})),total:Number(count.total),chosenCount:Number(chosen.n), hasMore: rows.length > limit,effectiveEquipment,
+      filters: {equipment:equipmentOptions,...Object.fromEntries(['exerciseType'].map(k => [k, [...new Set(filters.map(e => e[k]))].sort()])),bodyPart:bodyParts.map(e=>e.bodyPart),muscleGroup:[...new Set(filters.map(e=>e.muscleGroup))].sort(),secondaryMuscle:[...new Set(filters.flatMap(e=>json(e.secondaryMuscles)||[]))].sort()}});
   }));
   router.get('/exercises/:id/history',run(async(req,res)=>{
     const clientID=await clientScope(req),exerciseID=integer(req.params.id),page=integer(req.query.page??1,1,10000);
@@ -128,9 +155,21 @@ export function createWorkoutRouter(db, {ready = Promise.resolve(), notify = asy
     await db.query(`INSERT INTO workout_exercise_preferences (userID,exerciseID,favorite,notes) VALUES (?,?,?,?) ON DUPLICATE KEY UPDATE favorite=VALUES(favorite),notes=VALUES(notes)`,[req.user.id,e.id,req.body.favorite?1:0,text(req.body.notes,2000)]);
     res.json({saved:true});
   }));
+  router.put('/exercises/:id/working-weight',requireRole('client'),run(async(req,res)=>{
+    const exercise=await visibleExercise(db,req.user,req.params.id);
+    const weight=number(req.body.weight,0,2000);
+    if(weight==null)fail('invalid_set');
+    await db.query(`INSERT INTO workout_exercise_preferences(userID,exerciseID,workingWeight) VALUES(?,?,?)
+      ON DUPLICATE KEY UPDATE workingWeight=GREATEST(COALESCE(workingWeight,0),VALUES(workingWeight))`,[req.user.id,exercise.id,weight]);
+    res.json({saved:true});
+  }));
   router.post('/exercises', run(async(req,res)=>{
     const e=validateCustomExercise(req.body);
-    const [r]=await db.query(`INSERT INTO exercises (name,muscleGroup,equipment,exerciseType,isBodyweight,isTimed,instructions,secondaryMuscles,description,externalSource,externalId,ownerID,isPrivate) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,1)`,[e.name,e.muscleGroup,e.equipment,e.exerciseType,e.isBodyweight?1:0,e.exerciseType==='reps'?0:1,JSON.stringify(e.instructions),JSON.stringify(e.secondaryMuscles),e.description,'sirvya-custom',crypto.randomUUID(),req.user.id]);
+    const [duplicates]=await db.query(`SELECT id FROM exercises WHERE archivedAt IS NULL AND LOWER(name)=LOWER(?)
+      AND ((ownerID IS NULL AND isPrivate=0) OR ownerID=? OR EXISTS(SELECT 1 FROM coachclients cc WHERE
+      (cc.coachID=? AND cc.clientID=ownerID) OR (cc.clientID=? AND cc.coachID=ownerID))) LIMIT 1`,[e.name,req.user.id,req.user.id,req.user.id]);
+    if(duplicates.length)fail('exercise_name_exists',409);
+    const [r]=await db.query(`INSERT INTO exercises (name,muscleGroup,bodyPart,equipment,exerciseType,isBodyweight,isTimed,instructions,secondaryMuscles,description,externalSource,externalId,ownerID,isPrivate) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,1)`,[e.name,e.muscleGroup,e.bodyPart,e.equipment,e.exerciseType,e.isBodyweight?1:0,e.exerciseType==='reps'?0:1,JSON.stringify(e.instructions),JSON.stringify(e.secondaryMuscles),e.description,'sirvya-custom',crypto.randomUUID(),req.user.id]);
     res.status(201).json({id:r.insertId});
   }));
   router.put('/exercises/:id',run(async(req,res)=>{
@@ -138,18 +177,43 @@ export function createWorkoutRouter(db, {ready = Promise.resolve(), notify = asy
     await transaction(async conn=>{
       const [[existing]]=await conn.query('SELECT * FROM exercises WHERE id=? FOR UPDATE',[integer(req.params.id)]);
       if(!existing || Number(existing.ownerID)!==Number(req.user.id))fail('exercise_not_found',404);
+      const [duplicates]=await conn.query(`SELECT id FROM exercises WHERE id<>? AND archivedAt IS NULL AND LOWER(name)=LOWER(?)
+        AND ((ownerID IS NULL AND isPrivate=0) OR ownerID=? OR EXISTS(SELECT 1 FROM coachclients cc WHERE
+        (cc.coachID=? AND cc.clientID=ownerID) OR (cc.clientID=? AND cc.coachID=ownerID))) LIMIT 1`,[existing.id,e.name,req.user.id,req.user.id,req.user.id]);
+      if(duplicates.length)fail('exercise_name_exists',409);
       if(existing.exerciseType!==e.exerciseType || Boolean(existing.isBodyweight)!==e.isBodyweight){
         const [[usage]]=await conn.query('SELECT (EXISTS(SELECT 1 FROM workout_exercises WHERE exerciseID=?) OR EXISTS(SELECT 1 FROM workout_sets WHERE exerciseID=?)) AS used',[existing.id,existing.id]);
         const [active]=await conn.query("SELECT id FROM workout_sessions WHERE status='active' AND (JSON_CONTAINS(prescription,JSON_OBJECT('exerciseID',?), '$.exercises') OR JSON_CONTAINS(execution,JSON_OBJECT('exerciseID',?))) LIMIT 1",[existing.id,existing.id]);
         if(usage.used || active.length)fail('exercise_in_use',409);
       }
       await conn.query('UPDATE exercises SET name=?,muscleGroup=?,equipment=?,exerciseType=?,isBodyweight=?,isTimed=?,instructions=?,secondaryMuscles=?,description=? WHERE id=?', [e.name,e.muscleGroup,e.equipment,e.exerciseType,e.isBodyweight?1:0,e.exerciseType==='reps'?0:1,JSON.stringify(e.instructions),JSON.stringify(e.secondaryMuscles),e.description,existing.id]);
+      await conn.query('UPDATE exercises SET bodyPart=? WHERE id=?',[e.bodyPart,existing.id]);
     });res.json({saved:true});
   }));
-  // Hide custom exercises without removing stable identities, prescriptions or sets.
+  // Personal deletion removes future routine entries, while archived identities
+  // and immutable session snapshots keep completed training readable.
   router.delete('/exercises/:id',run(async(req,res)=>{
-    const [result]=await db.query('UPDATE exercises SET archivedAt=COALESCE(archivedAt,UTC_TIMESTAMP()) WHERE id=? AND ownerID=?',[integer(req.params.id),req.user.id]);
-    if(!result.affectedRows)fail('exercise_not_found',404);
+    await transaction(async conn=>{
+      const id=integer(req.params.id);
+      const [[exercise]]=await conn.query('SELECT id,ownerID FROM exercises WHERE id=? FOR UPDATE',[id]);
+      if(!exercise||Number(exercise.ownerID)!==Number(req.user.id))fail('exercise_not_found',404);
+      const [active]=await conn.query("SELECT id FROM workout_sessions WHERE status='active' AND (JSON_CONTAINS(prescription,JSON_OBJECT('exerciseID',?), '$.exercises') OR JSON_CONTAINS(execution,JSON_OBJECT('exerciseID',?))) LIMIT 1",[id,id]);
+      if(active.length)fail('exercise_in_use',409);
+      const [days]=await conn.query(`SELECT DISTINCT d.id,d.workoutPlanID FROM workout_days d JOIN workout_plans p ON p.id=d.workoutPlanID
+        JOIN workout_exercises we ON we.workoutDayID=d.id WHERE we.exerciseID=? AND p.clientID=? AND p.coachID IS NULL FOR UPDATE`,[id,req.user.id]);
+      for(const day of days){
+        await conn.query('DELETE FROM workout_exercises WHERE workoutDayID=? AND exerciseID=?',[day.id,id]);
+        const [remaining]=await conn.query('SELECT id,supersetGroup FROM workout_exercises WHERE workoutDayID=? ORDER BY sortOrder,id',[day.id]);
+        for(let i=0;i<remaining.length;i++){
+          const entry=remaining[i],group=entry.supersetGroup;
+          const retained=group&&(remaining[i-1]?.supersetGroup===group||remaining[i+1]?.supersetGroup===group)?group:null;
+          await conn.query('UPDATE workout_exercises SET sortOrder=?,supersetGroup=? WHERE id=?',[i,retained,entry.id]);
+        }
+      }
+      for(const planID of new Set(days.map(day=>day.workoutPlanID)))await conn.query('UPDATE workout_plans SET revision=revision+1 WHERE id=?',[planID]);
+      await conn.query('UPDATE exercises SET archivedAt=COALESCE(archivedAt,UTC_TIMESTAMP()) WHERE id=?',[id]);
+      await conn.query('UPDATE workout_exercise_preferences SET workingWeight=NULL WHERE exerciseID=? AND userID=?',[id,req.user.id]);
+    });
     res.json({archived:true});
   }));
   router.get('/preferences',run(async(req,res)=>{
@@ -200,7 +264,7 @@ export function createWorkoutRouter(db, {ready = Promise.resolve(), notify = asy
 
   const savePlan = async (req, res, updating, imported = null) => {
     if(req.user.role==='client' && req.body.clientID!=null && integer(req.body.clientID)!==Number(req.user.id))fail('unauthorized_client',403);
-    const body = validatePlan({...req.body,clientID:req.user.role==='client'?req.user.id:req.body.clientID});
+    const body = validatePlan({...req.body,clientID:req.user.role==='client'?req.user.id:req.body.clientID},{allowEmptyRoutine:req.user.role==='client'});
     const result = await transaction(async conn => {
       if(req.user.role==='coach')await linked(conn, req.user.id, body.clientID);
       if(imported){
@@ -208,9 +272,14 @@ export function createWorkoutRouter(db, {ready = Promise.resolve(), notify = asy
         for(const [placeholder,e] of imported){
           const [matches]=await conn.query('SELECT id FROM exercises WHERE externalSource=? AND externalId=? AND ownerID IS NULL AND isPrivate=0',[e.externalSource,e.externalId]);
           let id=matches[0]?.id;
+          if(!id && e.externalSource==='sirvya-custom'){
+            const [[same]]=await conn.query('SELECT id FROM exercises WHERE ownerID=? AND isPrivate=1 AND LOWER(name)=LOWER(?) AND COALESCE(bodyPart,muscleGroup)=?',[req.user.id,e.name,e.bodyPart??e.muscleGroup]);
+            id=same?.id;
+          }
           if(!id){
             const [row]=await conn.query(`INSERT INTO exercises(name,muscleGroup,equipment,exerciseType,isBodyweight,isTimed,instructions,secondaryMuscles,externalSource,externalId,ownerID,isPrivate) VALUES(?,?,?,?,?,?,?,?,'sirvya-custom',?,?,1)`,[e.name,e.muscleGroup,e.equipment,e.exerciseType,e.isBodyweight?1:0,e.exerciseType==='reps'?0:1,JSON.stringify(e.instructions),JSON.stringify([]),crypto.randomUUID(),req.user.id]);
             id=row.insertId;
+            await conn.query('UPDATE exercises SET bodyPart=?,description=? WHERE id=?',[e.bodyPart??e.muscleGroup,e.description??null,id]);
           }ids.set(placeholder,id);
         }
         for(const day of body.days)for(const e of day.exercises)e.exerciseID=ids.get(e.exerciseID);
@@ -228,16 +297,16 @@ export function createWorkoutRouter(db, {ready = Promise.resolve(), notify = asy
         const [r] = await conn.query('INSERT INTO workout_plans (coachID, clientID, name, description, status) VALUES (?, ?, ?, ?, ?)', [req.user.role==='coach'?req.user.id:null, body.clientID, body.name, body.description, body.status]);
         id = r.insertId;
       }
-      const keptDays=new Set(),keptExercises=new Set();
+      const keptDays=new Set(),keptExercises=new Set(),newDayIDs=[];
       for(const d of body.days){
         let dayID;
         if(updating&&d.id){
           if(!existingDays.some(v=>Number(v.id)===d.id)||keptDays.has(d.id))fail('invalid_workout');dayID=d.id;
           await conn.query('UPDATE workout_days SET name=?,dayOfWeek=?,sortOrder=?,configuration=? WHERE id=? AND workoutPlanID=?',[d.name,d.dayOfWeek,d.sortOrder,JSON.stringify(d.configuration),dayID,id]);
         }else{const [r]=await conn.query('INSERT INTO workout_days(workoutPlanID,name,dayOfWeek,sortOrder,configuration) VALUES(?,?,?,?,?)',[id,d.name,d.dayOfWeek,d.sortOrder,JSON.stringify(d.configuration)]);dayID=r.insertId;}
-        keptDays.add(Number(dayID));
+        keptDays.add(Number(dayID));newDayIDs.push(Number(dayID));
         for(const e of d.exercises){
-          const catalog=await visibleExercise(conn,req.user,e.exerciseID);
+          const catalog=exerciseForPrescription(await visibleExercise(conn,req.user,e.exerciseID),e.configuration);
           if(catalog.exerciseType==='reps'?e.targetReps===null||e.targetDurationSeconds!==null:e.targetDurationSeconds===null||e.targetReps!==null)fail('invalid_target');
           const values=[dayID,e.exerciseID,e.sortOrder,e.targetSets,e.targetReps,e.targetWeight,e.targetDurationSeconds,e.restSeconds,e.notes,e.supersetGroup,JSON.stringify(e.configuration)];
           let exerciseID;
@@ -250,7 +319,17 @@ export function createWorkoutRouter(db, {ready = Promise.resolve(), notify = asy
       }
       for(const row of existingExercises)if(!keptExercises.has(Number(row.id)))await conn.query('DELETE FROM workout_exercises WHERE id=?',[row.id]);
       for(const row of existingDays)if(!keptDays.has(Number(row.id)))await conn.query('DELETE FROM workout_days WHERE id=? AND workoutPlanID=?',[row.id,id]);
-      return {id, revision: updating ? Number(req.body.revision) + 1 : 1};
+      if(req.programWeek){
+        if(req.user.role!=='client'||body.status!=='assigned')fail('invalid_workout');
+        await conn.query('SELECT id FROM users WHERE id=? FOR UPDATE',[req.user.id]);
+        const weekdays=req.programWeekDays??[1,2,3,4,5,6,7];
+        for(const weekday of weekdays){
+          await conn.query('DELETE FROM workout_week_days WHERE userID=? AND weekday=?',[req.user.id,weekday]);
+          await conn.query('INSERT INTO workout_week_days(userID,weekday) VALUES(?,?)',[req.user.id,weekday]);
+          for(const index of req.programWeek[weekday]??[])await conn.query('INSERT INTO workout_week_schedule(userID,weekday,workoutDayID) VALUES(?,?,?)',[req.user.id,weekday,newDayIDs[index]]);
+        }
+      }
+      return {id, revision: updating ? Number(req.body.revision) + 1 : 1,dayIDs:newDayIDs,exerciseIDs:[...keptExercises]};
     });
     res.status(updating ? 200 : 201).json(result);
     if (body.status === 'assigned'&&req.user.role==='coach') void notify({recipientUserID: body.clientID, type: 'workout_assigned', title: 'SIRVYA Workout', body: body.name,
@@ -266,6 +345,18 @@ export function createWorkoutRouter(db, {ready = Promise.resolve(), notify = asy
     });
     res.json({archived: true});
   }));
+  router.delete('/plans/:id/days/:dayID',run(async(req,res)=>{
+    await transaction(async conn=>{
+      const plan=await editablePlan(conn,req.user,req.params.id,true);
+      if(integer(req.query.revision)!==Number(plan.revision))fail('plan_changed',409);
+      const dayID=integer(req.params.dayID);
+      const [days]=await conn.query('SELECT id FROM workout_days WHERE workoutPlanID=? AND id=?',[plan.id,dayID]);
+      if(!days.length)fail('workout_not_found',404);
+      await conn.query('DELETE FROM workout_days WHERE workoutPlanID=? AND id=?',[plan.id,dayID]);
+      const [[remaining]]=await conn.query('SELECT COUNT(*) AS n FROM workout_days WHERE workoutPlanID=?',[plan.id]);
+      await conn.query('UPDATE workout_plans SET revision=revision+1,status=? WHERE id=?',[Number(remaining.n)?plan.status:'archived',plan.id]);
+    });res.json({deleted:true});
+  }));
   router.post('/plans/:id/duplicate',run(async(req,res)=>{
     const p=await planDetail(db,await planAccess(db,req.user,req.params.id));
     req.body={...p,id:undefined,revision:undefined,clientID:req.user.role==='client'?req.user.id:(req.body.clientID??p.clientID),name:text(req.body.name,160)||`${p.name.slice(0,150)} (copy)`,status:'draft'};
@@ -278,9 +369,9 @@ export function createWorkoutRouter(db, {ready = Promise.resolve(), notify = asy
       exercise:{externalSource:source.externalSource,externalId:source.externalId,name:source.name,muscleGroup:source.muscleGroup,equipment:source.equipment,exerciseType:source.exerciseType,isBodyweight:source.isBodyweight===1,instructions:json(source.instructions)}});}days.push({name:day.name,dayOfWeek:day.dayOfWeek,configuration:day.configuration,exercises});}
     res.json({format:'sirvya-workout-plan',version:1,name:plan.name,description:plan.description,days});
   }));
-  router.post('/plans/import',run(async(req,res)=>{
+  const importPlan=async(req,res)=>{
     const input=req.body.plan;
-    if(!input||input.format!=='sirvya-workout-plan'||input.version!==1||!Array.isArray(input.days)||input.days.length>14)fail('invalid_workout');
+    if(!input||input.format!=='sirvya-workout-plan'||input.version!==1||!Array.isArray(input.days)||input.days.length>(req.programImport?100:14))fail('invalid_workout');
     const imported=new Map(),keys=new Map(),days=[];
     for(const day of input.days){
       if(!day||!Array.isArray(day.exercises)||day.exercises.length>50)fail('invalid_workout');
@@ -288,14 +379,45 @@ export function createWorkoutRouter(db, {ready = Promise.resolve(), notify = asy
       for(const config of day.exercises){
         const raw=config?.exercise;
         if(!raw||!['reps','timed','cardio'].includes(raw.exerciseType)||!Array.isArray(raw.instructions)||raw.instructions.length>30)fail('invalid_workout');
-        const e={externalSource:text(raw.externalSource,80,true),externalId:text(raw.externalId,160,true),name:text(raw.name,160,true),muscleGroup:text(raw.muscleGroup,80,true),equipment:text(raw.equipment,80,true),exerciseType:raw.exerciseType,isBodyweight:raw.isBodyweight===true,instructions:raw.instructions.map(v=>text(v,2000,true))};
+        const e={externalSource:text(raw.externalSource,80,true),externalId:text(raw.externalId,160,true),name:text(raw.name,160,true),muscleGroup:text(raw.muscleGroup,80,true),equipment:text(raw.equipment,80,true),exerciseType:raw.exerciseType,isBodyweight:raw.isBodyweight===true,bodyPart:text(raw.bodyPart,80)??raw.muscleGroup,description:text(raw.description,5000),instructions:raw.instructions.map(v=>text(v,2000,true))};
         const key=JSON.stringify([e.externalSource,e.externalId]);let id=keys.get(key);
         if(!id){id=keys.size+1;keys.set(key,id);imported.set(id,e);}
         exercises.push({...config,exerciseID:id});
       }days.push({...day,exercises});
     }
-    req.body={name:input.name,description:input.description,status:'draft',clientID:req.user.role==='client'?req.user.id:req.body.clientID,days};
+    req.body={name:input.name,description:input.description,status:req.programImport && req.user.role==='client' && days.length && days.every(d=>d.exercises.length)?'assigned':'draft',clientID:req.user.role==='client'?req.user.id:req.body.clientID,days};
     await savePlan(req,res,false,imported);
+  };
+  router.post('/plans/import',run(importPlan));
+  router.get('/program/export',requireRole('client'),run(async(req,res)=>{
+    const [rows]=await db.query("SELECT p.* FROM workout_plans p WHERE p.clientID=? AND (p.status='assigned' OR p.coachID IS NULL AND p.status='draft') AND (p.coachID IS NULL OR EXISTS(SELECT 1 FROM coachclients cc WHERE cc.coachID=p.coachID AND cc.clientID=p.clientID)) ORDER BY p.id",[req.user.id]);
+    const plans=await readPlanDetails(db,rows),days=[];const indexByDay=new Map();
+    for(const p of plans)for(const d of p.days){
+      indexByDay.set(Number(d.id),days.length);
+      const exercises=[];for(const e of d.exercises)exercises.push({targetSets:e.targetSets,targetReps:e.targetReps,targetWeight:e.targetWeight,targetDurationSeconds:e.targetDurationSeconds,restSeconds:e.restSeconds,notes:e.notes,supersetGroup:e.supersetGroup,configuration:e.configuration,exercise:portableExercise(await visibleExercise(db,req.user,e.exerciseID))});
+      days.push({name:d.name,configuration:d.configuration,dayOfWeek:null,exercises});
+    }
+    const week={};for(const day of await readWeeklyDays(db,req.user.id)){const index=indexByDay.get(Number(day.id));if(index!=null)(week[day.dayOfWeek]??=[]).push(index);}
+    const bundle={format:'sirvya-workout-program',version:1,plan:{format:'sirvya-workout-plan',version:1,name:'Weekly workout plan',days},week};
+    res.json(req.query.format==='opengym'?openGymWorkoutProgram(bundle):bundle);
+  }));
+  router.post('/program/starter',requireRole('client'),run(async(req,res)=>{
+    const [catalog]=await db.query("SELECT * FROM exercises WHERE ownerID IS NULL AND isPrivate=0 AND externalSource='exercises-dataset'");
+    const bundle=parseWorkoutProgram(starterWorkoutProgram(),catalog,{clientID:req.user.id});
+    if(bundle.dropped)fail('starter_unavailable',409);
+    req.programImport=true;req.programWeek=bundle.week;req.programWeekDays=[1,3,5];req.body={plan:bundle.plan};
+    await importPlan(req,res);
+  }));
+  router.post('/program/import-preview',requireRole('client'),run(async(req,res)=>{
+    const [catalog]=await db.query("SELECT * FROM exercises WHERE ownerID IS NULL AND isPrivate=0 AND externalSource='exercises-dataset'");
+    res.json(parseWorkoutProgram(req.body.program,catalog,{clientID:req.user.id}));
+  }));
+  router.post('/program/import',requireRole('client'),run(async(req,res)=>{
+    const [catalog]=await db.query("SELECT * FROM exercises WHERE ownerID IS NULL AND isPrivate=0 AND externalSource='exercises-dataset'");
+    const bundle=parseWorkoutProgram(req.body.program,catalog,{clientID:req.user.id});
+    if(req.body.replaceWeek!==undefined&&typeof req.body.replaceWeek!=='boolean')fail('invalid_workout');
+    req.programImport=true;req.programWeek=req.body.replaceWeek?bundle.week:null;req.body={plan:bundle.plan};
+    await importPlan(req,res);
   }));
   router.get('/templates',run(async(req,res)=>{
     const templates=[{key:'full-body',name:'Full body',days:[{name:'Full body A',dayOfWeek:1,ids:['goblet-squat','dumbbell-press','row','plank']},{name:'Full body B',dayOfWeek:3,ids:['romanian-deadlift','overhead-press','lat-pulldown','glute-bridge']},{name:'Full body A',dayOfWeek:5,ids:['goblet-squat','dumbbell-press','row','plank']}]},
@@ -308,7 +430,52 @@ export function createWorkoutRouter(db, {ready = Promise.resolve(), notify = asy
     const clientID=await clientScope(req);
     const [rows]=await db.query("SELECT DATE_FORMAT(workoutDate,'%Y-%m-%d') AS workoutDate,workoutDayID FROM workout_schedule WHERE userID=? ORDER BY workoutDate,workoutDayID",[clientID]);
     const [overrides]=await db.query("SELECT DATE_FORMAT(workoutDate,'%Y-%m-%d') AS workoutDate FROM workout_schedule_dates WHERE userID=? ORDER BY workoutDate",[clientID]);
-    res.json({data:rows,overrideDates:overrides.map(d=>d.workoutDate)});
+    const [weekOverrides]=await db.query('SELECT weekday FROM workout_week_days WHERE userID=? ORDER BY weekday',[clientID]);
+    res.json({data:rows,overrideDates:overrides.map(d=>d.workoutDate),week:await readWeeklyDays(db,clientID),weekOverrideDays:weekOverrides.map(r=>Number(r.weekday))});
+  }));
+  router.put('/week',requireRole('client'),run(async(req,res)=>{
+    const weekday=integer(req.body.weekday,1,7);
+    if(!Array.isArray(req.body.dayIDs)||req.body.dayIDs.length>14)fail('invalid_workout');
+    const ids=[...new Set(req.body.dayIDs.map(v=>integer(v)))];
+    await transaction(async conn=>{
+      await conn.query('SELECT id FROM users WHERE id=? FOR UPDATE',[req.user.id]);
+      for(const id of ids){
+        const [[day]]=await conn.query('SELECT workoutPlanID FROM workout_days WHERE id=?',[id]);
+        if(!day)fail('workout_not_found',404);
+        if((await planAccess(conn,req.user,day.workoutPlanID)).status!=='assigned')fail('invalid_workout');
+      }
+      await conn.query('DELETE FROM workout_week_days WHERE userID=? AND weekday=?',[req.user.id,weekday]);
+      if(req.body.reset===true)return;
+      await conn.query('INSERT INTO workout_week_days(userID,weekday) VALUES(?,?)',[req.user.id,weekday]);
+      for(const id of ids)await conn.query('INSERT INTO workout_week_schedule(userID,weekday,workoutDayID) VALUES(?,?,?)',[req.user.id,weekday,id]);
+    });res.json({saved:true});
+  }));
+  router.post('/schedule/move',requireRole('client'),run(async(req,res)=>{
+    const valid=date=>typeof date==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(date)&&!Number.isNaN(Date.parse(date))&&new Date(date).toISOString().slice(0,10)===date;
+    const {fromDate,toDate}=req.body;
+    if(!valid(fromDate)||!valid(toDate)||fromDate===toDate)fail('invalid_workout');
+    await transaction(async conn=>{
+      await conn.query('SELECT id FROM users WHERE id=? FOR UPDATE',[req.user.id]);
+      const weekly=await readWeeklyDays(conn,req.user.id);
+      const effective=async date=>{
+        const [override]=await conn.query('SELECT userID FROM workout_schedule_dates WHERE userID=? AND workoutDate=?',[req.user.id,date]);
+        if(!override.length)return weekly.filter(d=>Number(d.dayOfWeek)===(new Date(`${date}T12:00:00Z`).getUTCDay()||7)).map(d=>Number(d.id));
+        const [rows]=await conn.query('SELECT workoutDayID FROM workout_schedule WHERE userID=? AND workoutDate=?',[req.user.id,date]);
+        const accessible=new Set(weekly.map(d=>Number(d.id)));
+        // Flexible routines may exist only in date overrides. Recheck each plan.
+        for(const row of rows){const [[day]]=await conn.query('SELECT workoutPlanID FROM workout_days WHERE id=?',[row.workoutDayID]);if(day&&(await planAccess(conn,req.user,day.workoutPlanID)).status==='assigned')accessible.add(Number(row.workoutDayID));}
+        return rows.map(r=>Number(r.workoutDayID)).filter(id=>accessible.has(id));
+      };
+      const source=await effective(fromDate);
+      if(!source.length)fail('empty_plan');
+      const destination=[...new Set([...await effective(toDate),...source])];
+      if(destination.length>14)fail('invalid_workout');
+      for(const date of [fromDate,toDate]){
+        await conn.query('INSERT IGNORE INTO workout_schedule_dates(userID,workoutDate) VALUES(?,?)',[req.user.id,date]);
+        await conn.query('DELETE FROM workout_schedule WHERE userID=? AND workoutDate=?',[req.user.id,date]);
+      }
+      for(const id of destination)await conn.query('INSERT INTO workout_schedule(userID,workoutDate,workoutDayID) VALUES(?,?,?)',[req.user.id,toDate,id]);
+    });res.json({saved:true});
   }));
   router.put('/schedule',requireRole('client'),run(async(req,res)=>{
     if(!/^\d{4}-\d{2}-\d{2}$/.test(req.body.date)||Number.isNaN(Date.parse(req.body.date))||new Date(req.body.date).toISOString().slice(0,10)!==req.body.date||!Array.isArray(req.body.dayIDs)||req.body.dayIDs.length>14)fail('invalid_workout');
@@ -350,7 +517,7 @@ export function createWorkoutRouter(db, {ready = Promise.resolve(), notify = asy
         const plan=await planAccess(conn,req.user,days[0].workoutPlanID,true);
         if(plan.status!=='assigned')fail('invalid_workout');
         const detail=await planDetail(conn,plan),chosen=detail.days.find(d=>Number(d.id)===id);
-        if(!chosen?.exercises.length)fail('empty_plan');
+        if(!chosen || plan.coachID!=null&&!chosen.exercises.length)fail('empty_plan');
         chosen.exercises=chosen.exercises.map(e=>{
           if(e.configuration.progression!=='inherit')return e;
           const policy=chosen.configuration.progression??'off';
@@ -366,19 +533,29 @@ export function createWorkoutRouter(db, {ready = Promise.resolve(), notify = asy
         p={id:container.insertId,name};day={name,exercises:selected.flatMap(({day},i)=>day.exercises.map(e=>({...e,supersetGroup:e.supersetGroup?`${i}:${e.supersetGroup}`:null})))};
         if(day.exercises.length>50)fail('invalid_workout');
       }
+      const [[startPrefs]]=await conn.query('SELECT preferences FROM workout_preferences WHERE userID=?',[req.user.id]);
+      const startUnit=startPrefs?json(startPrefs.preferences).unit:'kg';
       for(const e of day.exercises) {
+        const sharedHistory=!selected.find(s=>s.day.exercises.some(x=>Number(x.id)===Number(e.id)))?.plan.coachID && day.exercises.filter(x=>Number(x.exerciseID)===Number(e.exerciseID)).length===1;
         const [past]=await conn.query(`SELECT s.prescription,s.execution,s.excludedFromProgression,ws.* FROM workout_sessions s JOIN workout_sets ws ON ws.workoutSessionID=s.id WHERE s.clientID=? AND s.status='completed' AND ws.exerciseID=? AND s.startedAt<=? ORDER BY s.startedAt DESC,s.id DESC,ws.setNumber`,[req.user.id,e.exerciseID,startedAt]);
         const groups=new Map();
+        const [[preference]]=await conn.query('SELECT workingWeight FROM workout_exercise_preferences WHERE userID=? AND exerciseID=?',[req.user.id,e.exerciseID]);
+        // The retained confirmation and the lifetime record have different roles.
+        // Without a confirmation, row prefill uses the last positional set.
+        e.workingWeight=Number(preference?.workingWeight)||null;
+        e.bestWeight=Math.max(e.workingWeight||0,...past.filter(isWorkSet).map(s=>Number(s.weight)||0));
         for(const row of past){
-          if(Number(row.workoutExerciseID)!==Number(e.id))continue;
+          const entries=row.execution?json(row.execution):json(row.prescription).exercises;
+          const target=entries.find(x=>Number(x.exerciseID)===Number(e.exerciseID)&&(sharedHistory||Number(x.id)===Number(e.id)));
+          if(!target||Number(row.workoutExerciseID)!==Number(target.id))continue;
           const id=Number(row.workoutSessionID);
-          if(!groups.has(id)){const entries=row.execution?json(row.execution):json(row.prescription).exercises;groups.set(id,{target:entries.find(x=>Number(x.id)===Number(e.id)&&Number(x.exerciseID)===Number(e.exerciseID)),excludedFromProgression:row.excludedFromProgression,sets:[]});}
+          if(!groups.has(id))groups.set(id,{target,excludedFromProgression:row.excludedFromProgression,sets:[]});
           groups.get(id).sets.push(row);
         }
-        // Progression belongs to this routine slot. An edited/replaced prescription
-        // starts from its new targets rather than an unrelated routine's last load.
-        const history=[...groups.values()].filter(h=>Number(h.target?.id)===Number(e.id));
-        const recommendation=nextTarget(e,history);
+        // Coach prescriptions progress by stable slot; personal routines reuse the
+        // most recent compatible exercise performance, as the reference does.
+        const history=[...groups.values()];
+        const recommendation=nextTarget(e,history,{sharedHistory,unit:startUnit});
         e.originalTargets={targetWeight:e.targetWeight,targetReps:e.targetReps,targetSets:e.targetSets,targetDurationSeconds:e.targetDurationSeconds};
         e.recommendation=recommendation;
         if(recommendation.policy!=='off'){e.targetWeight=recommendation.weight;e.targetReps=recommendation.reps;e.targetSets=recommendation.sets;e.targetDurationSeconds=recommendation.durationSeconds;}
@@ -436,10 +613,10 @@ export function createWorkoutRouter(db, {ready = Promise.resolve(), notify = asy
         const old=supplied?existing.find(e=>Number(e.id)===integer(supplied)):null;
         if(supplied&&!old)fail('invalid_workout');
         const recorded=saved.filter(v=>Number(v.workoutExerciseID)===Number(old?.id));
-        if(recorded.length&&(Number(old.exerciseID)!==e.exerciseID||Math.max(0,...recorded.filter(isWorkSet).map(v=>v.setNumber))>e.targetSets))fail('recorded_exercise',409);
-        const catalog=await visibleExercise(conn,req.user,e.exerciseID);
+        if(recorded.length&&(old.exerciseType!==(e.configuration.mode??old.exerciseType)||Boolean(old.isBodyweight)!==Boolean(e.configuration.bodyweight??old.isBodyweight)||Number(old.exerciseID)!==e.exerciseID||Math.max(0,...recorded.filter(isWorkSet).map(v=>v.setNumber))>e.targetSets))fail('recorded_exercise',409);
+        const catalog=exerciseForPrescription(await visibleExercise(conn,req.user,e.exerciseID),e.configuration);
         if(catalog.exerciseType==='reps'?e.targetReps==null||e.targetDurationSeconds!=null:e.targetDurationSeconds==null||e.targetReps!=null)fail('invalid_target');
-        result.push({...catalog,...e,id:old?.id??nextID++,instructions:json(catalog.instructions)});
+        result.push({...catalog,...e,id:old?.id??nextID++,instructions:json(catalog.instructions),secondaryMuscles:json(catalog.secondaryMuscles)||[]});
       }
       if(new Set(result.map(e=>Number(e.id))).size!==result.length)fail('invalid_workout');
       if(saved.some(v=>!result.some(e=>Number(e.id)===Number(v.workoutExerciseID))))fail('recorded_exercise',409);
@@ -450,9 +627,11 @@ export function createWorkoutRouter(db, {ready = Promise.resolve(), notify = asy
   router.put('/sessions/:id/rest-alert',requireRole('client'),run(async(req,res)=>{
     const s=await sessionAccess(db,req.user,req.params.id);
     if(s.status!=='active')fail('workout_closed',409);
-    const seconds=req.body.seconds==null?0:integer(req.body.seconds,0,3600);
+    if(req.body.kind!=null&&!['rest','work'].includes(req.body.kind))fail('invalid_workout');
+    const seconds=req.body.seconds==null?0:integer(req.body.seconds,0,86400);
+    const alertBody=req.body.kind==='work'?'Timed set complete':'Rest complete — ready for your next set';
     if(!seconds)await db.query('DELETE FROM workout_alerts WHERE userID=? AND alertKey=?',[req.user.id,`rest:${s.id}`]);
-    else await db.query(`INSERT INTO workout_alerts (userID,sessionID,alertKey,dueAt,title,body) VALUES (?,?,?,DATE_ADD(UTC_TIMESTAMP(),INTERVAL ? SECOND),'SIRVYA Workout','Rest complete — ready for your next set') ON DUPLICATE KEY UPDATE dueAt=VALUES(dueAt),deliveredAt=NULL,claimedAt=NULL`,[req.user.id,s.id,`rest:${s.id}`,seconds]);
+    else await db.query(`INSERT INTO workout_alerts (userID,sessionID,alertKey,dueAt,title,body) VALUES (?,?,?,DATE_ADD(UTC_TIMESTAMP(),INTERVAL ? SECOND),'SIRVYA Workout',?) ON DUPLICATE KEY UPDATE dueAt=VALUES(dueAt),body=VALUES(body),deliveredAt=NULL,claimedAt=NULL`,[req.user.id,s.id,`rest:${s.id}`,seconds,alertBody]);
     res.json({saved:true});
   }));
   router.put('/sessions/:id', requireRole('client'), run(async (req, res) => {
@@ -463,7 +642,7 @@ export function createWorkoutRouter(db, {ready = Promise.resolve(), notify = asy
       if (s.status !== 'active' && s.status !== req.body.status) fail('workout_closed', 409);
       const expected = s.prescription.exercises.reduce((n, e) => n + e.targetSets, 0);
       if (req.body.status === 'completed' && (!sets.some(isWorkSet) || sets.filter(isWorkSet).length < expected && req.body.allowIncomplete !== true)) fail('incomplete_workout', 409);
-      let newPRs = 0;
+      let newPRs = 0;const loadRecords=[],estimatedRecords=[];
       if (req.body.status === 'completed') {
         for (const e of new Map(s.prescription.exercises.map(e => [Number(e.exerciseID), e])).values()) {
           const current = sets.filter(v => Number(v.exerciseID) === Number(e.exerciseID)&&isWorkSet(v));
@@ -472,7 +651,11 @@ export function createWorkoutRouter(db, {ready = Promise.resolve(), notify = asy
           const score = v => e.exerciseType !== 'reps' ? Number(v.durationSeconds || 0) : e.isBodyweight ? Number(v.reps || 0) : estimated1RM(v, e) || 0;
           const previous=past.filter(isWorkSet),volumes=new Map();
           for(const v of previous)volumes.set(v.workoutSessionID,(volumes.get(v.workoutSessionID)||0)+setVolume(v,e));
-          const loaded=e.exerciseType==='reps'&&!e.isBodyweight;
+          const loaded=e.exerciseType==='reps'&&current.some(v=>Number(v.weight)>0);
+          const currentLoad=Math.max(0,...current.map(v=>Number(v.weight)||0)),previousLoad=Math.max(0,...previous.map(v=>Number(v.weight)||0));
+          if(loaded&&currentLoad>previousLoad)loadRecords.push({exerciseID:e.exerciseID,name:e.name,weight:currentLoad});
+          const currentRM=Math.max(0,...current.map(v=>estimated1RM(v,e)||0)),previousRM=Math.max(0,...previous.map(v=>estimated1RM(v,e)||0));
+          if(currentRM>previousRM)estimatedRecords.push({exerciseID:e.exerciseID,name:e.name,estimated1RM:currentRM});
           if (Math.max(0, ...current.map(score)) > Math.max(0, ...previous.map(score)) || loaded&&(Math.max(0,...current.map(v=>Number(v.weight)))>Math.max(0,...previous.map(v=>Number(v.weight)))||current.reduce((n,v)=>n+setVolume(v,e),0)>Math.max(0,...volumes.values()))) newPRs++;
         }
       }
@@ -485,7 +668,7 @@ export function createWorkoutRouter(db, {ready = Promise.resolve(), notify = asy
       }
       await conn.query('DELETE FROM workout_alerts WHERE userID=? AND sessionID=?',[req.user.id,s.id]);
       const [updated] = await conn.query('SELECT durationSeconds, completedAt FROM workout_sessions WHERE id = ?', [s.id]);
-      return {...summarize(sets, s.prescription), ...updated[0], newPRs, status: req.body.status};
+      return {...summarize(sets, s.prescription), ...updated[0], newPRs,loadRecords,estimatedRecords, status: req.body.status};
     });
     res.json(result);
   }));
@@ -535,17 +718,27 @@ export function createWorkoutRouter(db, {ready = Promise.resolve(), notify = asy
     const [allSets] = await db.query(`SELECT ws.* FROM workout_sets ws
       JOIN workout_sessions s ON s.id = ws.workoutSessionID JOIN workout_plans p ON p.id = s.workoutPlanID
       WHERE s.clientID = ? AND s.status = 'completed'`, [clientID]);
-    const [bodyweight]=await db.query('SELECT id,weight,note,recordedAt,createdAt FROM weighthistory WHERE clientID=? ORDER BY recordedAt DESC,id DESC LIMIT 365',[clientID]);
-    const [planned]=await db.query(`SELECT DISTINCT d.dayOfWeek FROM workout_days d JOIN workout_plans p ON p.id=d.workoutPlanID WHERE p.clientID=? AND p.status='assigned' AND d.dayOfWeek IS NOT NULL AND (p.coachID IS NULL OR EXISTS(SELECT 1 FROM coachclients cc WHERE cc.coachID=p.coachID AND cc.clientID=p.clientID))`,[clientID]);
-    const [days]=await db.query(`SELECT d.id,d.dayOfWeek FROM workout_days d JOIN workout_plans p ON p.id=d.workoutPlanID WHERE p.clientID=? AND p.status='assigned' AND (p.coachID IS NULL OR EXISTS(SELECT 1 FROM coachclients cc WHERE cc.coachID=p.coachID AND cc.clientID=p.clientID))`,[clientID]);
+    const [weightRows]=await db.query("SELECT id,weight,note,DATE_FORMAT(recordedAt,'%Y-%m-%d') AS recordedAt,createdAt FROM weighthistory WHERE clientID=? ORDER BY recordedAt DESC,id DESC",[clientID]);
+    const seenWeightDays=new Set();const bodyweight=weightRows.filter(r=>{if(seenWeightDays.has(r.recordedAt))return false;seenWeightDays.add(r.recordedAt);return true;});
+    const days=await readWeeklyDays(db,clientID);
+    const planned=new Set(days.filter(d=>d.dayOfWeek!=null).map(d=>Number(d.dayOfWeek)));
     const now=new Date(),start=new Date(now.getTime()-(Math.min(period??30,3650)-1)*86400000).toISOString().slice(0,10),end=now.toISOString().slice(0,10);
     const [overrides]=await db.query("SELECT DATE_FORMAT(workoutDate,'%Y-%m-%d') AS date FROM workout_schedule_dates WHERE userID=? AND workoutDate>=? AND workoutDate<=?",[clientID,start,end]);
     const [scheduled]=await db.query("SELECT DATE_FORMAT(workoutDate,'%Y-%m-%d') AS date,workoutDayID FROM workout_schedule WHERE userID=? AND workoutDate>=? AND workoutDate<=?",[clientID,start,end]);
     const [[prefs]]=await db.query('SELECT preferences FROM workout_preferences WHERE userID=?',[clientID]);
     const timeZone=prefs?json(prefs.preferences).timeZone:'UTC';
     const adherence=scheduleAdherence(sessions,days,overrides,scheduled,{start,end,timeZone});
-    res.json({...buildTrainingStats(sessions,allSets,{now,bodyweight:Number(bodyweight[0]?.weight)||null,timeZone,
-      since:period?new Date(now.getTime()-period*86400000):null}),bodyweight:bodyweight.reverse(),bodyweightGoal:prefs?json(prefs.preferences).bodyweightGoal:null,plannedDaysPerWeek:planned.length,adherence});
+    const all=buildTrainingStats(sessions,allSets,{now,bodyweight:Number(bodyweight[0]?.weight)||null,timeZone});
+    const currentMonth=new Intl.DateTimeFormat('en-CA',{timeZone,year:'numeric',month:'2-digit'}).format(now);
+    const weight30=bodyweight.filter(r=>new Date(r.recordedAt)>=new Date(now.getTime()-30*86400000));
+    const localToday=new Intl.DateTimeFormat('en-CA',{timeZone,year:'numeric',month:'2-digit',day:'2-digit'}).format(now);
+    const monday=new Date(`${localToday}T12:00:00Z`);monday.setUTCDate(monday.getUTCDate()-(monday.getUTCDay()+6)%7);
+    const weekStart=monday.toISOString().slice(0,10);
+    const weekSessions=req.query.window==='week'?sessions.filter(s=>new Intl.DateTimeFormat('en-CA',{timeZone,year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(s.startedAt))>=weekStart):null;
+    const stats=weekSessions?buildTrainingStats(weekSessions,allSets,{now,bodyweight:Number(bodyweight[0]?.weight)||null,timeZone}):period?buildTrainingStats(sessions,allSets,{now,bodyweight:Number(bodyweight[0]?.weight)||null,timeZone,since:new Date(now.getTime()-period*86400000)}):all;
+    res.json({...stats,overview:{workoutCount:all.workoutCount,monthWorkouts:all.frequency.filter(f=>f.date.startsWith(currentMonth)).reduce((n,f)=>n+f.count,0),
+      weeklyStreak:all.currentWeeklyStreak,bodyweightDelta30:weight30.length>1?Number(weight30[0].weight)-Number(weight30.at(-1).weight):null},
+      yearActivity:all.activity,bodyweight:bodyweight.reverse(),bodyweightGoal:prefs?json(prefs.preferences).bodyweightGoal:null,plannedDaysPerWeek:planned.size,adherence});
   }));
   return router;
 }

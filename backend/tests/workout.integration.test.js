@@ -34,6 +34,8 @@ test('SIRVYA Workout HTTP / MySQL lifecycle and existing endpoint regression', {
     const {default: reservations} = await import('../routes/anas/reservations.js');
     const {default: conversations} = await import('../routes/anas/conversations.js');
     const {default: calendar} = await import('../routes/pahae/coachCalendar.js');
+    const {default: weightHistory} = await import('../routes/anas/weightHistory.js');
+    app.use('/api/weight-history',requireAuth,weightHistory);
     app.use('/api/clients', requireAuth, clients);
     app.use('/api/reservations', requireAuth, reservations);
     app.use('/api/conversations', requireAuth, conversations);
@@ -196,7 +198,7 @@ test('SIRVYA Workout HTTP / MySQL lifecycle and existing endpoint regression', {
       assert.equal((await request(otherClient,'/workout/schedule','PUT',{date:'2026-10-05',dayIDs:[detail.days[0].id]})).status,200);
       assert.equal((await request(client,'/workout/schedule','PUT',{date:'2026-10-05',dayIDs:[detail.days[0].id]})).status,404);
     });
-    await t.test('custom exercise edits are owner-only and removal retains routines and actual history',async()=>{
+    await t.test('custom deletion removes personal routine entries, blocks active use and keeps actual history',async()=>{
       const input={name:'Lifecycle custom press',muscleGroup:'chest',equipment:'dumbbell',exerciseType:'reps',isBodyweight:false,instructions:['Press steadily.'],secondaryMuscles:['triceps'],description:'Independent instructions'};
       const created=await request(client,'/workout/exercises','POST',input);assert.equal(created.status,201);
       const id=created.body.id,path=`/workout/exercises/${id}`;
@@ -212,6 +214,7 @@ test('SIRVYA Workout HTTP / MySQL lifecycle and existing endpoint regression', {
       assert.equal((await request(client,path,'PUT',{...input,exerciseType:'timed'})).status,409);
       const started=await request(client,'/workout/sessions','POST',{workoutDayID:plan.days[0].id});assert.equal(started.status,201);
       const sid=started.body.id;
+      assert.equal((await request(client,path,'DELETE')).status,409,'active prescription cannot be orphaned');
       assert.equal((await request(client,`/workout/sessions/${sid}/sets`,'PUT',{workoutExerciseID:plan.days[0].exercises[0].id,setNumber:1,reps:10,weight:20})).status,200);
       assert.equal((await request(client,`/workout/sessions/${sid}`,'PUT',{status:'completed'})).status,200);
       assert.equal((await request(client,path,'DELETE')).status,200);
@@ -219,7 +222,10 @@ test('SIRVYA Workout HTTP / MySQL lifecycle and existing endpoint regression', {
       assert.equal((await request(client,'/workout/exercises?search=Renamed%20custom%20press')).body.data.length,0);
       assert.equal((await request(client,path+'/history')).body.data.length,1);
       assert.equal((await request(client,`/workout/sessions/${sid}`)).body.summary.volume,200);
-      assert.equal((await request(client,`/workout/plans/${plan.id}`)).body.days[0].exercises[0].exerciseID,id);
+      const afterRemoval=(await request(client,`/workout/plans/${plan.id}`)).body;
+      assert.equal(afterRemoval.days[0].exercises.length,0);
+      assert.equal(afterRemoval.revision,plan.revision+1);
+      assert.equal((await request(client,`/workout/sessions/${sid}`)).body.prescription.exercises[0].exerciseID,id);
       const builtIn=(await request(client,'/workout/exercises?search=bench')).body.data.find(e=>!e.ownerID);
       assert.equal((await request(client,`/workout/exercises/${builtIn.id}`,'DELETE')).status,404);
     });
@@ -408,6 +414,251 @@ test('SIRVYA Workout HTTP / MySQL lifecycle and existing endpoint regression', {
       await db.query("INSERT INTO workout_alerts(userID,alertKey,dueAt,title,body) VALUES (?,'daily:2024-05-23','2024-05-22 20:00:00','Workout','Fixture')",[otherClient.id]);
       await dispatchWorkoutReminders(db,notify,new Date('2024-05-22T20:00:00Z'),{...options,checkDaily:false});
       assert.equal(delivered,1,'opting out cancels pending daily reminders');
+    });
+    await t.test('product parity: Chosen ranks account usage, adapts equipment, and retains fractional RIR in MySQL',async()=>{
+      const marker=`${prefix} chosen`;
+      const ids=[];
+      for(const [name,equipment] of [['press','barbell'],['row','dumbbell'],['unused','cable']]){
+        const made=await request(client,'/workout/exercises','POST',{name:`${marker} ${name}`,bodyPart:'back',muscleGroup:'back',equipment,isBodyweight:false});
+        assert.equal(made.status,201);ids.push(made.body.id);
+      }
+      assert.equal((await request(client,'/workout/exercises','POST',{name:`${marker} PRESS`,bodyPart:'chest'})).status,409);
+      assert.equal((await request(otherClient,'/workout/exercises','POST',{name:`${marker} press`,bodyPart:'chest'})).status,201,'unrelated private names do not leak or conflict');
+      const own=await request(client,'/workout/plans','POST',{name:marker,clientID:client.id,status:'assigned',days:[{name:marker,exercises:[ids[0],ids[0],ids[1]].map(exerciseID=>({exerciseID,targetSets:1,targetReps:10,targetWeight:60,restSeconds:0}))}]});
+      assert.equal(own.status,201,JSON.stringify(own.body));
+      const plan=(await request(client,`/workout/plans/${own.body.id}`)).body;
+      const start=await request(client,'/workout/sessions','POST',{workoutDayID:plan.days[0].id});
+      assert.equal(start.status,201,JSON.stringify(start.body));
+      for(const slot of plan.days[0].exercises){
+        const saved=await request(client,`/workout/sessions/${start.body.id}/sets`,'PUT',{workoutExerciseID:slot.id,setNumber:1,reps:10,weight:60,rir:1.5});
+        assert.equal(saved.status,200,JSON.stringify(saved.body));
+      }
+      assert.equal((await request(client,`/workout/sessions/${start.body.id}`,'PUT',{status:'completed',durationSeconds:600})).status,200);
+      const chosen=await request(client,`/workout/exercises?chosen=true&search=${encodeURIComponent(marker)}`);
+      assert.equal(chosen.status,200,JSON.stringify(chosen.body));
+      assert.deepEqual(chosen.body.data.map(e=>[e.id,e.usageCount]),[[ids[0],4],[ids[1],2]]);
+      assert.deepEqual(chosen.body.filters.equipment.sort(),['barbell','dumbbell']);
+      const narrow=await request(client,`/workout/exercises?chosen=true&search=${encodeURIComponent(marker+' row')}&equipment=barbell`);
+      assert.equal(narrow.body.effectiveEquipment,null);assert.equal(narrow.body.data[0].id,ids[1]);
+      assert.equal((await request(otherClient,`/workout/exercises?chosen=true&search=${encodeURIComponent(marker)}`)).body.total,0);
+      assert.equal((await request(coach,`/workout/exercises?chosen=true&search=${encodeURIComponent(marker)}`)).body.total,0);
+      const historical=(await request(client,`/workout/sessions/${start.body.id}`)).body;
+      assert.ok(historical.sets.every(s=>Number(s.rir)===1.5));
+      const [[stored]]=await db.query('SELECT rir FROM workout_sets WHERE workoutSessionID=? LIMIT 1',[start.body.id]);
+      assert.equal(Number(stored.rir),1.5);
+      await request(client,`/workout/plans/${plan.id}`,'DELETE');
+      const after=(await request(client,`/workout/exercises?chosen=true&search=${encodeURIComponent(marker)}`)).body;
+      assert.deepEqual(after.data.map(e=>[e.id,e.usageCount]),[[ids[0],2],[ids[1],1]],'completed history remains chosen after routine archive');
+    });
+
+    await t.test('product parity: equipment facets use the base results and impossible equipment resets',async()=>{
+      const marker=`facet-${prefix}`;
+      const custom=[];
+      for(const equipment of ['barbell','dumbbell']){
+        const result=await request(client,'/workout/exercises','POST',{name:`${marker} ${equipment}`,
+          muscleGroup:'back',equipment,isBodyweight:false,instructions:[],description:`${marker} cue-only`});
+        assert.equal(result.status,201);custom.push(result.body.id);
+      }
+      const selected=await request(client,`/workout/exercises?search=${marker}&equipment=barbell`);
+      assert.equal(selected.body.data.length,1);
+      assert.deepEqual(selected.body.filters.equipment,['barbell','dumbbell']);
+      assert.equal(selected.body.effectiveEquipment,'barbell');
+      const switched=await request(client,`/workout/exercises?search=${marker}&equipment=dumbbell`);
+      assert.equal(switched.body.data[0].equipment,'dumbbell');
+      const cleared=await request(client,`/workout/exercises?search=${marker}&equipment=cable`);
+      assert.equal(cleared.body.data.length,2);assert.equal(cleared.body.effectiveEquipment,null);
+      assert.equal((await request(otherClient,`/workout/exercises?search=${marker}`)).body.total,0);
+      const byDescription=await request(client,`/workout/exercises?search=${encodeURIComponent(marker+' cue-only')}`);
+      assert.equal(byDescription.body.total,2);
+      assert.equal((await request(client,'/workout/exercises/'+custom[0]+'/working-weight','PUT',{weight:65})).status,200);
+      assert.equal((await request(otherClient,'/workout/exercises/'+custom[0]+'/working-weight','PUT',{weight:70})).status,404);
+      await request(client,'/workout/exercises/'+custom[0]+'/working-weight','PUT',{weight:60});
+      const [[pref]]=await db.query('SELECT workingWeight FROM workout_exercise_preferences WHERE userID=? AND exerciseID=?',[client.id,custom[0]]);
+      assert.equal(Number(pref.workingWeight),65,'confirmed highest load is retained');
+    });
+    await t.test('unconfirmed prefill uses recent sets while lifetime records remain separate',async()=>{
+      const ex=await request(client,'/workout/exercises','POST',{name:prefix+' prefill',bodyPart:'chest'});
+      assert.equal(ex.status,201);
+      const created=await request(client,'/workout/plans','POST',{name:'Prefill regression',status:'assigned',days:[{name:'Press',configuration:{progression:'off'},exercises:[{exerciseID:ex.body.id,targetSets:1,targetReps:10,weight:60,configuration:{progression:'off'}}]}]});
+      assert.equal(created.status,201);
+      const plan=(await request(client,'/workout/plans/'+created.body.id)).body;
+      const day=plan.days[0],slot=day.exercises[0];
+      for(const weight of [80,40]){
+        const start=await request(client,'/workout/sessions','POST',{workoutDayID:day.id});
+        assert.equal(start.status,201);
+        assert.equal((await request(client,'/workout/sessions/'+start.body.id+'/sets','PUT',{workoutExerciseID:slot.id,setNumber:1,weight,reps:10})).status,200);
+        assert.equal((await request(client,'/workout/sessions/'+start.body.id,'PUT',{status:'completed'})).status,200);
+      }
+      const start=await request(client,'/workout/sessions','POST',{workoutDayID:day.id});
+      const current=(await request(client,'/workout/sessions/'+start.body.id)).body;
+      assert.equal(current.prescription.exercises[0].workingWeight,null);
+      assert.equal(current.prescription.exercises[0].bestWeight,80);
+      assert.equal(Number(current.previous[ex.body.id][0].weight),40);
+      await request(client,'/workout/sessions/'+start.body.id,'PUT',{status:'cancelled'});
+      await request(client,'/workout/exercises/'+ex.body.id+'/working-weight','PUT',{weight:65});
+      const confirmed=await request(client,'/workout/sessions','POST',{workoutDayID:day.id});
+      const snap=(await request(client,'/workout/sessions/'+confirmed.body.id)).body.prescription.exercises[0];
+      assert.equal(snap.workingWeight,65);assert.equal(snap.bestWeight,80);
+      await request(client,'/workout/sessions/'+confirmed.body.id,'PUT',{status:'cancelled'});
+    });
+    await t.test('product parity: weekly assignments and atomic date moves preserve the original program',async()=>{
+      const [[exercise]]=await db.query("SELECT id FROM exercises WHERE externalSource='sirvya' AND exerciseType='reps' LIMIT 1");
+      const created=await request(client,'/workout/plans','POST',{clientID:client.id,name:'Weekly parity fixture',status:'assigned',days:[
+        {name:'Monday push',dayOfWeek:1,exercises:[{exerciseID:exercise.id,targetSets:1,targetReps:10,targetWeight:60}]},
+        {name:'Tuesday pull',dayOfWeek:2,exercises:[{exerciseID:exercise.id,targetSets:1,targetReps:8,targetWeight:60}]}]});
+      assert.equal(created.status,201,JSON.stringify(created.body));
+      const original=(await request(client,'/workout/plans/'+created.body.id)).body;
+      const [monday,tuesday]=original.days;
+      // Explicit week picks decouple the weekday from the immutable routine.
+      assert.equal((await request(client,'/workout/week','PUT',{weekday:1,dayIDs:[monday.id]})).status,200);
+      assert.equal((await request(client,'/workout/week','PUT',{weekday:2,dayIDs:[tuesday.id]})).status,200);
+      assert.equal((await request(client,'/workout/week','PUT',{weekday:5,dayIDs:[monday.id]})).status,200);
+      assert.equal((await request(otherClient,'/workout/week','PUT',{weekday:1,dayIDs:[monday.id]})).status,404);
+      assert.equal((await request(coach,'/workout/week','PUT',{weekday:1,dayIDs:[monday.id]})).status,403);
+      const before=(await request(client,'/workout/schedule')).body;
+      assert.ok(before.week.some(d=>d.id===monday.id&&d.dayOfWeek===5));
+      assert.equal((await request(client,'/workout/schedule/move','POST',{fromDate:'2026-10-05',toDate:'2026-10-06'})).status,200);
+      const moved=(await request(client,'/workout/schedule')).body;
+      assert.deepEqual(moved.week,before.week);
+      assert.ok(moved.overrideDates.includes('2026-10-05'));
+      assert.ok(!moved.data.some(d=>d.workoutDate==='2026-10-05'));
+      assert.deepEqual(moved.data.filter(d=>d.workoutDate==='2026-10-06').map(d=>d.workoutDayID).sort((a,b)=>a-b),[monday.id,tuesday.id].sort((a,b)=>a-b));
+      assert.equal((await request(client,'/workout/schedule/move','POST',{fromDate:'2026-10-05',toDate:'2026-10-07'})).status,400);
+      assert.deepEqual((await request(client,'/workout/schedule')).body,moved,'an empty source rolls back without a new override');
+      assert.equal((await request(client,'/workout/schedule/move','POST',{fromDate:'2026-02-31',toDate:'2026-10-07'})).status,400);
+      assert.deepEqual((await request(client,'/workout/plans/'+created.body.id)).body.days,original.days);
+      for(const weekday of [1,2,5])await request(client,'/workout/week','PUT',{weekday,dayIDs:[],reset:true});
+      for(const date of ['2026-10-05','2026-10-06'])await request(client,'/workout/schedule','PUT',{date,dayIDs:[],reset:true});
+      await request(client,'/workout/plans/'+created.body.id,'DELETE');
+    });
+    await t.test('program import previews, merges fresh IDs, reuses customs and atomically replaces seven weekdays',async()=>{
+      const [[catalog]]=await db.query("SELECT * FROM exercises WHERE externalSource='exercises-dataset' AND exerciseType='reps' LIMIT 1");
+      const program={opengym_plan:1,name:'Program parity',week:{1:'strength',0:'hold'},customEx:[{id:'carry-test',n:'Parity carry',bp:'upper legs',desc:'Keep tall'}],routines:[
+        {id:'strength',name:'Strength',prog:'linear',ex:[{id:catalog.externalId,sets:1,reps:10,weight:60}]},
+        {id:'hold',name:'Hold',ex:[{id:'carry-test',mode:'time',sec:45,sets:1}]}]};
+      const before=(await request(client,'/workout/schedule')).body.week;
+      const preview=await request(client,'/workout/program/import-preview','POST',{program});
+      assert.equal(preview.status,200,JSON.stringify(preview.body));assert.equal(preview.body.scheduledDays,2);
+      const first=await request(client,'/workout/program/import','POST',{program,replaceWeek:false});
+      assert.equal(first.status,201,JSON.stringify(first.body));
+      assert.deepEqual((await request(client,'/workout/schedule')).body.week,before);
+      const firstPlan=(await request(client,'/workout/plans/'+first.body.id)).body;
+      assert.equal(firstPlan.days[0].exercises[0].exerciseID,catalog.id);
+      assert.equal(firstPlan.days[1].exercises[0].exerciseType,'timed');
+      const second=await request(client,'/workout/program/import','POST',{program,replaceWeek:true});
+      assert.equal(second.status,201,JSON.stringify(second.body));assert.notEqual(second.body.id,first.body.id);
+      const secondPlan=(await request(client,'/workout/plans/'+second.body.id)).body;
+      assert.notEqual(secondPlan.days[0].id,firstPlan.days[0].id);
+      assert.equal(secondPlan.days[1].exercises[0].exerciseID,firstPlan.days[1].exercises[0].exerciseID,'matching custom reused');
+      const schedule=(await request(client,'/workout/schedule')).body;
+      assert.deepEqual(schedule.weekOverrideDays,[1,2,3,4,5,6,7]);
+      assert.deepEqual(schedule.week.map(d=>d.dayOfWeek).sort(),[1,7]);
+      const native=(await request(client,'/workout/program/export')).body;
+      assert.equal(native.format,'sirvya-workout-program');assert.equal(native.clientID,undefined);
+      assert.equal((await request(client,'/workout/program/import-preview','POST',{program:native})).status,200);
+      const compatible=await request(client,'/workout/program/export?format=opengym');
+      assert.equal(compatible.status,200);assert.equal(compatible.body.opengym_plan,1);
+      assert.equal(compatible.body.clientID,undefined);
+      assert.equal(compatible.body.customEx.filter(e=>e.n==='Parity carry').length,1);
+      assert.ok(compatible.body.week[0]);
+      const compatiblePreview=await request(client,'/workout/program/import-preview','POST',{program:compatible.body});
+      assert.equal(compatiblePreview.status,200,JSON.stringify(compatiblePreview.body));
+      assert.equal(compatiblePreview.body.dropped,0);
+      assert.equal((await request(otherClient,'/workout/program/export')).body.plan.days.some(d=>d.name==='Strength'),false);
+      const invalid=structuredClone(program);invalid.routines[1].ex[0].sec=-1;
+      const [[countBefore]]=await db.query('SELECT COUNT(*) n FROM workout_plans WHERE clientID=?',[client.id]);
+      assert.equal((await request(client,'/workout/program/import','POST',{program:invalid,replaceWeek:true})).status,400);
+      const [[countAfter]]=await db.query('SELECT COUNT(*) n FROM workout_plans WHERE clientID=?',[client.id]);
+      assert.equal(countBefore.n,countAfter.n);assert.deepEqual((await request(client,'/workout/schedule')).body,schedule);
+      assert.equal((await request(coach,'/workout/program/import','POST',{program})).status,403);
+      for(let weekday=1;weekday<=7;weekday++)await request(client,'/workout/week','PUT',{weekday,dayIDs:[],reset:true});
+    });
+    await t.test('measurement modes, actual cardio speed and routine deletion retain immutable history',async()=>{
+      const [[exercise]]=await db.query("SELECT id FROM exercises WHERE externalSource='exercises-dataset' AND exerciseType='reps' LIMIT 1");
+      const planResult=await request(client,'/workout/plans','POST',{name:'Mode recovery',status:'assigned',days:[
+        {name:'Cardio conversion',exercises:[{exerciseID:exercise.id,targetSets:1,targetDurationSeconds:600,configuration:{mode:'cardio',bodyweight:false,speedKmh:8}}]}]});
+      assert.equal(planResult.status,201,JSON.stringify(planResult.body));
+      const plan=(await request(client,'/workout/plans/'+planResult.body.id)).body;
+      const day=plan.days[0],slot=day.exercises[0];assert.equal(slot.exerciseType,'cardio');
+      const start=await request(client,'/workout/sessions','POST',{workoutDayID:day.id});assert.equal(start.status,201,JSON.stringify(start.body));
+      assert.equal((await request(client,'/workout/sessions/'+start.body.id+'/sets','PUT',{workoutExerciseID:slot.id,setNumber:1,durationSeconds:600,details:{distanceMeters:1500}})).status,200);
+      assert.equal((await request(client,'/workout/sessions/'+start.body.id,'PUT',{status:'completed'})).status,200);
+      const stats=(await request(client,'/workout/stats')).body;
+      const record=stats.records.find(r=>r.exerciseID===exercise.id);assert.equal(record.points.at(-1).speedKmh,9);
+      const stale=await request(client,`/workout/plans/${plan.id}/days/${day.id}?revision=999`,'DELETE');assert.equal(stale.status,409);
+      assert.equal((await request(otherClient,`/workout/plans/${plan.id}/days/${day.id}?revision=${plan.revision}`,'DELETE')).status,404);
+      await request(client,'/workout/week','PUT',{weekday:6,dayIDs:[day.id]});
+      assert.equal((await request(client,`/workout/plans/${plan.id}/days/${day.id}?revision=${plan.revision}`,'DELETE')).status,200);
+      assert.ok(!(await request(client,'/workout/schedule')).body.week.some(d=>d.id===day.id));
+      const retained=(await request(client,'/workout/sessions/'+start.body.id)).body;
+      assert.equal(retained.prescription.exercises[0].exerciseType,'cardio');assert.equal(retained.sets[0].durationSeconds,600);
+      const exported=(await request(client,'/workout/history/export')).body;
+      const exportedSession=exported.sessions.find(s=>s.name==='Cardio conversion');
+      assert.ok(exportedSession);
+      const transfer={...exported,sessions:[exportedSession],bodyweight:[]};
+      const preview=await request(otherClient,'/workout/history/import-preview','POST',{history:transfer});
+      assert.equal(preview.status,200,JSON.stringify(preview.body));
+      assert.ok(preview.body.exercises[0].matches.some(e=>e.id===exercise.id),'same catalog identity can be reused with a session mode override');
+      const imported=await request(otherClient,'/workout/history/import','POST',transfer);
+      assert.equal(imported.status,201,JSON.stringify(imported.body));
+      const roundtrip=(await request(otherClient,'/workout/sessions/'+imported.body.ids[0])).body;
+      assert.equal(roundtrip.prescription.exercises[0].exerciseID,exercise.id);
+      assert.equal(roundtrip.prescription.exercises[0].exerciseType,'cardio');
+      assert.equal(roundtrip.sets[0].durationSeconds,600);
+      assert.equal(roundtrip.sets[0].details.distanceMeters,1500);
+      assert.equal((await request(otherClient,'/workout/history/import','POST',transfer)).body.skipped,1);
+      assert.equal((await request(client,'/workout/history')).body.data.some(s=>s.id===start.body.id),true);
+      await request(client,'/workout/week','PUT',{weekday:6,dayIDs:[],reset:true});
+    });
+    await t.test('personal routine autosave permits empty drafts and binds stable IDs without changing the week',async()=>{
+      const body={name:'New routine',status:'assigned',days:[{name:'New routine',exercises:[]}]};
+      assert.equal((await request(coach,'/workout/plans','POST',{...body,clientID:client.id})).status,400,'Coach assignment still requires exercises');
+      const created=await request(client,'/workout/plans','POST',body);
+      assert.equal(created.status,201,JSON.stringify(created.body));
+      const dayID=created.body.dayIDs[0];assert.ok(dayID);
+      assert.equal((await request(client,'/workout/week','PUT',{weekday:4,dayIDs:[dayID]})).status,200);
+      const empty=await request(client,'/workout/sessions','POST',{workoutDayID:dayID});
+      assert.equal(empty.status,201,JSON.stringify(empty.body));
+      assert.equal((await request(client,'/workout/sessions/'+empty.body.id)).body.prescription.exercises.length,0);
+      await request(client,'/workout/sessions/'+empty.body.id,'PUT',{status:'cancelled'});
+      const [[exercise]]=await db.query("SELECT id FROM exercises WHERE externalSource='sirvya' AND exerciseType='reps' LIMIT 1");
+      const updated=await request(client,'/workout/plans/'+created.body.id,'PUT',{...body,name:'Edited routine',revision:1,days:[{id:dayID,name:'Edited routine',exercises:[{exerciseID:exercise.id,targetSets:3,targetReps:10,targetWeight:0}]}]});
+      assert.equal(updated.status,200,JSON.stringify(updated.body));assert.deepEqual(updated.body.dayIDs,[dayID]);
+      assert.ok(updated.body.exerciseIDs[0]);assert.equal(updated.body.revision,2);
+      assert.equal((await request(client,'/workout/schedule')).body.week.find(d=>d.dayOfWeek===4).id,dayID);
+      assert.equal((await request(client,'/workout/plans/'+created.body.id,'PUT',{...body,revision:1})).status,409,'stale autosave cannot discard newer edits');
+      await request(client,'/workout/week','PUT',{weekday:4,dayIDs:[],reset:true});
+    });
+    await t.test('one-tap PPL starter reuses dataset IDs and replaces only Monday Wednesday Friday',async()=>{
+      const original=await request(otherClient,'/workout/plans','POST',{name:'Preserved Tuesday',status:'assigned',days:[{name:'Tuesday',exercises:[]}]});
+      assert.equal(original.status,201);const existing={id:original.body.dayIDs[0]};
+      await request(otherClient,'/workout/week','PUT',{weekday:2,dayIDs:[existing.id]});
+      const result=await request(otherClient,'/workout/program/starter','POST',{});
+      assert.equal(result.status,201,JSON.stringify(result.body));
+      const plan=(await request(otherClient,'/workout/plans/'+result.body.id)).body;
+      assert.deepEqual(plan.days.map(d=>d.exercises.length),[6,5,6]);
+      assert.deepEqual(plan.days.map(d=>d.name),['Push Day','Pull Day','Leg Day']);
+      assert.equal(plan.days[0].exercises[0].externalId,'0025');
+      const schedule=(await request(otherClient,'/workout/schedule')).body;
+      assert.equal(schedule.week.find(d=>d.dayOfWeek===2).id,existing.id,'Tuesday program is preserved');
+      for(const [i,weekday] of [1,3,5].entries())assert.equal(schedule.week.find(d=>d.dayOfWeek===weekday).id,plan.days[i].id);
+      assert.equal((await request(coach,'/workout/program/starter','POST',{})).status,403);
+    });
+    await t.test('dated bodyweight uses existing history and keeps Client Coach authorization',async()=>{
+      const created=await request(client,'/weight-history','POST',{weight:80,recordedAt:'2026-09-30',note:'Workout check-in'});
+      assert.equal(created.status,201,JSON.stringify(created.body));
+      const [[row]]=await db.query("SELECT weight,DATE_FORMAT(recordedAt,'%Y-%m-%d') day FROM weighthistory WHERE id=?",[created.body.id]);
+      assert.equal(row.day,'2026-09-30');assert.equal(Number(row.weight),80);
+      assert.equal((await request(client,'/weight-history','POST',{weight:80,recordedAt:'2026-02-31'})).status,400);
+      assert.equal((await request(otherClient,'/weight-history/'+created.body.id,'PUT',{weight:75})).status,404);
+      assert.equal((await request(coach,'/weight-history/'+created.body.id,'DELETE')).status,403);
+      assert.equal((await request(otherCoach,`/weight-history/me?clientID=${client.id}`)).status,403);
+      // An earlier access-regression fixture unlinks the original Coach.
+      assert.equal((await request(coach,`/weight-history/me?clientID=${client.id}`)).status,403);
+      await db.query('INSERT INTO coachclients(coachID,clientID) VALUES(?,?)',[coach.id,client.id]);
+      assert.equal((await request(coach,`/weight-history/me?clientID=${client.id}`)).status,200);
+      assert.equal((await request(client,'/weight-history/'+created.body.id,'PUT',{weight:79.5})).status,200);
+      assert.equal((await request(client,'/weight-history/'+created.body.id,'DELETE')).status,200);
     });
     await t.test('existing account deletion cascades workout data', async () => {
       await db.query('DELETE FROM users WHERE id = ?', [client.id]);

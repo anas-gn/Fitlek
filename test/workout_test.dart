@@ -9,6 +9,8 @@ import 'package:fitlek1/screens/ENG/workout/active_workout.dart';
 import 'package:fitlek1/screens/ENG/workout/exercise_library.dart';
 import 'package:fitlek1/screens/ENG/workout/workout_builder.dart';
 import 'package:fitlek1/theme/app_theme.dart';
+import 'package:fitlek1/services/workout_service.dart';
+import 'package:fitlek1/screens/ENG/workout/workout_set_row.dart';
 
 const catalogExercise = <String, dynamic>{
   'id': 1,
@@ -45,8 +47,11 @@ Map<String, dynamic> sessionFixture({bool timed = false}) => {
     };
 
 void main() {
-  setUp(() => SharedPreferences.setMockInitialValues(
-      {'token': 'workout-widget-test-token-long-enough'}));
+  setUp(() {
+    SharedPreferences.setMockInitialValues(
+        {'token': 'workout-widget-test-token-long-enough'});
+    WorkoutService.preferences = {'view': 'guided', 'viewVersion': 2};
+  });
 
   test(
       'supersets alternate by round and only rest after eligible group members',
@@ -115,11 +120,12 @@ void main() {
       await tester.pump(const Duration(milliseconds: 100));
       expect(attempts, 2);
       expect(find.text('1 / 2 sets saved'), findsOneWidget);
-      await tester.ensureVisible(find.text('Pause'));
-      await tester.tap(find.text('Pause'));
+      await tester.tap(find.byTooltip('Pause'));
       await tester.pump();
-      expect(find.text('Resume'), findsOneWidget);
-      await tester.tap(find.text('+30 sec'));
+      expect(find.byTooltip('Resume'), findsOneWidget);
+      await tester.tap(find.widgetWithIcon(TextButton, Icons.add).last);
+      await tester.pump();
+      await tester.tap(find.widgetWithIcon(TextButton, Icons.add).last);
       await tester.pump();
       expect(find.text('02:00'), findsOneWidget);
       await tester.tap(find.text('Skip'));
@@ -137,23 +143,32 @@ void main() {
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
     final session = sessionFixture(timed: true);
-    final client =
-        MockClient((_) async => http.Response(jsonEncode(session), 200));
+    Map<String, dynamic>? recorded;
+    var now = DateTime.utc(2026, 10, 4, 10);
+    final client = MockClient((req) async {
+      if (req.method == 'PUT') {
+        recorded = jsonDecode(req.body);
+        session['sets'] = [
+          {...recorded!, 'id': 1}
+        ];
+        return http.Response('{"saved":true}', 200);
+      }
+      return http.Response(jsonEncode(session), 200);
+    });
     await http.runWithClient(() async {
       await tester.pumpWidget(MaterialApp(
-          theme: AppTheme.dark, home: const ActiveWorkoutScreen(sessionID: 7)));
+          theme: AppTheme.dark,
+          home: ActiveWorkoutScreen(sessionID: 7, clock: () => now)));
       await tester.pumpAndSettle();
       expect(find.widgetWithText(TextFormField, 'Repetitions'), findsNothing);
-      await tester.tap(find.text('Start work timer'));
-      await tester.pump(const Duration(seconds: 2));
-      await tester.tap(find.text('Stop work timer'));
-      await tester.pump();
-      final duration = tester
-          .widget<TextFormField>(
-              find.widgetWithText(TextFormField, 'Duration (sec)'))
-          .controller!
-          .text;
-      expect(int.parse(duration), greaterThanOrEqualTo(1));
+      await tester.tap(find.text('Start set'));
+      now = now.add(const Duration(seconds: 2));
+      await tester.pump(const Duration(milliseconds: 250));
+      await tester.tap(find.text('Done'));
+      await tester.pumpAndSettle();
+      expect(recorded?['durationSeconds'], 2);
+      expect(recorded?['reps'], isNull);
+      expect(find.text('That’s the whole workout!'), findsOneWidget);
       expect(find.text('Rest'), findsNothing);
       await tester.pumpWidget(const SizedBox.shrink());
     }, () => client);
@@ -243,8 +258,15 @@ void main() {
       await tester.tap(find.byTooltip('Add exercise'));
       await tester.pumpAndSettle();
       await tester.enterText(
-          find.widgetWithText(TextFormField, 'Target weight (kg)'), '60');
+          find.descendant(
+              of: find.byWidgetPredicate((w) =>
+                  w is WorkoutNumberStepper && w.label == 'Target weight (kg)'),
+              matching: find.byType(TextField)),
+          '60');
       await tester.tap(find.text('Save'));
+      await tester.pumpAndSettle();
+      expect(find.byType(WorkoutExerciseLibrary), findsOneWidget);
+      await tester.tap(find.byTooltip('Close'));
       await tester.pumpAndSettle();
       await tester.ensureVisible(find.text('Save and assign to client'));
       await tester.tap(find.text('Save and assign to client'));

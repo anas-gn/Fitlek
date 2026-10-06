@@ -1,5 +1,123 @@
 // Independently authored SIRVYA translations.
 const workoutStrings = <String, List<String>>{
+  'Back to SIRVYA': ['Retour à SIRVYA', 'Volver a SIRVYA'],
+  'Background timer alerts': [
+    'Alertes du minuteur en arrière-plan',
+    'Alertas del temporizador en segundo plano'
+  ],
+  'Enable alerts when the app is in the background.': [
+    'Activer les alertes lorsque l’application est en arrière-plan.',
+    'Activar alertas cuando la aplicación esté en segundo plano.'
+  ],
+  'Background timer alerts enabled': [
+    'Alertes du minuteur en arrière-plan activées',
+    'Alertas del temporizador activadas'
+  ],
+  'Check timer alerts in your device notification permissions.': [
+    'Vérifiez les alertes du minuteur dans les autorisations de notification de votre appareil.',
+    'Revisa las alertas del temporizador en los permisos de notificación del dispositivo.'
+  ],
+  'The exercise will be removed from your personal routines. Logged workouts and Coach routines are kept.':
+      [
+    'L’exercice sera retiré de vos routines personnelles. L’historique et les routines du coach seront conservés.',
+    'El ejercicio se eliminará de tus rutinas personales. Se conservan el historial y las rutinas del entrenador.'
+  ],
+  'Top set': ['Meilleure série', 'Mejor serie'],
+  'More progress metrics': [
+    'Autres mesures de progression',
+    'Más métricas de progreso'
+  ],
+  'What this session hits': [
+    'Muscles sollicités par cette séance',
+    'Músculos que trabaja esta sesión'
+  ],
+  'Muscle balance · by hard sets': [
+    'Équilibre musculaire · séries intenses',
+    'Equilibrio muscular · series intensas'
+  ],
+  'Muscle balance · by sets worked': [
+    'Équilibre musculaire · séries réalisées',
+    'Equilibrio muscular · series realizadas'
+  ],
+  'Name and body part. Add a description to remember your setup.': [
+    'Nom et partie du corps. Ajoutez une description de votre mise en place.',
+    'Nombre y parte del cuerpo. Añade una descripción para recordar tu preparación.'
+  ],
+  'Less': ['Moins', 'Menos'],
+  'More': ['Plus', 'Más'],
+  'More planning options': [
+    'Autres options de planification',
+    'Más opciones de planificación'
+  ],
+  'Combine routines': ['Combiner des routines', 'Combinar rutinas'],
+  'Rest / skip this day': [
+    'Repos / passer ce jour',
+    'Descanso / omitir este día'
+  ],
+  'Back to weekly plan': [
+    'Revenir au programme hebdomadaire',
+    'Volver al plan semanal'
+  ],
+  'No workouts this month': [
+    'Aucun entraînement ce mois-ci',
+    'No hay entrenamientos este mes'
+  ],
+  '{0} workout · {1} min · {2} {3}': [
+    '{0} entraînement · {1} min · {2} {3}',
+    '{0} entrenamiento · {1} min · {2} {3}'
+  ],
+  '{0} workouts · {1} min · {2} {3}': [
+    '{0} entraînements · {1} min · {2} {3}',
+    '{0} entrenamientos · {1} min · {2} {3}'
+  ],
+  'Trained': ['Entraîné', 'Entrenado'],
+  'Planned': ['Prévu', 'Planificado'],
+  'Rescheduled': ['Déplacé', 'Reprogramado'],
+  'Workout complete!': ['Entraînement terminé !', '¡Entrenamiento completado!'],
+  'What you just trained': [
+    'Muscles que vous venez de travailler',
+    'Músculos que acabas de trabajar'
+  ],
+  'Nice!': ['Bravo !', '¡Bien hecho!'],
+  'An exercise with this name already exists. Choose it from the library or use a different name.':
+      [
+    'Un exercice porte déjà ce nom. Choisissez-le dans la bibliothèque ou utilisez un autre nom.',
+    'Ya existe un ejercicio con este nombre. Elígelo de la biblioteca o usa otro nombre.'
+  ],
+  'Chosen ({0})': ['Utilisés ({0})', 'Utilizados ({0})'],
+  'No chosen exercises match this search.': [
+    'Aucun exercice utilisé ne correspond à cette recherche.',
+    'Ningún ejercicio utilizado coincide con esta búsqueda.'
+  ],
+  'Repetitions per side': ['Répétitions par côté', 'Repeticiones por lado'],
+  '{0} per side · log the total': [
+    '{0} par côté · saisissez le total',
+    '{0} por lado · registra el total'
+  ],
+  'Routine options': ['Options de la routine', 'Opciones de rutina'],
+  'Muscle figure': ['Silhouette musculaire', 'Figura muscular'],
+  'Male': ['Masculine', 'Masculina'],
+  'Female': ['Féminine', 'Femenina'],
+  'Description (optional)': [
+    'Description (facultative)',
+    'Descripción (opcional)'
+  ],
+  'More exercise options': [
+    'Autres options de l’exercice',
+    'Más opciones del ejercicio'
+  ],
+  'Cardio logs time and speed.': [
+    'Le cardio enregistre la durée et la vitesse.',
+    'El cardio registra el tiempo y la velocidad.'
+  ],
+  'Exercises follow this rule unless they have their own progression.': [
+    'Les exercices suivent cette règle sauf si une progression particulière est définie.',
+    'Los ejercicios siguen esta regla salvo que tengan su propia progresión.'
+  ],
+  'Link an exercise with the one above to perform a superset.': [
+    'Liez un exercice au précédent pour effectuer un superset.',
+    'Vincula un ejercicio con el anterior para realizar una superserie.'
+  ],
   'Routine icon': ['Icône de la routine', 'Icono de rutina'],
   'strength': ['force', 'fuerza'],
   'recovery': ['récupération', 'recuperación'],

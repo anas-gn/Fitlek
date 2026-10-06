@@ -60,6 +60,7 @@ backend/.env.backup
 *.pid
 workout_tmp/
 backend/storage/
+backend/uploads/
 backend.tar.gz
 sirvya_backup.sql
 android/.kotlin/

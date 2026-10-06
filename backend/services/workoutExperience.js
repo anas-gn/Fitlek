@@ -3,7 +3,7 @@ import {fail, integer, number, text, json, isWorkSet} from './workoutDomain.js';
 
 export const defaultWorkoutPreferences = Object.freeze({unit:'kg', defaultRestSeconds:90,
   restPauseSeconds:15, timerSound:true, timerVibration:true, timerFlash:false,
-  automaticRest:true, keepAwake:false, bodyweightCheckIn:false, bodyweightGoal:null, view:'cards', effort:'off', weekStart:1,
+  automaticRest:true, keepAwake:true, bodyweightCheckIn:true, bodyweightGoal:null, bodyFigure:'male', demonstrationSize:'full', view:'cards', viewVersion:2, effort:'off', weekStart:1,
   reminderEnabled:false, reminderTime:'08:00', timeZone:'UTC', equipmentProfiles:[], activeEquipmentProfile:null,
   barWeight:20,balanceAnchorID:null,balanceTargets:[],balanceProtocols:[],activeBalanceProtocolID:null,
   plates:[25,20,15,10,5,2.5,1.25].map(weight=>({weight,count:4}))});
@@ -20,7 +20,13 @@ const validateBalanceTargets=targets=>{
 export function validatePreferences(input) {
   if (!input || typeof input !== 'object' || Array.isArray(input)) fail('invalid_workout');
   const p={...defaultWorkoutPreferences,...input};
+  if(input.viewVersion!=null && ![1,2].includes(input.viewVersion))fail('invalid_workout');
+  // Version 1 used the single-set form as its default guided experience.
+  if(input.view==='guided' && input.viewVersion!==2)p.view='cards';
+  p.viewVersion=2;
   if (!['kg','lb'].includes(p.unit) || !['cards','compact','guided'].includes(p.view) || !['off','rpe','rir'].includes(p.effort)) fail('invalid_workout');
+  if (!['male','female'].includes(p.bodyFigure)) fail('invalid_workout');
+  if (!['full','mini'].includes(p.demonstrationSize)) fail('invalid_workout');
   p.defaultRestSeconds=integer(p.defaultRestSeconds,0,3600); p.restPauseSeconds=integer(p.restPauseSeconds,0,300); p.weekStart=integer(p.weekStart,1,7);
   for(const key of ['timerSound','timerVibration','timerFlash','automaticRest','keepAwake','reminderEnabled','bodyweightCheckIn']) if(typeof p[key]!=='boolean') fail('invalid_workout');
   if(!/^([01]\d|2[0-3]):[0-5]\d$/.test(p.reminderTime)) fail('invalid_workout');
@@ -53,47 +59,61 @@ export function validatePreferences(input) {
 
 // Targets are suggestions generated at start; the original prescription is retained.
 // Only working sets from completed sessions affect progression.
-export function nextTarget(exercise, history) {
+export function nextTarget(exercise, history, {sharedHistory=false, unit='kg'}={}) {
   const cfg = typeof exercise.configuration === 'string' ? json(exercise.configuration) : exercise.configuration || {};
   const policy=cfg.progression || 'off';
   const baseline={weight:Number(exercise.targetWeight || 0),reps:exercise.targetReps,sets:exercise.targetSets,durationSeconds:exercise.targetDurationSeconds};
   if(policy==='off'||policy==='inherit'||cfg.excludeFromProgression||exercise.exerciseType==='cardio')return {...baseline,reason:'prescribed',policy:'off'};
   const valid=history.filter(h=>!h.excludedFromProgression&&h.sets.some(isWorkSet)&&
+    (!h.target?.exerciseType||h.target.exerciseType===exercise.exerciseType)&&
+    (sharedHistory||(
     (!h.target?.originalTargets || ['targetWeight','targetReps','targetSets','targetDurationSeconds'].every(k=>Number(h.target.originalTargets[k]??0)===Number(exercise[k]??0)))&&
-    (!h.target?.configuration || (typeof h.target.configuration==='string'?json(h.target.configuration):h.target.configuration).progression===policy));
+    (!h.target?.configuration || (typeof h.target.configuration==='string'?json(h.target.configuration):h.target.configuration).progression===policy))));
   if(!valid.length)return {...baseline,reason:'first_session',policy};
   const last=valid[0]; const work=last.sets.filter(isWorkSet);
   const lastTarget=last.target || exercise;
   const reps=Number(lastTarget.targetReps || baseline.reps || 1), sets=Number(lastTarget.targetSets || baseline.sets);
-  const weight=Number(lastTarget.targetWeight ?? baseline.weight), duration=Number(lastTarget.targetDurationSeconds || baseline.durationSeconds || 0);
+  const weight=Math.max(0,...work.map(s=>Number(s.weight)||0)), duration=Number(lastTarget.targetDurationSeconds || baseline.durationSeconds || 0);
   const met=h=>{const ss=h.sets.filter(isWorkSet);return ss.length>=Number(h.target?.targetSets||sets)&&ss.every(s=>{
     if(exercise.exerciseType!=='reps')return Number(s.durationSeconds)>=Number(h.target?.targetDurationSeconds||duration);
-    const details=s.details?json(s.details):{},entries=details.sides?Object.values(details.sides):[s];
-    return entries.every(v=>Number(v.reps)>=Number(h.target?.targetReps||reps)&&Number(v.weight)>=Number(h.target?.targetWeight??weight));
+    return Number(s.reps)>=Number(h.target?.targetReps||reps);
   });};
   let failures=0;for(const h of valid){if(met(h))break;failures++;}
-  const success=met(last),factor=Number(cfg.deloadFactor||0.9),step=Number(cfg.increment||2.5);
+  const heavy=['upper legs','lower legs','back','hips','glutes'].includes(exercise.bodyPart);
+  const defaultStep=unit==='lb'?(heavy?10:5)/2.20462262185:heavy?5:2.5;
+  const success=met(last),factor=Number(cfg.deloadFactor||0.9),step=Number(cfg.increment||defaultStep);
+  const snap=(value,unit)=>Math.round(Math.round(value/unit)*unit*100)/100;
+  const deload=(value,unit)=>Math.max(unit,snap(value*factor,unit)>=value?snap(value-unit,unit):snap(value*factor,unit));
+  const repStep=cfg.perSide?2:1;
   const base={weight,reps,sets,durationSeconds:duration||null,policy,reason:'repeat'};
   if(exercise.exerciseType!=='reps') {
     if(policy!=='time')return {...baseline,reason:'prescribed',policy:'off'};
     if(success)return {...base,durationSeconds:Math.min(86400,duration+Math.max(1,Math.round(cfg.increment||5))),reason:'increase_time'};
-    return failures>=3?{...base,durationSeconds:Math.max(1,Math.round(duration*factor)),reason:'deload'}:base;
+    return failures>=3?{...base,durationSeconds:deload(duration,5),reason:'deload'}:base;
   }
-  if(exercise.isBodyweight&&weight===0) {
-    const ceiling=Number(cfg.bodyweightRepCeiling??30),maxSets=Number(cfg.maxBodyweightSets??6);
-    if(success&&reps<ceiling)return {...base,reps:Math.min(ceiling,reps+1),reason:'increase_reps'};
-    if(success&&sets<maxSets)return {...base,sets:sets+1,reason:'increase_sets'};
-    return {...base,reason:success?'add_load_or_variation':'repeat'};
+  if(weight===0) {
+    const ceiling=Number(cfg.bodyweightRepCeiling??0),maxSets=Number(cfg.maxBodyweightSets??6);
+    if(!success)return base;
+    if(ceiling<=0||reps<ceiling)return {...base,reps:reps+repStep,reason:'increase_reps'};
+    if(sets<maxSets)return {...base,sets:sets+1,reps:Math.min(Number(exercise.targetReps)||ceiling,ceiling),reason:'increase_sets'};
+    return {...base,reason:'add_load_or_variation'};
   }
   if(policy==='double') {
     const upper=Number(exercise.targetReps),lower=Number(cfg.minReps||Math.max(1,upper-2));
-    if(success&&reps>=upper)return {...base,weight:Math.min(2000,weight+step),reps:lower,reason:'increase_load'};
-    if(success)return {...base,reps:Math.min(upper,reps+1),reason:'increase_reps'};
+    // Success is judged at the top of the range, even if last session aimed
+    // below it. Until then, advance from the lowest actually completed set.
+    const reachedTop=work.length>=sets&&work.every(s=>Number(s.reps)>=upper);
+    if(sharedHistory?success:reachedTop)return {...base,weight:Math.min(2000,snap(weight+step,step)),reps:lower,reason:'increase_load'};
+    const topMisses=valid.findIndex(h=>h.sets.filter(isWorkSet).length>=Number(h.target?.targetSets||sets)&&h.sets.filter(isWorkSet).every(s=>Number(s.reps)>=upper));
+    const stalls=sharedHistory?failures:topMisses<0?valid.length:topMisses;
+    if(stalls>=3)return {...base,weight:deload(weight,step),reps:lower,reason:'deload'};
+    const low=Math.min(...work.map(s=>Number(s.reps)||0));
+    return {...base,reps:Math.min(upper,Math.max(lower,low+repStep)),reason:'increase_reps'};
   } else if(success) {
     const top=Number(work.at(-1)?.reps||0);
-    return {...base,weight:Math.min(2000,weight+step*(policy==='greyskull'&&top>=reps*2?2:1)),reason:'increase_load'};
+    return {...base,weight:Math.min(2000,snap(weight+step*(policy==='greyskull'&&top>=reps*2?2:1),step)),reason:'increase_load'};
   }
-  if(failures>=(policy==='greyskull'?1:3))return {...base,weight:Math.max(0,Math.floor(weight*factor/step)*step),reason:'deload'};
+  if(failures>=(policy==='greyskull'?1:3))return {...base,weight:deload(weight,step),reason:'deload'};
   return base;
 }
 

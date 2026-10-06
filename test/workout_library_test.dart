@@ -39,7 +39,7 @@ void main() {
                   }
                 ])))));
     expect(find.byTooltip('${workoutDate(date)} · 500 kg'), findsOneWidget);
-    expect(find.text('Activity · last 365 days'), findsOneWidget);
+    expect(find.text('More volume'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });
 
@@ -163,8 +163,8 @@ void main() {
       await tester.tap(find.text('Push'));
       await tester.pumpAndSettle();
       expect(find.byType(WorkoutBuilderScreen), findsOneWidget);
-      expect(find.byType(AlertDialog), findsOneWidget);
-      expect(find.text('Fixture press'), findsOneWidget);
+      expect(find.byType(BottomSheet), findsOneWidget);
+      expect(find.text('Fixture Press'), findsOneWidget);
       expect(tester.takeException(), isNull);
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pumpAndSettle();

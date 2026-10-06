@@ -237,6 +237,8 @@ void main() {
       await tester.pumpWidget(
           MaterialApp(theme: AppTheme.light, home: const WorkoutHomeScreen()));
       await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('workout-tab-1')));
+      await tester.pumpAndSettle();
       expect(find.textContaining('Flexible'), findsWidgets);
       expect(tester.takeException(), null);
       await tester.pumpWidget(const SizedBox.shrink());

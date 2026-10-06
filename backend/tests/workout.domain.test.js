@@ -14,7 +14,7 @@ test('coach prescription stays distinct from actual set performance', () => {
 });
 test('reject malformed, infinite, fractional, out-of-range or mixed effort data', () => {
   const e = {targetSets: 3, exerciseType: 'reps', isBodyweight: false};
-  for (const changes of [{setNumber: 4}, {weight: Infinity}, {reps: 1.5}, {weight: -1}, {rpe: 11}, {rir: 2.5}, {rpe: 8, rir: 2}, {reps: null}, {weight: null}, {durationSeconds: 30}]) {
+  for (const changes of [{setNumber: 4}, {weight: Infinity}, {reps: 1.5}, {weight: -1}, {rpe: 11}, {rir: NaN}, {rpe: 8, rir: 2}, {reps: null}, {weight: null}, {durationSeconds: 30}]) {
     assert.throws(() => validateSet({setNumber: 1, reps: 10, weight: 60, ...changes}, e));
   }
 });

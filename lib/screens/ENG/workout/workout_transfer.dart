@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import '../../../services/workout_file.dart';
 import '../../../models/workout.dart';
 import '../../../services/workout_service.dart';
 import 'exercise_library.dart';
@@ -106,16 +106,17 @@ class _WorkoutTransferScreenState extends State<WorkoutTransferScreen> {
         if (data['hasMore'] != true) break;
         page++;
       }
-      await Clipboard.setData(ClipboardData(
-          text: const JsonEncoder.withIndent('  ').convert({
+      final saved = await saveWorkoutJson('sirvya-workout-history.json', {
         'format': 'sirvya-workout-history',
         'version': 1,
         'source': 'SIRVYA',
         'unit': 'kg',
         'sessions': sessions,
         'bodyweight': weights
-      })));
-      if (mounted) setState(() => _result = 'Workout history JSON copied');
+      });
+      if (saved && mounted) {
+        setState(() => _result = 'Workout history exported');
+      }
     } catch (e) {
       if (mounted) workoutError(context, e);
     } finally {

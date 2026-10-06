@@ -9,7 +9,7 @@ if(!licenseResponse.ok||!dataResponse.ok)throw new Error('Metadata download fail
 const license=await licenseResponse.text();
 if(!license.startsWith('MIT License')||!license.includes('MEDIA EXCEPTION'))throw new Error('Exercise licensing changed; review required');
 const original=await dataResponse.json();
-const data=original.map(e=>({externalId:e.id,name:e.name,muscleGroup:e.target||e.body_part,
+const data=original.map(e=>({externalId:e.id,name:e.name,bodyPart:e.body_part,muscleGroup:e.target||e.body_part,
   secondaryMuscles:e.secondary_muscles||[],equipment:e.equipment,
   exerciseType:e.body_part==='cardio'?'cardio':/\b(plank|hold|stretch)\b/i.test(e.name)?'timed':'reps',
   isBodyweight:e.equipment==='body weight',instructions:e.instruction_steps.en,

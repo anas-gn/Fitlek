@@ -115,6 +115,8 @@ void main() {
     });
     await tester.pumpAndSettle();
     expect(find.text('Everkinetic · CC BY-SA 3.0'), findsOneWidget);
+    await tester.tap(find.byTooltip('Pause demonstration'));
+    await tester.pumpAndSettle();
     expect(find.text('1 / 2'), findsOneWidget);
     await tester.tap(find.byTooltip('Next demonstration frame'));
     await tester.pumpAndSettle();
@@ -157,6 +159,47 @@ void main() {
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump(const Duration(seconds: 3));
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets(
+      'demonstration size survives screen recreation and retains training preferences',
+      (tester) async {
+    await tester
+        .runAsync(() => WorkoutDemonstrationCatalog.forExercise(exercise));
+    var preferences = <String, dynamic>{'unit': 'lb', 'bodyweightGoal': 78};
+    WorkoutService.preferences = preferences;
+    final client = MockClient((request) async {
+      expect(request.url.path.endsWith('/preferences'), true);
+      if (request.method == 'PUT') {
+        preferences = Map<String, dynamic>.from(jsonDecode(request.body));
+      }
+      return http.Response(jsonEncode(preferences), 200);
+    });
+    await http.runWithClient(() async {
+      await tester.pumpWidget(screen(
+          const WorkoutDemonstrationPanel(exercise: exercise, compact: true)));
+      await tester.pumpAndSettle();
+      expect(find.byTooltip('Pause demonstration'), findsOneWidget);
+      await tester.tap(find.text('Minimize'));
+      await tester.pumpAndSettle();
+      expect(preferences['demonstrationSize'], 'mini');
+      expect(preferences['unit'], 'lb');
+      expect(preferences['bodyweightGoal'], 78);
+      expect(find.byType(PageView), findsNothing);
+      await tester.pumpWidget(const SizedBox.shrink());
+      WorkoutService.preferences = await WorkoutService.get('/preferences');
+      await tester.pumpWidget(screen(
+          const WorkoutDemonstrationPanel(exercise: exercise, compact: true)));
+      await tester.pumpAndSettle();
+      expect(find.text('Expand'), findsOneWidget);
+      expect(find.byType(PageView), findsNothing);
+      await tester.tap(find.text('Expand'));
+      await tester.pumpAndSettle();
+      expect(preferences['demonstrationSize'], 'full');
+      expect(find.byType(PageView), findsOneWidget);
+      await tester.pumpWidget(const SizedBox.shrink());
+      expect(tester.takeException(), isNull);
+    }, () => client);
   });
 
   testWidgets(

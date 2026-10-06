@@ -23,6 +23,10 @@ router.use(requireAuth,requireRole('client','coach'),async(req,res,next)=>{
       if(req.method!=='DELETE'){
         const weight=Number(body.weight);
         if(!Number.isFinite(weight)||weight<1||weight>500||typeof body.note==='string'&&body.note.length>2000)return res.status(400).json({message:'invalid_weight'});
+        if(body.recordedAt!=null){
+          const date=new Date(`${body.recordedAt}T12:00:00Z`);
+          if(typeof body.recordedAt!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(body.recordedAt)||Number.isNaN(date.getTime())||date.toISOString().slice(0,10)!==body.recordedAt||date>Date.now()+86400000)return res.status(400).json({message:'invalid_weight_date'});
+        }
       }
       if(req.params.id){
         const [entry]=await db.query('SELECT id FROM weighthistory WHERE id=? AND clientID=?',[req.params.id,req.user.id]);
@@ -125,8 +129,8 @@ router.post('/', async (req, res) => {
     }
 
     const [result] = await db.query(
-      'INSERT INTO weighthistory (clientID, weight, recordedAt, note) VALUES (?, ?, CURDATE(), ?)',
-      [clientID, weight, note || null]
+      'INSERT INTO weighthistory (clientID, weight, recordedAt, note) VALUES (?, ?, COALESCE(?,CURDATE()), ?)',
+      [clientID, weight, req.body.recordedAt ?? null, note || null]
     );
     res.status(201).json({ message: 'Weight recorded', id: result.insertId });
   } catch (err) { res.status(500).json({ error: err.message }); }

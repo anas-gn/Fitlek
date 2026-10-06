@@ -12,7 +12,19 @@ class WorkoutApiException implements Exception {
 
 // All requests go through the existing SIRVYA token, timeout and response handling.
 class WorkoutService {
-  static Map<String, dynamic> preferences = {};
+  static Map<String, dynamic> _preferences = {};
+  static Map<String, dynamic> get preferences => _preferences;
+  static set preferences(Map<String, dynamic> value) {
+    final migrated = Map<String, dynamic>.from(value);
+    if (migrated.isNotEmpty) {
+      if (migrated['view'] == 'guided' && migrated['viewVersion'] != 2) {
+        migrated['view'] = 'cards';
+      }
+      migrated['viewVersion'] = 2;
+    }
+    _preferences = migrated;
+  }
+
   static String get unit => preferences['unit'] == 'lb' ? 'lb' : 'kg';
   static double displayWeight(num value) =>
       unit == 'lb' ? value / 0.45359237 : value.toDouble();

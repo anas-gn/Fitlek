@@ -12,11 +12,90 @@ import 'workout_builder.dart';
 import 'workout_charts.dart';
 import 'workout_demonstration.dart';
 
+Future<Exercise?> workoutPickExercise(BuildContext context,
+        {Future<void> Function(BuildContext, Exercise)? onSelect}) =>
+    workoutSheet<Exercise>(
+        context: context,
+        isScrollControlled: true,
+        builder: (context) => SizedBox(
+            height: MediaQuery.sizeOf(context).height * .88,
+            child:
+                WorkoutExerciseLibrary(selecting: true, onSelect: onSelect)));
+
+Future<void> workoutAddExerciseToRoutine(
+    BuildContext context, Exercise exercise) async {
+  try {
+    final user = await ApiService.getUserData();
+    final coach = user?['role'] == 'coach';
+    final plans = (await WorkoutService.plans())
+        .where((p) =>
+            coach ? p.coachID == workoutInt(user?['id']) : p.coachID == 0)
+        .toList();
+    if (!context.mounted) return;
+    final choice = await workoutSheet<(WorkoutPlan?, WorkoutDay?)>(
+        context: context,
+        isScrollControlled: true,
+        builder: (context) => SafeArea(
+            child: ConstrainedBox(
+                constraints: BoxConstraints(
+                    maxHeight: MediaQuery.sizeOf(context).height * .8),
+                child: ListView(
+                    shrinkWrap: true,
+                    padding: const EdgeInsets.all(20),
+                    children: [
+                      const WorkoutLabel('Add to routine',
+                          style: TextStyle(
+                              fontSize: 22, fontWeight: FontWeight.w600)),
+                      ListTile(
+                          leading: const Icon(Icons.add),
+                          title: const WorkoutLabel('Create routine'),
+                          onTap: () => Navigator.pop(context, (null, null))),
+                      for (final p in plans)
+                        for (final d in p.days)
+                          ListTile(
+                              title: WorkoutLabel(d.name),
+                              subtitle: WorkoutLabel(p.name),
+                              onTap: () => Navigator.pop(context, (p, d)))
+                    ]))));
+    if (choice == null || !context.mounted) return;
+    int? clientID = choice.$1?.clientID;
+    if (coach && clientID == null) {
+      final clients =
+          workoutRows((await WorkoutService.get('/clients'))['data']);
+      if (!context.mounted) return;
+      clientID = await workoutSheet<int>(
+          context: context,
+          builder: (context) => SafeArea(
+                  child: ListView(shrinkWrap: true, children: [
+                for (final client in clients)
+                  ListTile(
+                      title: WorkoutLabel(
+                          '${client['firstName']} ${client['lastName']}'),
+                      onTap: () =>
+                          Navigator.pop(context, workoutInt(client['id'])))
+              ])));
+      if (clientID == null || !context.mounted) return;
+    }
+    await Navigator.push(
+        context,
+        WorkoutRoute(
+            builder: (_) => WorkoutBuilderScreen(
+                clientID: clientID,
+                plan: choice.$1,
+                personal: !coach,
+                initialDayID: choice.$2?.id,
+                initialExercise: exercise)));
+  } catch (error) {
+    if (context.mounted) workoutError(context, error);
+  }
+}
+
 class WorkoutExerciseLibrary extends StatefulWidget {
   final bool selecting;
   final String? muscleGroup;
+  final Future<void> Function(BuildContext, Exercise)? onSelect;
   const WorkoutExerciseLibrary(
-      {super.key, this.selecting = false, this.muscleGroup});
+      {super.key, this.selecting = false, this.muscleGroup, this.onSelect});
   @override
   State<WorkoutExerciseLibrary> createState() => _WorkoutExerciseLibraryState();
 }
@@ -26,7 +105,9 @@ class _WorkoutExerciseLibraryState extends State<WorkoutExerciseLibrary> {
   Timer? _debounce;
   List<Exercise> _exercises = [];
   Map<String, dynamic> _filters = {};
+  bool _advanced = false;
   final Map<String, String?> _selected = {
+    'bodyPart': null,
     'muscleGroup': null,
     'equipment': null,
     'exerciseType': null,
@@ -38,6 +119,24 @@ class _WorkoutExerciseLibraryState extends State<WorkoutExerciseLibrary> {
   int _page = 1, _request = 0;
   bool _favorites = false, _bodyweight = false;
   int _total = 0;
+  int _chosenCount = 0;
+  bool _chosen = false;
+  bool _selectingExercise = false;
+
+  Future<void> _pick(Exercise exercise) async {
+    if (_selectingExercise) return;
+    if (widget.onSelect == null) {
+      Navigator.pop(context, exercise);
+      return;
+    }
+    _selectingExercise = true;
+    try {
+      await widget.onSelect!(context, exercise);
+    } finally {
+      _selectingExercise = false;
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -69,7 +168,9 @@ class _WorkoutExerciseLibraryState extends State<WorkoutExerciseLibrary> {
       final query = {
         'search': _search.text.trim(),
         'page': '$page',
+        if (widget.selecting) 'picker': 'true',
         if (_favorites) 'favorite': 'true',
+        if (_chosen) 'chosen': 'true',
         if (_bodyweight) 'bodyweight': 'true',
         if (profile != null && (profile['equipment'] as List).isNotEmpty)
           'equipmentList': (profile['equipment'] as List).join(','),
@@ -84,9 +185,13 @@ class _WorkoutExerciseLibraryState extends State<WorkoutExerciseLibrary> {
             workoutRows(result['data']).map(Exercise.fromJson).toList();
         _exercises = more ? [..._exercises, ...rows] : rows;
         _filters = Map<String, dynamic>.from(result['filters']);
+        if (result.containsKey('effectiveEquipment')) {
+          _selected['equipment'] = result['effectiveEquipment'] as String?;
+        }
         _more = result['hasMore'] == true;
         _page = page;
         _total = workoutInt(result['total']);
+        _chosenCount = workoutInt(result['chosenCount']);
         _offline = result['offline'] == true;
       });
     } catch (e) {
@@ -116,86 +221,181 @@ class _WorkoutExerciseLibraryState extends State<WorkoutExerciseLibrary> {
             setState(() => _selected[key] = v == '' ? null : v);
             _load();
           }));
+  Widget _chips(String key, String all) => SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(children: [
+        if (widget.selecting && (key == 'bodyPart' || key == 'muscleGroup'))
+          if (_chosenCount > 0 || _chosen)
+            Padding(
+                padding: const EdgeInsets.only(right: 6),
+                child: ChoiceChip(
+                    avatar: const Icon(Icons.star_rounded, size: 16),
+                    label: WorkoutLabel('Chosen ($_chosenCount)'),
+                    selected: _chosen,
+                    onSelected: (_) {
+                      setState(() {
+                        _chosen = true;
+                        _selected['bodyPart'] = null;
+                        _selected['muscleGroup'] = null;
+                        _selected['equipment'] = null;
+                      });
+                      _load();
+                    })),
+        for (final value in <String>[
+          '',
+          ...(_filters[key] as List? ?? []).map((v) => '$v')
+        ])
+          Padding(
+              padding: const EdgeInsets.only(right: 6),
+              child: ChoiceChip(
+                  label: WorkoutLabel(value.isEmpty
+                      ? all
+                      : workoutExerciseTitle(value.workoutTr(context))),
+                  selected: (key == 'equipment' || !_chosen) &&
+                      (_selected[key] ?? '') == value,
+                  onSelected: (_) {
+                    setState(() {
+                      _selected[key] = value.isEmpty ? null : value;
+                      if (key == 'bodyPart' || key == 'muscleGroup') {
+                        _chosen = false;
+                        _selected['equipment'] = null;
+                      }
+                    });
+                    _load();
+                  }))
+      ]));
   @override
   Widget build(BuildContext context) => WorkoutScaffold(
-      appBar: AppBar(title: const WorkoutLabel(WorkoutText.library), actions: [
-        IconButton(
-            tooltip: 'Muscle explorer'.workoutTr(context),
-            icon: const Icon(Icons.accessibility_new),
-            onPressed: () async {
-              final e = await Navigator.push<Exercise>(
-                  context,
-                  WorkoutRoute(
-                      builder: (_) =>
-                          WorkoutMuscleExplorer(selecting: widget.selecting)));
-              if (widget.selecting && e != null && context.mounted) {
-                Navigator.pop(context, e);
-              }
-            })
-      ]),
-      body: Column(children: [
-        if (_offline) const WorkoutOfflineNotice(),
-        Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(children: [
-              TextField(
-                  controller: _search,
-                  decoration: InputDecoration(
-                      labelText: (('Search exercises')).workoutTr(context),
-                      prefixIcon: const Icon(Icons.search_rounded)),
-                  onChanged: (_) {
-                    _debounce?.cancel();
-                    _debounce =
-                        Timer(const Duration(milliseconds: 300), () => _load());
-                  }),
-              const SizedBox(height: 12),
-              SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(children: [
-                    _filter('muscleGroup', 'Muscle group'),
-                    const SizedBox(width: 8),
-                    _filter('equipment', 'Equipment'),
-                    const SizedBox(width: 8),
-                    _filter('exerciseType', 'Type'),
-                    const SizedBox(width: 8),
-                    _filter('secondaryMuscle', 'Secondary muscle')
-                  ])),
-              Wrap(spacing: 8, children: [
-                FilterChip(
-                    label: const WorkoutLabel('Favorites'),
-                    selected: _favorites,
-                    onSelected: (v) {
-                      setState(() => _favorites = v);
-                      _load();
-                    }),
-                FilterChip(
-                    label: const WorkoutLabel('Bodyweight'),
-                    selected: _bodyweight,
-                    onSelected: (v) {
-                      setState(() => _bodyweight = v);
-                      _load();
-                    }),
-                ActionChip(
-                    label: const WorkoutLabel('Custom exercise'),
-                    avatar: const Icon(Icons.add, size: 16),
-                    onPressed: _custom)
-              ]),
-              Align(
-                  alignment: Alignment.centerLeft,
-                  child: WorkoutLabel('$_total exercises',
-                      style: const TextStyle(fontSize: 13)))
-            ])),
-        Expanded(
-            child: _error != null
-                ? WorkoutFailure(error: _error!, retry: _load)
+      appBar: widget.selecting
+          ? AppBar(
+              leading: widget.selecting
+                  ? IconButton(
+                      tooltip: 'Close'.workoutTr(context),
+                      onPressed: () => Navigator.pop(context),
+                      icon: const Icon(Icons.close_rounded))
+                  : null,
+              title: WorkoutLabel(
+                  widget.selecting ? 'Add exercise' : WorkoutText.library),
+              actions: [
+                  IconButton(
+                      tooltip: 'Muscle explorer'.workoutTr(context),
+                      icon: const Icon(Icons.accessibility_new),
+                      onPressed: () async {
+                        final e = await Navigator.push<Exercise>(
+                            context,
+                            WorkoutRoute(
+                                builder: (_) => WorkoutMuscleExplorer(
+                                    selecting: widget.selecting)));
+                        if (widget.selecting && e != null && context.mounted) {
+                          await _pick(e);
+                        }
+                      })
+                ])
+          : WorkoutPageHeader(
+              textScale: MediaQuery.textScalerOf(context).scale(14) / 14,
+              title: 'Exercises',
+              subtitle: '$_total exercises',
+              actions: [
+                  IconButton(
+                      tooltip: 'Filters'.workoutTr(context),
+                      onPressed: () => setState(() => _advanced = !_advanced),
+                      icon: const Icon(Icons.tune, size: 20))
+                ]),
+      body: CustomScrollView(slivers: [
+        if (_offline) const SliverToBoxAdapter(child: WorkoutOfflineNotice()),
+        SliverToBoxAdapter(
+            child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                child: Column(children: [
+                  TextField(
+                      controller: _search,
+                      decoration: InputDecoration(
+                          hintText: (('Search exercises')).workoutTr(context),
+                          prefixIcon:
+                              const Icon(Icons.search_rounded, size: 18)),
+                      onChanged: (_) {
+                        _debounce?.cancel();
+                        _debounce = Timer(
+                            const Duration(milliseconds: 300), () => _load());
+                      }),
+                  const SizedBox(height: 12),
+                  _chips(
+                      _filters.containsKey('bodyPart')
+                          ? 'bodyPart'
+                          : 'muscleGroup',
+                      'All'),
+                  if ((_filters['equipment'] as List? ?? []).length > 1) ...[
+                    const SizedBox(height: 4),
+                    _chips('equipment', 'Any equipment')
+                  ],
+                  if (widget.selecting)
+                    Row(children: [
+                      Expanded(
+                          child: WorkoutLabel('$_total exercises',
+                              style: const TextStyle(fontSize: 13))),
+                      TextButton.icon(
+                          onPressed: () =>
+                              setState(() => _advanced = !_advanced),
+                          icon: const Icon(Icons.tune, size: 16),
+                          label: const WorkoutLabel('Filters')),
+                    ]),
+                  if (_advanced) ...[
+                    SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Row(children: [
+                          _filter('muscleGroup', 'Target muscle'),
+                          const SizedBox(width: 8),
+                          _filter('exerciseType', 'Type'),
+                          const SizedBox(width: 8),
+                          _filter('secondaryMuscle', 'Secondary muscle')
+                        ])),
+                    Wrap(spacing: 8, children: [
+                      FilterChip(
+                          label: const WorkoutLabel('Favorites'),
+                          selected: _favorites,
+                          onSelected: (v) {
+                            setState(() => _favorites = v);
+                            _load();
+                          }),
+                      FilterChip(
+                          label: const WorkoutLabel('Bodyweight'),
+                          selected: _bodyweight,
+                          onSelected: (v) {
+                            setState(() => _bodyweight = v);
+                            _load();
+                          }),
+                    ]),
+                  ],
+                ]))),
+        if (!_chosen)
+          SliverToBoxAdapter(
+              child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Card(
+                      child: ListTile(
+                          leading: const Icon(Icons.auto_awesome_outlined),
+                          title: const WorkoutLabel('Create your own exercise'),
+                          subtitle: const WorkoutLabel('Name and body part'),
+                          trailing: const Icon(Icons.add),
+                          onTap: _custom)))),
+        SliverPadding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+            sliver: _error != null
+                ? SliverFillRemaining(
+                    hasScrollBody: false,
+                    child: WorkoutFailure(error: _error!, retry: _load))
                 : _loading && _exercises.isEmpty
-                    ? const Center(child: CircularProgressIndicator())
+                    ? const SliverFillRemaining(
+                        hasScrollBody: false,
+                        child: Center(child: CircularProgressIndicator()))
                     : _exercises.isEmpty
-                        ? const Center(
-                            child: WorkoutLabel(
-                                'No exercises match these filters.'))
-                        : ListView.builder(
-                            padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+                        ? SliverFillRemaining(
+                            hasScrollBody: false,
+                            child: Center(
+                                child: WorkoutLabel(_chosen
+                                    ? 'No chosen exercises match this search.'
+                                    : 'No exercises match these filters.')))
+                        : SliverList.builder(
                             itemCount: _exercises.length + 1,
                             itemBuilder: (context, i) {
                               if (i == _exercises.length) {
@@ -206,44 +406,116 @@ class _WorkoutExerciseLibraryState extends State<WorkoutExerciseLibrary> {
                                         ? OutlinedButton(
                                             onPressed: () => _load(more: true),
                                             child:
-                                                const WorkoutLabel('Load more'))
+                                                const WorkoutLabel('Show more'))
                                         : const SizedBox.shrink();
                               }
                               final e = _exercises[i];
-                              return Card(
-                                  child: ListTile(
-                                      leading: const Icon(
-                                          Icons.fitness_center_rounded),
-                                      title: WorkoutLabel(e.name),
-                                      subtitle: WorkoutLabel(
-                                          '${e.muscleGroup} · ${e.equipment}'),
-                                      onTap: () async {
-                                        await Navigator.push(
-                                            context,
-                                            WorkoutRoute(
-                                                builder: (_) =>
-                                                    WorkoutExerciseDetail(
-                                                        exercise: e)));
-                                        if (mounted) await _load();
-                                      },
-                                      trailing: widget.selecting
-                                          ? IconButton(
-                                              tooltip: (('Add exercise'))
-                                                  .workoutTr(context),
-                                              icon:
-                                                  const Icon(Icons.add_rounded),
-                                              onPressed: () =>
-                                                  Navigator.pop(context, e))
-                                          : const Icon(
-                                              Icons.chevron_right_rounded)));
+                              return Padding(
+                                  padding: const EdgeInsets.only(bottom: 8),
+                                  child: Material(
+                                      borderRadius: BorderRadius.circular(14),
+                                      color:
+                                          Theme.of(context).colorScheme.surface,
+                                      child: Column(children: [
+                                        ListTile(
+                                            contentPadding:
+                                                const EdgeInsets.symmetric(
+                                                    horizontal: 12,
+                                                    vertical: 2),
+                                            horizontalTitleGap: 12,
+                                            titleTextStyle: TextStyle(
+                                                fontFamily: 'SirvyaWorkout',
+                                                fontSize: 15,
+                                                color: Theme.of(context)
+                                                    .colorScheme
+                                                    .onSurface),
+                                            subtitleTextStyle: TextStyle(
+                                                fontFamily: 'SirvyaWorkout',
+                                                fontSize: 13,
+                                                color: Theme.of(context)
+                                                    .colorScheme
+                                                    .onSurfaceVariant),
+                                            leading: WorkoutExerciseThumbnail(
+                                                exercise: e),
+                                            title: WorkoutLabel(
+                                                workoutExerciseTitle(e.name),
+                                                maxLines: 2,
+                                                overflow:
+                                                    TextOverflow.ellipsis),
+                                            subtitle: Column(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
+                                                children: [
+                                                  WorkoutLabel(workoutExerciseTitle(
+                                                      '${e.muscleGroup.workoutTr(context)} · ${e.equipment.workoutTr(context)}')),
+                                                  if (e.bestWeight > 0)
+                                                    WorkoutLabel(
+                                                        'Best: ${workoutValue(WorkoutService.displayWeight(e.bestWeight))} ${WorkoutService.unit}',
+                                                        style: TextStyle(
+                                                            fontSize: 12,
+                                                            color: Theme.of(
+                                                                    context)
+                                                                .colorScheme
+                                                                .primary)),
+                                                  if (widget.selecting &&
+                                                      e.usageCount > 0)
+                                                    Icon(Icons.star_rounded,
+                                                        size: 14,
+                                                        color: Theme.of(context)
+                                                            .colorScheme
+                                                            .primary)
+                                                ]),
+                                            onTap: () async {
+                                              if (widget.selecting) {
+                                                await _pick(e);
+                                                return;
+                                              }
+                                              await Navigator.push(
+                                                  context,
+                                                  WorkoutRoute(
+                                                      builder: (_) =>
+                                                          WorkoutExerciseDetail(
+                                                              exercise: e)));
+                                              if (mounted) await _load();
+                                            },
+                                            trailing: widget.selecting
+                                                ? IconButton(
+                                                    tooltip: (('Add exercise'))
+                                                        .workoutTr(context),
+                                                    icon: const Icon(
+                                                        Icons.add_rounded),
+                                                    onPressed: () => _pick(e))
+                                                : TextButton.icon(
+                                                    style: TextButton.styleFrom(
+                                                        backgroundColor: Theme.of(context).colorScheme.primary.withValues(alpha: .15),
+                                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8))),
+                                                    icon: const Icon(Icons.add, size: 16),
+                                                    label: const WorkoutLabel('Plan'),
+                                                    onPressed: () => workoutAddExerciseToRoutine(context, e))),
+                                      ])));
                             }))
       ]));
   Future<void> _custom() async {
+    Exercise? created;
     final result = await workoutSheet<bool>(
         context: context,
         isScrollControlled: true,
-        builder: (_) => const _CustomExerciseForm());
-    if (result == true && mounted) await _load();
+        builder: (_) => _CustomExerciseForm(
+            prefill: _search.text.trim(),
+            onCreated: (exercise) => created = exercise));
+    if (result != true || !mounted) return;
+    if (widget.selecting && created != null) {
+      await _pick(created!);
+      return;
+    }
+    await _load();
+    if (mounted && created != null) {
+      await Navigator.push(
+          context,
+          WorkoutRoute(
+              builder: (_) => WorkoutExerciseDetail(exercise: created!)));
+      if (mounted) await _load();
+    }
   }
 }
 
@@ -350,7 +622,7 @@ class _WorkoutExerciseDetailState extends State<WorkoutExerciseDetail> {
         builder: (context) => AlertDialog(
                 title: const WorkoutLabel('Remove custom exercise?'),
                 content: const WorkoutLabel(
-                    'The exercise will be hidden from the library. Existing routines and workout history are kept.'),
+                    'The exercise will be removed from your personal routines. Logged workouts and Coach routines are kept.'),
                 actions: [
                   TextButton(
                       onPressed: () => Navigator.pop(context, false),
@@ -641,7 +913,9 @@ class _WorkoutExerciseDetailState extends State<WorkoutExerciseDetail> {
 
 class _CustomExerciseForm extends StatefulWidget {
   final Exercise? existing;
-  const _CustomExerciseForm({this.existing});
+  final String prefill;
+  final ValueChanged<Exercise>? onCreated;
+  const _CustomExerciseForm({this.existing, this.prefill = '', this.onCreated});
   @override
   State<_CustomExerciseForm> createState() => _CustomExerciseFormState();
 }
@@ -655,19 +929,32 @@ class _CustomExerciseFormState extends State<_CustomExerciseForm> {
       _secondary = TextEditingController(),
       _instructions = TextEditingController();
   String _type = 'reps';
-  bool _bodyweight = false, _saving = false;
+  String? _bodyPart;
+  bool _bodyweight = false, _saving = false, _advanced = false;
+  bool _manualType = false;
   @override
   void initState() {
     super.initState();
     final e = widget.existing;
-    _name.text = e?.name ?? '';
+    _name.text = e?.name ?? widget.prefill;
     _muscle.text = e?.muscleGroup ?? '';
+    _bodyPart = e == null
+        ? null
+        : e.bodyPart.isEmpty
+            ? e.muscleGroup
+            : e.bodyPart;
     _equipment.text = e?.equipment ?? '';
     _description.text = e?.description ?? '';
     _secondary.text = e?.secondaryMuscles.join(', ') ?? '';
     _instructions.text = e?.instructions.join('\n') ?? '';
     _type = e?.type ?? 'reps';
     _bodyweight = e?.isBodyweight ?? false;
+    _manualType = e != null;
+    _advanced = e != null &&
+        (e.isBodyweight ||
+            e.secondaryMuscles.isNotEmpty ||
+            e.instructions.isNotEmpty ||
+            e.type != (e.bodyPart == 'cardio' ? 'cardio' : 'reps'));
   }
 
   @override
@@ -692,8 +979,10 @@ class _CustomExerciseFormState extends State<_CustomExerciseForm> {
           child: TextFormField(
               controller: c,
               maxLength: maxLength,
-              decoration:
-                  InputDecoration(labelText: ((label)).workoutTr(context)),
+              decoration: InputDecoration(
+                  hintText: ((label)).workoutTr(context),
+                  counterText: '',
+                  fillColor: Theme.of(context).colorScheme.surface),
               validator: (v) => required && (v ?? '').trim().isEmpty
                   ? 'Enter $label'.workoutTr(context)
                   : null));
@@ -703,7 +992,8 @@ class _CustomExerciseFormState extends State<_CustomExerciseForm> {
     try {
       final body = {
         'name': _name.text,
-        'muscleGroup': _muscle.text,
+        'muscleGroup': _muscle.text.trim().isEmpty ? _bodyPart : _muscle.text,
+        'bodyPart': _bodyPart,
         'equipment': _equipment.text,
         'exerciseType': _type,
         'isBodyweight': _bodyweight,
@@ -719,7 +1009,15 @@ class _CustomExerciseFormState extends State<_CustomExerciseForm> {
             .toList()
       };
       if (widget.existing == null) {
-        await WorkoutService.post('/exercises', body);
+        final response = await WorkoutService.post('/exercises', body);
+        widget.onCreated?.call(Exercise.fromJson({
+          ...body,
+          'id': response['id'],
+          'equipment': _equipment.text.trim().isEmpty
+              ? (_bodyweight ? 'body weight' : 'custom')
+              : _equipment.text.trim(),
+          'externalSource': 'sirvya-custom'
+        }));
       } else {
         await WorkoutService.put('/exercises/${widget.existing!.id}', body);
       }
@@ -739,51 +1037,146 @@ class _CustomExerciseFormState extends State<_CustomExerciseForm> {
           child: SingleChildScrollView(
               child: Form(
                   key: _form,
-                  child: Column(mainAxisSize: MainAxisSize.min, children: [
-                    WorkoutLabel(
-                        widget.existing == null
-                            ? 'Custom exercise'
-                            : 'Edit exercise',
-                        style: const TextStyle(
-                            fontSize: 22, fontWeight: FontWeight.w600)),
-                    const SizedBox(height: 16),
-                    _field(_name, 'Exercise name'),
-                    _field(_muscle, 'Muscle group', maxLength: 80),
-                    _field(_equipment, 'Equipment',
-                        required: false, maxLength: 80),
-                    _field(_description, 'Description',
-                        required: false, maxLength: 5000),
-                    _field(_secondary, 'Secondary muscles (comma separated)',
-                        required: false, maxLength: 1600),
-                    DropdownButtonFormField<String>(
-                        initialValue: _type,
-                        decoration: InputDecoration(
-                            labelText: (('Type')).workoutTr(context)),
-                        items: const [
-                          DropdownMenuItem(
-                              value: 'reps',
-                              child: WorkoutLabel('Repetitions')),
-                          DropdownMenuItem(
-                              value: 'timed',
-                              child: WorkoutLabel('Timed exercise')),
-                          DropdownMenuItem(
-                              value: 'cardio', child: WorkoutLabel('Cardio'))
+                  child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        WorkoutLabel(
+                            widget.existing == null
+                                ? 'Create your own exercise'
+                                : 'Edit exercise',
+                            style: const TextStyle(
+                                fontSize: 20, fontWeight: FontWeight.w600)),
+                        const SizedBox(height: 12),
+                        WorkoutLabel(
+                            'Name and body part. Add a description to remember your setup.',
+                            style: TextStyle(
+                                fontSize: 13,
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurfaceVariant)),
+                        const SizedBox(height: 16),
+                        _field(_name, 'Exercise name'),
+                        FormField<String>(
+                            initialValue: _bodyPart,
+                            validator: (v) => v == null
+                                ? 'Choose a body part'.workoutTr(context)
+                                : null,
+                            builder: (field) => Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      SingleChildScrollView(
+                                          scrollDirection: Axis.horizontal,
+                                          child: Row(children: [
+                                            for (final part in {
+                                              'back',
+                                              'cardio',
+                                              'chest',
+                                              'lower arms',
+                                              'lower legs',
+                                              'neck',
+                                              'shoulders',
+                                              'upper arms',
+                                              'upper legs',
+                                              'waist',
+                                              if (_bodyPart != null) _bodyPart!
+                                            })
+                                              Padding(
+                                                  padding:
+                                                      const EdgeInsets.only(
+                                                          right: 6),
+                                                  child: ChoiceChip(
+                                                      label: WorkoutLabel(part),
+                                                      selected:
+                                                          _bodyPart == part,
+                                                      onSelected: (_) =>
+                                                          setState(() {
+                                                            _bodyPart = part;
+                                                            field.didChange(
+                                                                part);
+                                                            if (!_manualType) {
+                                                              _type = part ==
+                                                                      'cardio'
+                                                                  ? 'cardio'
+                                                                  : 'reps';
+                                                            }
+                                                          })))
+                                          ])),
+                                      if (field.errorText != null)
+                                        Text(field.errorText!,
+                                            style: TextStyle(
+                                                color: Theme.of(context)
+                                                    .colorScheme
+                                                    .error))
+                                    ])),
+                        const SizedBox(height: 12),
+                        if (_bodyPart == 'cardio')
+                          const WorkoutLabel('Cardio logs time and speed.'),
+                        TextFormField(
+                            controller: _description,
+                            minLines: 4,
+                            maxLines: 6,
+                            maxLength: 5000,
+                            decoration: InputDecoration(
+                                counterText: '',
+                                fillColor:
+                                    Theme.of(context).colorScheme.surface,
+                                hintText: 'Description (optional)'
+                                    .workoutTr(context))),
+                        TextButton.icon(
+                            onPressed: () =>
+                                setState(() => _advanced = !_advanced),
+                            icon: Icon(_advanced
+                                ? Icons.expand_less
+                                : Icons.expand_more),
+                            label: const WorkoutLabel('More exercise options')),
+                        if (_advanced) ...[
+                          _field(_muscle, 'Target muscle (optional)',
+                              required: false, maxLength: 80),
+                          _field(_equipment, 'Equipment',
+                              required: false, maxLength: 80),
+                          _field(
+                              _secondary, 'Secondary muscles (comma separated)',
+                              required: false, maxLength: 1600),
+                          DropdownButtonFormField<String>(
+                              initialValue: _type,
+                              decoration: InputDecoration(
+                                  labelText: (('Type')).workoutTr(context)),
+                              items: const [
+                                DropdownMenuItem(
+                                    value: 'reps',
+                                    child: WorkoutLabel('Repetitions')),
+                                DropdownMenuItem(
+                                    value: 'timed',
+                                    child: WorkoutLabel('Timed exercise')),
+                                DropdownMenuItem(
+                                    value: 'cardio',
+                                    child: WorkoutLabel('Cardio'))
+                              ],
+                              onChanged: (v) => setState(() {
+                                    _type = v!;
+                                    _manualType = true;
+                                  })),
+                          SwitchListTile(
+                              title: const WorkoutLabel('Bodyweight'),
+                              value: _bodyweight,
+                              onChanged: (v) =>
+                                  setState(() => _bodyweight = v)),
+                          TextFormField(
+                              controller: _instructions,
+                              maxLines: 4,
+                              decoration: InputDecoration(
+                                  labelText:
+                                      (('Instructions — one step per line'))
+                                          .workoutTr(context))),
                         ],
-                        onChanged: (v) => setState(() => _type = v!)),
-                    SwitchListTile(
-                        title: const WorkoutLabel('Bodyweight'),
-                        value: _bodyweight,
-                        onChanged: (v) => setState(() => _bodyweight = v)),
-                    TextFormField(
-                        controller: _instructions,
-                        maxLines: 4,
-                        decoration: InputDecoration(
-                            labelText: (('Instructions — one step per line'))
-                                .workoutTr(context))),
-                    const SizedBox(height: 16),
-                    ElevatedButton(
-                        onPressed: _saving ? null : _save,
-                        child:
-                            WorkoutLabel(_saving ? 'Saving…' : 'Save exercise'))
-                  ])))));
+                        const SizedBox(height: 16),
+                        SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton(
+                                onPressed: _saving ? null : _save,
+                                child: WorkoutLabel(
+                                    _saving ? 'Saving…' : 'Save exercise')))
+                      ])))));
 }

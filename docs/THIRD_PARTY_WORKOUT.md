@@ -2,7 +2,32 @@
 
 Exercise metadata and English/French/Spanish instructions from https://github.com/hasaneyldrm/exercises-dataset, revision 7455efae41b330c265e7cd4b78dfa848e7ce5ebd. 1324 records imported directly from upstream under MIT. Full license: [exercises-dataset-LICENSE.txt](licenses/exercises-dataset-LICENSE.txt). Stable identity is source + upstream ID. No media from that dataset is imported.
 
-openGym is a product/visual reference only; no AGPL source, translated strings, branding, fonts or assets are included. Native UI and behavior are independently implemented.
+Media exception rechecked against the current upstream
+[LICENSE](https://github.com/hasaneyldrm/exercises-dataset/blob/main/LICENSE)
+and [NOTICE](https://github.com/hasaneyldrm/exercises-dataset/blob/main/NOTICE.md)
+on 2026-10-05: MIT covers metadata, code and instruction translations;
+the exercise thumbnails/GIFs belong to Gym visual and require a separate
+license. The repository maintainer's permission does not grant downstream
+redistribution rights. Full catalog animation coverage remains blocked until
+SIRVYA has its own license or reviewed replacements. The existing MIT metadata
+import and reviewed Everkinetic assets remain intact.
+
+openGym is the product/visual reference; its AGPL application code, translated strings, branding and fonts are not included. Native UI and behavior are independently implemented. The separately MIT-licensed MuscleMap coordinates used by that reference are now bundled with their own notice, as described below.
+
+Muscle-map coordinate data by Melih Colpan is bundled in
+`assets/workout/anatomy/musclemap.json`, under MIT. The full notice is in
+`assets/workout/anatomy/LICENSE.txt`; provenance and the generated asset SHA-256
+are recorded in `provenance.json` in the same directory. The inspected source is
+the geometry-only export in the requested openGym commit
+`c42ba6b98e3776af5981f20c05ba392238799670`, whose `NOTICE.md` explicitly retains
+the geometry's MIT license. Upstream author/project:
+[MuscleMap](https://github.com/melihcolpan/MuscleMap),
+[upstream MIT license](https://github.com/melihcolpan/MuscleMap/blob/main/LICENSE).
+No upstream renderer or application code is included. Four coordinate views
+(male/female, front/back) are rendered, shaded and hit-tested with native Flutter
+code. The license is also registered in Flutter's license registry. Regenerate
+only this asset with `node backend/scripts/syncWorkoutAnatomy.mjs`; this command
+does not import or change exercise records or media.
 
 38 unmodified Everkinetic PNG illustrations were obtained from the individual
 image entries in the [wger API](https://wger.de/api/v2/exerciseimage/) on

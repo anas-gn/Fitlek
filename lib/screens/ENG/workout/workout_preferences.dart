@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../services/workout_service.dart';
+import '../../../services/notification_service.dart';
+import 'package:flutter/foundation.dart';
 import 'workout_ui.dart';
 
 class WorkoutPreferencesScreen extends StatefulWidget {
@@ -192,6 +194,8 @@ class _WorkoutPreferencesScreenState extends State<WorkoutPreferencesScreen> {
                             child: Column(children: [
                               _choice('unit', 'Load units',
                                   {'kg': 'Kilograms', 'lb': 'Pounds'}),
+                              _choice('bodyFigure', 'Muscle figure',
+                                  {'male': 'Male', 'female': 'Female'}),
                               _choice('view', 'Workout view', {
                                 'cards': 'Exercise cards',
                                 'compact': 'Compact set rows',
@@ -219,6 +223,25 @@ class _WorkoutPreferencesScreenState extends State<WorkoutPreferencesScreen> {
                       _switch('timerSound', 'Timer sound'),
                       _switch('timerVibration', 'Timer vibration'),
                       _switch('timerFlash', 'Flash when rest finishes'),
+                      if (!kIsWeb &&
+                          {TargetPlatform.android, TargetPlatform.iOS}
+                              .contains(defaultTargetPlatform))
+                        ListTile(
+                            title:
+                                const WorkoutLabel('Background timer alerts'),
+                            subtitle: const WorkoutLabel(
+                                'Enable alerts when the app is in the background.'),
+                            trailing:
+                                const Icon(Icons.notifications_active_outlined),
+                            onTap: () async {
+                              final enabled = await NotificationService.instance
+                                  .requestWorkoutTimerAlerts();
+                              if (!context.mounted) return;
+                              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                                  content: WorkoutLabel(enabled
+                                      ? 'Background timer alerts enabled'
+                                      : 'Check timer alerts in your device notification permissions.')));
+                            }),
                       _switch('keepAwake', 'Keep screen awake during workouts')
                     ])),
                     Card(

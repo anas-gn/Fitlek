@@ -502,7 +502,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 token: widget.token,
                 onLogout: widget.onLogout,
               ),
-              const WorkoutHomeScreen(),
             ],
           ),
         ],
@@ -1289,7 +1288,8 @@ const SizedBox(width: 8),
         Positioned(
           top: -8,
           child: GestureDetector(
-            onTap: () => setState(() => _navIndex = 4),
+            onTap: () => Navigator.push(context,
+                MaterialPageRoute(builder: (_) => const WorkoutHomeScreen())),
             child: Container(
               width: 70,
               height: 66,

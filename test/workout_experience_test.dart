@@ -143,7 +143,8 @@ void main() {
       await tester.pumpWidget(MaterialApp(
           theme: AppTheme.light, home: const WorkoutProgressScreen()));
       await tester.pumpAndSettle();
-      expect(find.text('30 days'), findsOneWidget);
+      expect(find.text('Activity — last 12 months · by time trained'),
+          findsOneWidget);
       expect(tester.takeException(), null);
       await tester.pumpWidget(const SizedBox.shrink());
     }, () => client);

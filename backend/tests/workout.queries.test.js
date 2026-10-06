@@ -18,9 +18,10 @@ test('batch plan reads preserve plan/day/slot identity and use two queries',asyn
 
 test('batch set and previous-performance reads retain client and chronology restrictions',async()=>{
   const calls=[];
-  const conn={query:async(sql,args)=>{calls.push({sql,args});return [[{exerciseID:3,workoutSessionID:2,details:'{"phase":"warmup"}'}]];}};
+  const conn={query:async(sql,args)=>{calls.push({sql,args});return [[{exerciseID:3,workoutSessionID:2,workoutExerciseID:7,prescription:'{"exercises":[{"id":7,"exerciseType":"timed"}]}',details:'{"phase":"warmup"}'}]];}};
   const sets=await readSessionSets(conn,[2,4]);assert.equal(sets[0].details.phase,'warmup');
   const previous=await readPreviousPerformance(conn,{id:9,clientID:42,startedAt:'2024-01-01',prescription:{exercises:[{exerciseID:3},{exerciseID:3},{exerciseID:4}]}});
   assert.equal(calls.length,2);assert.deepEqual(calls[1].args,[42,[3,4],42,'2024-01-01','2024-01-01',9]);
   assert.match(calls[1].sql,/s2.id<\?/);assert.equal(previous[3].length,1);assert.deepEqual(previous[4],[]);
+  assert.equal(previous[3][0].exerciseType,'timed');assert.equal(previous[3][0].prescription,undefined);
 });

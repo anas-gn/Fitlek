@@ -1,5 +1,6 @@
 import {json} from './workoutDomain.js';
 import {dailyReminderKey} from './workoutExperience.js';
+import {readWeeklyDays} from './workoutQueries.js';
 
 const localDay = (date, timeZone) => new Intl.DateTimeFormat('en-CA', {
   timeZone, year:'numeric', month:'2-digit', day:'2-digit'
@@ -27,7 +28,7 @@ export async function dispatchWorkoutReminders(db,notify,now=new Date(),{checkDa
     const date=key.slice(6);
     if(await trainedToday(db,row.userID,date,p.timeZone,now))continue;
     const [override]=await db.query('SELECT userID FROM workout_schedule_dates WHERE userID=? AND workoutDate=?',[row.userID,date]);
-    const [days]=await db.query(`SELECT d.name FROM workout_days d JOIN workout_plans p ON p.id=d.workoutPlanID WHERE p.clientID=? AND p.status='assigned' AND ${override.length?'EXISTS(SELECT 1 FROM workout_schedule sc WHERE sc.userID=p.clientID AND sc.workoutDayID=d.id AND sc.workoutDate=?)':'d.dayOfWeek=?'} AND (p.coachID IS NULL OR EXISTS(SELECT 1 FROM coachclients cc WHERE cc.coachID=p.coachID AND cc.clientID=p.clientID)) ORDER BY d.sortOrder LIMIT 5`,[row.userID,override.length?date:weekday]);
+    const days=override.length?(await db.query(`SELECT d.name FROM workout_days d JOIN workout_plans p ON p.id=d.workoutPlanID WHERE p.clientID=? AND p.status='assigned' AND EXISTS(SELECT 1 FROM workout_schedule sc WHERE sc.userID=p.clientID AND sc.workoutDayID=d.id AND sc.workoutDate=?) AND (p.coachID IS NULL OR EXISTS(SELECT 1 FROM coachclients cc WHERE cc.coachID=p.coachID AND cc.clientID=p.clientID)) ORDER BY d.sortOrder LIMIT 5`,[row.userID,date]))[0]:(await readWeeklyDays(db,row.userID)).filter(d=>Number(d.dayOfWeek)===weekday).slice(0,5);
     if(!days.length)continue;
     await db.query(`INSERT IGNORE INTO workout_alerts (userID,alertKey,dueAt,title,body) VALUES (?,?,?,'SIRVYA Workout',?)`,[row.userID,key,timestamp,days.map(d=>d.name).join(' + ').slice(0,500)]);
   }
