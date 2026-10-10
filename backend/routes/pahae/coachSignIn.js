@@ -12,11 +12,11 @@ router.post('/', async (req, res) => {
   }
   try {
     const [rows] = await pool.query(
-      `SELECT u.id, u.firstName, u.lastName, u.email, u.passwordHash, u.role,
+      `SELECT u.id, u.firstName, u.lastName, u.email, u.passwordHash, u.role, u.tokenVersion,
               u.avatarUrl, u.isApproved, u.gender,
               cp.invitationCode, cp.earnedPoints, cp.totalInvitations
        FROM users u
-       LEFT JOIN coachProfiles cp ON cp.userID = u.id
+       LEFT JOIN coachprofiles cp ON cp.userID = u.id
        WHERE u.email = ? AND u.role = 'coach'`,
       [email]
     );
@@ -42,7 +42,7 @@ router.post('/', async (req, res) => {
       return res.status(403).json({ message: 'Your account has been banned.' });
     }
     const token = jwt.sign(
-      { id: coach.id, role: 'coach' },
+      { id: coach.id, role: 'coach', tokenVersion: coach.tokenVersion },
       process.env.JWT_SECRET,
       { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
     );

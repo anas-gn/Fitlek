@@ -183,6 +183,7 @@ class ApiService {
     String path,
     Map<String, dynamic> body, {
     bool auth = true,
+    Duration timeout = const Duration(seconds: 15),
   }) async {
     try {
       final headers = await _headers(auth: auth);
@@ -192,7 +193,7 @@ class ApiService {
 
       final response = await http
           .post(uri, headers: headers, body: jsonEncode(body))
-          .timeout(const Duration(seconds: 15));
+          .timeout(timeout);
 
       if (kDebugMode) {
         debugPrint('POST $path -> ${response.statusCode}');

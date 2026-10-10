@@ -2,6 +2,11 @@ import { readFile } from 'node:fs/promises';
 import exercises from '../data/workoutExercises.js';
 
 export async function ensureWorkoutSchema(db) {
+  await db.query(`CREATE TABLE IF NOT EXISTS workout_backup_restores (
+    userID BIGINT UNSIGNED NOT NULL, fingerprint CHAR(64) NOT NULL,
+    restoredAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY(userID,fingerprint), FOREIGN KEY(userID) REFERENCES users(id) ON DELETE CASCADE
+  ) ENGINE=InnoDB`);
   const sql = await readFile(new URL('../migrations/2026_sirvya_workout.sql', import.meta.url), 'utf8');
   for (const statement of sql.split(';').map(s => s.trim()).filter(Boolean)) await db.query(statement);
   await db.query('ALTER TABLE workout_plans MODIFY coachID BIGINT UNSIGNED NULL');

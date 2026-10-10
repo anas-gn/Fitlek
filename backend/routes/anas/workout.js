@@ -6,6 +6,7 @@ import {defaultWorkoutPreferences, validatePreferences, nextTarget, balancePrefe
 import {buildTrainingStats,scheduleAdherence} from '../../services/workoutStats.js';
 import {readPlanDetails,readSessionSets,readPreviousPerformance,readWeeklyDays} from '../../services/workoutQueries.js';
 import {installWorkoutMedia} from '../../services/workoutMedia.js';
+import {installWorkoutBackup} from '../../services/workoutBackup.js';
 import {installWorkoutHistoryTransfer} from '../../services/workoutHistoryTransfer.js';
 
 // Dependencies are injectable so authorization and transaction behavior can be tested.
@@ -91,7 +92,7 @@ export function createWorkoutRouter(db, {ready = Promise.resolve(), notify = asy
         (!req.body || typeof req.body!=='object' || Array.isArray(req.body)))fail('invalid_workout');
     next();
   }));
-  installWorkoutHistoryTransfer(router,db,{run,transaction,visibleExercise,clientScope});
+  const historyTransfer=installWorkoutHistoryTransfer(router,db,{run,transaction,visibleExercise,clientScope});
 
   router.get('/exercises', run(async (req, res) => {
     const search = text(req.query.search, 160) || '';
@@ -265,13 +266,14 @@ export function createWorkoutRouter(db, {ready = Promise.resolve(), notify = asy
   const savePlan = async (req, res, updating, imported = null) => {
     if(req.user.role==='client' && req.body.clientID!=null && integer(req.body.clientID)!==Number(req.user.id))fail('unauthorized_client',403);
     const body = validatePlan({...req.body,clientID:req.user.role==='client'?req.user.id:req.body.clientID},{allowEmptyRoutine:req.user.role==='client'});
-    const result = await transaction(async conn => {
+    const commit=req.backupConnection ? fn=>fn(req.backupConnection) : transaction;
+    const result = await commit(async conn => {
       if(req.user.role==='coach')await linked(conn, req.user.id, body.clientID);
       if(imported){
         const ids=new Map();
         for(const [placeholder,e] of imported){
           const [matches]=await conn.query('SELECT id FROM exercises WHERE externalSource=? AND externalId=? AND ownerID IS NULL AND isPrivate=0',[e.externalSource,e.externalId]);
-          let id=matches[0]?.id;
+          let id=req.backupExerciseIDs?.get(JSON.stringify([e.externalSource,e.externalId])) ?? matches[0]?.id;
           if(!id && e.externalSource==='sirvya-custom'){
             const [[same]]=await conn.query('SELECT id FROM exercises WHERE ownerID=? AND isPrivate=1 AND LOWER(name)=LOWER(?) AND COALESCE(bodyPart,muscleGroup)=?',[req.user.id,e.name,e.bodyPart??e.muscleGroup]);
             id=same?.id;
@@ -385,7 +387,7 @@ export function createWorkoutRouter(db, {ready = Promise.resolve(), notify = asy
         exercises.push({...config,exerciseID:id});
       }days.push({...day,exercises});
     }
-    req.body={name:input.name,description:input.description,status:req.programImport && req.user.role==='client' && days.length && days.every(d=>d.exercises.length)?'assigned':'draft',clientID:req.user.role==='client'?req.user.id:req.body.clientID,days};
+    req.body={name:input.name,description:input.description,status:req.backupStatus ?? (req.programImport && req.user.role==='client' && days.length && days.every(d=>d.exercises.length)?'assigned':'draft'),clientID:req.user.role==='client'?req.user.id:req.body.clientID,days};
     await savePlan(req,res,false,imported);
   };
   router.post('/plans/import',run(importPlan));
@@ -625,13 +627,17 @@ export function createWorkoutRouter(db, {ready = Promise.resolve(), notify = asy
     });res.json(result);
   }));
   router.put('/sessions/:id/rest-alert',requireRole('client'),run(async(req,res)=>{
-    const s=await sessionAccess(db,req.user,req.params.id);
-    if(s.status!=='active')fail('workout_closed',409);
     if(req.body.kind!=null&&!['rest','work'].includes(req.body.kind))fail('invalid_workout');
     const seconds=req.body.seconds==null?0:integer(req.body.seconds,0,86400);
     const alertBody=req.body.kind==='work'?'Timed set complete':'Rest complete — ready for your next set';
-    if(!seconds)await db.query('DELETE FROM workout_alerts WHERE userID=? AND alertKey=?',[req.user.id,`rest:${s.id}`]);
-    else await db.query(`INSERT INTO workout_alerts (userID,sessionID,alertKey,dueAt,title,body) VALUES (?,?,?,DATE_ADD(UTC_TIMESTAMP(),INTERVAL ? SECOND),'SIRVYA Workout',?) ON DUPLICATE KEY UPDATE dueAt=VALUES(dueAt),body=VALUES(body),deliveredAt=NULL,claimedAt=NULL`,[req.user.id,s.id,`rest:${s.id}`,seconds,alertBody]);
+    await transaction(async conn=>{
+      // Serialize with finish/cancel so a delayed request cannot recreate an
+      // alert after the completion transaction has removed it.
+      const s=await sessionAccess(conn,req.user,req.params.id,true);
+      if(s.status!=='active'&&seconds>0)fail('workout_closed',409);
+      if(!seconds)await conn.query('DELETE FROM workout_alerts WHERE userID=? AND alertKey=?',[req.user.id,`rest:${s.id}`]);
+      else await conn.query(`INSERT INTO workout_alerts (userID,sessionID,alertKey,dueAt,title,body) VALUES (?,?,?,DATE_ADD(UTC_TIMESTAMP(),INTERVAL ? SECOND),'SIRVYA Workout',?) ON DUPLICATE KEY UPDATE dueAt=VALUES(dueAt),body=VALUES(body),deliveredAt=NULL,claimedAt=NULL`,[req.user.id,s.id,`rest:${s.id}`,seconds,alertBody]);
+    });
     res.json({saved:true});
   }));
   router.put('/sessions/:id', requireRole('client'), run(async (req, res) => {
@@ -740,5 +746,6 @@ export function createWorkoutRouter(db, {ready = Promise.resolve(), notify = asy
       weeklyStreak:all.currentWeeklyStreak,bodyweightDelta30:weight30.length>1?Number(weight30[0].weight)-Number(weight30.at(-1).weight):null},
       yearActivity:all.activity,bodyweight:bodyweight.reverse(),bodyweightGoal:prefs?json(prefs.preferences).bodyweightGoal:null,plannedDaysPerWeek:planned.size,adherence});
   }));
+  installWorkoutBackup(router,db,{run,transaction,visibleExercise,importPlan,...historyTransfer});
   return router;
 }

@@ -45,7 +45,7 @@ router.post('/', requireAuth, requireRole('manager'), upload.single('certificate
     const userId = userResult.insertId;
     const invitationCode = generateInvitationCode(userId);
     await conn.query(
-      `INSERT INTO coachProfiles (userID, bio, instagramPage, certificateUrl, invitationCode)
+      `INSERT INTO coachprofiles (userID, bio, instagramPage, certificateUrl, invitationCode)
        VALUES (?, ?, ?, ?, ?)`,
       [userId, bio, instagramPage, req.file.buffer, invitationCode]
     );

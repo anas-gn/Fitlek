@@ -1,5 +1,7 @@
+import {ensureAuthSecuritySchema} from './authSecuritySchema.js';
 // Repair older/partially migrated SIRVYA databases without replacing accounts.
 export async function ensureGoogleAuthSchema(db) {
+  await ensureAuthSecuritySchema(db);
   const [columns] = await db.query(`
     SELECT COLUMN_NAME, COLUMN_TYPE, IS_NULLABLE, COLLATION_NAME
     FROM information_schema.COLUMNS

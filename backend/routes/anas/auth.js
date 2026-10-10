@@ -5,10 +5,15 @@ import bcrypt from 'bcrypt';
 import admin from '../../config/firebase.js';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
+import {firebaseAuthFailure} from '../../services/firebaseAuthFailure.js';
 import { sendOTPEmail, resend } from '../../config/resend.js';
-import { requireAuth } from '../../middleware/auth.js';
+import { requireAuth, requireRole } from '../../middleware/auth.js';
 
 const JWT_SECRET = process.env.JWT_SECRET;
+import {createPasswordResetRouter} from './passwordReset.js';
+import {requestLimit} from '../../middleware/requestLimit.js';
+router.use(createPasswordResetRouter(db, {sendCode: sendOTPEmail}));
+router.use(['/login', '/send-signup-otp', '/verify-signup-otp'], requestLimit({limit: 30, windowMs: 15 * 60000}));
 
 // Coach-to-Coach referral reward (backend-controlled â€” never sent by the client).
 const REFERRAL_REWARD_POINTS = 40;
@@ -64,6 +69,8 @@ router.get('/validate-referral', async (req, res) => {
 // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 router.post('/register', async (req, res) => {
   const { firstName, lastName, email, password, gender, role = 'client', advisorID, acceptedTerms, termsAccepted } = req.body;
+
+  if (!['client', 'coach', 'advisor'].includes(role)) return res.status(400).json({error: 'Invalid registration role'});
 
   // Validation des champs obligatoires
   if (!firstName || !lastName || !email || !password || !gender) {
@@ -215,7 +222,7 @@ router.post('/login', async (req, res) => {
     }
 
     // CrÃ©er les tokens
-    const accessToken = jwt.sign({ id: user.id, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
+    const accessToken = jwt.sign({ id: user.id, role: user.role, tokenVersion: user.tokenVersion ?? 0 }, JWT_SECRET, { expiresIn: '7d' });
     const refreshToken = crypto.randomBytes(64).toString('hex');
     const expiresAt = new Date(Date.now() + 30 * 86400000);
 
@@ -261,12 +268,12 @@ router.post('/refresh', async (req, res) => {
       return res.status(401).json({ error: 'Invalid or expired token' });
     }
 
-    const [users] = await db.query('SELECT id, role FROM users WHERE id=?', [rows[0].userID]);
+    const [users] = await db.query('SELECT id, role, tokenVersion FROM users WHERE id=?', [rows[0].userID]);
     if (!users.length) {
       return res.status(401).json({ error: 'User not found' });
     }
 
-    const accessToken = jwt.sign({ id: users[0].id, role: users[0].role }, JWT_SECRET, { expiresIn: '7d' });
+    const accessToken = jwt.sign({ id: users[0].id, role: users[0].role, tokenVersion: users[0].tokenVersion }, JWT_SECRET, { expiresIn: '7d' });
     res.json({ accessToken });
   } catch (err) { 
     res.status(500).json({ error: err.message }); 
@@ -293,59 +300,18 @@ router.post('/logout', async (req, res) => {
 // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // POST /auth/forgot-password - Demande de rÃ©initialisation de mot de passe
 // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-router.post('/forgot-password', async (req, res) => {
-  try {
-    const { email } = req.body;
-    const [users] = await db.query('SELECT id FROM users WHERE email=?', [email]);
-    if (!users.length) {
-      return res.json({ message: 'If the email exists, a reset link was sent' });
-    }
 
-    const token = crypto.randomBytes(32).toString('hex');
-    const expiresAt = new Date(Date.now() + 3600000);
-    await db.query(
-      'INSERT INTO passwordresettokens (userID, token, expiresAt) VALUES (?,?,?)',
-      [users[0].id, token, expiresAt]
-    );
-    // TODO: send email with reset link
-    res.json({ message: 'Reset link sent', _devToken: token });
-  } catch (err) { 
-    res.status(500).json({ error: err.message }); 
-  }
-});
 
 // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // POST /auth/reset-password - RÃ©initialise le mot de passe
 // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-router.post('/reset-password', async (req, res) => {
-  try {
-    const { token, newPassword } = req.body;
-    if (!token || !newPassword) {
-      return res.status(400).json({ error: 'Token and password required' });
-    }
 
-    const [rows] = await db.query(
-      'SELECT * FROM passwordresettokens WHERE token=? AND usedAt IS NULL AND expiresAt > NOW()',
-      [token]
-    );
-    if (!rows.length) {
-      return res.status(400).json({ error: 'Invalid or expired token' });
-    }
-
-    const passwordHash = await bcrypt.hash(newPassword, 12);
-    await db.query('UPDATE users SET passwordHash=? WHERE id=?', [passwordHash, rows[0].userID]);
-    await db.query('UPDATE passwordresettokens SET usedAt=NOW() WHERE id=?', [rows[0].id]);
-    res.json({ message: 'Password reset successfully' });
-  } catch (err) { 
-    res.status(500).json({ error: err.message }); 
-  }
-});
 
 // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // POST /auth/sync-profiles - CrÃ©e les profils manquants (maintenance)
 // Utile pour synchroniser les anciens utilisateurs
 // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-router.post('/sync-profiles', async (req, res) => {
+router.post('/sync-profiles', requireAuth, requireRole('manager', 'admin'), async (req, res) => {
   try {
     // Trouvez les advisors sans profil
     const [advisorsNoProfile] = await db.query(
@@ -389,7 +355,7 @@ router.post('/sync-profiles', async (req, res) => {
 
 // Generate 6-digit numeric OTP
 function generateOTP() {
-  return Math.floor(100000 + Math.random() * 900000).toString();
+  return crypto.randomInt(100000, 1000000).toString();
 }
 
 // 1. POST /auth/send-signup-otp
@@ -453,98 +419,13 @@ router.post('/verify-signup-otp', async (req, res) => {
 });
 
 // 3. POST /auth/send-forgot-otp
-router.post('/send-forgot-otp', async (req, res) => {
-  try {
-    const { email } = req.body;
-    if (!email) return res.status(400).json({ error: 'Email is required' });
 
-    const normalizedEmail = email.trim().toLowerCase();
-
-    // Check if user exists
-    const [users] = await db.query('SELECT id FROM users WHERE LOWER(email) = ?', [normalizedEmail]);
-    if (!users.length) {
-      return res.status(404).json({ error: 'No account found with this email address.' });
-    }
-
-    const otp = generateOTP();
-    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
-
-    await db.query(
-      'INSERT INTO otp_verifications (email, otp, type, expiresAt) VALUES (?, ?, "forgot_password", ?)',
-      [normalizedEmail, otp, expiresAt]
-    );
-
-    await sendOTPEmail({ to: normalizedEmail, otp, type: 'forgot_password' });
-
-    res.json({ message: 'Password reset code sent to your email.' });
-  } catch (err) {
-    console.error('send-forgot-otp error:', err);
-    res.status(500).json({ error: 'Failed to send password reset email. ' + (err.message || '') });
-  }
-});
 
 // 4. POST /auth/verify-forgot-otp
-router.post('/verify-forgot-otp', async (req, res) => {
-  try {
-    const { email, otp } = req.body;
-    if (!email || !otp) return res.status(400).json({ error: 'Email and OTP code are required' });
 
-    const normalizedEmail = email.trim().toLowerCase();
-    const cleanOTP = otp.toString().trim();
-
-    const [rows] = await db.query(
-      `SELECT id FROM otp_verifications
-       WHERE LOWER(email) = ? AND otp = ? AND type = 'forgot_password' AND isVerified = 0 AND expiresAt > NOW()
-       ORDER BY id DESC LIMIT 1`,
-      [normalizedEmail, cleanOTP]
-    );
-
-    if (!rows.length) {
-      return res.status(400).json({ error: 'Invalid or expired verification code.' });
-    }
-
-    await db.query('UPDATE otp_verifications SET isVerified = 1 WHERE id = ?', [rows[0].id]);
-    res.json({ verified: true, message: 'Code verified successfully.' });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
 
 // 5. POST /auth/reset-password-otp
-router.post('/reset-password-otp', async (req, res) => {
-  try {
-    const { email, otp, newPassword } = req.body;
-    if (!email || !newPassword) {
-      return res.status(400).json({ error: 'Email and new password are required' });
-    }
 
-    const normalizedEmail = email.trim().toLowerCase();
-
-    // Verify OTP was validated
-    const [rows] = await db.query(
-      `SELECT id FROM otp_verifications
-       WHERE LOWER(email) = ? AND type = 'forgot_password' AND isVerified = 1 AND createdAt > DATE_SUB(NOW(), INTERVAL 30 MINUTE)
-       ORDER BY id DESC LIMIT 1`,
-      [normalizedEmail]
-    );
-
-    if (!rows.length) {
-      return res.status(400).json({ error: 'Verification session expired. Please request a new code.' });
-    }
-
-    const [users] = await db.query('SELECT id FROM users WHERE LOWER(email) = ?', [normalizedEmail]);
-    if (!users.length) {
-      return res.status(404).json({ error: 'User not found.' });
-    }
-
-    const passwordHash = await bcrypt.hash(newPassword, 12);
-    await db.query('UPDATE users SET passwordHash = ? WHERE id = ?', [passwordHash, users[0].id]);
-
-    res.json({ message: 'Password updated successfully.' });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
 
 // 6. POST /auth/fcm-token
 router.post('/fcm-token', requireAuth, async (req, res) => {
@@ -580,7 +461,9 @@ router.post('/google', async (req, res) => {
     decodedToken = await admin.auth().verifyIdToken(idToken);
   } catch (err) {
     console.error('Firebase token verification failed:', err.message);
-    return res.status(401).json({ error: 'Invalid or expired Google token. Please try again.' });
+    const failure = firebaseAuthFailure(err);
+    if (failure.status === 503) res.set('Retry-After', '30');
+    return res.status(failure.status).json(failure.body);
   }
 
   if (!decodedToken.email_verified) {
@@ -690,7 +573,7 @@ router.post('/google', async (req, res) => {
 
     // â”€â”€ 4. Generate JWT â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     const accessToken = jwt.sign(
-      { id: user.id, role: user.role },
+      { id: user.id, role: user.role, tokenVersion: user.tokenVersion ?? 0 },
       process.env.JWT_SECRET,
       { expiresIn: '7d' }
     );
@@ -767,7 +650,9 @@ router.post('/google', async (req, res) => {
     decodedToken = await admin.auth().verifyIdToken(idToken);
   } catch (err) {
     console.error('Firebase token verification failed:', err.message);
-    return res.status(401).json({ error: 'Invalid or expired Google token. Please try again.' });
+    const failure = firebaseAuthFailure(err);
+    if (failure.status === 503) res.set('Retry-After', '30');
+    return res.status(failure.status).json(failure.body);
   }
 
   if (!decodedToken.email_verified) {
@@ -877,7 +762,7 @@ router.post('/google', async (req, res) => {
 
     // ——— 4. Generate JWT —————————————————————————————————————————————————————————
     const accessToken = jwt.sign(
-      { id: user.id, role: user.role },
+      { id: user.id, role: user.role, tokenVersion: user.tokenVersion ?? 0 },
       process.env.JWT_SECRET,
       { expiresIn: '7d' }
     );
@@ -1162,4 +1047,3 @@ router.post('/confirm-delete-account', requireAuth, async (req, res) => {
 });
 
 export default router;
-

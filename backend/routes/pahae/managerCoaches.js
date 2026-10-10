@@ -11,7 +11,7 @@ router.get('/', requireAuth, requireRole('manager'), async (req, res) => {
       SELECT u.id, u.firstName, u.lastName, u.email, u.gender, u.avatarUrl, u.isApproved,
              cp.bio, cp.instagramPage, cp.invitationCode, cp.earnedPoints, cp.totalInvitations,
              (cp.certificateUrl IS NOT NULL) AS hasCertificate,
-             (SELECT COUNT(*) FROM coachClients cc WHERE cc.coachID = u.id) AS totalClients,
+             (SELECT COUNT(*) FROM coachclients cc WHERE cc.coachID = u.id) AS totalClients,
              (SELECT COUNT(*) FROM reservations r WHERE r.coachID = u.id) AS totalReservations,
              EXISTS(
                SELECT 1 FROM bans b
@@ -19,7 +19,7 @@ router.get('/', requireAuth, requireRole('manager'), async (req, res) => {
                  AND (b.expiresAt IS NULL OR b.expiresAt > NOW())
              ) AS isBanned
       FROM users u
-      JOIN coachProfiles cp ON cp.userID = u.id
+      JOIN coachprofiles cp ON cp.userID = u.id
       WHERE u.role = 'coach'`;
     const params = [];
     if (search) {

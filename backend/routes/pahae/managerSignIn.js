@@ -12,7 +12,7 @@ router.post('/', async (req, res) => {
   }
   try {
     const [[user]] = await pool.query(
-      `SELECT id, firstName, lastName, email, passwordHash, role, avatarUrl
+      `SELECT id, firstName, lastName, email, passwordHash, role, tokenVersion, avatarUrl
        FROM users WHERE email = ? AND role = 'manager'`,
       [email]
     );
@@ -20,7 +20,7 @@ router.post('/', async (req, res) => {
     const match = await bcrypt.compare(password, user.passwordHash);
     if (!match) return res.status(401).json({ message: 'Invalid credentials.' });
     const token = jwt.sign(
-      { id: user.id, role: 'manager' },
+      { id: user.id, role: 'manager', tokenVersion: user.tokenVersion },
       process.env.JWT_SECRET,
       { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
     );

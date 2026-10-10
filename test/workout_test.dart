@@ -105,7 +105,8 @@ void main() {
     await http.runWithClient(() async {
       await tester.pumpWidget(MaterialApp(
           theme: AppTheme.light,
-          home: const ActiveWorkoutScreen(sessionID: 7)));
+          home: ActiveWorkoutScreen(
+              sessionID: 7, clock: () => DateTime.utc(2026, 10, 10, 12))));
       await tester.pumpAndSettle();
       final weight = find.widgetWithText(TextFormField, 'Weight (kg)');
       await tester.enterText(weight, '65');

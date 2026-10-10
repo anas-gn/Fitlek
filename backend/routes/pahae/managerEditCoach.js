@@ -23,7 +23,7 @@ router.put('/:id', requireAuth, requireRole('manager'), async (req, res) => {
       [firstName, lastName, email, gender, id]
     );
     await conn.query(
-      `UPDATE coachProfiles SET bio = ?, instagramPage = ? WHERE userID = ?`,
+      `UPDATE coachprofiles SET bio = ?, instagramPage = ? WHERE userID = ?`,
       [bio, instagramPage, id]
     );
     await conn.commit();

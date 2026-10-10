@@ -1,6 +1,7 @@
 import express from 'express';
 const router = express.Router();
 import db from '../../config/db.js';
+import {ownIdentity} from '../../middleware/ownership.js';
 import fs from 'fs';
 import path from 'path';
 router.get('/', async (req, res) => {
@@ -64,9 +65,9 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-router.get('/me/profile', async (req, res) => {
+router.get('/me/profile', ownIdentity('userID',['coach']), async (req, res) => {
   try {
-    const { userID } = req.query;
+    const userID=req.user.id;
     const [rows] = await db.query('SELECT * FROM coachprofiles WHERE userID=?', [userID]);
     if (!rows.length) return res.status(404).json({ error: 'Profile not found' });
     res.json(rows[0]);
@@ -75,9 +76,10 @@ router.get('/me/profile', async (req, res) => {
   }
 });
 
-router.post('/me/profile', async (req, res) => {
+router.post('/me/profile', ownIdentity('userID',['coach']), async (req, res) => {
   try {
-    const { userID, bio, instagramPage, certificateUrl, invitationCode, advisorID, tel, price } = req.body;
+    const { bio, instagramPage, certificateUrl, invitationCode, advisorID, tel, price } = req.body;
+    const userID=req.user.id;
 
     if (!userID || !bio || !instagramPage || !certificateUrl || !invitationCode) {
       return res.status(400).json({ 
@@ -88,7 +90,7 @@ router.post('/me/profile', async (req, res) => {
     }
 
     await db.query(
-      'INSERT INTO coachprofiles (userID, bio, instagramPage, certificateUrl, invitationCode, advisorID , ville) VALUES (?,?,?,?,?,?)',
+      'INSERT INTO coachprofiles (userID, bio, instagramPage, certificateUrl, invitationCode, advisorID , ville) VALUES (?,?,?,?,?,?,?)',
       [userID, bio, instagramPage, certificateUrl, invitationCode, advisorID || null, req.body.ville || null]
     );
 
@@ -105,9 +107,10 @@ router.post('/me/profile', async (req, res) => {
   }
 });
 
-router.put('/me/profile', async (req, res) => {
+router.put('/me/profile', ownIdentity('userID',['coach']), async (req, res) => {
   try {
-    const { userID, bio, instagramPage, certificateUrl, tel, price, ville } = req.body;
+    const { bio, instagramPage, certificateUrl, tel, price, ville } = req.body;
+    const userID=req.user.id;
 
     const [existing] = await db.query('SELECT id FROM coachprofiles WHERE userID=?', [userID]);
     if (!existing.length) {
@@ -125,9 +128,9 @@ router.put('/me/profile', async (req, res) => {
   }
 });
 
-router.get('/me/stats', async (req, res) => {
+router.get('/me/stats', ownIdentity('userID',['coach']), async (req, res) => {
   try {
-    const { userID } = req.query;
+    const userID=req.user.id;
     const [rows] = await db.query(
       'SELECT totalInvitations, earnedPoints, tel, price, ville FROM coachprofiles WHERE userID=?', 
       [userID]
@@ -154,6 +157,7 @@ router.get('/:id/images', async (req, res) => {
 
 // DELETE /coaches/:id/images/:imageId
 router.delete('/:id/images/:imageId', async (req, res) => {
+  if(req.user.role!=='coach' || Number(req.params.id)!==Number(req.user.id)) return res.status(403).json({error:'Access denied.'});
   try {
     // Get the image url first to delete the file
     const [rows] = await db.query('SELECT urlImage FROM coachimages WHERE id = ? AND coachID = ?', [req.params.imageId, req.params.id]);

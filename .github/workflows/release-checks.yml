@@ -1,0 +1,120 @@
+name: Release checks
+on: [push, pull_request, workflow_dispatch]
+permissions:
+  contents: read
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    env:
+      CI: 'true'
+      DB_HOST: 127.0.0.1
+      DB_PORT: '3306'
+      DB_USER: root
+      DB_PASSWORD: ci-fixture-password
+      DB_NAME: sirvya_ci
+      JWT_SECRET: ci-fixture-only-secret-never-for-production-0123456789
+      RESEND_API_KEY: re_ci_fixture_only
+      WORKOUT_TEST_MYSQL: '1'
+      APP_TEST_MYSQL: '1'
+      AUTH_TEST_MYSQL: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - name: Start disposable MySQL
+        run: |
+          docker run --detach --name sirvya-ci-mysql -p 3306:3306 -e MYSQL_ROOT_PASSWORD="$DB_PASSWORD" -e MYSQL_ROOT_HOST=% -e MYSQL_DATABASE="$DB_NAME" mysql:8.4 --lower-case-table-names=1
+          for attempt in $(seq 1 30); do
+            if docker exec sirvya-ci-mysql mysqladmin ping -h 127.0.0.1 --silent; then exit 0; fi
+            sleep 2
+          done
+          docker logs sirvya-ci-mysql
+          exit 1
+      - run: npm ci
+        working-directory: backend
+      - run: node scripts/bootstrapCI.mjs
+        working-directory: backend
+      - run: node --import ./tests/providerFixtures.js --test --test-concurrency=1 tests/*.test.js
+        working-directory: backend
+  flutter:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.47.3'
+          cache: true
+      - name: Create optional local configuration asset
+        run: touch assets/config.env
+      - run: flutter pub get
+      - run: flutter analyze --no-pub
+      - run: flutter test --no-pub --concurrency=1
+      - run: flutter build web --release --no-pub --dart-define=API_BASE_URL=http://localhost:3201/api
+      - uses: actions/upload-artifact@v4
+        with:
+          name: workout-test-web
+          path: build/web
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - run: flutter build apk --debug --no-pub
+  journey:
+    needs: [backend, flutter]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      CI: 'true'
+      DB_HOST: 127.0.0.1
+      DB_PORT: '3306'
+      DB_USER: root
+      DB_PASSWORD: ci-fixture-password
+      DB_NAME: sirvya_ci_1
+      JWT_SECRET: ci-fixture-only-secret-never-for-production-0123456789
+      RESEND_API_KEY: re_ci_fixture_only
+      WORKOUT_REMINDERS_DISABLED: '1'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - uses: actions/download-artifact@v4
+        with:
+          name: workout-test-web
+          path: build/web
+      - name: Start disposable MySQL
+        run: |
+          docker run --detach --name sirvya-journey-mysql -p 3306:3306 -e MYSQL_ROOT_PASSWORD="$DB_PASSWORD" -e MYSQL_ROOT_HOST=% -e MYSQL_DATABASE="$DB_NAME" mysql:8.4 --lower-case-table-names=1
+          for attempt in $(seq 1 30); do
+            if docker exec sirvya-journey-mysql mysqladmin ping -h 127.0.0.1 --silent; then exit 0; fi
+            sleep 2
+          done
+          docker logs sirvya-journey-mysql
+          exit 1
+      - run: npm ci
+        working-directory: backend
+      - run: node scripts/bootstrapCI.mjs
+        working-directory: backend
+      - name: Start isolated headless Chrome
+        run: |
+          google-chrome --headless=new --no-sandbox --disable-gpu --remote-debugging-port=64425 --user-data-dir="$RUNNER_TEMP/workout-browser" > "$RUNNER_TEMP/workout-browser.log" 2>&1 &
+          for attempt in $(seq 1 15); do
+            if curl --fail --silent http://127.0.0.1:64425/json/version > /dev/null; then exit 0; fi
+            sleep 2
+          done
+          cat "$RUNNER_TEMP/workout-browser.log"
+          exit 1
+      - run: node --import ./tests/providerFixtures.js scripts/verifyWorkoutJourney.mjs
+        working-directory: backend
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: workout-journey-evidence
+          path: |
+            docs/verification/workout-live-journey.json
+            docs/verification/journey

@@ -47,7 +47,6 @@ app.*.map.json
 # Backend
 backend/node_modules
 backend/.env
-backend/package-lock.json
 
 # Root NodeJS / general ignores
 node_modules/
@@ -64,3 +63,6 @@ backend/uploads/
 backend.tar.gz
 sirvya_backup.sql
 android/.kotlin/
+android/key.properties
+*.jks
+*.keystore

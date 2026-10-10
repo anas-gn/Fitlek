@@ -1,12 +1,13 @@
 import express from 'express';
 const router = express.Router();
 import db from '../../config/db.js';
+import {ownIdentity} from '../../middleware/ownership.js';
 // ─── Routes spécifiques d'abord (/me avant /:userId) ───
 //
 // GET /advisors/me?userID=:id  — Profil de l'advisor actuel
-router.get('/me', async (req, res) => {
+router.get('/me', ownIdentity('userID',['advisor']), async (req, res) => {
   try {
-    const { userID } = req.query;
+    const userID=req.user.id;
     if (!userID) return res.status(400).json({ error: 'userID required' });
     const [rows] = await db.query(
       `SELECT ap.*, u.createdAt AS userCreatedAt
@@ -25,9 +26,10 @@ router.get('/me', async (req, res) => {
 });
 
 // POST /advisors/me  — Créer le profil advisor
-router.post('/me', async (req, res) => {
+router.post('/me', ownIdentity('userID',['advisor']), async (req, res) => {
   try {
-    const { userID, specialty, location, companyName } = req.body;
+    const { specialty, location, companyName } = req.body;
+    const userID=req.user.id;
     if (!userID || !specialty) return res.status(400).json({ error: 'userID and specialty required' });
     await db.query(
       'INSERT INTO advisorprofiles (userID, specialty, location, companyName) VALUES (?,?,?,?)',
@@ -38,9 +40,10 @@ router.post('/me', async (req, res) => {
 });
 
 // PUT /advisors/me  — Modifier le profil advisor
-router.put('/me', async (req, res) => {
+router.put('/me', ownIdentity('userID',['advisor']), async (req, res) => {
   try {
-    const { userID, specialty, location, companyName } = req.body;
+    const { specialty, location, companyName } = req.body;
+    const userID=req.user.id;
     if (!userID) return res.status(400).json({ error: 'userID required' });
     await db.query(
       'UPDATE advisorprofiles SET specialty=?, location=?, companyName=? WHERE userID=?',
@@ -54,6 +57,7 @@ router.put('/me', async (req, res) => {
 //
 // GET /advisors/:userId/coaches  — Coaches liés à cet advisor
 router.get('/:userId/coaches', async (req, res) => {
+  if (!['manager','admin'].includes(req.user.role) && !(req.user.role==='advisor' && Number(req.params.userId)===Number(req.user.id))) return res.status(403).json({error:'Access denied.'});
   try {
     const [rows] = await db.query(
       `SELECT u.id, u.firstName, u.lastName, u.avatarUrl,
@@ -75,6 +79,7 @@ router.get('/:userId/coaches', async (req, res) => {
 
 // GET /advisors/:advisorID/revenue  — Revenus par mois (6 derniers mois)
 router.get('/:advisorID/revenue', async (req, res) => {
+  if (!['manager','admin'].includes(req.user.role) && !(req.user.role==='advisor' && Number(req.params.advisorID)===Number(req.user.id))) return res.status(403).json({error:'Access denied.'});
   try {
     const [rows] = await db.query(
       `SELECT

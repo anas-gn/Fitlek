@@ -450,6 +450,14 @@ class WorkoutText {
               'This workout changed on another device. Reopen it before saving.',
           'invalid_effort': 'Use one effort scale: RPE or RIR.',
           'invalid_import': 'The history file contains invalid data.',
+          'empty_export': 'There are no workouts or measurements to export.',
+          'invalid_backup':
+              'The backup contains invalid data. Nothing was restored.',
+          'unsupported_backup': 'This backup version is not supported.',
+          'backup_too_large':
+              'This backup exceeds the supported size or record limits.',
+          'import_too_large':
+              'This file exceeds the supported import size. Choose a smaller export.',
           'invalid_import_date':
               'Check the dates and time zone in the history file.',
           'unsupported_import':

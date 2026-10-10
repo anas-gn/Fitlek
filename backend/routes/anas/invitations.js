@@ -1,4 +1,6 @@
 import express from 'express';
+import {ownIdentity} from '../../middleware/ownership.js';
+import safeCoachInvitations from '../pahae/coachInvitations.js';
 import db from '../../config/db.js';
 import { createAndSendNotification } from '../../services/pushNotificationService.js';
 
@@ -9,7 +11,7 @@ const router = express.Router();
 //  Le coach voit TOUTES ses invitations reçues
 //  (avec les infos de l'utilisateur invité)
 // ─────────────────────────────────────────────
-router.get('/me', async (req, res) => {
+router.get('/me', ownIdentity('coachID',['coach']), async (req, res) => {
   try {
     const { coachID } = req.query;
     if (!coachID) return res.status(400).json({ error: 'coachID required' });
@@ -42,7 +44,7 @@ router.get('/me', async (req, res) => {
 //  POST /invitations/use
 //  Le client utilise un code d'invitation
 // ─────────────────────────────────────────────
-router.post('/use', async (req, res) => {
+router.post('/use', ownIdentity('invitedUserID',['client']), async (req, res) => {
   try {
     const { invitationCode, invitedUserID } = req.body;
     if (!invitationCode || !invitedUserID)
@@ -84,7 +86,7 @@ router.post('/use', async (req, res) => {
 //  Le client envoie une invitation directe au coach
 //  (utilisé par CoachDetailScreen)
 // ─────────────────────────────────────────────
-router.post('/send', async (req, res) => {
+router.post('/send', ownIdentity('senderID',['client']), async (req, res) => {
   try {
     const { senderID, coachID } = req.body;
     if (!senderID || !coachID)
@@ -157,47 +159,12 @@ router.get('/received/:coachID', async (req, res) => {
 //  PATCH /invitations/:id/accept
 //  Le coach ACCEPTE l'invitation
 // ─────────────────────────────────────────────
-router.patch('/:id/accept', async (req, res) => {
-  try {
-    // Vérifie que l'invitation existe et est en "pending" ou "refused"
-    const [rows] = await db.query(
-      'SELECT * FROM invitations WHERE id = ? AND status IN ("pending", "refused")', 
-      [req.params.id]
-    );
-    if (!rows.length) 
-      return res.status(404).json({ error: 'Invitation introuvable ou déjà acceptée' });
-
-    const inv = rows[0];
-
-    // Client invitation reward (+20), separate from Coach-to-Coach referrals.
-    await db.query(
-      'UPDATE invitations SET status = "accepted", respondedAt = NOW(), pointsEarned = 20 WHERE id = ?',
-      [req.params.id]
-    );
-
-    await db.query(
-      'UPDATE coachprofiles SET earnedPoints = earnedPoints + 20 WHERE userID = ?',
-      [inv.coachID]
-    );
-
-    // Crée le lien coach-client
-    await db.query(
-      'INSERT IGNORE INTO coachclients (coachID, clientID) VALUES (?, ?)',
-      [inv.coachID, inv.invitedUserID]
-    );
-
-    res.json({
-      message: 'Invitation acceptée',
-      pointsAwarded: 20
-    });
-  } catch (err) { 
-    res.status(500).json({ error: err.message }); 
-  }
-});
+router.patch('/:id/accept', (req,res,next)=>safeCoachInvitations.handle(req,res,next));
 // GET /invitations/status/:coachID/:clientID
 router.get('/status/:coachID/:clientID', async (req, res) => {
   try {
     const { coachID, clientID } = req.params;
+    if(!((req.user.role==='coach' && Number(coachID)===Number(req.user.id)) || (req.user.role==='client' && Number(clientID)===Number(req.user.id)))) return res.status(403).json({error:'Access denied.'});
     const [rows] = await db.query(
       'SELECT status FROM invitations WHERE coachID = ? AND invitedUserID = ? LIMIT 1',
       [coachID, clientID]
@@ -212,28 +179,6 @@ router.get('/status/:coachID/:clientID', async (req, res) => {
 //  PATCH /invitations/:id/refuse
 //  Le coach REFUSE l'invitation
 // ─────────────────────────────────────────────
-router.patch('/:id/refuse', async (req, res) => {
-  try {
-    // Vérifie que l'invitation existe et est en "pending"
-    const [rows] = await db.query(
-      'SELECT * FROM invitations WHERE id = ? AND status = "pending"', 
-      [req.params.id]
-    );
-    if (!rows.length) 
-      return res.status(404).json({ error: 'Invitation introuvable ou déjà traitée' });
-
-    // Met à jour l'invitation
-    await db.query(
-      'UPDATE invitations SET status = "refused", respondedAt = NOW() WHERE id = ?', 
-      [req.params.id]
-    );
-
-    res.json({ 
-      message: 'Invitation refusée' 
-    });
-  } catch (err) { 
-    res.status(500).json({ error: err.message }); 
-  }
-});
+router.patch('/:id/refuse', (req,res,next)=>safeCoachInvitations.handle(req,res,next));
 
 export default router;

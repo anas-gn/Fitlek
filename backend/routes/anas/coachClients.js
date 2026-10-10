@@ -1,10 +1,11 @@
 import express from 'express';
 const router = express.Router();
 import db from '../../config/db.js';
+import {ownIdentity} from '../../middleware/ownership.js';
 // GET /coach-clients/me
-router.get('/me', async (req, res) => {
+router.get('/me', ownIdentity('coachID',['coach']), async (req, res) => {
   try {
-    const { coachID } = req.query;
+    const coachID=req.user.id;
     const requesterID = req.user.id;
     const [rows] = await db.query(
       `SELECT u.id, u.firstName, u.lastName, u.email, u.avatarUrl, cc.createdAt AS linkedAt
@@ -20,19 +21,13 @@ router.get('/me', async (req, res) => {
 });
 
 // POST /coach-clients
-router.post('/', async (req, res) => {
-  try {
-    const { coachID, clientID } = req.body;
-    if (!coachID || !clientID) return res.status(400).json({ error: 'coachID and clientID required' });
-    await db.query('INSERT IGNORE INTO coachclients (coachID, clientID) VALUES (?,?)', [coachID, clientID]);
-    res.status(201).json({ message: 'Client linked to coach' });
-  } catch (err) { res.status(500).json({ error: err.message }); }
-});
+router.post('/', (_req,res)=>res.status(410).json({error:'Create connections through an invitation accepted by the Coach.'}));
 
 // DELETE /coach-clients/:clientID
 router.delete('/:clientID', async (req, res) => {
   try {
-    const { coachID } = req.query;
+    const coachID=Number(req.query.coachID);
+    if(!((req.user.role==='coach' && coachID===Number(req.user.id)) || (req.user.role==='client' && Number(req.params.clientID)===Number(req.user.id)))) return res.status(403).json({error:'Access denied.'});
     await db.query(
       'DELETE FROM coachclients WHERE coachID=? AND clientID=?', [coachID, req.params.clientID]
     );

@@ -11,7 +11,7 @@ router.get('/', requireAuth, requireRole('manager'), async (req, res) => {
               cp.bio, cp.instagramPage,
               (cp.certificateUrl IS NOT NULL) AS hasCertificate
        FROM users u
-       JOIN coachProfiles cp ON cp.userID = u.id
+       JOIN coachprofiles cp ON cp.userID = u.id
        WHERE u.role = 'coach' AND u.isApproved = 0
        ORDER BY u.createdAt ASC`
     );
@@ -53,7 +53,7 @@ router.get('/:id/certificate', requireAuth, requireRole('manager'), async (req, 
   const { id } = req.params;
   try {
     const [[row]] = await pool.query(
-      `SELECT cp.certificateUrl FROM coachProfiles cp
+      `SELECT cp.certificateUrl FROM coachprofiles cp
        JOIN users u ON u.id = cp.userID
        WHERE u.id = ? AND u.role = 'coach' AND u.isApproved = 0`,
       [id]

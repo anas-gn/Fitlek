@@ -5,6 +5,8 @@ import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 import { requireAuth, requireRole } from '../../middleware/auth.js';
+import {ownIdentity} from '../../middleware/ownership.js';
+import {publicOrigin} from '../../config/runtime.js';
 
 const storage = multer.memoryStorage();
 const upload = multer({
@@ -19,7 +21,7 @@ const upload = multer({
   },
 });
 
-router.post('/avatar', requireAuth, requireRole('coach'), (req, res) => {
+router.post('/avatar', requireAuth, requireRole('coach'), ownIdentity(), (req, res) => {
   upload.single('avatar')(req, res, async (err) => {
     if (err) {
       console.error('Multer error:', err.message);
@@ -33,7 +35,7 @@ router.post('/avatar', requireAuth, requireRole('coach'), (req, res) => {
         fs.mkdirSync(uploadDir, { recursive: true });
       }
 
-      const filename = `avatar_${req.query.userID || req.user?.id || req.user?._id || Date.now()}.webp`;
+      const filename = `avatar_${req.user.id}.webp`;
       const filepath = path.join(uploadDir, filename);
       
       await sharp(req.file.buffer)
@@ -41,7 +43,7 @@ router.post('/avatar', requireAuth, requireRole('coach'), (req, res) => {
         .webp({ quality: 80 })
         .toFile(filepath);
 
-      const url = `${req.protocol}://${req.get('host')}/uploads/avatars/${filename}`;
+      const url = `${publicOrigin(req)}/uploads/avatars/${filename}`;
       console.log('✅ Uploaded local avatar:', url);
       res.json({ ok: true, url });
     } catch (e) {

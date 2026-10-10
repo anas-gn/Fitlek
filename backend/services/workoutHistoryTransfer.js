@@ -2,6 +2,7 @@ import {createHash,randomUUID} from 'node:crypto';
 import {requireRole} from '../middleware/auth.js';
 import {fail,integer,text,number,json,validateSet,validateConfiguration,exerciseForPrescription} from './workoutDomain.js';
 import {parseWorkoutCSV,parseBodyweightXML} from './workoutImport.js';
+import {readSessionSets} from './workoutQueries.js';
 
 export function installWorkoutHistoryTransfer(router,db,{run,transaction,visibleExercise,clientScope}){
   router.post('/history/import-preview',requireRole('client'),run(async(req,res)=>{
@@ -15,21 +16,30 @@ export function installWorkoutHistoryTransfer(router,db,{run,transaction,visible
     }
     res.json({...data,exercises:[...names.values()]});
   }));
-  router.post('/history/import',requireRole('client'),run(async(req,res)=>{
+  const importHistory=async(req,res)=>{
     const input=req.body;
-    if(input.format!=='sirvya-workout-history'||input.version!==1||!Array.isArray(input.sessions)||(!input.sessions.length&&!input.bodyweight?.length)||input.sessions.length>100)fail('invalid_import');
-    const result=await transaction(async conn=>{
+    if(input.format!=='sirvya-workout-history'||input.version!==1||(input.unit!=null&&input.unit!=='kg')||!Array.isArray(input.sessions)||(!input.sessions.length&&!input.bodyweight?.length)||input.sessions.length>1000)fail('invalid_import');
+    let totalSets=0;
+    for(const s of input.sessions){
+      if(!s||!Array.isArray(s.exercises)||s.exercises.length>50)fail('invalid_import');
+      for(const e of s.exercises){if(!e||!Array.isArray(e.sets)||e.sets.length>60)fail('invalid_import');totalSets+=e.sets.length;if(totalSets>50000)fail('import_too_large',413);}
+    }
+    const commit=req.backupConnection ? fn=>fn(req.backupConnection) : transaction;
+    const result=await commit(async conn=>{
       await conn.query('SELECT id FROM users WHERE id=? FOR UPDATE',[req.user.id]);
-      let imported=0,skipped=0,bodyweightImported=0;const ids=[];
+      let imported=0,skipped=0,bodyweightImported=0,bodyweightSkipped=0;const ids=[];
       if(input.bodyweight!=null){
         if(!Array.isArray(input.bodyweight)||input.bodyweight.length>1000)fail('invalid_import');
         for(const entry of input.bodyweight){
           if(!entry||typeof entry!=='object'||Array.isArray(entry))fail('invalid_import');
           const date=text(entry.recordedAt,10,true);const parsed=new Date(`${date}T12:00:00Z`);
           if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||Number.isNaN(parsed.getTime())||parsed.toISOString().slice(0,10)!==date||parsed>Date.now()+86400000)fail('invalid_import_date');
-          const weight=number(entry.weight,1,500);if(weight==null)fail('invalid_import');const note=text(entry.note,2000);
+          const value=number(entry.weight,1,500);if(value==null)fail('invalid_import');
+          // Match the existing DECIMAL(5,2) storage before checking identity.
+          // Converted Health pounds otherwise never equal the stored kg row.
+          const weight=Number(value.toFixed(2)),note=text(entry.note,2000);
           const [exists]=await conn.query('SELECT id FROM weighthistory WHERE clientID=? AND recordedAt=? AND weight=?',[req.user.id,date,weight]);
-          if(!exists.length){await conn.query('INSERT INTO weighthistory(clientID,recordedAt,weight,note) VALUES (?,?,?,?)',[req.user.id,date,weight,note]);bodyweightImported++;}
+          if(!exists.length){await conn.query('INSERT INTO weighthistory(clientID,recordedAt,weight,note) VALUES (?,?,?,?)',[req.user.id,date,weight,note]);bodyweightImported++;}else bodyweightSkipped++;
         }
       }
       for(const raw of input.sessions){
@@ -70,25 +80,37 @@ export function installWorkoutHistoryTransfer(router,db,{run,transaction,visible
         const [session]=await conn.query("INSERT INTO workout_sessions(workoutPlanID,clientID,prescription,status,startedAt,completedAt,durationSeconds,notes,excludedFromProgression) VALUES(?,?,?,'completed',?,?,?,?,?)",[plan.insertId,req.user.id,JSON.stringify({planName:name,dayName:name,sourceDayIDs:[],importSource:input.source??'SIRVYA',exercises}),startedAt,completedAt,durationSeconds,notes,raw.excludedFromProgression===true?1:0]);
         for(const {exercise:e,set:v} of actual)await conn.query('INSERT INTO workout_sets(workoutSessionID,workoutExerciseID,exerciseID,setNumber,reps,weight,durationSeconds,rpe,rir,details,completedAt) VALUES(?,?,?,?,?,?,?,?,?,?,?)',[session.insertId,e.id,e.exerciseID,v.setNumber,v.reps,v.weight,v.durationSeconds,v.rpe,v.rir,JSON.stringify(v.details),completedAt]);
         await conn.query('INSERT INTO workout_imports(userID,fingerprint,sessionID) VALUES(?,?,?)',[req.user.id,fingerprint,session.insertId]);imported++;ids.push(session.insertId);
-      }return {imported,skipped,ids,bodyweightImported};
+      }return {imported,skipped,ids,bodyweightImported,bodyweightSkipped};
     });res.status(201).json(result);
-  }));
-  router.get('/history/export',run(async(req,res)=>{
+  };
+  router.post('/history/import',requireRole('client'),run(importHistory));
+  const exportHistory=async(req,res)=>{
+    const conn=req.backupConnection??db;
     const clientID=await clientScope(req),page=integer(req.query.page??1,1,10000);
-    const [sessions]=await db.query("SELECT * FROM workout_sessions WHERE clientID=? AND status='completed' ORDER BY startedAt,id LIMIT 101 OFFSET ?",[clientID,(page-1)*100]);
+    const limit=integer(req.query.limit??100,1,100),offset=integer(req.query.offset??(page-1)*100,0,1000000),weightOffset=integer(req.query.weightOffset??(page-1)*100,0,1000000);
+    const dates=req.backupDates;
+    const dateFilter=dates?.length?' AND startedAt IN (?)':'';
+    const [sessions]=await conn.query("SELECT * FROM workout_sessions WHERE clientID=? AND status='completed'"+dateFilter+" ORDER BY startedAt,id LIMIT ? OFFSET ?",[clientID,...(dates?.length?[dates.map(v=>new Date(v))]:[]),limit+1,offset]);
+    const batch=sessions.slice(0,limit);
+    const allSets=await readSessionSets(conn,batch.map(s=>s.id));
+    const exerciseIDs=[...new Set(allSets.map(v=>Number(v.exerciseID)))];
+    const [sourceRows]=exerciseIDs.length?await conn.query('SELECT id,externalSource,externalId FROM exercises WHERE id IN (?)',[exerciseIDs]):[[]];
+    const sources=new Map(sourceRows.map(e=>[Number(e.id),{externalSource:e.externalSource,externalId:e.externalId}]));
     const result=[];
-    for(const s of sessions.slice(0,100)){
+    for(const s of batch){
       const p=json(s.prescription),entries=s.execution?json(s.execution):p.exercises;
-      const [sets]=await db.query('SELECT * FROM workout_sets WHERE workoutSessionID=? ORDER BY workoutExerciseID,setNumber',[s.id]);
+      const sets=allSets.filter(v=>Number(v.workoutSessionID)===Number(s.id));
       const exercises=[];
       for(const e of entries){
-        const [[source]]=await db.query('SELECT externalSource,externalId FROM exercises WHERE id=?',[e.exerciseID]);
+        const source=sources.get(Number(e.exerciseID));
         const own=sets.filter(v=>Number(v.workoutExerciseID)===Number(e.id));if(!own.length)continue;
         exercises.push({...source,name:e.name,exerciseType:e.exerciseType,isBodyweight:Boolean(e.isBodyweight),restSeconds:e.restSeconds,notes:e.notes,supersetGroup:e.supersetGroup,configuration:e.configuration,sets:own.map(v=>({setNumber:v.setNumber,reps:v.reps,weight:v.weight,durationSeconds:v.durationSeconds,rpe:v.rpe,rir:v.rir,details:v.details?json(v.details):{phase:'work',type:'straight'}}))});
       }
-      result.push({name:p.dayName,startedAt:s.startedAt,durationSeconds:s.durationSeconds,notes:s.notes,excludedFromProgression:s.excludedFromProgression===1,exercises});
+      result.push({name:p.dayName,startedAt:s.startedAt instanceof Date?s.startedAt.toISOString():s.startedAt,durationSeconds:s.durationSeconds,notes:s.notes,excludedFromProgression:s.excludedFromProgression===1,exercises,...(req.includeSessionIDs?{_sessionID:s.id}:{})});
     }
-    const [bodyweight]=page===1?await db.query('SELECT weight,DATE_FORMAT(recordedAt,\'%Y-%m-%d\') AS recordedAt,note FROM weighthistory WHERE clientID=? ORDER BY recordedAt,id LIMIT 1000',[clientID]):[[]];
-    res.json({format:'sirvya-workout-history',source:'SIRVYA',version:1,unit:'kg',sessions:result,bodyweight,hasMore:sessions.length>100});
-  }));
+    const [weights]=req.skipBodyweight?[[]]:await conn.query('SELECT weight,DATE_FORMAT(recordedAt,\'%Y-%m-%d\') AS recordedAt,note FROM weighthistory WHERE clientID=? ORDER BY recordedAt,id LIMIT 101 OFFSET ?',[clientID,weightOffset]);
+    res.json({format:'sirvya-workout-history',source:'SIRVYA',version:1,unit:'kg',sessions:result,bodyweight:weights.slice(0,100),hasMore:sessions.length>limit||weights.length>100,sessionHasMore:sessions.length>limit,bodyweightHasMore:weights.length>100});
+  };
+  router.get('/history/export',run(exportHistory));
+  return {importHistory,exportHistory};
 }

@@ -13,6 +13,69 @@ import 'package:fitlek1/services/apiService.dart';
 import 'package:fitlek1/services/workout_service.dart';
 
 void main() {
+  testWidgets(
+      'picker loads 50 to 100 results, retains the filter and resets pages on search',
+      (tester) async {
+    final pages = <int>[], filters = <String?>[];
+    int? selected;
+    final client = MockClient((request) async {
+      final query = request.url.queryParameters;
+      final page = int.parse(query['page'] ?? '1');
+      pages.add(page);
+      filters.add(query['bodyPart']);
+      return http.Response(
+          jsonEncode({
+            'data': List.generate(
+                50,
+                (i) => {
+                      'id': (page - 1) * 50 + i + 1,
+                      'name': 'Press ${(page - 1) * 50 + i + 1}',
+                      'muscleGroup': 'chest',
+                      'equipment': 'barbell',
+                      'exerciseType': 'reps',
+                      'isBodyweight': 0
+                    }),
+            'total': 100,
+            'hasMore': page == 1,
+            'filters': {
+              'bodyPart': ['chest'],
+              'equipment': ['barbell']
+            },
+          }),
+          200);
+    });
+    await http.runWithClient(() async {
+      await tester.pumpWidget(MaterialApp(
+          home: WorkoutExerciseLibrary(
+              selecting: true,
+              onSelect: (pickerContext, e) async {
+                selected = e.id;
+              })));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Chest'));
+      await tester.pumpAndSettle();
+      await tester.scrollUntilVisible(find.text('Show more'), 500,
+          scrollable: find.byType(Scrollable).first);
+      await tester.tap(find.text('Show more'));
+      await tester.pumpAndSettle();
+      expect(pages.last, 2);
+      expect(filters.last, 'chest');
+      await tester.scrollUntilVisible(find.text('Press 100'), 500,
+          scrollable: find.byType(Scrollable).first);
+      await tester.tap(find.text('Press 100'));
+      await tester.pumpAndSettle();
+      expect(selected, 100);
+      await tester.scrollUntilVisible(find.byType(TextField), -700,
+          scrollable: find.byType(Scrollable).first);
+      await tester.enterText(find.byType(TextField), 'press');
+      await tester.pump(const Duration(milliseconds: 350));
+      await tester.pumpAndSettle();
+      expect(pages.last, 1);
+      expect(filters.last, 'chest');
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox.shrink());
+    }, () => client);
+  });
   setUp(() {
     SharedPreferences.setMockInitialValues(
         {'token': 'fixture-token', 'userId': 42, 'role': 'client'});

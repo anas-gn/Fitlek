@@ -11,7 +11,7 @@ router.get('/', requireAuth, requireRole('manager'), async (req, res) => {
       SELECT u.id, u.firstName, u.lastName, u.email, u.avatarUrl,
              ap.specialty, u.createdAt
       FROM users u
-      JOIN advisorProfiles ap ON ap.userID = u.id
+      JOIN advisorprofiles ap ON ap.userID = u.id
       WHERE u.role = 'advisor'`;
     const params = [];
     if (search) {

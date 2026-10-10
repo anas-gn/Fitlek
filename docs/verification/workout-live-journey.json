@@ -1,0 +1,26 @@
+{
+  "verifiedAt": "2026-10-10T15:23:58.009Z",
+  "passed": true,
+  "fixtureOnly": false,
+  "disposableAccounts": true,
+  "realLocalMySQL": true,
+  "checks": [
+    "Real password login for Client and Coaches",
+    "Coach assignment persists in MySQL and is visible to Client",
+    "Built app enters Workout with actual assigned routine",
+    "Actual UI start and optional weight check-in",
+    "Real browser offline set queues locally and reconnect sync persists it",
+    "Working-weight confirmation persists",
+    "UI set logging and completion persist successfully",
+    "Real persisted history and statistics match both logged sets",
+    "Browser downloads, previews and restores its backup without duplicating history",
+    "Real browser streams an 8+ MiB Apple Health file, imports bodyweight and skips repeat duplicates",
+    "Workout returns to SIRVYA",
+    "Coach UI reviews the Client completed workout",
+    "Unlinked Coach cannot read that workout"
+  ],
+  "apiErrors": [],
+  "exceptions": [],
+  "nativeDevices": false,
+  "externalProviders": false
+}

@@ -3,6 +3,8 @@ import { readFile } from 'node:fs/promises';
 // Bring older SIRVYA schemas up to the fields already used by native screens.
 // Retain legacy columns/IDs and existing data; do not recreate tables.
 export async function ensureAppCompatibilitySchema(db) {
+  const [weightNotes]=await db.query("SELECT DATA_TYPE,CHARACTER_MAXIMUM_LENGTH FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='weighthistory' AND COLUMN_NAME='note'");
+  if(weightNotes.some(v=>v.DATA_TYPE==='varchar'&&Number(v.CHARACTER_MAXIMUM_LENGTH)<2000))await db.query('ALTER TABLE weighthistory MODIFY note VARCHAR(2000) NULL');
   const columnsFor = async table => {
     const [columns] = await db.query('SHOW COLUMNS FROM ??', [table]);
     return new Map(columns.map(column => [column.Field, column]));

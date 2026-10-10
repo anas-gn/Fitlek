@@ -230,6 +230,7 @@ void main() {
         await capture('editor');
         await tester.scrollUntilVisible(find.text('Add exercise'), 300,
             scrollable: find.byType(Scrollable).first);
+        await tester.pumpAndSettle();
         await tester.tap(find.text('Add exercise'));
         await tester.pumpAndSettle();
         expect(find.byType(WorkoutExerciseLibrary), findsOneWidget);

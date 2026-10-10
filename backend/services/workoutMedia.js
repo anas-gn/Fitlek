@@ -37,8 +37,10 @@ export function installWorkoutMedia(router,db,{run,sessionAccess,visibleExercise
     router.get('/media/:id/content',run(async(req,res)=>{
       let claim;try{claim=jwt.verify(req.query.ticket,secret(),{algorithms:['HS256'],audience:'workout-media'});}catch{fail('authentication_expired',401);}
       if(claim.mediaID!==integer(req.params.id))fail('media_not_found',404);
-      const [[user]]=await db.query('SELECT id,role FROM users WHERE id=?',[claim.userID]);
-      if(!user||!['client','coach'].includes(user.role))fail('authentication_expired',401);
+      const [[user]]=await db.query(`SELECT id,role,tokenVersion,
+        EXISTS(SELECT 1 FROM bans WHERE userID=users.id AND isActive=1 AND (banType='permanent' OR expiresAt>NOW())) AS banned
+        FROM users WHERE id=?`,[claim.userID]);
+      if(!user||user.banned||!['client','coach'].includes(user.role)||Number(user.tokenVersion)!==Number(claim.tokenVersion??0))fail('authentication_expired',401);
       const media=await access(user,req.params.id);
       if(!/^[a-f0-9-]+\.(webp|mp4)$/.test(media.filename))fail('media_not_found',404);
       res.set({'Content-Type':media.mimeType,'X-Content-Type-Options':'nosniff','Cache-Control':'private, no-store'});
@@ -47,7 +49,7 @@ export function installWorkoutMedia(router,db,{run,sessionAccess,visibleExercise
   }
   router.get('/media/:id/ticket',run(async(req,res)=>{
     const media=await access(req.user,req.params.id);
-    res.json({ticket:jwt.sign({mediaID:Number(media.id),userID:Number(req.user.id)},secret(),{algorithm:'HS256',audience:'workout-media',expiresIn:'15m'})});
+    res.set('Cache-Control','no-store').json({ticket:jwt.sign({mediaID:Number(media.id),userID:Number(req.user.id),tokenVersion:req.user.tokenVersion??0},secret(),{algorithm:'HS256',audience:'workout-media',expiresIn:'15m'})});
   }));
   for(const kind of ['sessions','exercises']){
     const column=kind==='sessions'?'sessionID':'exerciseID';

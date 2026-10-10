@@ -224,6 +224,46 @@ class _WorkoutHistoryDetailState extends State<WorkoutHistoryDetail> {
                 plan: p, personal: true, duplicate: true)));
   }
 
+  String _setSummary(WorkoutExercise exercise, WorkoutSet set) {
+    final mode = set.exerciseType ?? exercise.exercise.type;
+    final parts = <String>[];
+    if (mode == 'reps') {
+      final load = set.weight ?? 0;
+      parts.add(load > 0 || !exercise.exercise.isBodyweight
+          ? '${workoutValue(WorkoutService.displayWeight(load))} ${WorkoutService.unit} × ${set.reps ?? 0}'
+          : '${set.reps ?? 0} reps');
+    } else {
+      parts.add('${set.durationSeconds ?? 0} sec');
+      if (mode == 'timed' && (set.weight ?? 0) > 0) {
+        parts.add(
+            '${workoutValue(WorkoutService.displayWeight(set.weight!))} ${WorkoutService.unit}');
+      }
+      if (mode == 'cardio') {
+        final distance = workoutNumber(set.details['distanceMeters']);
+        if (distance != null) {
+          parts.add('${workoutValue(distance / 1000)} km');
+          if ((set.durationSeconds ?? 0) > 0) {
+            parts.add(
+                '${workoutValue(distance * 3.6 / set.durationSeconds!)} km/h');
+          }
+        }
+      }
+    }
+    if (set.rpe != null) parts.add('RPE ${workoutValue(set.rpe)}');
+    if (set.rir != null) parts.add('RIR ${workoutValue(set.rir)}');
+    return parts.join(' · ');
+  }
+
+  String _copiedSummary() => [
+        _session!.dayName,
+        for (final exercise in _session!.exercises) ...[
+          exercise.exercise.name,
+          for (final set in _session!.sets
+              .where((set) => set.workoutExerciseID == exercise.id))
+            'Set ${set.setNumber}: ${_setSummary(exercise, set)}',
+        ],
+      ].join('\n');
+
   @override
   Widget build(BuildContext context) => WorkoutScaffold(
       appBar: AppBar(
@@ -236,9 +276,7 @@ class _WorkoutHistoryDetailState extends State<WorkoutHistoryDetail> {
                     if (v == 'delete') _delete();
                     if (v == 'routine') _routine();
                     if (v == 'copy') {
-                      Clipboard.setData(ClipboardData(
-                          text:
-                              '${_session!.dayName}\n${_session!.sets.map((s) => 'Set ${s.setNumber}: ${workoutValue(WorkoutService.displayWeight(s.weight ?? 0))} ${WorkoutService.unit} × ${s.reps ?? s.durationSeconds}').join('\n')}'));
+                      Clipboard.setData(ClipboardData(text: _copiedSummary()));
                     }
                   },
                   itemBuilder: (_) => const [
@@ -277,7 +315,7 @@ class _WorkoutHistoryDetailState extends State<WorkoutHistoryDetail> {
                   WorkoutMediaPanel(sessionID: widget.sessionID),
                   ..._session!.exercises.map((e) => Card(
                       child: Padding(
-                          padding: const EdgeInsets.all(16),
+                          padding: const EdgeInsets.all(12),
                           child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
@@ -286,7 +324,7 @@ class _WorkoutHistoryDetailState extends State<WorkoutHistoryDetail> {
                                         .textTheme
                                         .titleMedium),
                                 WorkoutLabel(
-                                    'Target: ${e.sets} × ${e.exercise.isTimed ? '${e.durationSeconds} sec' : '${e.reps} reps'}'),
+                                    'Target: ${e.sets} × ${e.exercise.type == 'cardio' ? '${workoutValue((e.durationSeconds ?? 0) / 60)} min @ ${e.configuration['speedKmh'] ?? 8} km/h' : e.exercise.isTimed ? '${e.durationSeconds} sec${(e.weight ?? 0) > 0 ? ' · ${workoutValue(WorkoutService.displayWeight(e.weight!))} ${WorkoutService.unit}' : ''}' : '${e.reps} reps'}'),
                                 if (e.configuration['targetRpe'] != null ||
                                     e.configuration['targetRir'] != null)
                                   WorkoutLabel(
@@ -310,12 +348,18 @@ class _WorkoutHistoryDetailState extends State<WorkoutHistoryDetail> {
                                   }),
                                 ..._session!.sets
                                     .where((s) => s.workoutExerciseID == e.id)
-                                    .map((s) => ListTile(
-                                        contentPadding: EdgeInsets.zero,
-                                        title:
-                                            WorkoutLabel('Set ${s.setNumber}'),
-                                        subtitle: WorkoutLabel(
-                                            '${e.exercise.isTimed ? '${s.durationSeconds} sec' : '${workoutValue(WorkoutService.displayWeight(s.weight ?? 0))} ${WorkoutService.unit} × ${s.reps}'}${s.rpe == null ? '' : ' · RPE ${workoutValue(s.rpe)}'}${s.rir == null ? '' : ' · RIR ${workoutValue(s.rir)}'}'))),
+                                    .map((s) => Padding(
+                                        padding: const EdgeInsets.symmetric(
+                                            vertical: 8),
+                                        child: Row(children: [
+                                          SizedBox(
+                                              width: 70,
+                                              child: WorkoutLabel(
+                                                  'Set ${s.setNumber}')),
+                                          Expanded(
+                                              child: WorkoutLabel(
+                                                  _setSummary(e, s))),
+                                        ]))),
                               ])))),
                 ]));
 }

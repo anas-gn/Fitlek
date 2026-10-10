@@ -556,6 +556,9 @@ class _WorkoutBuilderScreenState extends State<WorkoutBuilderScreen> {
       const SizedBox(height: 16),
       Card(
           child: ListTile(
+              dense: true,
+              minTileHeight: 52,
+              contentPadding: const EdgeInsets.symmetric(horizontal: 12),
               leading: Container(
                   padding: const EdgeInsets.all(6),
                   decoration: BoxDecoration(
@@ -563,21 +566,33 @@ class _WorkoutBuilderScreenState extends State<WorkoutBuilderScreen> {
                       borderRadius: BorderRadius.circular(7)),
                   child: const Icon(Icons.trending_up_rounded,
                       color: Colors.white, size: 18)),
-              title: const WorkoutLabel('Progression'),
-              subtitle: WorkoutLabel(const {
-                    'off': 'Off — prescribed targets',
-                    'linear': 'Linear',
-                    'double': 'Double progression',
-                    'greyskull': 'Greyskull · AMRAP'
-                  }[d.configuration['progression']] ??
-                  'Linear'),
+              title: Row(children: [
+                const WorkoutLabel('Progression'),
+                const SizedBox(width: 8),
+                Expanded(
+                    child: WorkoutLabel(
+                        const {
+                              'off': 'Off — prescribed targets',
+                              'linear': 'Linear',
+                              'double': 'Double progression',
+                              'greyskull': 'Greyskull · AMRAP'
+                            }[d.configuration['progression']] ??
+                            'Linear',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                            fontSize: 13,
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurfaceVariant)))
+              ]),
               trailing: const Icon(Icons.chevron_right),
               onTap: _routineRule)),
       const Padding(
-          padding: EdgeInsets.only(bottom: 16),
+          padding: EdgeInsets.only(bottom: 10),
           child: WorkoutLabel(
               'Exercises follow this rule unless they have their own progression.',
-              style: TextStyle(fontSize: 13))),
+              style: TextStyle(fontSize: 12, color: Colors.grey))),
       if (d.exercises.isEmpty)
         const Padding(
             padding: EdgeInsets.symmetric(vertical: 30),
@@ -605,7 +620,7 @@ class _WorkoutBuilderScreenState extends State<WorkoutBuilderScreen> {
                     onTap: () => _exercise(d, existing: d.exercises[n]),
                     child: Padding(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 10),
+                            horizontal: 12, vertical: 8),
                         child: Row(children: [
                           WorkoutExerciseThumbnail(
                               exercise: d.exercises[n].exercise),
@@ -632,7 +647,7 @@ class _WorkoutBuilderScreenState extends State<WorkoutBuilderScreen> {
                                   children: [
                                     if (n > 0)
                                       SizedBox(
-                                          height: 30,
+                                          height: 24,
                                           child: IconButton(
                                               tooltip: (d
                                                               .exercises[n]
@@ -660,7 +675,7 @@ class _WorkoutBuilderScreenState extends State<WorkoutBuilderScreen> {
                                           child: IconButton(
                                               padding: EdgeInsets.zero,
                                               constraints: const BoxConstraints(
-                                                  minWidth: 32, minHeight: 40),
+                                                  minWidth: 32, minHeight: 32),
                                               tooltip: 'Move exercise up'
                                                   .workoutTr(context),
                                               onPressed: n == 0
@@ -674,7 +689,7 @@ class _WorkoutBuilderScreenState extends State<WorkoutBuilderScreen> {
                                           child: IconButton(
                                               padding: EdgeInsets.zero,
                                               constraints: const BoxConstraints(
-                                                  minWidth: 32, minHeight: 40),
+                                                  minWidth: 32, minHeight: 32),
                                               tooltip: 'Move exercise down'
                                                   .workoutTr(context),
                                               onPressed: n ==
@@ -715,8 +730,21 @@ class _WorkoutBuilderScreenState extends State<WorkoutBuilderScreen> {
                                 ..sort((a, b) => b.value.compareTo(a.value)))
                               .take(6)
                               .map((entry) => Chip(
+                                  materialTapTargetSize:
+                                      MaterialTapTargetSize.shrinkWrap,
+                                  visualDensity: VisualDensity.compact,
+                                  padding:
+                                      const EdgeInsets.symmetric(horizontal: 3),
+                                  backgroundColor: Theme.of(context)
+                                      .colorScheme
+                                      .onSurface
+                                      .withValues(alpha: .07),
                                   label: WorkoutLabel(entry.key,
-                                      style: const TextStyle(fontSize: 12))))
+                                      style: TextStyle(
+                                          fontSize: 12,
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .onSurfaceVariant))))
                               .toList()),
                     ]))),
       const Padding(

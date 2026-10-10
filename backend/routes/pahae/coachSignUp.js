@@ -64,7 +64,7 @@ router.post('/', upload.single('certificate'), async (req, res) => {
 
     // Store the file binary directly in the LONGBLOB column
     await conn.query(
-      `INSERT INTO coachProfiles (userID, bio, instagramPage, certificateUrl, invitationCode)
+      `INSERT INTO coachprofiles (userID, bio, instagramPage, certificateUrl, invitationCode)
        VALUES (?, ?, ?, ?, ?)`,
       [userId, bio, instagramPage, req.file.buffer, invitationCode]
     );

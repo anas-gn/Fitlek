@@ -1202,27 +1202,44 @@ class _WorkoutOverviewState extends State<_WorkoutOverview> {
                         onTap: () => _chooseDay(date),
                         borderRadius: BorderRadius.circular(10),
                         child: Container(
-                            padding: const EdgeInsets.symmetric(vertical: 10),
+                            padding: const EdgeInsets.symmetric(vertical: 6),
                             decoration: BoxDecoration(
                                 borderRadius: BorderRadius.circular(10),
-                                color: today
-                                    ? Theme.of(context)
-                                        .colorScheme
-                                        .primary
-                                        .withValues(alpha: .14)
-                                    : null),
+                                color: Colors.transparent),
                             child: Column(children: [
                               WorkoutLabel(
                                   WorkoutText.weekdays[date.weekday - 1]
                                       .substring(0, 3),
-                                  style: const TextStyle(fontSize: 11)),
-                              const SizedBox(height: 6),
-                              WorkoutLabel('${date.day}',
                                   style: TextStyle(
-                                      fontSize: 20,
-                                      fontWeight: today
-                                          ? FontWeight.w600
-                                          : FontWeight.w400)),
+                                      fontSize: 11,
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onSurfaceVariant)),
+                              const SizedBox(height: 6),
+                              Padding(
+                                  padding:
+                                      const EdgeInsets.symmetric(horizontal: 4),
+                                  child: AspectRatio(
+                                      aspectRatio: 1,
+                                      child: DecoratedBox(
+                                          decoration: BoxDecoration(
+                                              shape: BoxShape.circle,
+                                              color: today
+                                                  ? Theme.of(context)
+                                                      .colorScheme
+                                                      .primary
+                                                  : Colors.transparent),
+                                          child: Center(
+                                              child: WorkoutLabel('${date.day}',
+                                                  style: TextStyle(
+                                                      fontSize: 17,
+                                                      height: 1,
+                                                      fontWeight: today
+                                                          ? FontWeight.w600
+                                                          : FontWeight.w400,
+                                                      color: today
+                                                          ? Colors.black
+                                                          : null)))))),
                               const SizedBox(height: 8),
                               Container(
                                   width: 5,
@@ -1253,8 +1270,9 @@ class _WorkoutOverviewState extends State<_WorkoutOverview> {
                       borderRadius: BorderRadius.circular(12)),
                   child: ListTile(
                       dense: true,
-                      minTileHeight: 62,
-                      contentPadding: EdgeInsets.zero,
+                      minTileHeight: 56,
+                      contentPadding:
+                          const EdgeInsets.symmetric(horizontal: 12),
                       leading: Icon(
                           _activeID != null
                               ? Icons.timer_outlined
@@ -1264,27 +1282,38 @@ class _WorkoutOverviewState extends State<_WorkoutOverview> {
                           color: _activeID != null
                               ? Colors.orange
                               : Theme.of(context).colorScheme.primary),
-                      title: const WorkoutLabel('Today',
-                          style: TextStyle(fontSize: 12)),
+                      title: WorkoutLabel('Today',
+                          style: TextStyle(
+                              fontSize: 11,
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurfaceVariant)),
                       subtitle: WorkoutLabel(
                           _activeID != null
                               ? _activeName ?? 'Workout in progress'
                               : todayDays.isEmpty
                                   ? 'Rest day'
                                   : '${todayDays.map((d) => d.name).join(' + ')}${changed ? ' · rescheduled' : ''}',
-                          style: const TextStyle(
-                              fontSize: 17, fontWeight: FontWeight.w600)),
+                          style: TextStyle(
+                              fontSize: 17,
+                              fontWeight: FontWeight.w600,
+                              color: Theme.of(context).colorScheme.onSurface)),
                       trailing: _activeID == null && todayDays.isEmpty
                           ? const Icon(Icons.add)
-                          : WorkoutLabel(_activeID != null ? 'Resume' : 'Start',
-                              style: TextStyle(
-                                  color: Theme.of(context).colorScheme.primary,
-                                  fontWeight: FontWeight.w600)),
-                      onTap: _starting
-                          ? null
-                          : () => _activeID != null || todayDays.isNotEmpty
-                              ? _startCurrent()
-                              : _chooseDay(now)))
+                          : DecoratedBox(
+                              decoration: BoxDecoration(
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .primary
+                                      .withValues(alpha: .14),
+                                  borderRadius: BorderRadius.circular(6)),
+                              child: Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 8, vertical: 4),
+                                  child: WorkoutLabel(
+                                      _activeID != null ? 'Resume' : 'Start',
+                                      style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w600)))),
+                      onTap: _starting ? null : () => _activeID != null || todayDays.isNotEmpty ? _startCurrent() : _chooseDay(now)))
             ])));
   }
 

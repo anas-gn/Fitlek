@@ -106,8 +106,20 @@ class WorkoutService {
   }
 
   static Future<Map<String, dynamic>> post(
-          String path, Map<String, dynamic> body) async =>
-      checked(await ApiService.post('$root$path', body));
+      String path, Map<String, dynamic> body) async {
+    final user = await ApiService.getUserData(),
+        token = await ApiService.getToken();
+    final result = await ApiService.post('$root$path', body,
+        timeout: path == '/backup/restore' || path == '/history/import'
+            ? const Duration(minutes: 3)
+            : const Duration(seconds: 15));
+    if ((await ApiService.getUserData())?['id'] != user?['id'] ||
+        await ApiService.getToken() != token) {
+      throw const WorkoutApiException('authentication_expired', 401);
+    }
+    return checked(result);
+  }
+
   static Future<Map<String, dynamic>> put(
           String path, Map<String, dynamic> body) async =>
       checked(await ApiService.put('$root$path', body));

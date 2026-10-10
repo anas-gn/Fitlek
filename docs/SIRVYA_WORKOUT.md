@@ -1,6 +1,6 @@
 # SIRVYA Workout
 
-Native Flutter module in the existing application. Baseline main/origin/main is
+Native Flutter module in the existing application. See the [October 10 completion report](WORKOUT_COMPLETION_2026-10-10.md) for current verification and release requirements. Baseline main/origin/main is
 23d3665 (`design`); existing local Premium work is retained. See
 [WORKOUT_PARITY.md](WORKOUT_PARITY.md) for the audit, inventory and parity limits.
 
@@ -53,7 +53,8 @@ download capability rechecks current access and cannot authenticate other APIs.
 | PUT /sessions/:id/execution; PUT /sessions/:id/rest-alert | Safe session changes and background rest delivery |
 | PUT /sessions/:id; PUT /sessions/:id/history; DELETE /sessions/:id | Finish/cancel, historical correction and owned history deletion |
 | GET /history; GET /stats | Paginated sessions, activity, records, progression, volume, effort and adherence |
-| POST /history/import-preview; POST /history/import; GET /history/export | CSV/JSON mapping, atomic import batches and private exports |
+| POST /history/import-preview; POST /history/import; GET /history/export | CSV/JSON mapping, atomic bounded imports and paged private exports |
+| GET /backup/export; POST /backup/preview; POST /backup/restore | Versioned full Workout backup with atomic restore and opt-in schedule/preferences |
 | GET/POST /sessions/:id/media; GET/POST /exercises/:id/media | Private validated workout/custom demonstrations |
 | GET /media/:id/ticket; GET /media/:id/content; DELETE /media/:id | Scoped media capability and owner deletion |
 

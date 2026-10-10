@@ -150,7 +150,9 @@ class WorkoutBodyweightCard extends StatelessWidget {
                 const Expanded(
                     child: WorkoutLabel('Body weight',
                         style: TextStyle(
-                            fontSize: 17, fontWeight: FontWeight.w600))),
+                            fontSize: 13,
+                            fontWeight: FontWeight.w400,
+                            color: Colors.grey))),
                 TextButton.icon(
                     onPressed: reload == null ? null : () => _goal(context),
                     icon: const Icon(Icons.flag_outlined, size: 16),
@@ -222,6 +224,7 @@ class WorkoutBodyweightCard extends StatelessWidget {
                 const SizedBox(height: 8),
                 WorkoutLineChart(
                     label: 'Body weight',
+                    compact: true,
                     values: recent
                         .map((r) => WorkoutService.displayWeight(
                             workoutNumber(r['weight'])!))

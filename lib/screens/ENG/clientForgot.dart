@@ -7,8 +7,7 @@ import 'package:fitlek1/constants/urls.dart';
 import '../../constants/app_colors.dart';
 
 const _red = Color(0xFFFF5252);
-const _bgImageUrl =
-    'assets/branding/sirvya2.jfif';
+const _bgImageUrl = 'assets/branding/sirvya2.jfif';
 
 class ClientForgotScreen extends StatefulWidget {
   const ClientForgotScreen({super.key});
@@ -29,6 +28,7 @@ class _ClientForgotScreenState extends State<ClientForgotScreen>
   bool _obscureConf = true;
   bool _loading = false;
   String? _errorMsg;
+  String? _resetToken;
 
   late AnimationController _fadeCtrl;
   late Animation<double> _fadeAnim;
@@ -82,8 +82,13 @@ class _ClientForgotScreenState extends State<ClientForgotScreen>
         }
         return null;
       case 2:
-        if (_passwordCtrl.text.length < 6) return 'Password too short (min 6 chars)';
-        if (_passwordCtrl.text != _confirmCtrl.text) return 'Passwords do not match';
+        if (_passwordCtrl.text.length < 8) return 'Use at least 8 characters';
+        if (utf8.encode(_passwordCtrl.text).length > 72) {
+          return 'Password is too long';
+        }
+        if (_passwordCtrl.text != _confirmCtrl.text) {
+          return 'Passwords do not match';
+        }
         return null;
       default:
         return null;
@@ -111,13 +116,17 @@ class _ClientForgotScreenState extends State<ClientForgotScreen>
       _errorMsg = null;
     });
     try {
-      final res = await http.post(
-        Uri.parse('$baseUrl/auth/send-forgot-otp'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'email': _emailCtrl.text.trim().toLowerCase()}),
-      ).timeout(const Duration(seconds: 12));
+      final res = await http
+          .post(
+            Uri.parse('$baseUrl/auth/send-forgot-otp'),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({'email': _emailCtrl.text.trim().toLowerCase()}),
+          )
+          .timeout(const Duration(seconds: 12));
       final data = jsonDecode(res.body) as Map<String, dynamic>;
+      if (!mounted) return;
       if (res.statusCode == 200) {
+        _resetToken = null;
         setState(() {
           _step = 1;
           _loading = false;
@@ -130,6 +139,7 @@ class _ClientForgotScreenState extends State<ClientForgotScreen>
         });
       }
     } catch (_) {
+      if (!mounted) return;
       setState(() {
         _errorMsg = 'Unable to reach the server';
         _loading = false;
@@ -143,16 +153,22 @@ class _ClientForgotScreenState extends State<ClientForgotScreen>
       _errorMsg = null;
     });
     try {
-      final res = await http.post(
-        Uri.parse('$baseUrl/auth/verify-forgot-otp'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'email': _emailCtrl.text.trim().toLowerCase(),
-          'otp': _otpCtrl.text.trim(),
-        }),
-      ).timeout(const Duration(seconds: 12));
+      final res = await http
+          .post(
+            Uri.parse('$baseUrl/auth/verify-forgot-otp'),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({
+              'email': _emailCtrl.text.trim().toLowerCase(),
+              'otp': _otpCtrl.text.trim(),
+            }),
+          )
+          .timeout(const Duration(seconds: 12));
       final data = jsonDecode(res.body) as Map<String, dynamic>;
-      if (res.statusCode == 200 && data['verified'] == true) {
+      if (!mounted) return;
+      if (res.statusCode == 200 &&
+          data['verified'] == true &&
+          data['resetToken'] is String) {
+        _resetToken = data['resetToken'] as String;
         setState(() {
           _step = 2;
           _loading = false;
@@ -165,6 +181,7 @@ class _ClientForgotScreenState extends State<ClientForgotScreen>
         });
       }
     } catch (_) {
+      if (!mounted) return;
       setState(() {
         _errorMsg = 'Unable to reach the server';
         _loading = false;
@@ -178,26 +195,33 @@ class _ClientForgotScreenState extends State<ClientForgotScreen>
       _errorMsg = null;
     });
     try {
-      final res = await http.post(
-        Uri.parse('$baseUrl/auth/reset-password-otp'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'email': _emailCtrl.text.trim().toLowerCase(),
-          'otp': _otpCtrl.text.trim(),
-          'newPassword': _passwordCtrl.text,
-        }),
-      ).timeout(const Duration(seconds: 12));
+      final res = await http
+          .post(
+            Uri.parse('$baseUrl/auth/reset-password-otp'),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({
+              'email': _emailCtrl.text.trim().toLowerCase(),
+              'otp': _otpCtrl.text.trim(),
+              'resetToken': _resetToken,
+              'newPassword': _passwordCtrl.text,
+            }),
+          )
+          .timeout(const Duration(seconds: 12));
       final data = jsonDecode(res.body) as Map<String, dynamic>;
+      if (!mounted) return;
       if (res.statusCode == 200) {
-        if (!mounted) return;
+        _resetToken = null;
+        setState(() => _loading = false);
         _showSuccess();
       } else {
         setState(() {
-          _errorMsg = data['error'] as String? ?? 'Error while resetting password';
+          _errorMsg =
+              data['error'] as String? ?? 'Error while resetting password';
           _loading = false;
         });
       }
     } catch (_) {
+      if (!mounted) return;
       setState(() {
         _errorMsg = 'Unable to reach the server';
         _loading = false;
@@ -339,16 +363,17 @@ class _ClientForgotScreenState extends State<ClientForgotScreen>
                 child: Image.asset(
                   _bgImageUrl,
                   fit: BoxFit.cover,
-                  frameBuilder: (_, child, frame, __) =>
-                      frame == null ? Container(color: const Color(0xFF111111)) : child,
-                  errorBuilder: (_, __, ___) => Container(color: const Color(0xFF111111)),
+                  frameBuilder: (_, child, frame, __) => frame == null
+                      ? Container(color: const Color(0xFF111111))
+                      : child,
+                  errorBuilder: (_, __, ___) =>
+                      Container(color: const Color(0xFF111111)),
                 ),
               ),
               Positioned.fill(
                 child: BackdropFilter(
                   filter: ImageFilter.blur(sigmaX: 1.2, sigmaY: 1.2),
-                  child:
-                      Container(color: Colors.black.withValues(alpha: 0.25)),
+                  child: Container(color: Colors.black.withValues(alpha: 0.25)),
                 ),
               ),
               Positioned.fill(
@@ -617,7 +642,7 @@ class _ClientForgotScreenState extends State<ClientForgotScreen>
               ),
             ),
       const SizedBox(height: 20),
-      Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+      Wrap(alignment: WrapAlignment.center, children: [
         Text(
           'Remember your password? ',
           style: TextStyle(

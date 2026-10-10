@@ -1,6 +1,8 @@
 import express from 'express';
 const router = express.Router();
 import db from '../../config/db.js';
+import {requireRole} from '../../middleware/auth.js';
+router.use(requireRole('manager','admin'));
 // GET /bans
 router.get('/', async (req, res) => {
   try {
@@ -19,7 +21,10 @@ router.get('/', async (req, res) => {
 // POST /bans
 router.post('/', async (req, res) => {
   try {
-    const { userID, bannedBy, banType, reason, expiresAt } = req.body;
+    const { userID, banType, reason, expiresAt } = req.body;
+    const bannedBy=req.user.id;
+    if(req.body.bannedBy!=null && Number(req.body.bannedBy)!==Number(bannedBy)) return res.status(403).json({error:"Access denied."});
+    if(!["temporary","permanent"].includes(banType)) return res.status(400).json({error:"Invalid ban type"});
     if (!userID || !bannedBy || !banType || !reason)
       return res.status(400).json({ error: 'userID, bannedBy, banType and reason required' });
     if (banType === 'temporary' && !expiresAt)
@@ -38,7 +43,8 @@ router.post('/', async (req, res) => {
 // PATCH /bans/:id/lift
 router.patch('/:id/lift', async (req, res) => {
   try {
-    const { liftedBy } = req.body;
+    const liftedBy=req.user.id;
+    if(req.body.liftedBy!=null && Number(req.body.liftedBy)!==Number(liftedBy)) return res.status(403).json({error:"Access denied."});
     const [rows] = await db.query('SELECT * FROM bans WHERE id=? AND isActive=1', [req.params.id]);
     if (!rows.length) return res.status(404).json({ error: 'Active ban not found' });
     await db.query(

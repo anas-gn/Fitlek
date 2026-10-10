@@ -11,6 +11,7 @@ class WorkoutLineChart extends StatefulWidget {
   final double? goal;
   final String unit;
   final bool invert;
+  final bool compact;
   final Color? color;
   const WorkoutLineChart(
       {super.key,
@@ -19,6 +20,7 @@ class WorkoutLineChart extends StatefulWidget {
       this.dates,
       this.goal,
       this.invert = false,
+      this.compact = false,
       this.color,
       this.unit = ''});
   @override
@@ -64,7 +66,7 @@ class _WorkoutLineChartState extends State<WorkoutLineChart> {
                 style:
                     const TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
           SizedBox(
-              height: 150,
+              height: widget.compact ? 120 : 150,
               width: double.infinity,
               child: LayoutBuilder(builder: (context, constraints) {
                 void select(double x) {
@@ -101,28 +103,35 @@ class _WorkoutLineChartState extends State<WorkoutLineChart> {
                                 Theme.of(context).colorScheme.onSurfaceVariant,
                                 widget.goal,
                                 _selected,
-                                widget.invert))));
+                                widget.invert,
+                                widget.compact))));
               })),
           const SizedBox(height: 8),
-          Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-            Expanded(
-                child: WorkoutLabel(
-                    widget.dates == null
-                        ? workoutValue(points.first.$2)
-                        : workoutDate(points.first.$1),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 12))),
-            Expanded(
-                child: WorkoutLabel(
-                    widget.dates == null
-                        ? workoutValue(points.last.$2)
-                        : workoutDate(points.last.$1),
-                    textAlign: TextAlign.end,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 12)))
-          ])
+          if (widget.compact && widget.dates != null)
+            WorkoutLabel(
+                MaterialLocalizations.of(context)
+                    .formatMonthYear(points.last.$1),
+                style: const TextStyle(fontSize: 11, color: Colors.grey))
+          else
+            Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+              Expanded(
+                  child: WorkoutLabel(
+                      widget.dates == null
+                          ? workoutValue(points.first.$2)
+                          : workoutDate(points.first.$1),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontSize: 12))),
+              Expanded(
+                  child: WorkoutLabel(
+                      widget.dates == null
+                          ? workoutValue(points.last.$2)
+                          : workoutDate(points.last.$1),
+                      textAlign: TextAlign.end,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(fontSize: 12)))
+            ])
         ]));
   }
 }
@@ -133,8 +142,9 @@ class _LinePainter extends CustomPainter {
   final double? goal;
   final int? selected;
   final bool invert;
+  final bool compact;
   _LinePainter(this.values, this.accent, this.line, this.textColor, this.goal,
-      this.selected, this.invert);
+      this.selected, this.invert, this.compact);
   @override
   void paint(Canvas canvas, Size size) {
     var low = values.map((p) => p.$2).reduce(math.min),
@@ -144,8 +154,15 @@ class _LinePainter extends CustomPainter {
       high = math.max(high, goal!);
     }
     final pad = high == low ? 1.0 : (high - low) * 0.12;
-    low -= pad;
-    high += pad;
+    if (!compact) {
+      low -= pad;
+      high += pad;
+    }
+    if (compact) {
+      low = low.floorToDouble();
+      high = high.ceilToDouble();
+      if (high == low) high = low + 1;
+    }
     final span = high - low;
     double y(double v) =>
         12 + (invert ? v - low : high - v) / span * (size.height - 24);
@@ -160,16 +177,21 @@ class _LinePainter extends CustomPainter {
       painter.paint(canvas, position);
     }
 
-    for (int i = 0; i < 4; i++) {
-      final rowY = 12 + (size.height - 24) * i / 3;
+    final intervals = compact ? 2 : 3;
+    for (int i = 0; i <= intervals; i++) {
+      final rowY = 12 + (size.height - 24) * i / intervals;
       canvas.drawLine(
           Offset(40, rowY),
           Offset(size.width - 16, rowY),
           Paint()
             ..color = line
             ..strokeWidth = 0.5);
-      label(workoutValue(invert ? low + span * i / 3 : high - span * i / 3),
-          Offset(0, rowY - 6), textColor);
+      label(
+          workoutValue(invert
+              ? low + span * i / intervals
+              : high - span * i / intervals),
+          Offset(0, rowY - 6),
+          textColor);
     }
     if (goal != null && goal!.isFinite) {
       for (double x = 40; x < size.width - 16; x += 11) {
@@ -199,6 +221,22 @@ class _LinePainter extends CustomPainter {
     for (final p in points.skip(1)) {
       path.lineTo(p.dx, p.dy);
     }
+    if (compact && points.length > 1) {
+      final fill = Path.from(path)
+        ..lineTo(points.last.dx, size.height - 12)
+        ..lineTo(points.first.dx, size.height - 12)
+        ..close();
+      canvas.drawPath(
+          fill,
+          Paint()
+            ..shader = LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [
+                  accent.withValues(alpha: .22),
+                  accent.withValues(alpha: .02)
+                ]).createShader(Offset.zero & size));
+    }
     canvas.drawPath(
         path,
         Paint()
@@ -226,6 +264,7 @@ class _LinePainter extends CustomPainter {
       old.goal != goal ||
       old.selected != selected ||
       old.invert != invert ||
+      old.compact != compact ||
       old.textColor != textColor;
 }
 

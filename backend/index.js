@@ -79,7 +79,10 @@ import {
   ensureCoachImagesSchema,
 } from './config/ensureSchema.js';
 import { startMediaCleanupJob } from './cron/mediaCleanup.js';
+import {runtimeConfig} from './config/runtime.js';
+import {requestLimit} from './middleware/requestLimit.js';
 dotenv.config();
+const runtime=runtimeConfig();
 initFirebase();
 startMediaCleanupJob();
 
@@ -87,87 +90,22 @@ startMediaCleanupJob();
 await ensureGoogleAuthSchema(db);
 await ensureAppCompatibilitySchema(db);
 
-let resolveWorkoutSchema;
-let rejectWorkoutSchema;
-const workoutReady = new Promise((resolve, reject) => {
-  resolveWorkoutSchema = resolve;
-  rejectWorkoutSchema = reject;
-});
-workoutReady.catch(() => {});
-
-// Run schema ensures sequentially — Clever Cloud allows only ~5 MySQL
-// connections; parallel ensure* calls race the pool and cause ECONNRESET.
-(async () => {
-  try {
-    await ensureReferralSchema();
-  } catch (e) {
-    console.error('❌ Referral schema ensure failed:', e.message);
-  }
-  try {
-    await ensureClientInvitationSchema();
-  } catch (e) {
-    console.error('❌ Client invitation schema ensure failed:', e.message);
-  }
-  try {
-    await ensureNotificationSchema();
-  } catch (e) {
-    console.error('❌ Notification schema ensure failed:', e.message);
-  }
-  try {
-    await ensureCoachProfileColumns();
-  } catch (e) {
-    console.error('❌ Coach profile columns ensure failed:', e.message);
-  }
-  try {
-    await ensureTermsAcceptedColumn();
-  } catch (e) {
-    console.error('❌ Terms accepted column ensure failed:', e.message);
-  }
-  try {
-    await ensureOTPSchema();
-  } catch (e) {
-    console.error('❌ OTP schema ensure failed:', e.message);
-  }
-  try {
-    await ensureFcmTokenColumn();
-  } catch (e) {
-    console.error('❌ FCM token column ensure failed:', e.message);
-  }
-  try {
-    await ensureAppVersionSchema();
-  } catch (e) {
-    console.error('❌ App version schema ensure failed:', e.message);
-  }
-  try {
-    await ensureDeletedAccountsSchema();
-  } catch (e) {
-    console.error('❌ Deleted accounts schema ensure failed:', e.message);
-  }
-  try {
-    await ensureUgcComplianceSchema();
-  } catch (e) {
-    console.error('❌ UGC compliance schema ensure failed:', e.message);
-  }
-  try {
-    await ensureCoachImagesSchema();
-  } catch (e) {
-    console.error('❌ Coach images schema ensure failed:', e.message);
-  }
-  try {
-    await ensureWorkoutSchema(db);
-    resolveWorkoutSchema();
-  } catch (e) {
-    console.error('Workout schema ensure failed:', e.message);
-    rejectWorkoutSchema(e);
-  }
-})();
-
-
+// Complete migrations before accepting any authenticated traffic. A failed
+// ensure stops startup rather than serving a partially migrated application.
+for (const ensure of [ensureReferralSchema, ensureClientInvitationSchema,
+  ensureNotificationSchema, ensureCoachProfileColumns, ensureTermsAcceptedColumn,
+  ensureOTPSchema, ensureFcmTokenColumn, ensureAppVersionSchema,
+  ensureDeletedAccountsSchema, ensureUgcComplianceSchema, ensureCoachImagesSchema]) await ensure();
+await ensureWorkoutSchema(db);
+const workoutReady=Promise.resolve();
 
 const app = express();
 
+app.disable('x-powered-by');
+app.set('trust proxy', runtime.trustProxy);
+app.use((req,res,next)=>{res.set('X-Content-Type-Options','nosniff');next();});
 app.use(cors({
-  origin: '*', 
+  origin: (origin,done)=>done(null, !origin || runtime.origins.includes(origin) || (!runtime.production && runtime.origins.length===0)),
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
@@ -175,7 +113,9 @@ app.use(cors({
 
 // Large workout transfers are authenticated before parsing; other APIs retain
 // their existing request-size limit.
-app.use(['/api/workout/history/import-preview','/api/workout/history/import'],requireAuth,express.json({limit:'10mb'}));
+app.use(['/api/workout/history/import-preview','/api/workout/history/import','/api/workout/backup/preview','/api/workout/backup/restore'],requireAuth,express.json({limit:'10mb'}));
+app.use('/api/upload',requestLimit({limit:30}));
+app.use('/api/workout',requestLimit({limit:300}));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -189,6 +129,11 @@ app.get('/', (req, res) => {
 
 app.get('/api', (req, res) => {
   res.json({ ok: true, message: 'Sirvya API Server is Running' });
+});
+
+app.get('/api/ready',async(_req,res)=>{
+  try{await db.query('SELECT 1');res.json({ready:true});}
+  catch{res.status(503).json({ready:false});}
 });
 
 app.use('/api/coach', coachAvatarRouter);
@@ -249,6 +194,10 @@ app.use('/api/notifications',notificationsRoutes);
 if(process.env.WORKOUT_REMINDERS_DISABLED!=='1')startWorkoutReminders(db,createAndSendNotification,workoutReady);
 startWorkoutMediaCleanup(db,workoutReady);
 
+app.use((error,_req,res,_next)=>{
+  const status=error.type==='entity.too.large'?413:error instanceof SyntaxError?400:500;
+  res.status(status).json({message:status===413?'request_too_large':status===400?'invalid_request':'server_error'});
+});
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`✅ Fitlek API running on port ${PORT}`));
 

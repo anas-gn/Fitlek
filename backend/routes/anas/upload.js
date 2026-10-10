@@ -5,6 +5,8 @@ import sharp from 'sharp';
 import path from 'path';
 import fs from 'fs';
 import db from '../../config/db.js';
+import {publicOrigin} from '../../config/runtime.js';
+import {ownIdentity} from '../../middleware/ownership.js';
 
 const storage = multer.memoryStorage();
 const uploadImage = multer({
@@ -32,7 +34,7 @@ const uploadAudio = multer({
   },
 });
 
-router.post('/avatar', (req, res) => {
+router.post('/avatar', ownIdentity(), (req, res) => {
   uploadImage.single('avatar')(req, res, async (err) => {
     if (err) {
       console.error('❌ Multer error:', err.message);
@@ -46,7 +48,7 @@ router.post('/avatar', (req, res) => {
         fs.mkdirSync(uploadDir, { recursive: true });
       }
 
-      const filename = `avatar_${req.query.userID || Date.now()}.webp`;
+      const filename = `avatar_${req.user.id}.webp`;
       const filepath = path.join(uploadDir, filename);
       
       await sharp(req.file.buffer)
@@ -54,7 +56,7 @@ router.post('/avatar', (req, res) => {
         .webp({ quality: 80 })
         .toFile(filepath);
 
-      const url = `${req.protocol}://${req.get('host')}/uploads/avatars/${filename}`;
+      const url = `${publicOrigin(req)}/uploads/avatars/${filename}`;
       console.log('✅ Uploaded local avatar:', url);
       res.json({ url });
     } catch (e) {
@@ -72,7 +74,8 @@ router.post('/coach-gallery', (req, res) => {
     }
     try {
       if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
-      const coachID = req.body.coachID;
+      const coachID = req.user.id;
+      if(req.user.role!=='coach' || (req.body.coachID!=null && Number(req.body.coachID)!==Number(coachID))) return res.status(403).json({error:'Access denied.'});
       if (!coachID) return res.status(400).json({ error: 'coachID required' });
 
       // Check if max 5 images reached
@@ -94,7 +97,7 @@ router.post('/coach-gallery', (req, res) => {
         .webp({ quality: 85 })
         .toFile(filepath);
 
-      const url = `${req.protocol}://${req.get('host')}/uploads/coach_gallery/${filename}`;
+      const url = `${publicOrigin(req)}/uploads/coach_gallery/${filename}`;
       
       const [result] = await db.query('INSERT INTO coachimages (coachID, urlImage) VALUES (?, ?)', [coachID, url]);
 
@@ -129,7 +132,7 @@ router.post('/chat-image', (req, res) => {
         .webp({ quality: 75 })
         .toFile(filepath);
 
-      const url = `${req.protocol}://${req.get('host')}/uploads/chat_media/${filename}`;
+      const url = `${publicOrigin(req)}/uploads/chat_media/${filename}`;
       console.log('✅ Uploaded chat image:', url);
       res.json({ url });
     } catch (e) {
@@ -164,7 +167,7 @@ router.post('/chat-audio', (req, res) => {
 
       fs.writeFileSync(filepath, req.file.buffer);
 
-      const url = `${req.protocol}://${req.get('host')}/uploads/chat_media/${filename}`;
+      const url = `${publicOrigin(req)}/uploads/chat_media/${filename}`;
       console.log('✅ Uploaded chat audio:', url);
       res.json({ url });
     } catch (e) {

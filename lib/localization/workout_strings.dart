@@ -1,5 +1,104 @@
 // Independently authored SIRVYA translations.
 const workoutStrings = <String, List<String>>{
+  'Import measurements': ['Importer les mesures', 'Importar mediciones'],
+  '{0} measurements ready to import': [
+    '{0} mesures prêtes à importer',
+    '{0} mediciones listas para importar'
+  ],
+  'Export next history file': [
+    'Exporter le fichier suivant',
+    'Exportar el siguiente archivo'
+  ],
+  'History file {0} exported': [
+    'Fichier d’historique {0} exporté',
+    'Archivo de historial {0} exportado'
+  ],
+  'There are no workouts or measurements to export.': [
+    'Aucun entraînement ou mesure à exporter.',
+    'No hay entrenamientos ni mediciones para exportar.'
+  ],
+  'History exports are split into files of up to 100 workouts and 100 measurements. Continue exporting until the next-file button disappears.':
+      [
+    'L’historique est exporté par fichiers de 100 entraînements et 100 mesures maximum. Continuez jusqu’à la disparition du bouton de fichier suivant.',
+    'El historial se exporta en archivos de hasta 100 entrenamientos y 100 mediciones. Continúa hasta que desaparezca el botón del siguiente archivo.'
+  ],
+  '{0} workouts imported · {1} duplicate workouts skipped · {2} measurements imported · {3} duplicate measurements skipped':
+      [
+    '{0} entraînements importés · {1} doublons d’entraînements ignorés · {2} mesures importées · {3} doublons de mesures ignorés',
+    '{0} entrenamientos importados · {1} entrenamientos duplicados omitidos · {2} mediciones importadas · {3} mediciones duplicadas omitidas'
+  ],
+  "Workout backup exported": [
+    "Sauvegarde Workout exportée",
+    "Copia de seguridad de Workout exportada"
+  ],
+  "Workout backup restored": [
+    "Sauvegarde Workout restaurée",
+    "Copia de seguridad de Workout restaurada"
+  ],
+  "This backup was already restored": [
+    "Cette sauvegarde a déjà été restaurée",
+    "Esta copia de seguridad ya se restauró"
+  ],
+  "Export workout backup": [
+    "Exporter une sauvegarde Workout",
+    "Exportar copia de seguridad de Workout"
+  ],
+  "Export history JSON": [
+    "Exporter l’historique JSON",
+    "Exportar historial JSON"
+  ],
+  "Workout backup preview": [
+    "Aperçu de la sauvegarde Workout",
+    "Vista previa de la copia de seguridad"
+  ],
+  "Restore backup": ["Restaurer la sauvegarde", "Restaurar copia de seguridad"],
+  "Restore workout backup?": [
+    "Restaurer cette sauvegarde Workout ?",
+    "¿Restaurar esta copia de seguridad de Workout?"
+  ],
+  "Replace weekly schedule and date overrides": [
+    "Remplacer le programme hebdomadaire et les exceptions par date",
+    "Reemplazar el calendario semanal y las excepciones por fecha"
+  ],
+  "Replace workout preferences": [
+    "Remplacer les préférences Workout",
+    "Reemplazar las preferencias de Workout"
+  ],
+  "{0} routines · {1} workouts · {2} measurements": [
+    "{0} routines · {1} entraînements · {2} mesures",
+    "{0} rutinas · {1} entrenamientos · {2} mediciones"
+  ],
+  "Adds routines and completed workouts. Coach routines become personal copies. Selected schedule and preference options replace your current settings. Existing history is kept.":
+      [
+    "Ajoute les routines et les entraînements terminés. Les routines du coach deviennent des copies personnelles. Les options sélectionnées remplacent votre programme et vos préférences actuels. L’historique existant est conservé.",
+    "Añade rutinas y entrenamientos completados. Las rutinas del entrenador se convierten en copias personales. Las opciones seleccionadas reemplazan el calendario y las preferencias actuales. Se conserva el historial existente."
+  ],
+  "History and backup files: up to 8 MiB. Apple Health XML: up to 256 MiB, read in chunks; up to 1,000 measurement days.":
+      [
+    "Historique et sauvegardes : 8 Mio maximum. XML Apple Health : 256 Mio maximum, lu par blocs ; jusqu’à 1 000 jours de mesures.",
+    "Historial y copias de seguridad: hasta 8 MiB. XML de Apple Health: hasta 256 MiB, leído por bloques; hasta 1.000 días de mediciones."
+  ],
+  "Includes routines, schedules, preferences, completed workouts and measurements. Active workouts, device drafts and uploaded media are excluded. Backup limits: 100 plans and 1,000 workouts and measurements.":
+      [
+    "Comprend les routines, programmes, préférences, entraînements terminés et mesures. Les entraînements actifs, brouillons locaux et médias envoyés sont exclus. Limites : 100 plans et 1 000 entraînements et mesures.",
+    "Incluye rutinas, calendarios, preferencias, entrenamientos completados y mediciones. Se excluyen entrenamientos activos, borradores locales y archivos multimedia subidos. Límites: 100 planes y 1.000 entrenamientos y mediciones."
+  ],
+  "The backup contains invalid data. Nothing was restored.": [
+    "La sauvegarde contient des données invalides. Rien n’a été restauré.",
+    "La copia de seguridad contiene datos no válidos. No se restauró nada."
+  ],
+  "This backup version is not supported.": [
+    "Cette version de sauvegarde n’est pas prise en charge.",
+    "Esta versión de copia de seguridad no es compatible."
+  ],
+  "This backup exceeds the supported size or record limits.": [
+    "Cette sauvegarde dépasse les limites de taille ou de données.",
+    "Esta copia de seguridad supera los límites de tamaño o registros."
+  ],
+  "This file exceeds the supported import size. Choose a smaller export.": [
+    "Ce fichier dépasse la taille d’importation autorisée. Choisissez un export plus petit.",
+    "Este archivo supera el tamaño de importación permitido. Elige una exportación más pequeña."
+  ],
   'Back to SIRVYA': ['Retour à SIRVYA', 'Volver a SIRVYA'],
   'Background timer alerts': [
     'Alertes du minuteur en arrière-plan',

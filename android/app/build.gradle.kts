@@ -14,6 +14,17 @@ val keystoreProperties = Properties()
 if (keystorePropertiesFile.exists()) {
     keystoreProperties.load(FileInputStream(keystorePropertiesFile))
 }
+val requestsRelease = gradle.startParameter.taskNames.any { it.contains("release", ignoreCase = true) }
+if (requestsRelease) {
+    val missingKeys = listOf("keyAlias", "keyPassword", "storeFile", "storePassword")
+        .filter { keystoreProperties.getProperty(it).isNullOrBlank() }
+    if (missingKeys.isNotEmpty()) {
+        throw GradleException("Release signing requires android/key.properties: ${missingKeys.joinToString()}")
+    }
+    if (!rootProject.file(keystoreProperties.getProperty("storeFile")).isFile) {
+        throw GradleException("Release signing keystore does not exist")
+    }
+}
 
 android {
     namespace = "com.sirvya.app"
@@ -54,7 +65,7 @@ android {
 
     buildTypes {
         release {
-            signingConfig = if (keystorePropertiesFile.exists()) signingConfigs.getByName("release") else signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.getByName("release")
             isMinifyEnabled = true
         }
     }

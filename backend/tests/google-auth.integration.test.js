@@ -28,7 +28,8 @@ test('Google auth schema and existing account compatibility', {skip: process.env
     assert.equal(columns.find(c => c.Field === 'gender').Null, 'YES');
     assert.ok(columns.find(c => c.Field === 'authProvider').Type.includes("'both'"));
     firebaseAuth.verifyIdToken = async token => {
-      if (!['new', 'existing', 'coach', 'unverified'].includes(token)) throw new Error('Invalid fixture token');
+      if (token === 'network-failure') throw Object.assign(new Error('Blocked certificate request'), {code: 'app/network-error'});
+      if (!['new', 'existing', 'coach', 'unverified'].includes(token)) throw Object.assign(new Error('Invalid fixture token'), {code: 'auth/argument-error'});
       return {uid: `${prefix}-${token}`, email: `${prefix}-${token}@example.invalid`, email_verified: token !== 'unverified', name: 'Auth Fixture'};
     };
     const password = 'FixturePassword123';
@@ -46,6 +47,12 @@ test('Google auth schema and existing account compatibility', {skip: process.env
       assert.equal((await request('google', {})).status, 400);
       assert.equal((await request('google', {idToken: 'invalid'})).status, 401);
       assert.equal((await request('google', {idToken: 'unverified'})).status, 401);
+    });
+    await t.test('provider connection failures remain unauthenticated and report service unavailable', async () => {
+      const response = await request('google', {idToken: 'network-failure'});
+      assert.equal(response.status, 503);
+      assert.match(response.body.error, /temporarily unavailable/);
+      assert.equal(response.body.accessToken, undefined);
     });
     await t.test('Google-only account creation and repeated login keep one user', async () => {
       const created = await request('google', {idToken: 'new'});
