@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../services/apiService.dart';
+import '../../models/workout.dart';
+import '../../screens/ENG/workout/workout_demonstration.dart';
 
 class ExerciseLibraryScreen extends StatefulWidget {
   final int? routineID;
@@ -29,10 +31,13 @@ class _ExerciseLibraryScreenState extends State<ExerciseLibraryScreen> {
   Future<void> _load() async {
     setState(() => _loading = true);
     final query = _search.text.trim();
-    final result = await ApiService.get('/premium/workouts/exercises${query.isEmpty ? '' : '?search=${Uri.encodeQueryComponent(query)}'}');
+    final result = await ApiService.get(
+        '/premium/workouts/exercises${query.isEmpty ? '' : '?search=${Uri.encodeQueryComponent(query)}'}');
     if (!mounted) return;
     setState(() {
-      _exercises = result['ok'] == true && result['data'] is List ? result['data'] as List : [];
+      _exercises = result['ok'] == true && result['data'] is List
+          ? result['data'] as List
+          : [];
       _loading = false;
     });
   }
@@ -41,13 +46,18 @@ class _ExerciseLibraryScreenState extends State<ExerciseLibraryScreen> {
     if (widget.routineID == null) return;
     final result = await ApiService.post(
       '/premium/workouts/routines/${widget.routineID}/exercises',
-      {'exerciseID': exercise['id'], 'targetSets': 3, 'targetReps': exercise['exerciseType'] == 'reps' ? 10 : null},
+      {
+        'exerciseID': exercise['id'],
+        'targetSets': 3,
+        'targetReps': exercise['exerciseType'] == 'reps' ? 10 : null
+      },
     );
     if (!mounted) return;
     if (result['ok'] == true) {
       ApiService.showSuccess(context, 'Exercise added to routine.');
     } else {
-      ApiService.showError(context, result['message']?.toString() ?? 'Unable to add exercise.');
+      ApiService.showError(
+          context, result['message']?.toString() ?? 'Unable to add exercise.');
     }
   }
 
@@ -65,7 +75,9 @@ class _ExerciseLibraryScreenState extends State<ExerciseLibraryScreen> {
               decoration: InputDecoration(
                 hintText: 'Search exercises',
                 prefixIcon: const Icon(Icons.search_rounded),
-                suffixIcon: IconButton(onPressed: _load, icon: const Icon(Icons.arrow_forward_rounded)),
+                suffixIcon: IconButton(
+                    onPressed: _load,
+                    icon: const Icon(Icons.arrow_forward_rounded)),
                 border: const OutlineInputBorder(),
               ),
             ),
@@ -80,13 +92,20 @@ class _ExerciseLibraryScreenState extends State<ExerciseLibraryScreen> {
                         itemBuilder: (context, index) {
                           final exercise = _exercises[index];
                           return ListTile(
-                            leading: const CircleAvatar(child: Icon(Icons.fitness_center_rounded)),
-                            title: Text(exercise['name']?.toString() ?? 'Exercise'),
-                            subtitle: Text('${exercise['muscleGroup'] ?? 'General'} • ${exercise['equipment'] ?? 'Bodyweight'}'),
-                            trailing: widget.routineID == null ? null : IconButton(
-                              onPressed: () => _add(exercise),
-                              icon: const Icon(Icons.add_circle_outline_rounded),
-                            ),
+                            leading: WorkoutExerciseThumbnail(
+                                exercise: Exercise.fromJson(
+                                    Map<String, dynamic>.from(exercise))),
+                            title: Text(
+                                exercise['name']?.toString() ?? 'Exercise'),
+                            subtitle: Text(
+                                '${exercise['muscleGroup'] ?? 'General'} • ${exercise['equipment'] ?? 'Bodyweight'}'),
+                            trailing: widget.routineID == null
+                                ? null
+                                : IconButton(
+                                    onPressed: () => _add(exercise),
+                                    icon: const Icon(
+                                        Icons.add_circle_outline_rounded),
+                                  ),
                           );
                         },
                       ),

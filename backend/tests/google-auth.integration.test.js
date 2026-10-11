@@ -13,9 +13,9 @@ test('Google auth schema and existing account compatibility', {skip: process.env
   assert.ok(['localhost', '127.0.0.1', '::1'].includes(process.env.DB_HOST), 'Auth fixtures require local MySQL');
   const {default: db} = await import('../config/db.js');
   const {ensureGoogleAuthSchema} = await import('../config/googleAuthSchema.js');
-  const {default: admin, initFirebase} = await import('../config/firebase.js');
+  const {getAuth, initFirebase} = await import('../config/firebase.js');
   initFirebase();
-  const firebaseAuth = admin.auth();
+  const firebaseAuth = getAuth();
   const originalVerifier = firebaseAuth.verifyIdToken;
   const prefix = `google-auth-test-${Date.now()}-${process.pid}`;
   const users = [];
@@ -89,6 +89,27 @@ test('Google auth schema and existing account compatibility', {skip: process.env
       assert.equal(created.body.user.role, 'coach');
       const [profiles] = await db.query('SELECT userID FROM coachprofiles WHERE userID=?', [created.body.user.id]);
       assert.equal(profiles.length, 1);
+    });
+    await t.test('initial-password endpoint cannot overwrite an existing password', async () => {
+      const signedIn = await request('google', {idToken: 'existing'});
+      const response = await fetch(`http://127.0.0.1:${server.address().port}/api/auth/set-password`, {
+        method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${signedIn.body.accessToken}`},
+        body:JSON.stringify({password:'UnexpectedChangedPassword123'}),
+      });
+      assert.equal(response.status,409);
+      const [[saved]]=await db.query('SELECT passwordHash FROM users WHERE id=?',[inserted.insertId]);
+      assert.equal(saved.passwordHash,hash);
+    });
+    await t.test('initial-password validation rejects weak, nonstring and bcrypt-truncated values', async () => {
+      const signedIn = await request('google', {idToken: 'new'});
+      for(const password of ['1234567',['not-a-string'],'a'.repeat(73),'é'.repeat(37)]) {
+        const response = await fetch(`http://127.0.0.1:${server.address().port}/api/auth/set-password`, {
+          method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${signedIn.body.accessToken}`},body:JSON.stringify({password}),
+        });
+        assert.equal(response.status,400);
+      }
+      const [[saved]]=await db.query('SELECT passwordHash FROM users WHERE id=?',[signedIn.body.user.id]);
+      assert.equal(saved.passwordHash,null);
     });
     await t.test('Google-only users can set a password without an FCM token', async () => {
       const signedIn = await request('google', {idToken: 'new'});

@@ -514,7 +514,7 @@ class WorkoutFailure extends StatelessWidget {
 }
 
 String workoutDate(dynamic value) {
-  final d = DateTime.tryParse('$value')?.toLocal();
+  final d = WorkoutService.trainingDate(value);
   return d == null
       ? ''
       : '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';

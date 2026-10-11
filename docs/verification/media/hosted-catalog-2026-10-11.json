@@ -1,0 +1,35 @@
+{
+  "date": "2026-10-11",
+  "provider": "AscendAPI ExerciseDB V1",
+  "identityMetadataRevision": "7455efae41b330c265e7cd4b78dfa848e7ce5ebd",
+  "identityMetadataLicense": "MIT, metadata only",
+  "importedExercisesMapped": 1324,
+  "liveOssCatalogIdentitiesObserved": 1500,
+  "mappedIdentitiesMissingFromLiveOssCatalog": 0,
+  "reviewedStarterAliases": 20,
+  "checks": {
+    "nativeFlutterTests": {"passed": 19},
+    "mysqlHttpIntegrationTests": {"passed": 34},
+    "mediaContractAndImportTests": {"passed": 15},
+    "scopedFlutterAnalysis": "passed",
+    "fullReleaseWebBuild": "passed",
+    "actualReleaseBrowserGifWidget": {
+      "browser": "headless Chromium",
+      "realCdnGifStillThumbnail": "passed",
+      "playback": "passed",
+      "pause": "passed",
+      "reducedMotion": "passed"
+    }
+  },
+  "limitations": [
+    "Paid API live coverage requires a subscribed server-side key and was not exercised live.",
+    "The installed Windows SDK browser test runner hit baked-in paths, missing CanvasKit routes and temporary disk limits. Browser rendering was instead verified with the actual widget in a separately built release page.",
+    "Unmatched starter static holds/lunge keep illustrations or missing-media state; they are not assigned a different movement."
+  ],
+  "hosting": {
+    "mediaCopiedIntoRepository": false,
+    "apiResponsesPersistentlyCached": false,
+    "credentialsSentToFlutter": false,
+    "commercialActivation": "Set ASCENDAPI_KEY for a paid V1 subscription on the backend."
+  }
+}

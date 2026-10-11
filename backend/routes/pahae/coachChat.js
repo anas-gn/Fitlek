@@ -2,6 +2,8 @@ import { Router } from 'express';
 import pool from '../../config/db.js';
 import { requireAuth, requireRole } from '../../middleware/auth.js';
 import { createAndSendNotification } from '../../services/pushNotificationService.js';
+import {signedChatMedia,validateChatAttachment} from '../../services/chatMedia.js';
+import {publicOrigin} from '../../config/runtime.js';
 
 const router = Router();
 
@@ -25,7 +27,7 @@ router.get('/:conversationId', requireAuth, requireRole('coach'), async (req, re
        WHERE conversationID = ? AND senderID != ? AND isRead = 0`,
       [conversationId, coachID]
     );
-    res.json(messages);
+    res.set('Cache-Control','no-store').json(messages.map(message=>({...message,mediaUrl:message.mediaExpired?null:signedChatMedia(req,message.mediaUrl)})));
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -43,9 +45,11 @@ router.post('/:conversationId', requireAuth, requireRole('coach'), async (req, r
     );
     if (!conv) return res.status(403).json({ message: 'Access denied.' });
     
+    const filename=await validateChatAttachment(pool,coachID,mediaUrl);
+    const attachment=filename?`${publicOrigin(req)}/uploads/chat_media/${filename}`:null;
     const [result] = await pool.query(
       `INSERT INTO messages (conversationID, senderID, body, mediaUrl, mediaType) VALUES (?, ?, ?, ?, ?)`,
-      [conversationId, coachID, body ? body.trim() : null, mediaUrl || null, mediaType || 'text']
+      [conversationId, coachID, body ? body.trim() : null, attachment, mediaType || 'text']
     );
     await pool.query(
       `UPDATE conversations SET lastMessageAt = NOW() WHERE id = ?`,
@@ -78,9 +82,9 @@ router.post('/:conversationId', requireAuth, requireRole('coach'), async (req, r
       console.error('coach new_message notification failed:', notifyErr.message);
     }
 
-    res.status(201).json({ id: result.insertId, body: body ? body.trim() : null, mediaUrl, mediaType, senderID: coachID });
+    res.status(201).json({ id: result.insertId, body: body ? body.trim() : null, mediaUrl:signedChatMedia(req,attachment), mediaType, senderID: coachID });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    res.status(err.status??500).json({ message: err.message });
   }
 });
 

@@ -1,21 +1,24 @@
 import {parseWorkoutProgram,portableExercise,starterWorkoutProgram,openGymWorkoutProgram} from '../../services/workoutProgram.js';
 import express from 'express';
+import {hasWorkoutVideo,workoutVideoFilter} from '../../services/workoutVideos.js';
+import {hasHostedWorkoutMedia,resolveHostedWorkoutMedia} from '../../services/hostedWorkoutMedia.js';
 import { requireAuth, requireRole } from '../../middleware/auth.js';
 import { fail, integer, text, json, number, validatePlan, validateSet, validateCustomExercise, summarize, estimated1RM, isWorkSet,setVolume,exerciseForPrescription } from '../../services/workoutDomain.js';
 import {defaultWorkoutPreferences, validatePreferences, nextTarget, balancePreferences, balancePreferenceKeys} from '../../services/workoutExperience.js';
-import {buildTrainingStats,scheduleAdherence} from '../../services/workoutStats.js';
+import {buildTrainingStats,scheduleAdherence,trainingCalendarRange} from '../../services/workoutStats.js';
 import {readPlanDetails,readSessionSets,readPreviousPerformance,readWeeklyDays} from '../../services/workoutQueries.js';
 import {installWorkoutMedia} from '../../services/workoutMedia.js';
 import {installWorkoutBackup} from '../../services/workoutBackup.js';
 import {installWorkoutHistoryTransfer} from '../../services/workoutHistoryTransfer.js';
 
 // Dependencies are injectable so authorization and transaction behavior can be tested.
-export function createWorkoutRouter(db, {ready = Promise.resolve(), notify = async () => {}, authenticate = requireAuth} = {}) {
+export function createWorkoutRouter(db, {ready = Promise.resolve(), notify = async () => {}, authenticate = requireAuth, resolveDemonstration = resolveHostedWorkoutMedia} = {}) {
   const router = express.Router();
   const run = handler => async (req, res, next) => {
     try { await handler(req, res, next); }
     catch (error) {
       if (!error.status) console.error('Workout request failed:', error.code || error.message);
+      if(error.code==='exercise_media_rate_limited'&&Number.isInteger(error.retryAfter))res.set('Retry-After',String(error.retryAfter));
       res.status(error.status || 500).json({message: error.code && error.status ? error.code : 'workout_error'});
     }
   };
@@ -116,6 +119,9 @@ export function createWorkoutRouter(db, {ready = Promise.resolve(), notify = asy
     if(req.query.bodyweight==='true')where.push('e.isBodyweight=1');
     if(req.query.favorite==='true')where.push('ep.favorite=1');
     if(req.query.chosen==='true')where.push('COALESCE(eu.usageCount,0)>0');
+    if(req.query.video==='true'){
+      const videos=workoutVideoFilter();where.push(videos.sql);params.push(...videos.params);
+    }
     if(req.query.equipmentList){const equipment=text(req.query.equipmentList,2000,true).split(',').slice(0,40);where.push(`e.equipment IN (${equipment.map(()=>'?').join(',')})`);params.push(...equipment);}
     // Equipment choices describe the search/body-part base, before equipment is
     // applied. A search that excludes the selected equipment clears it rather
@@ -134,8 +140,13 @@ export function createWorkoutRouter(db, {ready = Promise.resolve(), notify = asy
         WHERE bs.clientID=? AND bs.status='completed' AND ws.exerciseID=e.id AND COALESCE(JSON_UNQUOTE(JSON_EXTRACT(ws.details,'$.phase')),'work')='work'),0)) AS bestWeight
       ${catalogue} WHERE ${where.join(' AND ')} ORDER BY ${req.query.chosen==='true'?'usageCount DESC, ':''}e.name, e.id LIMIT ? OFFSET ?`, [req.user.id,...scoped(),...params, limit + 1, (page - 1) * limit]);
     const [[count]]=await db.query(`SELECT COUNT(*) AS total ${catalogue} WHERE ${where.join(' AND ')}`,[...scoped(),...params]);
-    res.json({data: rows.slice(0, limit).map(({instructionTranslations,...e}) => ({...e,usageCount:Number(e.usageCount), secondaryMuscles: json(e.secondaryMuscles), instructions: json(e.instructions)})),total:Number(count.total),chosenCount:Number(chosen.n), hasMore: rows.length > limit,effectiveEquipment,
+    res.json({data: rows.slice(0, limit).map(({instructionTranslations,...e}) => ({...e,hasVideo:hasWorkoutVideo(e),hasHostedMedia:hasHostedWorkoutMedia(e),usageCount:Number(e.usageCount), secondaryMuscles: json(e.secondaryMuscles), instructions: json(e.instructions)})),total:Number(count.total),chosenCount:Number(chosen.n), hasMore: rows.length > limit,effectiveEquipment,
       filters: {equipment:equipmentOptions,...Object.fromEntries(['exerciseType'].map(k => [k, [...new Set(filters.map(e => e[k]))].sort()])),bodyPart:bodyParts.map(e=>e.bodyPart),muscleGroup:[...new Set(filters.map(e=>e.muscleGroup))].sort(),secondaryMuscle:[...new Set(filters.flatMap(e=>json(e.secondaryMuscles)||[]))].sort()}});
+  }));
+  router.get('/exercises/:id/demonstration',run(async(req,res)=>{
+    res.set('Cache-Control','private, no-store');
+    const exercise=await visibleExercise(db,req.user,req.params.id);
+    res.json({video:await resolveDemonstration(exercise,{priority:req.query.priority==='preview'?'preview':'detail'})});
   }));
   router.get('/exercises/:id/history',run(async(req,res)=>{
     const clientID=await clientScope(req),exerciseID=integer(req.params.id),page=integer(req.query.page??1,1,10000);
@@ -148,7 +159,7 @@ export function createWorkoutRouter(db, {ready = Promise.resolve(), notify = asy
     const [prefs]=await db.query('SELECT favorite,notes AS personalNotes FROM workout_exercise_preferences WHERE userID=? AND exerciseID=?',[req.user.id,e.id]);
     const language=['en','fr','es'].includes(req.query.language)?req.query.language:'en';
     const translations=e.instructionTranslations?json(e.instructionTranslations):{};
-    res.json({...e,...prefs[0],instructions:translations[language]||json(e.instructions),secondaryMuscles:json(e.secondaryMuscles)});
+    res.json({...e,...prefs[0],hasHostedMedia:hasHostedWorkoutMedia(e),instructions:translations[language]||json(e.instructions),secondaryMuscles:json(e.secondaryMuscles)});
   }));
   router.put('/exercises/:id/preferences', run(async(req,res)=>{
     const e=await visibleExercise(db,req.user,req.params.id);
@@ -650,10 +661,14 @@ export function createWorkoutRouter(db, {ready = Promise.resolve(), notify = asy
       if (req.body.status === 'completed' && (!sets.some(isWorkSet) || sets.filter(isWorkSet).length < expected && req.body.allowIncomplete !== true)) fail('incomplete_workout', 409);
       let newPRs = 0;const loadRecords=[],estimatedRecords=[];
       if (req.body.status === 'completed') {
+        const exerciseIDs=[...new Set(s.prescription.exercises.map(e=>Number(e.exerciseID)))];
+        const [allPast]=exerciseIDs.length?await conn.query(`SELECT ws.* FROM workout_sets ws JOIN workout_sessions previous ON previous.id=ws.workoutSessionID
+          WHERE previous.clientID=? AND previous.status='completed' AND previous.id<>? AND previous.startedAt<=? AND ws.exerciseID IN (?)`,[s.clientID,s.id,s.startedAt,exerciseIDs]):[[]];
+        const pastByExercise=new Map();
+        for(const set of allPast){const id=Number(set.exerciseID);if(!pastByExercise.has(id))pastByExercise.set(id,[]);pastByExercise.get(id).push(set);}
         for (const e of new Map(s.prescription.exercises.map(e => [Number(e.exerciseID), e])).values()) {
           const current = sets.filter(v => Number(v.exerciseID) === Number(e.exerciseID)&&isWorkSet(v));
-          const [past] = await conn.query(`SELECT ws.* FROM workout_sets ws JOIN workout_sessions s ON s.id = ws.workoutSessionID
-            WHERE s.clientID = ? AND s.status = 'completed' AND s.id <> ? AND s.startedAt<=? AND ws.exerciseID = ?`, [s.clientID, s.id,s.startedAt, e.exerciseID]);
+          const past=pastByExercise.get(Number(e.exerciseID))??[];
           const score = v => e.exerciseType !== 'reps' ? Number(v.durationSeconds || 0) : e.isBodyweight ? Number(v.reps || 0) : estimated1RM(v, e) || 0;
           const previous=past.filter(isWorkSet),volumes=new Map();
           for(const v of previous)volumes.set(v.workoutSessionID,(volumes.get(v.workoutSessionID)||0)+setVolume(v,e));
@@ -711,10 +726,11 @@ export function createWorkoutRouter(db, {ready = Promise.resolve(), notify = asy
       WHERE s.clientID = ? AND s.status = 'completed'
       ORDER BY s.startedAt DESC, s.id DESC LIMIT 31 OFFSET ?`, [clientID, (page - 1) * 30]);
     const data = [];
+    const [[total]]=await db.query("SELECT COUNT(*) AS count FROM workout_sessions WHERE clientID=? AND status='completed'",[clientID]);
     const sets=await readSessionSets(db,rows.slice(0,30).map(s=>s.id)),bySession=new Map();
     for(const set of sets){const id=Number(set.workoutSessionID);if(!bySession.has(id))bySession.set(id,[]);bySession.get(id).push(set);}
     for (const s of rows.slice(0, 30)) { const p = {...json(s.prescription)};if(s.execution)p.exercises=json(s.execution); data.push({...s, prescription: p, summary: summarize(bySession.get(Number(s.id))??[], p)}); }
-    res.json({data, hasMore: rows.length > 30});
+    res.json({data, total:Number(total.count), hasMore: rows.length > 30});
   }));
   router.get('/stats', run(async (req, res) => {
     const clientID = await clientScope(req);
@@ -728,20 +744,17 @@ export function createWorkoutRouter(db, {ready = Promise.resolve(), notify = asy
     const seenWeightDays=new Set();const bodyweight=weightRows.filter(r=>{if(seenWeightDays.has(r.recordedAt))return false;seenWeightDays.add(r.recordedAt);return true;});
     const days=await readWeeklyDays(db,clientID);
     const planned=new Set(days.filter(d=>d.dayOfWeek!=null).map(d=>Number(d.dayOfWeek)));
-    const now=new Date(),start=new Date(now.getTime()-(Math.min(period??30,3650)-1)*86400000).toISOString().slice(0,10),end=now.toISOString().slice(0,10);
+    const [[prefs]]=await db.query('SELECT preferences FROM workout_preferences WHERE userID=?',[clientID]);
+    const timeZone=prefs?json(prefs.preferences).timeZone||'UTC':'UTC';
+    const now=new Date(),calendar=trainingCalendarRange(now,timeZone,Math.min(period??30,3650));
+    const start=req.query.window==='week'?calendar.weekStart:calendar.start,end=calendar.end;
     const [overrides]=await db.query("SELECT DATE_FORMAT(workoutDate,'%Y-%m-%d') AS date FROM workout_schedule_dates WHERE userID=? AND workoutDate>=? AND workoutDate<=?",[clientID,start,end]);
     const [scheduled]=await db.query("SELECT DATE_FORMAT(workoutDate,'%Y-%m-%d') AS date,workoutDayID FROM workout_schedule WHERE userID=? AND workoutDate>=? AND workoutDate<=?",[clientID,start,end]);
-    const [[prefs]]=await db.query('SELECT preferences FROM workout_preferences WHERE userID=?',[clientID]);
-    const timeZone=prefs?json(prefs.preferences).timeZone:'UTC';
     const adherence=scheduleAdherence(sessions,days,overrides,scheduled,{start,end,timeZone});
     const all=buildTrainingStats(sessions,allSets,{now,bodyweight:Number(bodyweight[0]?.weight)||null,timeZone});
     const currentMonth=new Intl.DateTimeFormat('en-CA',{timeZone,year:'numeric',month:'2-digit'}).format(now);
     const weight30=bodyweight.filter(r=>new Date(r.recordedAt)>=new Date(now.getTime()-30*86400000));
-    const localToday=new Intl.DateTimeFormat('en-CA',{timeZone,year:'numeric',month:'2-digit',day:'2-digit'}).format(now);
-    const monday=new Date(`${localToday}T12:00:00Z`);monday.setUTCDate(monday.getUTCDate()-(monday.getUTCDay()+6)%7);
-    const weekStart=monday.toISOString().slice(0,10);
-    const weekSessions=req.query.window==='week'?sessions.filter(s=>new Intl.DateTimeFormat('en-CA',{timeZone,year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(s.startedAt))>=weekStart):null;
-    const stats=weekSessions?buildTrainingStats(weekSessions,allSets,{now,bodyweight:Number(bodyweight[0]?.weight)||null,timeZone}):period?buildTrainingStats(sessions,allSets,{now,bodyweight:Number(bodyweight[0]?.weight)||null,timeZone,since:new Date(now.getTime()-period*86400000)}):all;
+    const stats=req.query.window==='week'?buildTrainingStats(sessions,allSets,{now,bodyweight:Number(bodyweight[0]?.weight)||null,timeZone,sinceDate:calendar.weekStart}):period?buildTrainingStats(sessions,allSets,{now,bodyweight:Number(bodyweight[0]?.weight)||null,timeZone,since:new Date(now.getTime()-period*86400000)}):all;
     res.json({...stats,overview:{workoutCount:all.workoutCount,monthWorkouts:all.frequency.filter(f=>f.date.startsWith(currentMonth)).reduce((n,f)=>n+f.count,0),
       weeklyStreak:all.currentWeeklyStreak,bodyweightDelta30:weight30.length>1?Number(weight30[0].weight)-Number(weight30.at(-1).weight):null},
       yearActivity:all.activity,bodyweight:bodyweight.reverse(),bodyweightGoal:prefs?json(prefs.preferences).bodyweightGoal:null,plannedDaysPerWeek:planned.size,adherence});

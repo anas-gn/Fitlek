@@ -1,4 +1,6 @@
-﻿import admin from 'firebase-admin';
+import {cert, getApps, initializeApp} from 'firebase-admin/app';
+export {getAuth} from 'firebase-admin/auth';
+export {getMessaging} from 'firebase-admin/messaging';
 import { createRequire } from 'module';
 import fs from 'fs';
 import path from 'path';
@@ -8,13 +10,9 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const require = createRequire(import.meta.url);
 
-let firebaseApp;
-
 export function initFirebase() {
-  if (admin.apps.length > 0) {
-    firebaseApp = admin.apps[0];
-    return;
-  }
+  const apps=getApps();
+  if (apps.length > 0) return apps[0];
 
   let credential;
   const keyPath = path.join(__dirname, 'sirvya-app-firebase-adminsdk-fbsvc-5858641a2a.json');
@@ -22,16 +20,14 @@ export function initFirebase() {
   if (fs.existsSync(keyPath)) {
     // Local environment
     const serviceAccount = require(keyPath);
-    credential = admin.credential.cert(serviceAccount);
+    credential = cert(serviceAccount);
   } else if (process.env.FIREBASE_SERVICE_ACCOUNT) {
     // Production (Heroku)
     const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
-    credential = admin.credential.cert(serviceAccount);
+    credential = cert(serviceAccount);
   } else {
     throw new Error('Firebase Service Account is missing! Please provide FIREBASE_SERVICE_ACCOUNT env var or local JSON file.');
   }
 
-  firebaseApp = admin.initializeApp({ credential });
+  return initializeApp({ credential });
 }
-
-export default admin;

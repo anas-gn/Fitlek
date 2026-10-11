@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {buildTrainingStats,scheduleAdherence} from '../services/workoutStats.js';
+import {buildTrainingStats,scheduleAdherence,trainingCalendarRange} from '../services/workoutStats.js';
 import {validMP4} from '../services/workoutMedia.js';
 
 test('statistics derive chronological records, actual effort, streak and cardio speed',()=>{
@@ -46,4 +46,33 @@ test('MP4 upload rejects truncated or forged container headers',()=>{
   assert.equal(validMP4(ftyp),false);
   const valid=Buffer.concat([ftyp,box('moov'),box('mdat',Buffer.alloc(8))]);
   assert.equal(validMP4(valid),true);assert.equal(validMP4(valid.subarray(0,valid.length-1)),false);
+});
+
+test('calendar-week statistics retain earlier PR baselines across a local midnight',()=>{
+  const exercise={id:10,exerciseID:1,name:'Bench',exerciseType:'reps',isBodyweight:false,muscleGroup:'chest'};
+  const sessions=[{id:1,startedAt:'2024-01-01T12:00:00Z',prescription:{exercises:[exercise]}},
+    {id:2,startedAt:'2024-02-04T23:30:00Z',prescription:{exercises:[exercise]}}];
+  const sets=sessions.map((session,i)=>({workoutSessionID:session.id,workoutExerciseID:10,exerciseID:1,reps:5,weight:i?60:100}));
+  const stats=buildTrainingStats(sessions,sets,{sinceDate:'2024-02-05',timeZone:'Africa/Casablanca'});
+  assert.equal(stats.workoutCount,1);
+  assert.equal(stats.prCount,0);
+  assert.equal(stats.records[0].points[0].date,'2024-02-05');
+});
+
+test('weighted bodyweight PRs recognize added load even when fewer reps were performed',()=>{
+  const exercise={id:10,exerciseID:1,name:'Pull-up',exerciseType:'reps',isBodyweight:true,muscleGroup:'back'};
+  const sessions=[1,2].map(id=>({id,startedAt:`2024-01-0${id}T12:00:00Z`,prescription:{exercises:[exercise]}}));
+  const sets=[{workoutSessionID:1,workoutExerciseID:10,exerciseID:1,reps:12,weight:0},
+    {workoutSessionID:2,workoutExerciseID:10,exerciseID:1,reps:5,weight:10}];
+  const stats=buildTrainingStats(sessions,sets);
+  const record=stats.personalRecords.find(record=>record.sessionID===2);
+  assert.ok(record,'a first added load is real progress even below the unweighted rep record');
+  assert.ok(record.metrics.includes('weight'));
+});
+
+test('training calendar ranges follow local dates at the date line and across DST',()=>{
+  const now=new Date('2024-03-11T00:30:00Z');
+  assert.deepEqual(trainingCalendarRange(now,'Pacific/Honolulu',7),{start:'2024-03-04',end:'2024-03-10',weekStart:'2024-03-04'});
+  assert.deepEqual(trainingCalendarRange(now,'Pacific/Kiritimati',7),{start:'2024-03-05',end:'2024-03-11',weekStart:'2024-03-11'});
+  assert.deepEqual(trainingCalendarRange(now,'America/New_York',7),{start:'2024-03-04',end:'2024-03-10',weekStart:'2024-03-04'});
 });

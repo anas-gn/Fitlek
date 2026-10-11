@@ -1,8 +1,15 @@
+
 # SIRVYA
 
 SIRVYA is the existing Flutter application and Express/MySQL API. Workout is a native module for Clients and Coaches, sharing SIRVYA accounts, Coach/Client relationships, notifications and database. Workout access is currently free.
 
-See the [current completion report](docs/WORKOUT_COMPLETION_2026-10-10.md), [Workout guide](docs/SIRVYA_WORKOUT.md), [parity matrix](docs/WORKOUT_RECOVERY_CURRENT.md) and [third-party licenses](docs/THIRD_PARTY_WORKOUT.md). Historical audits describe the state on their recorded dates.
+See the [current end-to-end A–S audit](docs/WORKOUT_END_TO_END_AUDIT_2026-10-10.md), [100-row parity matrix](docs/WORKOUT_MASTER_PARITY_2026-10-10.md), [Workout guide](docs/SIRVYA_WORKOUT.md) and [third-party licenses](docs/THIRD_PARTY_WORKOUT.md). Earlier completion reports describe the state before the latest audit fixes. Physical-device/provider verification, historical credential rotation and remaining visual/media parity are still required.
+
+Exercise demonstrations: open **Workout → Exercises → Video demos**, then open an
+exercise to see its GIF or video. Hosted demonstrations cover all 1,324 imported
+exercise identities; reviewed bundled videos and illustrations remain available.
+See the [media guide](docs/WORKOUT_MEDIA_IMPORT.md) for provider setup, attribution
+and loading behavior. Commercial hosted use requires a paid provider key.
 
 ## Repository
 

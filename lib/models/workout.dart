@@ -12,6 +12,7 @@ class Exercise {
   final int usageCount;
   final String name, muscleGroup, equipment, type, bodyPart;
   final bool isBodyweight, favorite;
+  final bool? hasHostedMedia;
   final String personalNotes;
   final String? description, imageUrl, videoUrl, externalSource, externalId;
   final List<String> instructions, secondaryMuscles;
@@ -27,6 +28,7 @@ class Exercise {
       this.bodyPart = '',
       required this.isBodyweight,
       this.favorite = false,
+      this.hasHostedMedia,
       this.personalNotes = '',
       this.description,
       this.imageUrl,
@@ -45,6 +47,7 @@ class Exercise {
       type: type ?? this.type,
       isBodyweight: isBodyweight ?? this.isBodyweight,
       favorite: favorite,
+      hasHostedMedia: hasHostedMedia,
       bestWeight: bestWeight,
       usageCount: usageCount,
       personalNotes: personalNotes,
@@ -68,10 +71,11 @@ class Exercise {
       type: j['exerciseType'] ?? 'reps',
       isBodyweight: j['isBodyweight'] == true || j['isBodyweight'] == 1,
       favorite: j['favorite'] == true || j['favorite'] == 1,
+      hasHostedMedia: j['hasHostedMedia'] as bool?,
       personalNotes: j['personalNotes'] ?? '',
       description: j['description'],
       imageUrl: j['imageUrl'],
-      videoUrl: j['videoUrl'],
+      videoUrl: j['videoUrl'] ?? j['gifUrl'] ?? j['gif_url'],
       externalSource: j['externalSource'],
       externalId: j['externalId'],
       instructions:

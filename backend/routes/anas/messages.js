@@ -2,6 +2,8 @@ import express from 'express';
 const router = express.Router();
 import db from '../../config/db.js';
 import { createAndSendNotification } from '../../services/pushNotificationService.js';
+import {signedChatMedia,validateChatAttachment} from '../../services/chatMedia.js';
+import {publicOrigin} from '../../config/runtime.js';
 router.use('/:conversationID', async (req, res, next) => {
   try {
     const [conversations] = await db.query(
@@ -38,7 +40,7 @@ router.get('/:conversationID', async (req, res) => {
       );
     }
 
-    res.json(rows);
+    res.set('Cache-Control','no-store').json(rows.map(row=>({...row,mediaUrl:row.mediaExpired?null:signedChatMedia(req,row.mediaUrl)})));
   } catch (err) { res.status(500).json({ error: err.message }); }
 });
 
@@ -54,10 +56,12 @@ router.post('/:conversationID', async (req, res) => {
       [req.params.conversationID, senderID, senderID]
     );
     if (!conv.length) return res.status(404).json({ error: 'Conversation not found or access denied' });
+    const filename=await validateChatAttachment(db,req.user.id,mediaUrl);
+    const attachment=filename?`${publicOrigin(req)}/uploads/chat_media/${filename}`:null;
 
     const [result] = await db.query(
       'INSERT INTO messages (conversationID, senderID, body, mediaUrl, mediaType) VALUES (?,?,?,?,?)',
-      [req.params.conversationID, senderID, body ? body.trim() : null, mediaUrl || null, mediaType || 'text']
+      [req.params.conversationID, senderID, body ? body.trim() : null, attachment, mediaType || 'text']
     );
     await db.query(
       'UPDATE conversations SET lastMessageAt=NOW() WHERE id=?',
@@ -97,12 +101,12 @@ router.post('/:conversationID', async (req, res) => {
       conversationID: Number(req.params.conversationID),
       senderID,
       body: body ? body.trim() : null,
-      mediaUrl,
+      mediaUrl:signedChatMedia(req,attachment),
       mediaType: mediaType || 'text',
       isRead: false,
       createdAt: new Date(),
     });
-  } catch (err) { res.status(500).json({ error: err.message }); }
+  } catch (err) { res.status(err.status??500).json({ error: err.message }); }
 });
 
 export default router;

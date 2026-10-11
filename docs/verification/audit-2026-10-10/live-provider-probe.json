@@ -1,0 +1,9 @@
+{
+  "checkedAt": "2026-10-10T19:34:29.004Z",
+  "googleCertificateFetch": 200,
+  "knownKidInvalidSignature": 401,
+  "response": {
+    "error": "Invalid or expired Google token. Please try again."
+  },
+  "validOAuthAccountTested": false
+}

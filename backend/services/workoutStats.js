@@ -2,15 +2,27 @@ import {buildEffortStats} from './workoutEffort.js';
 import {workoutMuscleWeights,workoutMuscleNames} from './workoutMuscles.js';
 import {json,summarize,isWorkSet,setDetails,setVolume,estimated1RM} from './workoutDomain.js';
 
-export function buildTrainingStats(sessions,allSets,{now=new Date(),bodyweight=null,since=null,timeZone='UTC'}={}) {
+// Calendar boundaries use the training profile's date, independent of the API
+// machine's time zone and of daylight-saving changes between calendar days.
+export function trainingCalendarRange(now,timeZone='UTC',days=30) {
+  const end=new Intl.DateTimeFormat('en-CA',{timeZone,year:'numeric',month:'2-digit',day:'2-digit'}).format(now);
+  const start=new Date(`${end}T12:00:00Z`);
+  start.setUTCDate(start.getUTCDate()-(days-1));
+  const monday=new Date(`${end}T12:00:00Z`);
+  monday.setUTCDate(monday.getUTCDate()-(monday.getUTCDay()+6)%7);
+  return {start:start.toISOString().slice(0,10),end,weekStart:monday.toISOString().slice(0,10)};
+}
+
+export function buildTrainingStats(sessions,allSets,{now=new Date(),bodyweight=null,since=null,sinceDate=null,timeZone='UTC'}={}) {
   sessions=[...sessions].sort((a,b)=>new Date(a.startedAt)-new Date(b.startedAt)||Number(a.id)-Number(b.id));
-  const baselineSessions=since?sessions.filter(s=>new Date(s.startedAt)<since):[];
+  const localDate=new Intl.DateTimeFormat('en-CA',{timeZone,year:'numeric',month:'2-digit',day:'2-digit'});
+  const inPeriod=s=>sinceDate?localDate.format(new Date(s.startedAt))>=sinceDate:!since||new Date(s.startedAt)>=since;
+  const baselineSessions=sessions.filter(s=>!inPeriod(s));
   const baseline=baselineSessions.length?buildTrainingStats(baselineSessions,allSets,{now,bodyweight,timeZone}):null;
-  if(since)sessions=sessions.filter(s=>new Date(s.startedAt)>=since);
+  sessions=sessions.filter(inPeriod);
   const bySession=new Map();for(const s of allSets){const id=Number(s.workoutSessionID);if(!bySession.has(id))bySession.set(id,[]);bySession.get(id).push(s);}
   const records=new Map((baseline?.records??[]).map(r=>[Number(r.exerciseID),{...r,points:[]}])),frequency=new Map(),activity=[],muscles=new Map(),effort={rpe:[],rir:[]},personalRecords=[];
   const recordedBefore=new Set(records.keys());
-  const localDate=new Intl.DateTimeFormat('en-CA',{timeZone,year:'numeric',month:'2-digit',day:'2-digit'});
   let volume=0,setCount=0,totalReps=0,hardSets=0;
   for(const session of sessions){
     const prescription={...json(session.prescription)};if(session.execution)prescription.exercises=json(session.execution);
@@ -46,7 +58,8 @@ export function buildTrainingStats(sessions,allSets,{now=new Date(),bodyweight=n
       const distanceMeters=work.reduce((n,s)=>n+Number(setDetails(s).distanceMeters||0),0),durationSeconds=work.reduce((n,s)=>n+Number(s.durationSeconds||0),0);
       const speedKmh=e.exerciseType==='cardio'&&distanceMeters>0&&durationSeconds>0?distanceMeters/durationSeconds*3.6:null;
       record.bestSpeedKmh=Math.max(record.bestSpeedKmh,speedKmh||0);
-      const metrics=e.exerciseType==='cardio'?['bestSpeedKmh','durationSeconds']:e.exerciseType!=='reps'?['durationSeconds']:e.isBodyweight?['reps']:['weight','estimated1RM','bestVolume'];
+      const loaded=work.some(set=>Number(set.weight)>0);
+      const metrics=e.exerciseType==='cardio'?['bestSpeedKmh','durationSeconds']:e.exerciseType!=='reps'?['durationSeconds']:e.isBodyweight&&!loaded?['reps']:['weight','estimated1RM','bestVolume'];
       const improved=metrics.filter(k=>Number(record[k]||0)>Number(before[k]||0));
       if(improved.length)personalRecords.push({sessionID:session.id,exerciseID:e.exerciseID,name:e.name,date,metrics:improved,firstRecorded:before.points.length===0&&!recordedBefore.has(Number(e.exerciseID))});
       record.relativeStrength=bodyweight&&record.estimated1RM?record.estimated1RM/bodyweight:null;

@@ -81,6 +81,7 @@ import {
 import { startMediaCleanupJob } from './cron/mediaCleanup.js';
 import {runtimeConfig} from './config/runtime.js';
 import {requestLimit} from './middleware/requestLimit.js';
+import {createChatMediaRouter} from './services/chatMedia.js';
 dotenv.config();
 const runtime=runtimeConfig();
 initFirebase();
@@ -120,6 +121,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Serve static files for uploaded images
+app.use('/uploads/chat_media',createChatMediaRouter(db,path.join(process.cwd(),'uploads','chat_media')));
 app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
 // Root health check endpoints

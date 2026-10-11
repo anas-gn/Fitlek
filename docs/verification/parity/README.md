@@ -1,5 +1,7 @@
 # Workout parity captures and verification
 
+Current assessment: [A–S end-to-end audit](../../WORKOUT_END_TO_END_AUDIT_2026-10-10.md) and [100-row matrix](../../WORKOUT_MASTER_PARITY_2026-10-10.md). The latest real built-app/API/MySQL journey is [workout-live-journey.json](../workout-live-journey.json). Earlier results below remain historical; fixture captures do not prove external delivery or hardware behavior.
+
 Reference: [requested openGym source at c42ba6b](https://github.com/arvids-unavailable/openGym/tree/c42ba6b98e3776af5981f20c05ba392238799670). The current behavior/visual/test matrix is [WORKOUT_RECOVERY_CURRENT.md](../../WORKOUT_RECOVERY_CURRENT.md); [WORKOUT_PRODUCT_PARITY.md](../../WORKOUT_PRODUCT_PARITY.md) retains the historical audit and implementation record.
 
 Latest functional, security, native build and real API/browser results are recorded in the [October 10 completion report](../../WORKOUT_COMPLETION_2026-10-10.md). Refreshed native Home/editor/chart captures include compact rows, circular selection and muscle chips. These deterministic pairs complement the real local MySQL journey; they do not verify hardware delivery or pixel equality.

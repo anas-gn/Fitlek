@@ -1,0 +1,2393 @@
+{
+  "assessedAt": "2026-10-10T19:51:32.360Z",
+  "reference": "c42ba6b98e3776af5981f20c05ba392238799670",
+  "baseline": "f81eb0d9c776c6a9410e629be9ca73859eca7686",
+  "counts": {
+    "DONE": 81,
+    "PARTIAL": 11,
+    "BLOCKED — LICENSE": 1,
+    "MISSING": 2,
+    "EXCLUDED — AUTH": 1,
+    "EXCLUDED — ACCOUNT": 1,
+    "EXCLUDED — GENERAL SETTINGS": 1,
+    "EXCLUDED — NON-WORKOUT": 1,
+    "REPLACED BY SIRVYA": 1
+  },
+  "definition": "DONE requires reachable, functional, persisted as needed, passing relevant tests and no reproduced critical defect. Does not assert pixel equality, hardware testing or all theoretical edge cases. Feature scores are expert assessments, not percentages of test coverage.",
+  "rows": [
+    {
+      "id": 1,
+      "area": "Home",
+      "feature": "Workout navigation",
+      "reference": "Five tabs; persistent Start/Resume",
+      "current": "Native five tabs and Back to SIRVYA",
+      "status": "DONE",
+      "scores": [
+        9,
+        7,
+        8
+      ],
+      "test": "docs/verification/workout-live-journey.json; test/workout_visual_parity_test.dart; reviewed docs/verification/parity images",
+      "priority": "P2 MEDIUM",
+      "problem": "Active screen still highlights Home; improve tab/summary state",
+      "improvement": "Active screen still highlights Home; improve tab/summary state",
+      "referenceSources": [
+        "frontend/src/views/Home.jsx",
+        "frontend/src/sheets.jsx",
+        "frontend/src/lib/history.js"
+      ],
+      "basis": "Source inspection plus listed passing checks; UI scores are conservative assessment, not pixel equality or coverage percentages."
+    },
+    {
+      "id": 2,
+      "area": "Home",
+      "feature": "Dashboard hierarchy",
+      "reference": "Week/today, weight, goal and streak",
+      "current": "All present; adds recent workouts and tools",
+      "status": "PARTIAL",
+      "scores": [
+        9,
+        7,
+        7
+      ],
+      "test": "docs/verification/workout-live-journey.json; test/workout_visual_parity_test.dart; reviewed docs/verification/parity images",
+      "priority": "P2 MEDIUM",
+      "problem": "Taller cards and extra actions; tighten source hierarchy",
+      "improvement": "Taller cards and extra actions; tighten source hierarchy",
+      "referenceSources": [
+        "frontend/src/views/Home.jsx",
+        "frontend/src/sheets.jsx",
+        "frontend/src/lib/history.js"
+      ],
+      "basis": "Source inspection plus listed passing checks; UI scores are conservative assessment, not pixel equality or coverage percentages."
+    },
+    {
+      "id": 3,
+      "area": "Home",
+      "feature": "Week browsing and markers",
+      "reference": "Seven dates with planned/completed/override markers",
+      "current": "Browsable weeks with real schedule and activity",
+      "status": "DONE",
+      "scores": [
+        9,
+        7,
+        8
+      ],
+      "test": "backend/tests/workout.integration.test.js; test/workout_visual_parity_test.dart; reviewed docs/verification/parity images",
+      "priority": "P2 MEDIUM",
+      "problem": "Numeric dates and marker spacing differ",
+      "improvement": "Numeric dates and marker spacing differ",
+      "referenceSources": [
+        "frontend/src/views/Home.jsx",
+        "frontend/src/sheets.jsx",
+        "frontend/src/lib/history.js"
+      ],
+      "basis": "Source inspection plus listed passing checks; UI scores are conservative assessment, not pixel equality or coverage percentages."
+    },
+    {
+      "id": 4,
+      "area": "Home",
+      "feature": "Today and current workout",
+      "reference": "Effective routine or rest; active workout takes precedence",
+      "current": "Today's schedule with Start/Resume precedence",
+      "status": "DONE",
+      "scores": [
+        9,
+        7,
+        8
+      ],
+      "test": "docs/verification/workout-live-journey.json; test/workout_recovery_parity_test.dart; test/workout_continuation_test.dart",
+      "priority": "P2 MEDIUM",
+      "problem": "Badge and typography differ",
+      "improvement": "Badge and typography differ",
+      "referenceSources": [
+        "frontend/src/views/Home.jsx",
+        "frontend/src/sheets.jsx",
+        "frontend/src/lib/history.js"
+      ],
+      "basis": "Source inspection plus listed passing checks; UI scores are conservative assessment, not pixel equality or coverage percentages."
+    },
+    {
+      "id": 5,
+      "area": "Home",
+      "feature": "Empty-state starter program",
+      "reference": "Load PPL starter or create routine",
+      "current": "Starter identity/specification assertions and installation work",
+      "status": "DONE",
+      "scores": [
+        9,
+        7,
+        8
+      ],
+      "test": "backend/tests/workout.integration.test.js; backend/tests/workout.product-parity.test.js; backend/tests/workout.experience.test.js",
+      "priority": "P2 MEDIUM",
+      "problem": "Device empty-state interaction still needs release check",
+      "improvement": "Device empty-state interaction still needs release check",
+      "referenceSources": [
+        "frontend/src/views/Home.jsx",
+        "frontend/src/sheets.jsx",
+        "frontend/src/lib/history.js"
+      ],
+      "basis": "Source inspection plus listed passing checks; UI scores are conservative assessment, not pixel equality or coverage percentages."
+    },
+    {
+      "id": 6,
+      "area": "Home",
+      "feature": "Workout chooser",
+      "reference": "Select routine instead of today's routine",
+      "current": "Chooser and retained exercise picker",
+      "status": "DONE",
+      "scores": [
+        9,
+        7,
+        8
+      ],
+      "test": "test/workout_logging_test.dart; test/workout_visual_parity_test.dart; reviewed docs/verification/parity images",
+      "priority": "P2 MEDIUM",
+      "problem": "Native sheet sizing differs",
+      "improvement": "Native sheet sizing differs",
+      "referenceSources": [
+        "frontend/src/views/Home.jsx",
+        "frontend/src/sheets.jsx",
+        "frontend/src/lib/history.js"
+      ],
+      "basis": "Source inspection plus listed passing checks; UI scores are conservative assessment, not pixel equality or coverage percentages."
+    },
+    {
+      "id": 7,
+      "area": "Home",
+      "feature": "Pre-workout weigh-in",
+      "reference": "Save and start, skip, or choose another workout",
+      "current": "All three actions; real browser optional check-in",
+      "status": "DONE",
+      "scores": [
+        9,
+        7,
+        8
+      ],
+      "test": "docs/verification/workout-live-journey.json; test/workout_visual_parity_test.dart; reviewed docs/verification/parity images",
+      "priority": "P2 MEDIUM",
+      "problem": "Slider, scrim and vertical spacing differ",
+      "improvement": "Slider, scrim and vertical spacing differ",
+      "referenceSources": [
+        "frontend/src/views/Home.jsx",
+        "frontend/src/sheets.jsx",
+        "frontend/src/lib/history.js"
+      ],
+      "basis": "Source inspection plus listed passing checks; UI scores are conservative assessment, not pixel equality or coverage percentages."
+    },
+    {
+      "id": 8,
+      "area": "Home",
+      "feature": "Week streak",
+      "reference": "Consecutive trained weeks; current-week grace",
+      "current": "Calculated from stored completed sessions",
+      "status": "DONE",
+      "scores": [
+        9,
+        7,
+        8
+      ],
+      "test": "backend/tests/workout.stats.test.js; test/workout_visual_parity_test.dart; reviewed docs/verification/parity images",
+      "priority": "P2 MEDIUM",
+      "problem": "No full multi-year UI journey",
+      "improvement": "No full multi-year UI journey",
+      "referenceSources": [
+        "frontend/src/views/Home.jsx",
+        "frontend/src/sheets.jsx",
+        "frontend/src/lib/history.js"
+      ],
+      "basis": "Source inspection plus listed passing checks; UI scores are conservative assessment, not pixel equality or coverage percentages."
+    },
+    {
+      "id": 9,
+      "area": "Home",
+      "feature": "Training calendar",
+      "reference": "Month totals and trained/planned/rescheduled dates",
+      "current": "Real month drilldown and date actions",
+      "status": "DONE",
+      "scores": [
+        9,
+        7,
+        8
+      ],
+      "test": "backend/tests/workout.stats.test.js; test/workout_visual_parity_test.dart; reviewed docs/verification/parity images",
+      "priority": "P2 MEDIUM",
+      "problem": "Native cells omit source white tiles",
+      "improvement": "Native cells omit source white tiles",
+      "referenceSources": [
+        "frontend/src/views/Home.jsx",
+        "frontend/src/sheets.jsx",
+        "frontend/src/lib/history.js"
+      ],
+      "basis": "Source inspection plus listed passing checks; UI scores are conservative assessment, not pixel equality or coverage percentages."
+    },
+    {
+      "id": 10,
+      "area": "Planning",
+      "feature": "Weekly assignment",
+      "reference": "Sunday-indexed recurring routine/rest assignments",
+      "current": "Monday-Sunday native assignments persisted separately",
+      "status": "DONE",
+      "scores": [
+        9,
+        6,
+        8
+      ],
+      "test": "backend/tests/workout.integration.test.js; test/workout_visual_parity_test.dart; reviewed docs/verification/parity images",
+      "priority": "P2 MEDIUM",
+      "problem": "Main Plan uses combined week card instead of seven source cards",
+      "improvement": "Main Plan uses combined week card instead of seven source cards",
+      "referenceSources": [
+        "frontend/src/views/Plan.jsx",
+        "frontend/src/views/RoutineEdit.jsx",
+        "frontend/src/sheets.jsx",
+        "frontend/src/lib/plan-share.js"
+      ],
+      "basis": "Source inspection plus listed passing checks; UI scores are conservative assessment, not pixel equality or coverage percentages."
+    },
+    {
+      "id": 11,
+      "area": "Planning",
+      "feature": "Dated override",
+      "reference": "Replace just one date; reset to recurring plan",
+      "current": "One-tap override/rest/reset; base week preserved",
+      "status": "DONE",
+      "scores": [
+        9,
+        7,
+        8
+      ],
+      "test": "backend/tests/workout.integration.test.js; test/workout_visual_parity_test.dart; reviewed docs/verification/parity images",
+      "priority": "P2 MEDIUM",
+      "problem": "Adds More planning options and move action",
+      "improvement": "Adds More planning options and move action",
+      "referenceSources": [
+        "frontend/src/views/Plan.jsx",
+        "frontend/src/views/RoutineEdit.jsx",
+        "frontend/src/sheets.jsx",
+        "frontend/src/lib/plan-share.js"
+      ],
+      "basis": "Source inspection plus listed passing checks; UI scores are conservative assessment, not pixel equality or coverage percentages."
+    },
+    {
+      "id": 12,
+      "area": "Planning",
+      "feature": "Reschedule workout",
+      "reference": "Source uses separate source/destination overrides",
+      "current": "Native atomic move updates two dates, preserves base program",
+      "status": "DONE",
+      "scores": [
+        9,
+        7,
+        8
+      ],
+      "test": "backend/tests/workout.integration.test.js",
+      "priority": "P2 MEDIUM",
+      "problem": "Native extension; test more midnight/device interactions",
+      "improvement": "Native extension; test more midnight/device interactions",
+      "referenceSources": [
+        "frontend/src/views/Plan.jsx",
+        "frontend/src/views/RoutineEdit.jsx",
+        "frontend/src/sheets.jsx",
+        "frontend/src/lib/plan-share.js"
+      ],
+      "basis": "Source inspection plus listed passing checks; UI scores are conservative assessment, not pixel equality or coverage percentages."
+    },
+    {
+      "id": 13,
+      "area": "Planning",
+      "feature": "Create/edit routine",
+      "reference": "Reusable named routine with live updates",
+      "current": "Personal routine autosave, stable IDs/retry; Coach explicit save",
+      "status": "DONE",
+      "scores": [
+        9,
+        7,
+        8
+      ],
+      "test": "test/workout_recovery_parity_test.dart; test/workout_continuation_test.dart; backend/tests/workout.integration.test.js; test/workout_visual_parity_test.dart; reviewed docs/verification/parity images",
+      "priority": "P2 MEDIUM",
+      "problem": "Personal and Coach editing interaction intentionally differs",
+      "improvement": "Personal and Coach editing interaction intentionally differs",
+      "referenceSources": [
+        "frontend/src/views/Plan.jsx",
+        "frontend/src/views/RoutineEdit.jsx",
+        "frontend/src/sheets.jsx",
+        "frontend/src/lib/plan-share.js"
+      ],
+      "basis": "Source inspection plus listed passing checks; UI scores are conservative assessment, not pixel equality or coverage percentages."
+    },
+    {
+      "id": 14,
+      "area": "Planning",
+      "feature": "Delete routine",
+      "reference": "Clear schedule references; retain old logs",
+      "current": "Archive/cleanup preserves snapshots and history",
+      "status": "DONE",
+      "scores": [
+        9,
+        7,
+        8
+      ],
+      "test": "backend/tests/workout.integration.test.js",
+      "priority": "P2 MEDIUM",
+      "problem": "Direct SQL hard deletion would still cascade sessions; constrain operational access",
+      "improvement": "Direct SQL hard deletion would still cascade sessions; constrain operational access",
+      "referenceSources": [
+        "frontend/src/views/Plan.jsx",
+        "frontend/src/views/RoutineEdit.jsx",
+        "frontend/src/sheets.jsx",
+        "frontend/src/lib/plan-share.js"
+      ],
+      "basis": "Source inspection plus listed passing checks; UI scores are conservative assessment, not pixel equality or coverage percentages."
+    },
+    {
+      "id": 15,
+      "area": "Planning",
+      "feature": "Routine names and glyphs",
+      "reference": "Editable label and icon",
+      "current": "Validated label and persisted glyph configuration",
+      "status": "DONE",
+      "scores": [
+        9,
+        7,
+        8
+      ],
+      "test": "backend/tests/workout.product-parity.test.js; backend/tests/workout.experience.test.js; test/workout_visual_parity_test.dart; reviewed docs/verification/parity images",
+      "priority": "P3 LOW",
+      "problem": "Icon repertoire/typography differs",
+      "improvement": "Icon repertoire/typography differs",
+      "referenceSources": [
+        "frontend/src/views/Plan.jsx",
+        "frontend/src/views/RoutineEdit.jsx",
+        "frontend/src/sheets.jsx",
+        "frontend/src/lib/plan-share.js"
+      ],
+      "basis": "Source inspection plus listed passing checks; UI scores are conservative assessment, not pixel equality or coverage percentages."
+    },
+    {
+      "id": 16,
+      "area": "Planning",
+      "feature": "Add/remove exercises",
+      "reference": "Picker selection and removal from routine",
+      "current": "Search picker, save/cancel retention and stable slots",
+      "status": "DONE",
+      "scores": [
+        9,
+        7,
+        8
+      ],
+      "test": "test/workout_library_test.dart; test/workout_custom_flow_test.dart; test/workout_recovery_parity_test.dart; test/workout_continuation_test.dart",
+      "priority": "P2 MEDIUM",
+      "problem": "Native picker sheet layout differs",
+      "improvement": "Native picker sheet layout differs",
+      "referenceSources": [
+        "frontend/src/views/Plan.jsx",
+        "frontend/src/views/RoutineEdit.jsx",
+        "frontend/src/sheets.jsx",
+        "frontend/src/lib/plan-share.js"
+      ],
+      "basis": "Source inspection plus listed passing checks; UI scores are conservative assessment, not pixel equality or coverage percentages."
+    },
+    {
+      "id": 17,
+      "area": "Planning",
+      "feature": "Exercise reordering",
+      "reference": "Move exercises; repair invalid superset links",
+      "current": "Personal swap and group cleanup; Coach group controls",
+      "status": "DONE",
+      "scores": [
+        9,
+        7,
+        8
+      ],
+      "test": "backend/tests/workout.product-parity.test.js; backend/tests/workout.experience.test.js; test/workout_recovery_parity_test.dart; test/workout_continuation_test.dart",
+      "priority": "P2 MEDIUM",
+      "problem": "Coach interaction requires a separate manual acceptance run",
+      "improvement": "Coach interaction requires a separate manual acceptance run",
+      "referenceSources": [
+        "frontend/src/views/Plan.jsx",
+        "frontend/src/views/RoutineEdit.jsx",
+        "frontend/src/sheets.jsx",
+        "frontend/src/lib/plan-share.js"
+      ],
+      "basis": "Source inspection plus listed passing checks; UI scores are conservative assessment, not pixel equality or coverage percentages."
+    },
+    {
+      "id": 18,
+      "area": "Planning",
+      "feature": "Sets/reps/load configuration",
+      "reference": "Set counts, rep totals, working load",
+      "current": "Validated prescription fields persisted in MySQL",
+      "status": "DONE",
+      "scores": [
+        9,
+        6,
+        8
+      ],
+      "test": "backend/tests/workout.domain.test.js; backend/tests/workout.push-day.integration.test.js; test/workout_visual_parity_test.dart; reviewed docs/verification/parity images",
+      "priority": "P2 MEDIUM",
+      "problem": "Native switch/form controls differ from source option rows",
+      "improvement": "Native switch/form controls differ from source option rows",
+      "referenceSources": [
+        "frontend/src/views/Plan.jsx",
+        "frontend/src/views/RoutineEdit.jsx",
+        "frontend/src/sheets.jsx",
+        "frontend/src/lib/plan-share.js"
+      ],
+      "basis": "Source inspection plus listed passing checks; UI scores are conservative assessment, not pixel equality or coverage percentages."
+    },
+    {
+      "id": 19,
+      "area": "Planning",
+      "feature": "Timed prescription",
+      "reference": "Held seconds and optional external load",
+      "current": "Timed mode target/actual stored separately",
+      "status": "DONE",
+      "scores": [
+        9,
+        6,
+        8
+      ],
+      "test": "backend/tests/workout.domain.test.js; backend/tests/workout.push-day.integration.test.js; test/workout_logging_test.dart",
+      "priority": "P2 MEDIUM",
+      "problem": "Physical early-stop timing still requires hardware check",
+      "improvement": "Physical early-stop timing still requires hardware check",
+      "referenceSources": [
+        "frontend/src/views/Plan.jsx",
+        "frontend/src/views/RoutineEdit.jsx",
+        "frontend/src/sheets.jsx",
+        "frontend/src/lib/plan-share.js"
+      ],
+      "basis": "Source inspection plus listed passing checks; UI scores are conservative assessment, not pixel equality or coverage percentages."
+    },
+    {
+      "id": 20,
+      "area": "Planning",
+      "feature": "Bodyweight prescription",
+      "reference": "Optional added load; per-side rep option",
+      "current": "Unloaded and weighted bodyweight supported",
+      "status": "DONE",
+      "scores": [
+        9,
+        6,
+        8
+      ],
+      "test": "backend/tests/workout.domain.test.js; backend/tests/workout.product-parity.test.js; backend/tests/workout.experience.test.js",
+      "priority": "P2 MEDIUM",
+      "problem": "Negative assistance is not a source feature and is not supported",
+      "improvement": "Negative assistance is not a source feature and is not supported",
+      "referenceSources": [
+        "frontend/src/views/Plan.jsx",
+        "frontend/src/views/RoutineEdit.jsx",
+        "frontend/src/sheets.jsx",
+        "frontend/src/lib/plan-share.js"
+      ],
+      "basis": "Source inspection plus listed passing checks; UI scores are conservative assessment, not pixel equality or coverage percentages."
+    },
+    {
+      "id": 21,
+      "area": "Planning",
+      "feature": "Superset configuration",
+      "reference": "Link adjacent exercises; clean singleton links",
+      "current": "Adjacent grouping and round-robin execution",
+      "status": "DONE",
+      "scores": [
+        9,
+        7,
+        8
+      ],
+      "test": "backend/tests/workout.product-parity.test.js; backend/tests/workout.experience.test.js; test/workout_logging_test.dart",
+      "priority": "P2 MEDIUM",
+      "problem": "Manual uneven-group workout remains desirable",
+      "improvement": "Manual uneven-group workout remains desirable",
+      "referenceSources": [
+        "frontend/src/views/Plan.jsx",
+        "frontend/src/views/RoutineEdit.jsx",
+        "frontend/src/sheets.jsx",
+        "frontend/src/lib/plan-share.js"
+      ],
+      "basis": "Source inspection plus listed passing checks; UI scores are conservative assessment, not pixel equality or coverage percentages."
+    },
+    {
+      "id": 22,
+      "area": "Planning",
+      "feature": "Routine muscle preview",
+      "reference": "Planned effective sets on front/back body",
+      "current": "Native MIT anatomy with planned-set intensity and chips",
+      "status": "DONE",
+      "scores": [
+        9,
+        7,
+        8
+      ],
+      "test": "test/workout_anatomy_test.dart; backend/tests/workout.stats.test.js; test/workout_visual_parity_test.dart; reviewed docs/verification/parity images",
+      "priority": "P2 MEDIUM",
+      "problem": "Card title, chip spacing and body layout differ",
+      "improvement": "Card title, chip spacing and body layout differ",
+      "referenceSources": [
+        "frontend/src/views/Plan.jsx",
+        "frontend/src/views/RoutineEdit.jsx",
+        "frontend/src/sheets.jsx",
+        "frontend/src/lib/plan-share.js"
+      ],
+      "basis": "Source inspection plus listed passing checks; UI scores are conservative assessment, not pixel equality or coverage percentages."
+    },
+    {
+      "id": 23,
+      "area": "Planning",
+      "feature": "Routine unit preference",
+      "reference": "Routine/history display respects kg/lb",
+      "current": "Canonical kg with actual kg/lb conversion",
+      "status": "DONE",
+      "scores": [
+        9,
+        7,
+        8
+      ],
+      "test": "backend/tests/workout.product-parity.test.js; backend/tests/workout.experience.test.js; test/workout_logging_test.dart",
+      "priority": "P2 MEDIUM",
+      "problem": "Reference general setting relabels raw numbers; native conversion is intentional",
+      "improvement": "Reference general setting relabels raw numbers; native conversion is intentional",
+      "referenceSources": [
+        "frontend/src/views/Plan.jsx",
+        "frontend/src/views/RoutineEdit.jsx",
+        "frontend/src/sheets.jsx",
+        "frontend/src/lib/plan-share.js"
+      ],
+      "basis": "Source inspection plus listed passing checks; UI scores are conservative assessment, not pixel equality or coverage percentages."
+    },
+    {
+      "id": 24,
+      "area": "Planning",
+      "feature": "Plan sharing/import",
+      "reference": "openGym v1 plan with routines/customs/week",
+      "current": "Compatible v1 and native plan import/export",
+      "status": "DONE",
+      "scores": [
+        9,
+        6,
+        8
+      ],
+      "test": "backend/tests/workout.product-parity.test.js; backend/tests/workout.experience.test.js; backend/tests/workout.import.test.js; backend/tests/workout.backup.integration.test.js; test/workout_transfer_flow_test.dart",
+      "priority": "P2 MEDIUM",
+      "problem": "Native share/download controls and combined-day export differ",
+      "improvement": "Native share/download controls and combined-day export differ",
+      "referenceSources": [
+        "frontend/src/views/Plan.jsx",
+        "frontend/src/views/RoutineEdit.jsx",
+        "frontend/src/sheets.jsx",
+        "frontend/src/lib/plan-share.js"
+      ],
+      "basis": "Source inspection plus listed passing checks; UI scores are conservative assessment, not pixel equality or coverage percentages."
+    },
+    {
+      "id": 25,
+      "area": "Planning",
+      "feature": "Printable program",
+      "reference": "Browser print/PDF workout plan",
+      "current": "Flutter training PDF generation",
+      "status": "DONE",
+      "scores": [
+        8,
+        6,
+        7
+      ],
+      "test": "test/workout_tools_test.dart",
+      "priority": "P2 MEDIUM",
+      "problem": "No physical printer/share-sheet acceptance evidence",
+      "improvement": "No physical printer/share-sheet acceptance evidence",
+      "referenceSources": [
+        "frontend/src/views/Plan.jsx",
+        "frontend/src/views/RoutineEdit.jsx",
+        "frontend/src/sheets.jsx",
+        "frontend/src/lib/plan-share.js"
+      ],
+      "basis": "Source inspection plus listed passing checks; UI scores are conservative assessment, not pixel equality or coverage percentages."
+    },
+    {
+      "id": 26,
+      "area": "Library",
+      "feature": "Exercise metadata identities",
+      "reference": "1324 exercise identities and instructions",
+      "current": "1324 imported identities plus 24 SIRVYA seeds; existing custom exercises retained",
+      "status": "DONE",
+      "scores": [
+        9,
+        7,
+        8
+      ],
+      "test": "backend/tests/workout.integration.test.js; test/workout_library_test.dart; test/workout_custom_flow_test.dart",
+      "priority": "P2 MEDIUM",
+      "problem": "Similar seed/import exercise names may confuse users; label provenance instead of deleting IDs",
+      "improvement": "Similar seed/import exercise names may confuse users; label provenance instead of deleting IDs",
+      "referenceSources": [
+        "frontend/src/views/Library.jsx",
+        "frontend/src/lib/exercises.js",
+        "frontend/src/components/Media.jsx"
+      ],
+      "basis": "Source inspection plus listed passing checks; UI scores are conservative assessment, not pixel equality or coverage percentages."
+    },
+    {
+      "id": 27,
+      "area": "Library",
+      "feature": "Exercise list",
+      "reference": "Searchable catalog and workout selection",
+      "current": "Paged native catalog and picker",
+      "status": "DONE",
+      "scores": [
+        9,
+        7,
+        8
+      ],
+      "test": "test/workout_library_test.dart; test/workout_custom_flow_test.dart; docs/verification/workout-live-journey.json",
+      "priority": "P2 MEDIUM",
+      "problem": "Desktop native content is narrower than source grid",
+      "improvement": "Desktop native content is narrower than source grid",
+      "referenceSources": [
+        "frontend/src/views/Library.jsx",
+        "frontend/src/lib/exercises.js",
+        "frontend/src/components/Media.jsx"
+      ],
+      "basis": "Source inspection plus listed passing checks; UI scores are conservative assessment, not pixel equality or coverage percentages."
+    },
+    {
+      "id": 28,
+      "area": "Library",
+      "feature": "Search debounce",
+      "reference": "Filtered search while typing",
+      "current": "Debounced query; bounded 50-row pages",
+      "status": "DONE",
+      "scores": [
+        9,
+        7,
+        8
+      ],
+      "test": "test/workout_library_test.dart; test/workout_custom_flow_test.dart",
+      "priority": "P2 MEDIUM",
+      "problem": "LIKE substring remains non-indexable; measure growth before full-text changes",
+      "improvement": "LIKE substring remains non-indexable; measure growth before full-text changes",
+      "referenceSources": [
+        "frontend/src/views/Library.jsx",
+        "frontend/src/lib/exercises.js",
+        "frontend/src/components/Media.jsx"
+      ],
+      "basis": "Source inspection plus listed passing checks; UI scores are conservative assessment, not pixel equality or coverage percentages."
+    },
+    {
+      "id": 29,
+      "area": "Library",
+      "feature": "Body-part and equipment filters",
+      "reference": "Combined body-part/equipment chips",
+      "current": "Combined chips plus extra type/muscle filtering",
+      "status": "DONE",
+      "scores": [
+        9,
+        7,
+        8
+      ],
+      "test": "test/workout_library_test.dart; test/workout_custom_flow_test.dart",
+      "priority": "P2 MEDIUM",
+      "problem": "Filter labels and horizontal scrolling differ",
+      "improvement": "Filter labels and horizontal scrolling differ",
+      "referenceSources": [
+        "frontend/src/views/Library.jsx",
+        "frontend/src/lib/exercises.js",
+        "frontend/src/components/Media.jsx"
+      ],
+      "basis": "Source inspection plus listed passing checks; UI scores are conservative assessment, not pixel equality or coverage percentages."
+    },
+    {
+      "id": 30,
+      "area": "Library",
+      "feature": "Chosen exercises filter",
+      "reference": "Filter to exercises already in routines",
+      "current": "Chosen identities retained with filter reset",
+      "status": "DONE",
+      "scores": [
+        9,
+        7,
+        8
+      ],
+      "test": "test/workout_library_test.dart; test/workout_custom_flow_test.dart; backend/tests/workout.product-parity.test.js; backend/tests/workout.experience.test.js",
+      "priority": "P2 MEDIUM",
+      "problem": "Separate favorites are a SIRVYA extension",
+      "improvement": "Separate favorites are a SIRVYA extension",
+      "referenceSources": [
+        "frontend/src/views/Library.jsx",
+        "frontend/src/lib/exercises.js",
+        "frontend/src/components/Media.jsx"
+      ],
+      "basis": "Source inspection plus listed passing checks; UI scores are conservative assessment, not pixel equality or coverage percentages."
+    },
+    {
+      "id": 31,
+      "area": "Library",
+      "feature": "Loading/empty/pagination",
+      "reference": "Results, no matches, bounded rendering",
+      "current": "Loading/error/empty states and 50-to-100 paging tested",
+      "status": "DONE",
+      "scores": [
+        9,
+        7,
+        8
+      ],
+      "test": "test/workout_library_test.dart; test/workout_custom_flow_test.dart",
+      "priority": "P2 MEDIUM",
+      "problem": "No measured large-network latency budget",
+      "improvement": "No measured large-network latency budget",
+      "referenceSources": [
+        "frontend/src/views/Library.jsx",
+        "frontend/src/lib/exercises.js",
+        "frontend/src/components/Media.jsx"
+      ],
+      "basis": "Source inspection plus listed passing checks; UI scores are conservative assessment, not pixel equality or coverage percentages."
+    },
+    {
+      "id": 32,
+      "area": "Library",
+      "feature": "Instructions/details",
+      "reference": "Exercise information and translated instructions",
+      "current": "Metadata/instructions visible with native detail and history",
+      "status": "DONE",
+      "scores": [
+        8,
+        6,
+        7
+      ],
+      "test": "test/workout_library_test.dart; test/workout_custom_flow_test.dart; backend/tests/workout.domain.test.js",
+      "priority": "P2 MEDIUM",
+      "problem": "Detail screen has weaker paired visual evidence than main library",
+      "improvement": "Detail screen has weaker paired visual evidence than main library",
+      "referenceSources": [
+        "frontend/src/views/Library.jsx",
+        "frontend/src/lib/exercises.js",
+        "frontend/src/components/Media.jsx"
+      ],
+      "basis": "Source inspection plus listed passing checks; UI scores are conservative assessment, not pixel equality or coverage percentages."
+    },
+    {
+      "id": 33,
+      "area": "Library",
+      "feature": "Original catalog demonstration media",
+      "reference": "GymVisual GIF/image catalog",
+      "current": "Restricted original media omitted; replacement coverage limited",
+      "status": "BLOCKED — LICENSE",
+      "scores": [
+        3,
+        3,
+        4
+      ],
+      "test": "pinned reference source inspection",
+      "priority": "P1 HIGH",
+      "problem": "Obtain compatible media rights or extend original licensed demonstrations",
+      "improvement": "Obtain compatible media rights or extend original licensed demonstrations",
+      "referenceSources": [
+        "frontend/src/views/Library.jsx",
+        "frontend/src/lib/exercises.js",
+        "frontend/src/components/Media.jsx"
+      ],
+      "basis": "Source inspection plus listed passing checks; UI scores are conservative assessment, not pixel equality or coverage percentages."
+    },
+    {
+      "id": 34,
+      "area": "Library",
+      "feature": "Licensed replacement demonstrations",
+      "reference": "Reference loads demonstrative media",
+      "current": "19 reviewed demos cover 24 identities; 38 CC BY-SA frames",
+      "status": "DONE",
+      "scores": [
+        8,
+        6,
+        7
+      ],
+      "test": "backend/tests/workout.demonstrations.test.js",
+      "priority": "P2 MEDIUM",
+      "problem": "Limited catalog coverage and distinct playback behavior",
+      "improvement": "Limited catalog coverage and distinct playback behavior",
+      "referenceSources": [
+        "frontend/src/views/Library.jsx",
+        "frontend/src/lib/exercises.js",
+        "frontend/src/components/Media.jsx"
+      ],
+      "basis": "Source inspection plus listed passing checks; UI scores are conservative assessment, not pixel equality or coverage percentages."
+    },
+    {
+      "id": 35,
+      "area": "Library",
+      "feature": "Media size/show preference",
+      "reference": "Demonstration visibility and sizing",
+      "current": "Persisted visibility/size with licensed playback",
+      "status": "DONE",
+      "scores": [
+        8,
+        6,
+        7
+      ],
+      "test": "backend/tests/workout.product-parity.test.js; backend/tests/workout.experience.test.js; test/workout_logging_test.dart",
+      "priority": "P2 MEDIUM",
+      "problem": "Physical playback and caching budget unverified",
+      "improvement": "Physical playback and caching budget unverified",
+      "referenceSources": [
+        "frontend/src/views/Library.jsx",
+        "frontend/src/lib/exercises.js",
+        "frontend/src/components/Media.jsx"
+      ],
+      "basis": "Source inspection plus listed passing checks; UI scores are conservative assessment, not pixel equality or coverage percentages."
+    },
+    {
+      "id": 36,
+      "area": "Custom",
+      "feature": "Create custom exercise",
+      "reference": "Name/body part/description; cardio default from body part",
+      "current": "Private owned custom, minimal form and optional advanced fields",
+      "status": "DONE",
+      "scores": [
+        9,
+        7,
+        8
+      ],
+      "test": "test/workout_library_test.dart; test/workout_custom_flow_test.dart; backend/tests/workout.product-parity.test.js; backend/tests/workout.experience.test.js",
+      "priority": "P2 MEDIUM",
+      "problem": "Native form is taller and has more options",
+      "improvement": "Native form is taller and has more options",
+      "referenceSources": [
+        "frontend/src/views/Library.jsx",
+        "frontend/src/sheets.jsx",
+        "frontend/src/store/useStore.js"
+      ],
+      "basis": "Source inspection plus listed passing checks; UI scores are conservative assessment, not pixel equality or coverage percentages."
+    },
+    {
+      "id": 37,
+      "area": "Custom",
+      "feature": "Edit/delete custom exercise",
+      "reference": "Owned custom updates/removal; historical behavior retained",
+      "current": "Authorization, archive/in-use safety, existing history preserved",
+      "status": "DONE",
+      "scores": [
+        9,
+        7,
+        8
+      ],
+      "test": "backend/tests/workout.integration.test.js; test/workout_library_test.dart; test/workout_custom_flow_test.dart",
+      "priority": "P2 MEDIUM",
+      "problem": "Manual source/native delete interaction comparison incomplete",
+      "improvement": "Manual source/native delete interaction comparison incomplete",
+      "referenceSources": [
+        "frontend/src/views/Library.jsx",
+        "frontend/src/sheets.jsx",
+        "frontend/src/store/useStore.js"
+      ],
+      "basis": "Source inspection plus listed passing checks; UI scores are conservative assessment, not pixel equality or coverage percentages."
+    },
+    {
+      "id": 38,
+      "area": "Custom",
+      "feature": "Custom routine/log/history/stats",
+      "reference": "Customs behave as normal exercises",
+      "current": "Stable custom IDs used across plan, actual sets and statistics",
+      "status": "DONE",
+      "scores": [
+        9,
+        7,
+        8
+      ],
+      "test": "backend/tests/workout.integration.test.js; test/workout_library_test.dart; test/workout_custom_flow_test.dart; backend/tests/workout.stats.test.js",
+      "priority": "P2 MEDIUM",
+      "problem": "Transfer matching must remain identity-first",
+      "improvement": "Transfer matching must remain identity-first",
+      "referenceSources": [
+        "frontend/src/views/Library.jsx",
+        "frontend/src/sheets.jsx",
+        "frontend/src/store/useStore.js"
+      ],
+      "basis": "Source inspection plus listed passing checks; UI scores are conservative assessment, not pixel equality or coverage percentages."
+    },
+    {
+      "id": 39,
+      "area": "Execution",
+      "feature": "Active workout hierarchy",
+      "reference": "Exercise cards, demonstration, targets, last time, set grid",
+      "current": "Rich default cards, actual previous values, targets and set rows",
+      "status": "PARTIAL",
+      "scores": [
+        9,
+        7,
+        8
+      ],
+      "test": "docs/verification/workout-live-journey.json; test/workout_logging_test.dart; test/workout_visual_parity_test.dart; reviewed docs/verification/parity images",
+      "priority": "P1 HIGH",
+      "problem": "Full four-exercise phone UI journey remains unverified; visual controls still differ",
+      "improvement": "Full four-exercise phone UI journey remains unverified; visual controls still differ",
+      "referenceSources": [
+        "frontend/src/views/Workout.jsx",
+        "frontend/src/sheets.jsx",
+        "frontend/src/store/useStore.js"
+      ],
+      "basis": "Source inspection plus listed passing checks; UI scores are conservative assessment, not pixel equality or coverage percentages."
+    },
+    {
+      "id": 40,
+      "area": "Execution",
+      "feature": "Set weight/reps editing",
+      "reference": "Inline stepper inputs and completion check",
+      "current": "Inline native rows with validated load/reps and completion",
+      "status": "DONE",
+      "scores": [
+        9,
+        7,
+        8
+      ],
+      "test": "docs/verification/workout-live-journey.json; test/workout_logging_test.dart; backend/tests/workout.push-day.integration.test.js",
+      "priority": "P2 MEDIUM",
+      "problem": "Stepper glyphs/column widths differ",
+      "improvement": "Stepper glyphs/column widths differ",
+      "referenceSources": [
+        "frontend/src/views/Workout.jsx",
+        "frontend/src/sheets.jsx",
+        "frontend/src/store/useStore.js"
+      ],
+      "basis": "Source inspection plus listed passing checks; UI scores are conservative assessment, not pixel equality or coverage percentages."
+    },
+    {
+      "id": 41,
+      "area": "Execution",
+      "feature": "Complete/undo/add/remove set",
+      "reference": "Edit live completed state and set count",
+      "current": "Persisted actual sets with stable slot identity and retries",
+      "status": "DONE",
+      "scores": [
+        9,
+        7,
+        8
+      ],
+      "test": "backend/tests/workout.integration.test.js; test/workout_logging_test.dart",
+      "priority": "P2 MEDIUM",
+      "problem": "Long-session manual interaction coverage incomplete",
+      "improvement": "Long-session manual interaction coverage incomplete",
+      "referenceSources": [
+        "frontend/src/views/Workout.jsx",
+        "frontend/src/sheets.jsx",
+        "frontend/src/store/useStore.js"
+      ],
+      "basis": "Source inspection plus listed passing checks; UI scores are conservative assessment, not pixel equality or coverage percentages."
+    },
+    {
+      "id": 42,
+      "area": "Execution",
+      "feature": "Previous performance",
+      "reference": "Actual most recent sets, dates and loads",
+      "current": "Database previous sets; second Push Day checks real values",
+      "status": "DONE",
+      "scores": [
+        9,
+        7,
+        8
+      ],
+      "test": "backend/tests/workout.push-day.integration.test.js; backend/tests/workout.product-parity.test.js; backend/tests/workout.experience.test.js; test/workout_logging_test.dart",
+      "priority": "P1 HIGH",
+      "problem": "No placeholder data; retain two-session regression",
+      "improvement": "No placeholder data; retain two-session regression",
+      "referenceSources": [
+        "frontend/src/views/Workout.jsx",
+        "frontend/src/sheets.jsx",
+        "frontend/src/store/useStore.js"
+      ],
+      "basis": "Source inspection plus listed passing checks; UI scores are conservative assessment, not pixel equality or coverage percentages."
+    },
+    {
+      "id": 43,
+      "area": "Execution",
+      "feature": "Prefill precedence",
+      "reference": "Previous working performance, progression, then target",
+      "current": "Personal source policy plus stricter assigned Coach prescription",
+      "status": "DONE",
+      "scores": [
+        9,
+        7,
+        8
+      ],
+      "test": "backend/tests/workout.push-day.integration.test.js; backend/tests/workout.product-parity.test.js; backend/tests/workout.experience.test.js",
+      "priority": "P1 HIGH",
+      "problem": "Explain Coach versus personal rule in UI",
+      "improvement": "Explain Coach versus personal rule in UI",
+      "referenceSources": [
+        "frontend/src/views/Workout.jsx",
+        "frontend/src/sheets.jsx",
+        "frontend/src/store/useStore.js"
+      ],
+      "basis": "Source inspection plus listed passing checks; UI scores are conservative assessment, not pixel equality or coverage percentages."
+    },
+    {
+      "id": 44,
+      "area": "Execution",
+      "feature": "Working weight confirmation",
+      "reference": "Confirm learned working load; unconfirmed actual load remains usable",
+      "current": "Stored preference plus real previous-load precedence",
+      "status": "DONE",
+      "scores": [
+        9,
+        7,
+        8
+      ],
+      "test": "docs/verification/workout-live-journey.json; backend/tests/workout.product-parity.test.js; backend/tests/workout.experience.test.js",
+      "priority": "P2 MEDIUM",
+      "problem": "Confirmation is a native dialog adaptation",
+      "improvement": "Confirmation is a native dialog adaptation",
+      "referenceSources": [
+        "frontend/src/views/Workout.jsx",
+        "frontend/src/sheets.jsx",
+        "frontend/src/store/useStore.js"
+      ],
+      "basis": "Source inspection plus listed passing checks; UI scores are conservative assessment, not pixel equality or coverage percentages."
+    },
+    {
+      "id": 45,
+      "area": "Execution",
+      "feature": "Superset sequencing",
+      "reference": "A1/A2 back-to-back; rest only after last member",
+      "current": "Round-robin set sequence and appropriate rest boundary",
+      "status": "DONE",
+      "scores": [
+        9,
+        7,
+        8
+      ],
+      "test": "test/workout_logging_test.dart; backend/tests/workout.product-parity.test.js; backend/tests/workout.experience.test.js",
+      "priority": "P1 HIGH",
+      "problem": "Phone timer interaction still needs acceptance testing",
+      "improvement": "Phone timer interaction still needs acceptance testing",
+      "referenceSources": [
+        "frontend/src/views/Workout.jsx",
+        "frontend/src/sheets.jsx",
+        "frontend/src/store/useStore.js"
+      ],
+      "basis": "Source inspection plus listed passing checks; UI scores are conservative assessment, not pixel equality or coverage percentages."
+    },
+    {
+      "id": 46,
+      "area": "Execution",
+      "feature": "Unloaded/weighted bodyweight",
+      "reference": "Reps without mandatory external load; added load optional",
+      "current": "Saved reps/load and appropriate records; weighted PR fix included",
+      "status": "DONE",
+      "scores": [
+        9,
+        7,
+        8
+      ],
+      "test": "backend/tests/workout.domain.test.js; backend/tests/workout.stats.test.js",
+      "priority": "P1 HIGH",
+      "problem": "No assisted negative-load model; reference also lacks it",
+      "improvement": "No assisted negative-load model; reference also lacks it",
+      "referenceSources": [
+        "frontend/src/views/Workout.jsx",
+        "frontend/src/sheets.jsx",
+        "frontend/src/store/useStore.js"
+      ],
+      "basis": "Source inspection plus listed passing checks; UI scores are conservative assessment, not pixel equality or coverage percentages."
+    },
+    {
+      "id": 47,
+      "area": "Execution",
+      "feature": "Per-side reps",
+      "reference": "Even total-rep prescription with per-side interpretation",
+      "current": "Even targets validated; adds unequal-side actual logging",
+      "status": "DONE",
+      "scores": [
+        9,
+        7,
+        8
+      ],
+      "test": "backend/tests/workout.product-parity.test.js; backend/tests/workout.experience.test.js; test/workout_logging_test.dart",
+      "priority": "P2 MEDIUM",
+      "problem": "SIRVYA unequal-side extension increases complexity",
+      "improvement": "SIRVYA unequal-side extension increases complexity",
+      "referenceSources": [
+        "frontend/src/views/Workout.jsx",
+        "frontend/src/sheets.jsx",
+        "frontend/src/store/useStore.js"
+      ],
+      "basis": "Source inspection plus listed passing checks; UI scores are conservative assessment, not pixel equality or coverage percentages."
+    },
+    {
+      "id": 48,
+      "area": "Execution",
+      "feature": "Cardio logging",
+      "reference": "Duration and speed; derives distance",
+      "current": "Duration/distance/speed persisted and reported separately",
+      "status": "DONE",
+      "scores": [
+        9,
+        6,
+        7
+      ],
+      "test": "backend/tests/workout.domain.test.js; backend/tests/workout.product-parity.test.js; backend/tests/workout.experience.test.js",
+      "priority": "P2 MEDIUM",
+      "problem": "Native configuration adds Cardio segment; physical journey not run",
+      "improvement": "Native configuration adds Cardio segment; physical journey not run",
+      "referenceSources": [
+        "frontend/src/views/Workout.jsx",
+        "frontend/src/sheets.jsx",
+        "frontend/src/store/useStore.js"
+      ],
+      "basis": "Source inspection plus listed passing checks; UI scores are conservative assessment, not pixel equality or coverage percentages."
+    },
+    {
+      "id": 49,
+      "area": "Execution",
+      "feature": "RIR/RPE effort",
+      "reference": "Optional chosen scale; half-point RIR; no effect on progression/1RM",
+      "current": "Validated optional effort retained in sets/history/stats",
+      "status": "DONE",
+      "scores": [
+        9,
+        7,
+        8
+      ],
+      "test": "backend/tests/workout.product-parity.test.js; backend/tests/workout.experience.test.js; backend/tests/workout.push-day.integration.test.js",
+      "priority": "P1 HIGH",
+      "problem": "Physical keyboard/input ergonomics unverified",
+      "improvement": "Physical keyboard/input ergonomics unverified",
+      "referenceSources": [
+        "frontend/src/views/Workout.jsx",
+        "frontend/src/sheets.jsx",
+        "frontend/src/store/useStore.js"
+      ],
+      "basis": "Source inspection plus listed passing checks; UI scores are conservative assessment, not pixel equality or coverage percentages."
+    },
+    {
+      "id": 50,
+      "area": "Execution",
+      "feature": "Exercise descriptions and training notes",
+      "reference": "Custom descriptions/setup cues are shown during training",
+      "current": "Plan/exercise/session notes and historical notes extend source behavior",
+      "status": "DONE",
+      "scores": [
+        9,
+        6,
+        7
+      ],
+      "test": "backend/tests/workout.integration.test.js; backend/tests/workout.import.test.js; backend/tests/workout.backup.integration.test.js; test/workout_transfer_flow_test.dart",
+      "priority": "P2 MEDIUM",
+      "problem": "Native session notes are an extension; note placement differs",
+      "improvement": "Native session notes are an extension; note placement differs",
+      "referenceSources": [
+        "frontend/src/views/Workout.jsx",
+        "frontend/src/sheets.jsx",
+        "frontend/src/store/useStore.js"
+      ],
+      "basis": "Source inspection plus listed passing checks; UI scores are conservative assessment, not pixel equality or coverage percentages."
+    },
+    {
+      "id": 51,
+      "area": "Execution",
+      "feature": "Finish prompt and summary",
+      "reference": "Incomplete confirmation; duration/sets/volume/PR/muscles",
+      "current": "Persisted finish, incomplete/cancel guards, real summary",
+      "status": "DONE",
+      "scores": [
+        9,
+        7,
+        8
+      ],
+      "test": "docs/verification/workout-live-journey.json; backend/tests/workout.push-day.integration.test.js; test/workout_visual_parity_test.dart; reviewed docs/verification/parity images",
+      "priority": "P1 HIGH",
+      "problem": "Summary background retains Resume/active view until dismissal",
+      "improvement": "Summary background retains Resume/active view until dismissal",
+      "referenceSources": [
+        "frontend/src/views/Workout.jsx",
+        "frontend/src/sheets.jsx",
+        "frontend/src/store/useStore.js"
+      ],
+      "basis": "Source inspection plus listed passing checks; UI scores are conservative assessment, not pixel equality or coverage percentages."
+    },
+    {
+      "id": 52,
+      "area": "Execution",
+      "feature": "Cancellation/exit",
+      "reference": "Confirm cancellation; retained live workout across navigation",
+      "current": "Confirmation, Resume and separate cancelled status",
+      "status": "DONE",
+      "scores": [
+        9,
+        7,
+        8
+      ],
+      "test": "backend/tests/workout.integration.test.js; test/workout_recovery_parity_test.dart; test/workout_continuation_test.dart",
+      "priority": "P1 HIGH",
+      "problem": "Actual OS force-stop/relaunch unverified",
+      "improvement": "Actual OS force-stop/relaunch unverified",
+      "referenceSources": [
+        "frontend/src/views/Workout.jsx",
+        "frontend/src/sheets.jsx",
+        "frontend/src/store/useStore.js"
+      ],
+      "basis": "Source inspection plus listed passing checks; UI scores are conservative assessment, not pixel equality or coverage percentages."
+    },
+    {
+      "id": 53,
+      "area": "Execution",
+      "feature": "Offline completed-set recovery",
+      "reference": "Local active state persists; server sync failure handled",
+      "current": "Account-scoped draft/outbox, idempotent set replay and retry",
+      "status": "PARTIAL",
+      "scores": [
+        8,
+        6,
+        7
+      ],
+      "test": "docs/verification/workout-live-journey.json; test/workout_recovery_parity_test.dart; test/workout_continuation_test.dart",
+      "priority": "P0 CRITICAL",
+      "problem": "Web offline/reconnect proved; device force-stop and storage quota not proved",
+      "improvement": "Web offline/reconnect proved; device force-stop and storage quota not proved",
+      "referenceSources": [
+        "frontend/src/views/Workout.jsx",
+        "frontend/src/sheets.jsx",
+        "frontend/src/store/useStore.js"
+      ],
+      "basis": "Source inspection plus listed passing checks; UI scores are conservative assessment, not pixel equality or coverage percentages."
+    },
+    {
+      "id": 54,
+      "area": "Timer",
+      "feature": "Automatic rest",
+      "reference": "Starts after correct working set/superset boundary",
+      "current": "Independent rest controller with boundary rules",
+      "status": "DONE",
+      "scores": [
+        9,
+        7,
+        8
+      ],
+      "test": "test/workout_logging_test.dart; backend/tests/workout.product-parity.test.js; backend/tests/workout.experience.test.js",
+      "priority": "P1 HIGH",
+      "problem": "No physical notification/sound proof",
+      "improvement": "No physical notification/sound proof",
+      "referenceSources": [
+        "frontend/src/views/Workout.jsx",
+        "frontend/src/components/RestTimer.jsx",
+        "frontend/src/store/useUI.js",
+        "frontend/src/lib/mobile.js"
+      ],
+      "basis": "Source inspection plus listed passing checks; UI scores are conservative assessment, not pixel equality or coverage percentages."
+    },
+    {
+      "id": 55,
+      "area": "Timer",
+      "feature": "Rest deadline stability",
+      "reference": "Wall-clock countdown survives background throttling",
+      "current": "Absolute deadlines; restore remaining time and single global host",
+      "status": "DONE",
+      "scores": [
+        9,
+        7,
+        8
+      ],
+      "test": "test/workout_recovery_parity_test.dart; test/workout_continuation_test.dart; test/workout_logging_test.dart",
+      "priority": "P1 HIGH",
+      "problem": "Doze/background restrictions remain device-dependent",
+      "improvement": "Doze/background restrictions remain device-dependent",
+      "referenceSources": [
+        "frontend/src/views/Workout.jsx",
+        "frontend/src/components/RestTimer.jsx",
+        "frontend/src/store/useUI.js",
+        "frontend/src/lib/mobile.js"
+      ],
+      "basis": "Source inspection plus listed passing checks; UI scores are conservative assessment, not pixel equality or coverage percentages."
+    },
+    {
+      "id": 56,
+      "area": "Timer",
+      "feature": "Rest add/skip controls",
+      "reference": "Add/subtract time and skip",
+      "current": "Add/subtract/skip plus native pause/resume",
+      "status": "DONE",
+      "scores": [
+        9,
+        7,
+        8
+      ],
+      "test": "test/workout_logging_test.dart",
+      "priority": "P2 MEDIUM",
+      "problem": "Dedicated paired timer capture not reviewed in this pass",
+      "improvement": "Dedicated paired timer capture not reviewed in this pass",
+      "referenceSources": [
+        "frontend/src/views/Workout.jsx",
+        "frontend/src/components/RestTimer.jsx",
+        "frontend/src/store/useUI.js",
+        "frontend/src/lib/mobile.js"
+      ],
+      "basis": "Source inspection plus listed passing checks; UI scores are conservative assessment, not pixel equality or coverage percentages."
+    },
+    {
+      "id": 57,
+      "area": "Timer",
+      "feature": "Timed work set",
+      "reference": "Start hold, auto-complete target, early-stop actual duration",
+      "current": "Independent work timer and persisted actual seconds",
+      "status": "DONE",
+      "scores": [
+        9,
+        7,
+        8
+      ],
+      "test": "test/workout_logging_test.dart; backend/tests/workout.push-day.integration.test.js",
+      "priority": "P1 HIGH",
+      "problem": "HTTP 45/50-second records prove data, not actual hardware elapsed timing",
+      "improvement": "HTTP 45/50-second records prove data, not actual hardware elapsed timing",
+      "referenceSources": [
+        "frontend/src/views/Workout.jsx",
+        "frontend/src/components/RestTimer.jsx",
+        "frontend/src/store/useUI.js",
+        "frontend/src/lib/mobile.js"
+      ],
+      "basis": "Source inspection plus listed passing checks; UI scores are conservative assessment, not pixel equality or coverage percentages."
+    },
+    {
+      "id": 58,
+      "area": "Timer",
+      "feature": "Work/rest conflict prevention",
+      "reference": "One working timer; rest starts after completed hold",
+      "current": "Separate work/rest state with global timer ownership",
+      "status": "DONE",
+      "scores": [
+        9,
+        7,
+        8
+      ],
+      "test": "test/workout_logging_test.dart; test/workout_recovery_parity_test.dart; test/workout_continuation_test.dart",
+      "priority": "P1 HIGH",
+      "problem": "Stress app lifecycle on Android before release",
+      "improvement": "Stress app lifecycle on Android before release",
+      "referenceSources": [
+        "frontend/src/views/Workout.jsx",
+        "frontend/src/components/RestTimer.jsx",
+        "frontend/src/store/useUI.js",
+        "frontend/src/lib/mobile.js"
+      ],
+      "basis": "Source inspection plus listed passing checks; UI scores are conservative assessment, not pixel equality or coverage percentages."
+    },
+    {
+      "id": 59,
+      "area": "Timer",
+      "feature": "Sound/vibration/flash",
+      "reference": "Optional completion cues",
+      "current": "Existing SIRVYA local notification/haptic/audio APIs",
+      "status": "PARTIAL",
+      "scores": [
+        7,
+        6,
+        7
+      ],
+      "test": "test/workout_logging_test.dart",
+      "priority": "P1 HIGH",
+      "problem": "Physical delivery and background audio not tested",
+      "improvement": "Physical delivery and background audio not tested",
+      "referenceSources": [
+        "frontend/src/views/Workout.jsx",
+        "frontend/src/components/RestTimer.jsx",
+        "frontend/src/store/useUI.js",
+        "frontend/src/lib/mobile.js"
+      ],
+      "basis": "Source inspection plus listed passing checks; UI scores are conservative assessment, not pixel equality or coverage percentages."
+    },
+    {
+      "id": 60,
+      "area": "Timer",
+      "feature": "Screen awake",
+      "reference": "Wake lock while actively training",
+      "current": "Ownership cleanup fixed at finish/cancel/dispose",
+      "status": "PARTIAL",
+      "scores": [
+        8,
+        7,
+        8
+      ],
+      "test": "test/workout_wakelock_test.dart",
+      "priority": "P1 HIGH",
+      "problem": "Both cleanup tests pass; actual phone wake-lock behavior untested",
+      "improvement": "Both cleanup tests pass; actual phone wake-lock behavior untested",
+      "referenceSources": [
+        "frontend/src/views/Workout.jsx",
+        "frontend/src/components/RestTimer.jsx",
+        "frontend/src/store/useUI.js",
+        "frontend/src/lib/mobile.js"
+      ],
+      "basis": "Source inspection plus listed passing checks; UI scores are conservative assessment, not pixel equality or coverage percentages."
+    },
+    {
+      "id": 61,
+      "area": "Progression",
+      "feature": "No progression",
+      "reference": "Repeat prescribed/remembered target",
+      "current": "Explicit off policy",
+      "status": "DONE",
+      "scores": [
+        9,
+        7,
+        8
+      ],
+      "test": "backend/tests/workout.product-parity.test.js; backend/tests/workout.experience.test.js",
+      "priority": "P1 HIGH",
+      "problem": "Manual help wording differs",
+      "improvement": "Manual help wording differs",
+      "referenceSources": [
+        "frontend/src/lib/progression.js",
+        "frontend/src/sheets.jsx"
+      ],
+      "basis": "Source inspection plus listed passing checks; UI scores are conservative assessment, not pixel equality or coverage percentages."
+    },
+    {
+      "id": 62,
+      "area": "Progression",
+      "feature": "Linear progression",
+      "reference": "Increase successful load; repeated misses deload",
+      "current": "Actual working-set success, source increments and miss/deload rules",
+      "status": "DONE",
+      "scores": [
+        9,
+        7,
+        8
+      ],
+      "test": "backend/tests/workout.product-parity.test.js; backend/tests/workout.experience.test.js; backend/tests/workout.push-day.integration.test.js",
+      "priority": "P1 HIGH",
+      "problem": "Preserve actual versus target distinction",
+      "improvement": "Preserve actual versus target distinction",
+      "referenceSources": [
+        "frontend/src/lib/progression.js",
+        "frontend/src/sheets.jsx"
+      ],
+      "basis": "Source inspection plus listed passing checks; UI scores are conservative assessment, not pixel equality or coverage percentages."
+    },
+    {
+      "id": 63,
+      "area": "Progression",
+      "feature": "Greyskull progression",
+      "reference": "AMRAP/last-set threshold affects load increase",
+      "current": "Configured Greyskull policy with controlled-value tests",
+      "status": "DONE",
+      "scores": [
+        9,
+        6,
+        7
+      ],
+      "test": "backend/tests/workout.product-parity.test.js; backend/tests/workout.experience.test.js",
+      "priority": "P1 HIGH",
+      "problem": "No separate two-session browser Greyskull exercise run",
+      "improvement": "No separate two-session browser Greyskull exercise run",
+      "referenceSources": [
+        "frontend/src/lib/progression.js",
+        "frontend/src/sheets.jsx"
+      ],
+      "basis": "Source inspection plus listed passing checks; UI scores are conservative assessment, not pixel equality or coverage percentages."
+    },
+    {
+      "id": 64,
+      "area": "Progression",
+      "feature": "Double progression",
+      "reference": "Rep range; judge most recent actual target; add load on success",
+      "current": "Personal source rule; Coach retains original upper-range requirement",
+      "status": "DONE",
+      "scores": [
+        9,
+        6,
+        7
+      ],
+      "test": "backend/tests/workout.product-parity.test.js; backend/tests/workout.experience.test.js",
+      "priority": "P1 HIGH",
+      "problem": "Intentional Coach policy difference needs visible explanation",
+      "improvement": "Intentional Coach policy difference needs visible explanation",
+      "referenceSources": [
+        "frontend/src/lib/progression.js",
+        "frontend/src/sheets.jsx"
+      ],
+      "basis": "Source inspection plus listed passing checks; UI scores are conservative assessment, not pixel equality or coverage percentages."
+    },
+    {
+      "id": 65,
+      "area": "Progression",
+      "feature": "Timed progression",
+      "reference": "Increase hold seconds on success; deload after misses",
+      "current": "Time policy with 45-to-50-second Push Day proof",
+      "status": "DONE",
+      "scores": [
+        9,
+        6,
+        7
+      ],
+      "test": "backend/tests/workout.push-day.integration.test.js; backend/tests/workout.product-parity.test.js; backend/tests/workout.experience.test.js",
+      "priority": "P1 HIGH",
+      "problem": "Manual timer/journey evidence still narrower than pure logic coverage",
+      "improvement": "Manual timer/journey evidence still narrower than pure logic coverage",
+      "referenceSources": [
+        "frontend/src/lib/progression.js",
+        "frontend/src/sheets.jsx"
+      ],
+      "basis": "Source inspection plus listed passing checks; UI scores are conservative assessment, not pixel equality or coverage percentages."
+    },
+    {
+      "id": 66,
+      "area": "Progression",
+      "feature": "Bodyweight progression",
+      "reference": "Increase reps or sets at configured ceiling",
+      "current": "Rep ceiling/set cap with per-side step normalization",
+      "status": "DONE",
+      "scores": [
+        9,
+        6,
+        7
+      ],
+      "test": "backend/tests/workout.product-parity.test.js; backend/tests/workout.experience.test.js",
+      "priority": "P1 HIGH",
+      "problem": "No full bodyweight-only browser program run",
+      "improvement": "No full bodyweight-only browser program run",
+      "referenceSources": [
+        "frontend/src/lib/progression.js",
+        "frontend/src/sheets.jsx"
+      ],
+      "basis": "Source inspection plus listed passing checks; UI scores are conservative assessment, not pixel equality or coverage percentages."
+    },
+    {
+      "id": 67,
+      "area": "Progression",
+      "feature": "Policy/configuration change",
+      "reference": "Changed prescription should reset relevant progression",
+      "current": "Original targets/policy checked; notes-only edits keep history",
+      "status": "DONE",
+      "scores": [
+        9,
+        6,
+        7
+      ],
+      "test": "backend/tests/workout.product-parity.test.js; backend/tests/workout.experience.test.js",
+      "priority": "P1 HIGH",
+      "problem": "Keep configuration revision semantics explicit",
+      "improvement": "Keep configuration revision semantics explicit",
+      "referenceSources": [
+        "frontend/src/lib/progression.js",
+        "frontend/src/sheets.jsx"
+      ],
+      "basis": "Source inspection plus listed passing checks; UI scores are conservative assessment, not pixel equality or coverage percentages."
+    },
+    {
+      "id": 68,
+      "area": "History",
+      "feature": "Chronological history and true count",
+      "reference": "Reverse completed workouts; detail entry",
+      "current": "Paged real history, actual total count fixed this audit",
+      "status": "DONE",
+      "scores": [
+        9,
+        7,
+        8
+      ],
+      "test": "docs/verification/workout-live-journey.json; backend/tests/workout.push-day.integration.test.js; backend/tests/workout.integration.test.js",
+      "priority": "P1 HIGH",
+      "problem": "Numeric date layout and transfer actions differ",
+      "improvement": "Numeric date layout and transfer actions differ",
+      "referenceSources": [
+        "frontend/src/views/History.jsx",
+        "frontend/src/lib/history.js",
+        "frontend/src/lib/onerm.js",
+        "frontend/src/sheets.jsx"
+      ],
+      "basis": "Source inspection plus listed passing checks; UI scores are conservative assessment, not pixel equality or coverage percentages."
+    },
+    {
+      "id": 69,
+      "area": "History",
+      "feature": "Workout detail",
+      "reference": "Date/duration/sets/reps/load/time/effort/notes",
+      "current": "Original versus actual snapshots and all performed fields",
+      "status": "DONE",
+      "scores": [
+        9,
+        7,
+        8
+      ],
+      "test": "backend/tests/workout.push-day.integration.test.js; test/workout_history_detail_test.dart",
+      "priority": "P1 HIGH",
+      "problem": "Coach detail adds prescribed versus performed comparison",
+      "improvement": "Coach detail adds prescribed versus performed comparison",
+      "referenceSources": [
+        "frontend/src/views/History.jsx",
+        "frontend/src/lib/history.js",
+        "frontend/src/lib/onerm.js",
+        "frontend/src/sheets.jsx"
+      ],
+      "basis": "Source inspection plus listed passing checks; UI scores are conservative assessment, not pixel equality or coverage percentages."
+    },
+    {
+      "id": 70,
+      "area": "History",
+      "feature": "Exercise history and progression",
+      "reference": "Exercise records, load/rep/duration points",
+      "current": "Real previous sessions and exercise charts",
+      "status": "DONE",
+      "scores": [
+        8,
+        6,
+        7
+      ],
+      "test": "backend/tests/workout.stats.test.js; backend/tests/workout.integration.test.js",
+      "priority": "P2 MEDIUM",
+      "problem": "No dedicated matched exercise-detail chart capture",
+      "improvement": "No dedicated matched exercise-detail chart capture",
+      "referenceSources": [
+        "frontend/src/views/History.jsx",
+        "frontend/src/lib/history.js",
+        "frontend/src/lib/onerm.js",
+        "frontend/src/sheets.jsx"
+      ],
+      "basis": "Source inspection plus listed passing checks; UI scores are conservative assessment, not pixel equality or coverage percentages."
+    },
+    {
+      "id": 71,
+      "area": "History",
+      "feature": "Personal records",
+      "reference": "Heaviest load and estimated 1RM at completion",
+      "current": "Actual-only load/e1RM; adds reps/volume/timed records",
+      "status": "DONE",
+      "scores": [
+        9,
+        7,
+        8
+      ],
+      "test": "backend/tests/workout.stats.test.js; backend/tests/workout.push-day.integration.test.js",
+      "priority": "P1 HIGH",
+      "problem": "Deliberately does not treat unlogged confirmed load as a PR",
+      "improvement": "Deliberately does not treat unlogged confirmed load as a PR",
+      "referenceSources": [
+        "frontend/src/views/History.jsx",
+        "frontend/src/lib/history.js",
+        "frontend/src/lib/onerm.js",
+        "frontend/src/sheets.jsx"
+      ],
+      "basis": "Source inspection plus listed passing checks; UI scores are conservative assessment, not pixel equality or coverage percentages."
+    },
+    {
+      "id": 72,
+      "area": "History",
+      "feature": "Period PR baseline",
+      "reference": "Period metrics must compare with earlier lifetime performance",
+      "current": "Weekly false-PR defect fixed; prior baseline retained",
+      "status": "DONE",
+      "scores": [
+        9,
+        7,
+        8
+      ],
+      "test": "backend/tests/workout.stats.test.js; backend/tests/workout.push-day.integration.test.js",
+      "priority": "P1 HIGH",
+      "problem": "Retain boundary regression; broader UI PR label review desirable",
+      "improvement": "Retain boundary regression; broader UI PR label review desirable",
+      "referenceSources": [
+        "frontend/src/views/History.jsx",
+        "frontend/src/lib/history.js",
+        "frontend/src/lib/onerm.js",
+        "frontend/src/sheets.jsx"
+      ],
+      "basis": "Source inspection plus listed passing checks; UI scores are conservative assessment, not pixel equality or coverage percentages."
+    },
+    {
+      "id": 73,
+      "area": "History",
+      "feature": "Estimated 1RM",
+      "reference": "UI uses Epley, rep cap 12; one rep returns measured load",
+      "current": "Same eligibility/formula; warmups/timed/unloaded excluded",
+      "status": "DONE",
+      "scores": [
+        9,
+        6,
+        7
+      ],
+      "test": "backend/tests/workout.domain.test.js; backend/tests/workout.stats.test.js",
+      "priority": "P1 HIGH",
+      "problem": "Source rounds to 0.1; native formatting is an adaptation",
+      "improvement": "Source rounds to 0.1; native formatting is an adaptation",
+      "referenceSources": [
+        "frontend/src/views/History.jsx",
+        "frontend/src/lib/history.js",
+        "frontend/src/lib/onerm.js",
+        "frontend/src/sheets.jsx"
+      ],
+      "basis": "Source inspection plus listed passing checks; UI scores are conservative assessment, not pixel equality or coverage percentages."
+    },
+    {
+      "id": 74,
+      "area": "History",
+      "feature": "Training volume",
+      "reference": "Load multiplied by completed reps; no fake timed volume",
+      "current": "Actual weighted rep volume; timed/cardio volume zero",
+      "status": "DONE",
+      "scores": [
+        9,
+        7,
+        8
+      ],
+      "test": "backend/tests/workout.domain.test.js; backend/tests/workout.push-day.integration.test.js",
+      "priority": "P1 HIGH",
+      "problem": "Bodyweight-only tonnage is intentionally zero without external load",
+      "improvement": "Bodyweight-only tonnage is intentionally zero without external load",
+      "referenceSources": [
+        "frontend/src/views/History.jsx",
+        "frontend/src/lib/history.js",
+        "frontend/src/lib/onerm.js",
+        "frontend/src/sheets.jsx"
+      ],
+      "basis": "Source inspection plus listed passing checks; UI scores are conservative assessment, not pixel equality or coverage percentages."
+    },
+    {
+      "id": 75,
+      "area": "Stats",
+      "feature": "Overview counters",
+      "reference": "Workouts, month count, streak, bodyweight delta",
+      "current": "Real stored-session counters and weight delta",
+      "status": "DONE",
+      "scores": [
+        9,
+        7,
+        8
+      ],
+      "test": "backend/tests/workout.stats.test.js; test/workout_visual_parity_test.dart; reviewed docs/verification/parity images; docs/verification/workout-live-journey.json",
+      "priority": "P2 MEDIUM",
+      "problem": "Native icons and tile heights differ",
+      "improvement": "Native icons and tile heights differ",
+      "referenceSources": [
+        "frontend/src/views/Stats.jsx",
+        "frontend/src/lib/history.js",
+        "frontend/src/lib/muscles.js",
+        "frontend/src/lib/effort.js",
+        "frontend/src/components/Heatmap.jsx",
+        "frontend/src/components/BodyMap.jsx",
+        "frontend/src/components/LineChart.jsx"
+      ],
+      "basis": "Source inspection plus listed passing checks; UI scores are conservative assessment, not pixel equality or coverage percentages."
+    },
+    {
+      "id": 76,
+      "area": "Stats",
+      "feature": "Activity heatmap",
+      "reference": "12-month duration intensity and day drilldown",
+      "current": "Actual dates and duration intensity; drilldown/calendar",
+      "status": "DONE",
+      "scores": [
+        9,
+        7,
+        8
+      ],
+      "test": "backend/tests/workout.stats.test.js; test/workout_visual_parity_test.dart; reviewed docs/verification/parity images",
+      "priority": "P2 MEDIUM",
+      "problem": "Desktop grid occupies less width; small-screen month label can clip",
+      "improvement": "Desktop grid occupies less width; small-screen month label can clip",
+      "referenceSources": [
+        "frontend/src/views/Stats.jsx",
+        "frontend/src/lib/history.js",
+        "frontend/src/lib/muscles.js",
+        "frontend/src/lib/effort.js",
+        "frontend/src/components/Heatmap.jsx",
+        "frontend/src/components/BodyMap.jsx",
+        "frontend/src/components/LineChart.jsx"
+      ],
+      "basis": "Source inspection plus listed passing checks; UI scores are conservative assessment, not pixel equality or coverage percentages."
+    },
+    {
+      "id": 77,
+      "area": "Stats",
+      "feature": "Muscle map front/back",
+      "reference": "Gender-specific anatomical contours and trained intensity",
+      "current": "Native four MIT figures; actual weighted muscle contributions",
+      "status": "DONE",
+      "scores": [
+        9,
+        7,
+        8
+      ],
+      "test": "test/workout_anatomy_test.dart; backend/tests/workout.stats.test.js; test/workout_visual_parity_test.dart; reviewed docs/verification/parity images",
+      "priority": "P2 MEDIUM",
+      "problem": "Map sizing and period-control styling differ",
+      "improvement": "Map sizing and period-control styling differ",
+      "referenceSources": [
+        "frontend/src/views/Stats.jsx",
+        "frontend/src/lib/history.js",
+        "frontend/src/lib/muscles.js",
+        "frontend/src/lib/effort.js",
+        "frontend/src/components/Heatmap.jsx",
+        "frontend/src/components/BodyMap.jsx",
+        "frontend/src/components/LineChart.jsx"
+      ],
+      "basis": "Source inspection plus listed passing checks; UI scores are conservative assessment, not pixel equality or coverage percentages."
+    },
+    {
+      "id": 78,
+      "area": "Stats",
+      "feature": "Muscle periods and effort filters",
+      "reference": "Week/30d/90d/all and effort context",
+      "current": "Actual local-week windows, weighted effective/hard sets",
+      "status": "DONE",
+      "scores": [
+        9,
+        7,
+        8
+      ],
+      "test": "backend/tests/workout.stats.test.js; backend/tests/workout.product-parity.test.js; backend/tests/workout.experience.test.js",
+      "priority": "P1 HIGH",
+      "problem": "No manual every-period browser comparison",
+      "improvement": "No manual every-period browser comparison",
+      "referenceSources": [
+        "frontend/src/views/Stats.jsx",
+        "frontend/src/lib/history.js",
+        "frontend/src/lib/muscles.js",
+        "frontend/src/lib/effort.js",
+        "frontend/src/components/Heatmap.jsx",
+        "frontend/src/components/BodyMap.jsx",
+        "frontend/src/components/LineChart.jsx"
+      ],
+      "basis": "Source inspection plus listed passing checks; UI scores are conservative assessment, not pixel equality or coverage percentages."
+    },
+    {
+      "id": 79,
+      "area": "Stats",
+      "feature": "Effort distribution and trend",
+      "reference": "RPE/RIR distribution, hard sets and weekly trend",
+      "current": "Stored effort used for distributions; no invented zeros",
+      "status": "DONE",
+      "scores": [
+        9,
+        6,
+        7
+      ],
+      "test": "backend/tests/workout.product-parity.test.js; backend/tests/workout.experience.test.js; backend/tests/workout.stats.test.js",
+      "priority": "P2 MEDIUM",
+      "problem": "Lower chart sections lack fresh paired rendered review",
+      "improvement": "Lower chart sections lack fresh paired rendered review",
+      "referenceSources": [
+        "frontend/src/views/Stats.jsx",
+        "frontend/src/lib/history.js",
+        "frontend/src/lib/muscles.js",
+        "frontend/src/lib/effort.js",
+        "frontend/src/components/Heatmap.jsx",
+        "frontend/src/components/BodyMap.jsx",
+        "frontend/src/components/LineChart.jsx"
+      ],
+      "basis": "Source inspection plus listed passing checks; UI scores are conservative assessment, not pixel equality or coverage percentages."
+    },
+    {
+      "id": 80,
+      "area": "Stats",
+      "feature": "Exercise performance charts",
+      "reference": "Loads/reps/time/1RM where eligible",
+      "current": "Actual exercise points and record source data",
+      "status": "DONE",
+      "scores": [
+        8,
+        6,
+        7
+      ],
+      "test": "backend/tests/workout.stats.test.js; backend/tests/workout.integration.test.js",
+      "priority": "P2 MEDIUM",
+      "problem": "Visual chart parity needs dedicated pairs and interactions",
+      "improvement": "Visual chart parity needs dedicated pairs and interactions",
+      "referenceSources": [
+        "frontend/src/views/Stats.jsx",
+        "frontend/src/lib/history.js",
+        "frontend/src/lib/muscles.js",
+        "frontend/src/lib/effort.js",
+        "frontend/src/components/Heatmap.jsx",
+        "frontend/src/components/BodyMap.jsx",
+        "frontend/src/components/LineChart.jsx"
+      ],
+      "basis": "Source inspection plus listed passing checks; UI scores are conservative assessment, not pixel equality or coverage percentages."
+    },
+    {
+      "id": 81,
+      "area": "Stats",
+      "feature": "Bodyweight trend and goal",
+      "reference": "Dated readings, last 30 points, goal-aware change",
+      "current": "Existing weighthistory reused; goal and trends from actual readings",
+      "status": "DONE",
+      "scores": [
+        9,
+        7,
+        8
+      ],
+      "test": "backend/tests/workout.import.test.js; backend/tests/workout.backup.integration.test.js; test/workout_transfer_flow_test.dart; test/workout_visual_parity_test.dart; reviewed docs/verification/parity images",
+      "priority": "P2 MEDIUM",
+      "problem": "Goal/axis/date labels differ; no native platform share proof",
+      "improvement": "Goal/axis/date labels differ; no native platform share proof",
+      "referenceSources": [
+        "frontend/src/views/Stats.jsx",
+        "frontend/src/lib/history.js",
+        "frontend/src/lib/muscles.js",
+        "frontend/src/lib/effort.js",
+        "frontend/src/components/Heatmap.jsx",
+        "frontend/src/components/BodyMap.jsx",
+        "frontend/src/components/LineChart.jsx"
+      ],
+      "basis": "Source inspection plus listed passing checks; UI scores are conservative assessment, not pixel equality or coverage percentages."
+    },
+    {
+      "id": 82,
+      "area": "Stats",
+      "feature": "Units",
+      "reference": "Workout-specific kg/lb display",
+      "current": "Explicit canonical-unit conversion and persisted preference",
+      "status": "DONE",
+      "scores": [
+        9,
+        7,
+        8
+      ],
+      "test": "backend/tests/workout.product-parity.test.js; backend/tests/workout.experience.test.js; backend/tests/workout.import.test.js; backend/tests/workout.backup.integration.test.js; test/workout_transfer_flow_test.dart",
+      "priority": "P2 MEDIUM",
+      "problem": "Reference raw-label behavior differs intentionally",
+      "improvement": "Reference raw-label behavior differs intentionally",
+      "referenceSources": [
+        "frontend/src/views/Stats.jsx",
+        "frontend/src/lib/history.js",
+        "frontend/src/lib/muscles.js",
+        "frontend/src/lib/effort.js",
+        "frontend/src/components/Heatmap.jsx",
+        "frontend/src/components/BodyMap.jsx",
+        "frontend/src/components/LineChart.jsx"
+      ],
+      "basis": "Source inspection plus listed passing checks; UI scores are conservative assessment, not pixel equality or coverage percentages."
+    },
+    {
+      "id": 83,
+      "area": "Stats",
+      "feature": "Timezone and calendar grouping",
+      "reference": "Device local workout day",
+      "current": "Profile IANA timezone now shared by labels/week/stats; bare dates preserved",
+      "status": "PARTIAL",
+      "scores": [
+        8,
+        7,
+        8
+      ],
+      "test": "test/workout_timezone_test.dart; backend/tests/workout.stats.test.js",
+      "priority": "P2 MEDIUM",
+      "problem": "Profile defaults UTC; automatic device-zone onboarding remains missing",
+      "improvement": "Profile defaults UTC; automatic device-zone onboarding remains missing",
+      "referenceSources": [
+        "frontend/src/views/Stats.jsx",
+        "frontend/src/lib/history.js",
+        "frontend/src/lib/muscles.js",
+        "frontend/src/lib/effort.js",
+        "frontend/src/components/Heatmap.jsx",
+        "frontend/src/components/BodyMap.jsx",
+        "frontend/src/components/LineChart.jsx"
+      ],
+      "basis": "Source inspection plus listed passing checks; UI scores are conservative assessment, not pixel equality or coverage percentages."
+    },
+    {
+      "id": 84,
+      "area": "Transfer",
+      "feature": "Workout history CSV import",
+      "reference": "Strong/Hevy/FitNotes matching and conversions",
+      "current": "Preview, validate, match/custom-create, transaction and duplicate handling",
+      "status": "DONE",
+      "scores": [
+        9,
+        6,
+        8
+      ],
+      "test": "backend/tests/workout.import.test.js; backend/tests/workout.backup.integration.test.js; test/workout_transfer_flow_test.dart; backend/tests/workout.integration.test.js",
+      "priority": "P1 HIGH",
+      "problem": "No native file-provider test; import schemas must stay versioned",
+      "improvement": "No native file-provider test; import schemas must stay versioned",
+      "referenceSources": [
+        "frontend/src/views/Settings.jsx",
+        "frontend/src/lib/import-csv.js",
+        "frontend/src/lib/plan-share.js",
+        "frontend/src/sheets.jsx"
+      ],
+      "basis": "Source inspection plus listed passing checks; UI scores are conservative assessment, not pixel equality or coverage percentages."
+    },
+    {
+      "id": 85,
+      "area": "Transfer",
+      "feature": "Bodyweight CSV/Health import",
+      "reference": "CSV and Apple Health weight records",
+      "current": "Streaming browser Health import over 8 MiB, date/unit/duplicate validation",
+      "status": "DONE",
+      "scores": [
+        9,
+        6,
+        8
+      ],
+      "test": "docs/verification/workout-live-journey.json; backend/tests/workout.import.test.js; backend/tests/workout.backup.integration.test.js; test/workout_transfer_flow_test.dart",
+      "priority": "P1 HIGH",
+      "problem": "Native document-provider behavior unverified",
+      "improvement": "Native document-provider behavior unverified",
+      "referenceSources": [
+        "frontend/src/views/Settings.jsx",
+        "frontend/src/lib/import-csv.js",
+        "frontend/src/lib/plan-share.js",
+        "frontend/src/sheets.jsx"
+      ],
+      "basis": "Source inspection plus listed passing checks; UI scores are conservative assessment, not pixel equality or coverage percentages."
+    },
+    {
+      "id": 86,
+      "area": "Transfer",
+      "feature": "Workout training backup/export",
+      "reference": "JSON state backup and restore",
+      "current": "Atomic versioned Workout-only backup, full history paging and restore",
+      "status": "DONE",
+      "scores": [
+        9,
+        6,
+        8
+      ],
+      "test": "docs/verification/workout-live-journey.json; backend/tests/workout.import.test.js; backend/tests/workout.backup.integration.test.js; test/workout_transfer_flow_test.dart",
+      "priority": "P1 HIGH",
+      "problem": "Merges rather than source replace; excludes active/drafts/media; limits disclosed",
+      "improvement": "Merges rather than source replace; excludes active/drafts/media; limits disclosed",
+      "referenceSources": [
+        "frontend/src/views/Settings.jsx",
+        "frontend/src/lib/import-csv.js",
+        "frontend/src/lib/plan-share.js",
+        "frontend/src/sheets.jsx"
+      ],
+      "basis": "Source inspection plus listed passing checks; UI scores are conservative assessment, not pixel equality or coverage percentages."
+    },
+    {
+      "id": 87,
+      "area": "Transfer",
+      "feature": "Raw openGym full-state migration",
+      "reference": "Restore raw source S including active/preferences",
+      "current": "Compatible plan v1 only; own full backup has a different schema",
+      "status": "MISSING",
+      "scores": [
+        0,
+        0,
+        0
+      ],
+      "test": "pinned reference source inspection; backend/tests/workout.import.test.js; backend/tests/workout.backup.integration.test.js; test/workout_transfer_flow_test.dart",
+      "priority": "P2 MEDIUM",
+      "problem": "Implement explicit raw-state adapter and preview without importing accounts",
+      "improvement": "Implement explicit raw-state adapter and preview without importing accounts",
+      "referenceSources": [
+        "frontend/src/views/Settings.jsx",
+        "frontend/src/lib/import-csv.js",
+        "frontend/src/lib/plan-share.js",
+        "frontend/src/sheets.jsx"
+      ],
+      "basis": "Source inspection plus listed passing checks; UI scores are conservative assessment, not pixel equality or coverage percentages."
+    },
+    {
+      "id": 88,
+      "area": "Transfer",
+      "feature": "Training-only reset",
+      "reference": "Reset routines/workouts/bodyweight from settings",
+      "current": "Individual deletion exists; no atomic bulk Workout reset",
+      "status": "MISSING",
+      "scores": [
+        0,
+        0,
+        0
+      ],
+      "test": "pinned reference source inspection",
+      "priority": "P2 MEDIUM",
+      "problem": "Add scoped reset with preview/confirmation; keep host user and Coach ownership",
+      "improvement": "Add scoped reset with preview/confirmation; keep host user and Coach ownership",
+      "referenceSources": [
+        "frontend/src/views/Settings.jsx",
+        "frontend/src/lib/import-csv.js",
+        "frontend/src/lib/plan-share.js",
+        "frontend/src/sheets.jsx"
+      ],
+      "basis": "Source inspection plus listed passing checks; UI scores are conservative assessment, not pixel equality or coverage percentages."
+    },
+    {
+      "id": 89,
+      "area": "Preferences",
+      "feature": "Workout-specific settings",
+      "reference": "Rest, effort scale, media, units, wake lock and reminders",
+      "current": "Preferences stored per existing user",
+      "status": "DONE",
+      "scores": [
+        9,
+        6,
+        8
+      ],
+      "test": "backend/tests/workout.product-parity.test.js; backend/tests/workout.experience.test.js; backend/tests/workout.integration.test.js",
+      "priority": "P2 MEDIUM",
+      "problem": "Native grouped settings page differs visually",
+      "improvement": "Native grouped settings page differs visually",
+      "referenceSources": [
+        "frontend/src/views/Settings.jsx",
+        "frontend/src/lib/i18n.js",
+        "frontend/src/locales/"
+      ],
+      "basis": "Source inspection plus listed passing checks; UI scores are conservative assessment, not pixel equality or coverage percentages."
+    },
+    {
+      "id": 90,
+      "area": "Preferences",
+      "feature": "Training language coverage",
+      "reference": "12 UI languages; 10 instruction languages including English",
+      "current": "Workout UI EN/FR/ES; imported metadata translations retained",
+      "status": "PARTIAL",
+      "scores": [
+        6,
+        6,
+        6
+      ],
+      "test": "pinned reference source inspection; test/workout_library_test.dart; test/workout_custom_flow_test.dart",
+      "priority": "P2 MEDIUM",
+      "problem": "Translate remaining UI languages and verify RTL/fallback behavior",
+      "improvement": "Translate remaining UI languages and verify RTL/fallback behavior",
+      "referenceSources": [
+        "frontend/src/views/Settings.jsx",
+        "frontend/src/lib/i18n.js",
+        "frontend/src/locales/"
+      ],
+      "basis": "Source inspection plus listed passing checks; UI scores are conservative assessment, not pixel equality or coverage percentages."
+    },
+    {
+      "id": 91,
+      "area": "Notifications",
+      "feature": "Planned workout reminder",
+      "reference": "Scheduled reminder in device timezone with permission flow",
+      "current": "Existing SIRVYA reminder worker/FCM and workout preferences",
+      "status": "PARTIAL",
+      "scores": [
+        7,
+        6,
+        7
+      ],
+      "test": "backend/tests/workout.product-parity.test.js; backend/tests/workout.experience.test.js; backend/tests/workout.integration.test.js",
+      "priority": "P1 HIGH",
+      "problem": "Scheduler/idempotency tested; actual FCM permission/delivery not verified",
+      "improvement": "Scheduler/idempotency tested; actual FCM permission/delivery not verified",
+      "referenceSources": [
+        "frontend/src/views/Settings.jsx",
+        "frontend/src/lib/push.js",
+        "frontend/src/lib/mobile.js"
+      ],
+      "basis": "Source inspection plus listed passing checks; UI scores are conservative assessment, not pixel equality or coverage percentages."
+    },
+    {
+      "id": 92,
+      "area": "Notifications",
+      "feature": "Rest completion notification",
+      "reference": "Source web/mobile notification integration",
+      "current": "Existing native local notification service and timer controls",
+      "status": "PARTIAL",
+      "scores": [
+        7,
+        6,
+        7
+      ],
+      "test": "test/workout_logging_test.dart; test/workout_recovery_parity_test.dart; test/workout_continuation_test.dart",
+      "priority": "P1 HIGH",
+      "problem": "Android permission/action/background delivery unverified",
+      "improvement": "Android permission/action/background delivery unverified",
+      "referenceSources": [
+        "frontend/src/views/Settings.jsx",
+        "frontend/src/lib/push.js",
+        "frontend/src/lib/mobile.js"
+      ],
+      "basis": "Source inspection plus listed passing checks; UI scores are conservative assessment, not pixel equality or coverage percentages."
+    },
+    {
+      "id": 93,
+      "area": "Notifications",
+      "feature": "Assigned-plan notification",
+      "reference": "No Coach assignment feature in source",
+      "current": "SIRVYA in-app assignment notification, existing push delivery path",
+      "status": "PARTIAL",
+      "scores": [
+        8,
+        6,
+        7
+      ],
+      "test": "backend/tests/workout.push-day.integration.test.js; backend/tests/app.integration.test.js; test/workout_host_navigation_test.dart",
+      "priority": "P1 HIGH",
+      "problem": "In-app route works; actual external push not proven",
+      "improvement": "In-app route works; actual external push not proven",
+      "referenceSources": [
+        "frontend/src/views/Settings.jsx",
+        "frontend/src/lib/push.js",
+        "frontend/src/lib/mobile.js"
+      ],
+      "basis": "Source inspection plus listed passing checks; UI scores are conservative assessment, not pixel equality or coverage percentages."
+    },
+    {
+      "id": 94,
+      "area": "Quality",
+      "feature": "Responsive workout UI",
+      "reference": "Mobile sheets and desktop layouts",
+      "current": "320/396/1100 widths and 1.4 text-scale widget checks",
+      "status": "PARTIAL",
+      "scores": [
+        8,
+        7,
+        7
+      ],
+      "test": "test/workout_visual_parity_test.dart; reviewed docs/verification/parity images",
+      "priority": "P2 MEDIUM",
+      "problem": "No actual small/normal/large Android keyboard and accessibility run",
+      "improvement": "No actual small/normal/large Android keyboard and accessibility run",
+      "referenceSources": [
+        "frontend/src/index.css",
+        "frontend/src/components/Modals.jsx",
+        "frontend/src/store/useUI.js"
+      ],
+      "basis": "Source inspection plus listed passing checks; UI scores are conservative assessment, not pixel equality or coverage percentages."
+    },
+    {
+      "id": 95,
+      "area": "Quality",
+      "feature": "Error/network feedback",
+      "reference": "Local active state plus server failure handling",
+      "current": "Loading/error/retry and offline queued sets",
+      "status": "DONE",
+      "scores": [
+        8,
+        6,
+        7
+      ],
+      "test": "docs/verification/workout-live-journey.json; test/workout_recovery_parity_test.dart; test/workout_continuation_test.dart",
+      "priority": "P1 HIGH",
+      "problem": "Quota/process-kill testing remains missing; no offline plan creation",
+      "improvement": "Quota/process-kill testing remains missing; no offline plan creation",
+      "referenceSources": [
+        "frontend/src/index.css",
+        "frontend/src/components/Modals.jsx",
+        "frontend/src/store/useUI.js"
+      ],
+      "basis": "Source inspection plus listed passing checks; UI scores are conservative assessment, not pixel equality or coverage percentages."
+    },
+    {
+      "id": 96,
+      "area": "Integration",
+      "feature": "Authentication/login/register",
+      "reference": "Source has separate auth/passkeys",
+      "current": "Existing SIRVYA authentication is reused",
+      "status": "EXCLUDED — AUTH",
+      "scores": [
+        null,
+        null,
+        null
+      ],
+      "test": "backend/tests/app.integration.test.js; test/workout_host_navigation_test.dart",
+      "priority": "P0 CRITICAL",
+      "problem": "Do not import source identity system",
+      "improvement": "Do not import source identity system",
+      "referenceSources": [
+        "frontend/src/App.jsx",
+        "frontend/src/store/useStore.js",
+        "frontend/src/lib/api.js",
+        "frontend/src/views/Login.jsx",
+        "frontend/src/views/Admin.jsx"
+      ],
+      "basis": "Source inspection plus listed passing checks; UI scores are conservative assessment, not pixel equality or coverage percentages."
+    },
+    {
+      "id": 97,
+      "area": "Integration",
+      "feature": "Account/admin/user system",
+      "reference": "Source users/account/admin routes",
+      "current": "Existing SIRVYA users/roles retained",
+      "status": "EXCLUDED — ACCOUNT",
+      "scores": [
+        null,
+        null,
+        null
+      ],
+      "test": "backend/tests/app.integration.test.js; test/workout_host_navigation_test.dart",
+      "priority": "P0 CRITICAL",
+      "problem": "No duplicate users",
+      "improvement": "No duplicate users",
+      "referenceSources": [
+        "frontend/src/App.jsx",
+        "frontend/src/store/useStore.js",
+        "frontend/src/lib/api.js",
+        "frontend/src/views/Login.jsx",
+        "frontend/src/views/Admin.jsx"
+      ],
+      "basis": "Source inspection plus listed passing checks; UI scores are conservative assessment, not pixel equality or coverage percentages."
+    },
+    {
+      "id": 98,
+      "area": "Integration",
+      "feature": "General theme/account settings",
+      "reference": "General source settings outside workout controls",
+      "current": "Host settings remain separate",
+      "status": "EXCLUDED — GENERAL SETTINGS",
+      "scores": [
+        null,
+        null,
+        null
+      ],
+      "test": "pinned reference source inspection",
+      "priority": "P3 LOW",
+      "problem": "Workout unit/timer/effort/reminder controls remain in scope",
+      "improvement": "Workout unit/timer/effort/reminder controls remain in scope",
+      "referenceSources": [
+        "frontend/src/App.jsx",
+        "frontend/src/store/useStore.js",
+        "frontend/src/lib/api.js",
+        "frontend/src/views/Login.jsx",
+        "frontend/src/views/Admin.jsx"
+      ],
+      "basis": "Source inspection plus listed passing checks; UI scores are conservative assessment, not pixel equality or coverage percentages."
+    },
+    {
+      "id": 99,
+      "area": "Integration",
+      "feature": "Standalone hosting/store build",
+      "reference": "Reference web/native hosting architecture",
+      "current": "One Flutter app plus existing Express/MySQL backend",
+      "status": "EXCLUDED — NON-WORKOUT",
+      "scores": [
+        null,
+        null,
+        null
+      ],
+      "test": "pinned reference source inspection",
+      "priority": "P3 LOW",
+      "problem": "No React WebView or second product database",
+      "improvement": "No React WebView or second product database",
+      "referenceSources": [
+        "frontend/src/App.jsx",
+        "frontend/src/store/useStore.js",
+        "frontend/src/lib/api.js",
+        "frontend/src/views/Login.jsx",
+        "frontend/src/views/Admin.jsx"
+      ],
+      "basis": "Source inspection plus listed passing checks; UI scores are conservative assessment, not pixel equality or coverage percentages."
+    },
+    {
+      "id": 100,
+      "area": "Integration",
+      "feature": "Persistence/identity replacement",
+      "reference": "Source store, authentication and remote sync",
+      "current": "SIRVYA authenticated API, scoped local recovery, MySQL ownership",
+      "status": "REPLACED BY SIRVYA",
+      "scores": [
+        9,
+        7,
+        8
+      ],
+      "test": "backend/tests/app.integration.test.js; test/workout_host_navigation_test.dart; backend/tests/workout.integration.test.js; docs/verification/workout-live-journey.json",
+      "priority": "P0 CRITICAL",
+      "problem": "Host realtime Socket.IO and physical provider delivery still need separate work",
+      "improvement": "Host realtime Socket.IO and physical provider delivery still need separate work",
+      "referenceSources": [
+        "frontend/src/App.jsx",
+        "frontend/src/store/useStore.js",
+        "frontend/src/lib/api.js",
+        "frontend/src/views/Login.jsx",
+        "frontend/src/views/Admin.jsx"
+      ],
+      "basis": "Source inspection plus listed passing checks; UI scores are conservative assessment, not pixel equality or coverage percentages."
+    }
+  ]
+}

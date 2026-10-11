@@ -8,12 +8,17 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:video_player_platform_interface/video_player_platform_interface.dart';
+import 'support/fake_workout_video.dart';
 import 'package:fitlek1/screens/ENG/workout/workout_home.dart';
 import 'package:fitlek1/screens/ENG/workout/workout_anatomy.dart';
 import 'package:fitlek1/services/workout_service.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+  final originalVideoPlatform = VideoPlayerPlatform.instance;
+  setUp(() => VideoPlayerPlatform.instance = FakeVideoPlatform());
+  tearDown(() => VideoPlayerPlatform.instance = originalVideoPlatform);
   setUpAll(() async {
     await loadWorkoutAnatomy();
   });
@@ -303,6 +308,8 @@ void main() {
         expect(find.text('Workout complete!'), findsNothing);
         expect(find.text('Resume'), findsNothing);
         await tester.pumpWidget(const SizedBox.shrink());
+        await tester.runAsync(() => Future<void>.delayed(Duration.zero));
+        await tester.pump(const Duration(seconds: 6));
       }, () => client);
     });
   }

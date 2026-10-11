@@ -53,6 +53,7 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^3.0.0
+  video_player_platform_interface: ^6.9.0
   flutter_launcher_icons: ^0.14.1
 
 flutter_launcher_icons:
@@ -82,4 +83,6 @@ flutter:
     - assets/workout/fonts/
     - assets/workout/anatomy/
     - assets/workout/demonstrations/
+    - assets/workout/videos/
+    - assets/workout/exercise_media/
     - assets/config.env

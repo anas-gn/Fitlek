@@ -71,6 +71,7 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen>
   double? _prefilledWeight;
   bool _addedLoad = false;
   Timer? _ticker;
+  bool _ownsWakeLock = false;
   int _elapsedSecond = -1;
   bool _workRunning = false;
   int _workSeconds = 0, _restPausedSeconds = 0;
@@ -107,6 +108,7 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen>
     NotificationService.instance.restAction
         .addListener(_notificationTimerAction);
     if (WorkoutService.preferences['keepAwake'] == true) {
+      _ownsWakeLock = true;
       WakelockPlus.enable().catchError((_) {});
     }
     _load();
@@ -167,13 +169,17 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen>
     NotificationService.instance.restControlsSessionID = null;
     NotificationService.instance.restAction
         .removeListener(_notificationTimerAction);
-    if (WorkoutService.preferences['keepAwake'] == true) {
-      WakelockPlus.disable().catchError((_) {});
-    }
+    _releaseWakeLock();
     for (final c in [_weight, _reps, _duration, _effort, _notes]) {
       c.dispose();
     }
     super.dispose();
+  }
+
+  void _releaseWakeLock() {
+    if (!_ownsWakeLock) return;
+    _ownsWakeLock = false;
+    WakelockPlus.disable().catchError((_) {});
   }
 
   bool _done(WorkoutExercise e, int number) => _session!.sets.any((s) =>
@@ -1218,6 +1224,8 @@ class _ActiveWorkoutScreenState extends State<ActiveWorkoutScreen>
         if (historicalDuration != null) 'durationSeconds': historicalDuration
       });
       if (!mounted) return;
+      _ticker?.cancel();
+      _releaseWakeLock();
       setState(() {
         _saving = false;
         _allowLeave = true;

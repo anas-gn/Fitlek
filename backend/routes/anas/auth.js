@@ -2,7 +2,7 @@ import express from 'express';
 const router = express.Router();
 import db from '../../config/db.js';
 import bcrypt from 'bcrypt';
-import admin from '../../config/firebase.js';
+import {getAuth} from '../../config/firebase.js';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import {firebaseAuthFailure} from '../../services/firebaseAuthFailure.js';
@@ -458,7 +458,7 @@ router.post('/google', async (req, res) => {
   // Works natively on Web (firebase_auth) and Mobile (firebase_auth + google_sign_in)
   let decodedToken;
   try {
-    decodedToken = await admin.auth().verifyIdToken(idToken);
+    decodedToken = await getAuth().verifyIdToken(idToken);
   } catch (err) {
     console.error('Firebase token verification failed:', err.message);
     const failure = firebaseAuthFailure(err);
@@ -613,20 +613,29 @@ router.post('/google', async (req, res) => {
 router.post('/set-password', requireAuth, async (req, res) => {
   try {
     const { password } = req.body;
-    if (!password || password.length < 6) {
-      return res.status(400).json({ error: 'Password must be at least 6 characters.' });
+    if (typeof password !== 'string' || password.length < 8 || Buffer.byteLength(password, 'utf8') > 72) {
+      return res.status(400).json({ error: 'Password must contain at least 8 characters and at most 72 UTF-8 bytes.' });
     }
 
-    const [rows] = await db.query('SELECT id, passwordHash, authProvider FROM users WHERE id = ?', [req.user.id]);
+    const [rows] = await db.query('SELECT id, passwordHash, authProvider, googleId FROM users WHERE id = ?', [req.user.id]);
     if (!rows.length) {
       return res.status(404).json({ error: 'User not found.' });
     }
 
+    if (rows[0].passwordHash) {
+      return res.status(409).json({ error: 'A password is already set. Use the verified password reset flow to change it.' });
+    }
+    if (!rows[0].googleId || !['google', 'both'].includes(rows[0].authProvider)) {
+      return res.status(403).json({ error: 'Initial password setup requires a linked provider account.' });
+    }
     const passwordHash = await bcrypt.hash(password, 12);
-    await db.query(
-      "UPDATE users SET passwordHash = ?, authProvider = 'both' WHERE id = ?",
+    const [updated] = await db.query(
+      "UPDATE users SET passwordHash = ?, authProvider = 'both' WHERE id = ? AND passwordHash IS NULL",
       [passwordHash, req.user.id]
     );
+    if (!updated.affectedRows) {
+      return res.status(409).json({ error: 'A password is already set. Use the verified password reset flow to change it.' });
+    }
     res.json({ message: 'Password set successfully. You can now log in with your email and password.' });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -647,7 +656,7 @@ router.post('/google', async (req, res) => {
   // Works natively on Web (firebase_auth) and Mobile (firebase_auth + google_sign_in)
   let decodedToken;
   try {
-    decodedToken = await admin.auth().verifyIdToken(idToken);
+    decodedToken = await getAuth().verifyIdToken(idToken);
   } catch (err) {
     console.error('Firebase token verification failed:', err.message);
     const failure = firebaseAuthFailure(err);
@@ -802,20 +811,29 @@ router.post('/google', async (req, res) => {
 router.post('/set-password', requireAuth, async (req, res) => {
   try {
     const { password } = req.body;
-    if (!password || password.length < 6) {
-      return res.status(400).json({ error: 'Password must be at least 6 characters.' });
+    if (typeof password !== 'string' || password.length < 8 || Buffer.byteLength(password, 'utf8') > 72) {
+      return res.status(400).json({ error: 'Password must contain at least 8 characters and at most 72 UTF-8 bytes.' });
     }
 
-    const [rows] = await db.query('SELECT id, passwordHash, authProvider FROM users WHERE id = ?', [req.user.id]);
+    const [rows] = await db.query('SELECT id, passwordHash, authProvider, googleId FROM users WHERE id = ?', [req.user.id]);
     if (!rows.length) {
       return res.status(404).json({ error: 'User not found.' });
     }
 
+    if (rows[0].passwordHash) {
+      return res.status(409).json({ error: 'A password is already set. Use the verified password reset flow to change it.' });
+    }
+    if (!rows[0].googleId || !['google', 'both'].includes(rows[0].authProvider)) {
+      return res.status(403).json({ error: 'Initial password setup requires a linked provider account.' });
+    }
     const passwordHash = await bcrypt.hash(password, 12);
-    await db.query(
-      "UPDATE users SET passwordHash = ?, authProvider = 'both' WHERE id = ?",
+    const [updated] = await db.query(
+      "UPDATE users SET passwordHash = ?, authProvider = 'both' WHERE id = ? AND passwordHash IS NULL",
       [passwordHash, req.user.id]
     );
+    if (!updated.affectedRows) {
+      return res.status(409).json({ error: 'A password is already set. Use the verified password reset flow to change it.' });
+    }
 
     res.json({ message: 'Password set successfully. You can now log in with your email and password.' });
   } catch (err) {

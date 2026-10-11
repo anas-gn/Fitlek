@@ -1,5 +1,11 @@
 // Independently authored SIRVYA translations.
 const workoutStrings = <String, List<String>>{
+  'Video demos': ['Démos vidéo', 'Demos en vídeo'],
+  'Video': ['Vidéo', 'Vídeo'],
+  'Illustrated demo': ['Démo illustrée', 'Demo ilustrada'],
+  'No demo yet': ['Pas encore de démo', 'Sin demo todavía'],
+  'Original video': ['Vidéo originale', 'Vídeo original'],
+  'Reload video': ['Recharger la vidéo', 'Recargar vídeo'],
   'Import measurements': ['Importer les mesures', 'Importar mediciones'],
   '{0} measurements ready to import': [
     '{0} mesures prêtes à importer',

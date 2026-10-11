@@ -508,7 +508,8 @@ class _WorkoutHistoryEditorState extends State<_WorkoutHistoryEditor> {
 }
 
 class _WorkoutProgressScreenState extends State<WorkoutProgressScreen> {
-  DateTime get _now => widget.clock?.call() ?? DateTime.now();
+  DateTime get _now =>
+      WorkoutService.trainingTime(widget.clock?.call() ?? DateTime.now());
   Map<String, dynamic>? _stats, _muscleStats, _effortStats;
   List<Map<String, dynamic>> _recent = [];
   Object? _error;

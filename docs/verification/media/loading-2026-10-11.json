@@ -1,0 +1,38 @@
+{
+  "date": "2026-10-11",
+  "changes": [
+    "Only visible thumbnails request hosted media after scrolling settles",
+    "Media-type labels do not request hosted demonstrations",
+    "Foreground demonstration requests promote matching queued previews",
+    "Provider throttling stops queued requests and forwards Retry-After",
+    "OSS request pacing remains 1100 ms; API responses are not cached"
+  ],
+  "verification": {
+    "providerContractTestsPassed": 13,
+    "httpMysqlChecksPassed": 34,
+    "dartAnalysis": "Changed model, demonstration widget and widget test file pass",
+    "flutterWidgetTestsPassed": 12,
+    "updatedWebBuild": "Full release build passed and is served at http://localhost:8082",
+    "apiRestarted": true,
+    "apiReadiness": "HTTP 200; MySQL ready",
+    "fullAppBrowser": {
+      "firstHostedThumbnailMilliseconds": 1324,
+      "airBikeDemonstrationMilliseconds": 1537,
+      "reducedMotion": "Accessibility mode retains a still frame",
+      "libraryScreenshot": "loading-library-preview.png",
+      "detailScreenshot": "loading-detail-preview.png",
+      "temporaryLocalTestAccountRemoved": true,
+      "isolatedBrowserProfileRemoved": true
+    }
+  },
+  "liveProviderObservation": {
+    "exerciseCount": 8,
+    "previousPacingMilliseconds": 8630,
+    "previousPacingLoaded": 8,
+    "attemptedFasterBurstLoaded": 2,
+    "attemptedFasterBurstRateLimited": 6,
+    "decision": "Rejected the faster burst configuration; retain safe pacing and reduce and prioritize requests instead"
+  },
+  "blocker": null,
+  "rerunRecovery": "SDK access restored; cached Flutter debug symbols compressed with file hashes verified unchanged; failed test temporary files removed. Tests and web build then passed."
+}

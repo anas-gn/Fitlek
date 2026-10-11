@@ -1,34 +1,9 @@
-import admin from 'firebase-admin';
-import { readFileSync } from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import {initFirebase,getMessaging} from '../config/firebase.js';
 import db from '../config/db.js';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-let isFirebaseInitialized = false;
-
-function initFirebase() {
-  if (isFirebaseInitialized) return true;
-  if (admin.apps.length > 0) {
-    isFirebaseInitialized = true;
-    return true;
-  }
+function ensureFirebase() {
   try {
-    let serviceAccount;
-    if (process.env.FIREBASE_SERVICE_ACCOUNT) {
-      serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
-    } else {
-      const serviceAccountPath = path.join(__dirname, '..', 'config', 'sirvya-app-firebase-adminsdk-fbsvc-5858641a2a.json');
-      serviceAccount = JSON.parse(readFileSync(serviceAccountPath, 'utf8'));
-    }
-
-    admin.initializeApp({
-      credential: admin.credential.cert(serviceAccount),
-    });
-    isFirebaseInitialized = true;
-    console.log('✅ Firebase Admin SDK initialized for push notifications');
+    initFirebase();
     return true;
   } catch (error) {
     console.error('❌ Failed to initialize Firebase Admin SDK:', error.message);
@@ -45,7 +20,7 @@ function initFirebase() {
  * @param {Object} [params.data] - Additional string key-value payload for Flutter app
  */
 export async function sendPushNotification({ recipientUserID, title, body, data = {} }) {
-  if (!initFirebase()) return { success: false, reason: 'Firebase not initialized' };
+  if (!ensureFirebase()) return { success: false, reason: 'Firebase not initialized' };
 
   try {
     // Fetch user's FCM token from MySQL
@@ -77,7 +52,7 @@ export async function sendPushNotification({ recipientUserID, title, body, data 
       token: fcmToken,
     };
 
-    const response = await admin.messaging().send(message);
+    const response = await getMessaging().send(message);
     console.log(`✉️ Push notification sent to user ${recipientUserID} (Msg ID: ${response})`);
     return { success: true, messageId: response };
   } catch (error) {

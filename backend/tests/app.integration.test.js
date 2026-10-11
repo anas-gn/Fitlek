@@ -12,13 +12,13 @@ test('SIRVYA existing app HTTP / MySQL flows', {skip: process.env.APP_TEST_MYSQL
   const {default: db} = await import('../config/db.js');
   const {ensureAppCompatibilitySchema} = await import('../config/appCompatibilitySchema.js');
   const {ensureGoogleAuthSchema} = await import('../config/googleAuthSchema.js');
-  const {default: admin, initFirebase} = await import('../config/firebase.js');
+  const {getMessaging, initFirebase} = await import('../config/firebase.js');
   const {requireAuth} = await import('../middleware/auth.js');
   const prefix = `app-test-${Date.now()}-${process.pid}`;
   const users = [];
   let server;
   initFirebase();
-  const messaging = admin.messaging();
+  const messaging = getMessaging();
   const originalSend = messaging.send;
   const pushes = [];
   // Provider delivery is simulated only in this test process, never the API.
@@ -141,7 +141,9 @@ test('SIRVYA existing app HTTP / MySQL flows', {skip: process.env.APP_TEST_MYSQL
       await expect(otherClient,`/conversations?userID=${client.id}&role=client`,403);
       await expect(client,`/conversations?userID=${client.id}&role=coach`,403);
       await expect(otherClient,'/conversations/find-or-create',403,'POST',{clientID:client.id,coachID:coach.id});
-      await expect(coach,`/coach/chat/${conv.conversationID}`,201,'POST',{mediaUrl:'https://example.invalid/fixture.png',mediaType:'image'});
+      const filename=`chat_img_${prefix}.webp`;
+      await db.query('INSERT INTO chat_uploads(filename,ownerID) VALUES(?,?)',[filename,coach.id]);
+      await expect(coach,`/coach/chat/${conv.conversationID}`,201,'POST',{mediaUrl:`http://localhost/uploads/chat_media/${filename}`,mediaType:'image'});
       const messages = await expect(client,`/messages/${conv.conversationID}?readerID=${client.id}`);
       assert.equal(messages.length,2); assert.equal(messages[1].mediaType,'image');
       assert.equal((await expect(client,`/conversations/unread-total?userID=${client.id}`)).totalUnread,0);

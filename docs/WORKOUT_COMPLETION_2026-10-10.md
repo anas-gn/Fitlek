@@ -1,5 +1,7 @@
 # Workout completion and release evidence — 2026-10-10
 
+This report records the earlier completion pass. The subsequent [full A–S audit](WORKOUT_END_TO_END_AUDIT_2026-10-10.md) and [current master matrix](WORKOUT_MASTER_PARITY_2026-10-10.md) supersede its counts and remaining-issue assessment. That audit adds private chat attachment delivery, dependency/Firebase updates, date/PR/history fixes and wake-lock cleanup; it retains explicit historical-secret, physical-device, provider and visual-parity limitations.
+
 The local Workout flow works end to end with SIRVYA authentication, native Flutter screens, the actual API handlers and a real disposable MySQL database. This pass fixes functional transfer/recovery gaps and the host authorization/reset weaknesses that could compromise Workout data. Deployment, live providers, hardware delivery and full catalog demonstration rights remain separate requirements.
 
 ## Changes completed

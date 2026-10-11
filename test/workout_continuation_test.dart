@@ -105,12 +105,12 @@ void main() {
                 externalId: 'bench-press'))),
         isNull);
     await tester.pumpWidget(
-        screen(const WorkoutDemonstrationPanel(exercise: exercise)));
+        screen(const WorkoutIllustrationPanel(exercise: exercise)));
     await tester.pumpAndSettle();
     await tester.runAsync(() async {
       for (final frame in demo.frames) {
         await precacheImage(AssetImage('${frame['asset']}'),
-            tester.element(find.byType(WorkoutDemonstrationPanel)));
+            tester.element(find.byType(WorkoutIllustrationPanel)));
       }
     });
     await tester.pumpAndSettle();
@@ -142,7 +142,7 @@ void main() {
     await tester
         .runAsync(() => WorkoutDemonstrationCatalog.forExercise(exercise));
     await tester.pumpWidget(screen(
-        const WorkoutDemonstrationPanel(exercise: exercise),
+        const WorkoutIllustrationPanel(exercise: exercise),
         reduceMotion: true));
     await tester.pumpAndSettle();
     final play = tester.widget<IconButton>(find.byWidgetPredicate((widget) =>
@@ -152,7 +152,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('2 / 2'), findsOneWidget);
     await tester.pumpWidget(
-        screen(const WorkoutDemonstrationPanel(exercise: exercise)));
+        screen(const WorkoutIllustrationPanel(exercise: exercise)));
     await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('Play demonstration'));
     await tester.pump();
@@ -177,7 +177,7 @@ void main() {
     });
     await http.runWithClient(() async {
       await tester.pumpWidget(screen(
-          const WorkoutDemonstrationPanel(exercise: exercise, compact: true)));
+          const WorkoutIllustrationPanel(exercise: exercise, compact: true)));
       await tester.pumpAndSettle();
       expect(find.byTooltip('Pause demonstration'), findsOneWidget);
       await tester.tap(find.text('Minimize'));
@@ -189,7 +189,7 @@ void main() {
       await tester.pumpWidget(const SizedBox.shrink());
       WorkoutService.preferences = await WorkoutService.get('/preferences');
       await tester.pumpWidget(screen(
-          const WorkoutDemonstrationPanel(exercise: exercise, compact: true)));
+          const WorkoutIllustrationPanel(exercise: exercise, compact: true)));
       await tester.pumpAndSettle();
       expect(find.text('Expand'), findsOneWidget);
       expect(find.byType(PageView), findsNothing);

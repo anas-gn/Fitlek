@@ -11,7 +11,7 @@ jobs:
       DB_PORT: '3306'
       DB_USER: root
       DB_PASSWORD: ci-fixture-password
-      DB_NAME: sirvya_ci
+      DB_NAME: sirvya_ci_1
       JWT_SECRET: ci-fixture-only-secret-never-for-production-0123456789
       RESEND_API_KEY: re_ci_fixture_only
       WORKOUT_TEST_MYSQL: '1'

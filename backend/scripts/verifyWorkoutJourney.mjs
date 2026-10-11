@@ -4,6 +4,7 @@ import express from 'express';
 import cors from 'cors';
 import assert from 'node:assert/strict';
 import bcrypt from 'bcrypt';
+import {randomUUID} from 'node:crypto';
 import {once} from 'node:events';
 import {mkdir,writeFile,readFile,readdir} from 'node:fs/promises';
 import path from 'node:path';
@@ -21,7 +22,7 @@ const root=fileURLToPath(new URL('../../',import.meta.url));
 const prefix=`journey-${Date.now()}-${process.pid}`,users=[],checks=[],apiErrors=[],exceptions=[];
 const api=express();api.use(cors({origin:'http://localhost:8082'}));api.use(express.json({limit:'10mb'}));
 const web=express();web.use(express.static(path.join(root,'build','web')));
-let apiServer,webServer,socket,contextId,send,browserCall,currentSession,fileInput,stage='setup';
+let apiServer,webServer,socket,contextId,send,browserCall,currentSession,fileInput,videoEvidence,stage='setup';
 const reportFile=path.join(root,'docs','verification','workout-live-journey.json');
 const shots=path.join(root,'docs','verification','journey');
 const files=path.join(root,'workout_tmp',prefix);
@@ -52,7 +53,7 @@ try{
   await mkdir(shots,{recursive:true});
   await mkdir(files,{recursive:true});
   await ensureGoogleAuthSchema(db);await ensureAppCompatibilitySchema(db);await ensureWorkoutSchema(db);
-  const password='JourneyFixturePassword123',hash=await bcrypt.hash(password,10);
+  const password=`Journey-${randomUUID()}`,hash=await bcrypt.hash(password,10);
   for(const role of ['client','coach','coach']){
     const email=`${prefix}-${users.length}@example.invalid`;
     const [r]=await db.query("INSERT INTO users(firstName,lastName,email,passwordHash,role,gender,isApproved,termsAccepted) VALUES('Journey','Fixture',?,?,?,'Other',1,1)",[email,hash,role]);users.push({id:r.insertId,role,email});
@@ -117,6 +118,22 @@ try{
   };
   await open(client);stage='client Workout entry';await click('Workout');
   await waitFor(async()=> (await labels()).join(' ').includes('Journey Routine'),'assigned routine');await capture('client-home');record('Built app enters Workout with actual assigned routine');
+  stage='exercise video';await click('Exercises');await click('Video demos');
+  await waitFor(async()=>(await labels()).join(' ').includes('Barbell Bench Press'),'video library');
+  await capture('video-library');await click('Barbell Bench Press',true);
+  const videoState=()=>evaluate(`(()=>{const find=root=>{const direct=[...root.querySelectorAll('video')].find(v=>(v.currentSrc||v.src).includes('/workout/videos/'));if(direct)return direct;for(const element of root.querySelectorAll('*'))if(element.shadowRoot){const nested=find(element.shadowRoot);if(nested)return nested;}return null;};const v=find(document);return v?{ready:v.readyState,time:v.currentTime,paused:v.paused,volume:v.volume,loop:v.loop,width:v.videoWidth,height:v.videoHeight,src:v.currentSrc}:null;})()`);
+  await waitFor(async()=>{const v=await videoState();return v&&v.ready>=2&&v.time>0&&!v.paused;},'actual decoded video playback',45);
+  const firstFrame=await videoState();await pause(1000);const secondFrame=await videoState();
+  assert.notEqual(firstFrame.time,secondFrame.time);assert.equal(secondFrame.volume,0);assert.equal(secondFrame.loop,true);assert.ok(secondFrame.width>0&&secondFrame.height>0);
+  await capture('exercise-video');await click('Pause demonstration');await waitFor(async()=>(await videoState())?.paused===true,'video pause');
+  const pausedFrame=await videoState();await pause(500);const stillPaused=await videoState();assert.ok(Math.abs(stillPaused.time-pausedFrame.time)<0.1);
+  await click('Play demonstration');await waitFor(async()=>(await videoState())?.paused===false,'video resume');
+  await click('Goulart · CC BY-SA 4.0');await waitFor(async()=>(await labels()).join(' ').includes('Original video'),'video credits');
+  assert.ok((await labels()).join(' ').includes('H.264'));await capture('video-credits');await click('Close');
+  await waitFor(async()=>(await videoState())?.paused===false,'video resumes after credits');
+  videoEvidence={before:firstFrame,after:secondFrame,paused:stillPaused,resumed:await videoState(),creditsVerified:true};
+  record('Video-only library opens a real attributed H.264 video that decodes, advances, pauses and resumes');
+  await click('Back');await click('Home');
   stage='start';await click('Start');await waitFor(async()=>(await labels()).join(' ').includes('Start without weighing in'),'weight check-in');await click('Start without weighing in');
   await waitFor(async()=>(await labels()).join(' ').includes('Complete set'),'active set');record('Actual UI start and optional weight check-in');
   stage='offline set';await capture('client-active');
@@ -176,7 +193,7 @@ try{
   const review=await request(coach,`/workout/sessions/${session.id}`);assert.equal(Number(review.sets[0].weight),40);record('Coach UI reviews the Client completed workout');
   const denied=await fetch(`http://localhost:3201/api/workout/sessions/${session.id}`,{headers:{Authorization:'Bearer '+unlinked.token}});assert.equal(denied.status,403);record('Unlinked Coach cannot read that workout');
   assert.deepEqual(exceptions,[]);assert.deepEqual(apiErrors,[]);
-  await writeFile(reportFile,JSON.stringify({verifiedAt:new Date().toISOString(),passed:true,fixtureOnly:false,disposableAccounts:true,realLocalMySQL:true,checks,apiErrors,exceptions,nativeDevices:false,externalProviders:false},null,2));
+  await writeFile(reportFile,JSON.stringify({verifiedAt:new Date().toISOString(),passed:true,fixtureOnly:false,disposableAccounts:true,realLocalMySQL:true,checks,videoEvidence,apiErrors,exceptions,nativeDevices:false,externalProviders:false},null,2));
   await call('Target.disposeBrowserContext',{browserContextId:contextId});contextId=null;
 }catch(error){
   if(send)try{await capture('failure');await writeFile(path.join(root,'workout_tmp','journey-failure-labels.json'),JSON.stringify(await labels(),null,2));}catch{}

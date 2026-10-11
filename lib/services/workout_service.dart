@@ -1,4 +1,5 @@
 import 'locale_service.dart';
+import 'workout_dates.dart';
 import '../models/workout.dart';
 import 'apiService.dart';
 import 'dart:convert';
@@ -26,6 +27,12 @@ class WorkoutService {
   }
 
   static String get unit => preferences['unit'] == 'lb' ? 'lb' : 'kg';
+  static String? get _timeZone =>
+      preferences['timeZone'] is String ? preferences['timeZone'] : null;
+  static DateTime trainingTime(DateTime instant) =>
+      workoutTrainingTime(instant, timeZone: _timeZone);
+  static DateTime? trainingDate(dynamic value) =>
+      workoutTrainingDate(value, timeZone: _timeZone);
   static double displayWeight(num value) =>
       unit == 'lb' ? value / 0.45359237 : value.toDouble();
   static double storedWeight(num value) =>
@@ -64,15 +71,17 @@ class WorkoutService {
     return result;
   }
 
-  static Future<Map<String, dynamic>> get(String path) async {
+  static Future<Map<String, dynamic>> get(String path,
+      {bool cache = true}) async {
     if (RegExp(r'^/exercises/\d+$').hasMatch(path)) {
       path += '?language=${LocaleService.instance.locale.languageCode}';
     }
     final user = await ApiService.getUserData();
     final token = await ApiService.getToken();
     final prefix = 'sirvya_workout_${user?['id']}_cache_';
-    final key =
-        user == null || path.endsWith('/ticket') ? null : '$prefix$path';
+    final key = !cache || user == null || path.endsWith('/ticket')
+        ? null
+        : '$prefix$path';
     final prefs = key == null ? null : await SharedPreferences.getInstance();
     Future<void> verifyAccount() async {
       if ((await ApiService.getUserData())?['id'] != user?['id'] ||

@@ -1130,8 +1130,8 @@ class _SetPasswordSheetState extends State<_SetPasswordSheet> {
 
   Future<void> _submit() async {
     final pass = _passCtrl.text;
-    if (pass.length < 6) {
-      setState(() => _error = 'Password must be at least 6 characters.');
+    if (pass.length < 8 || utf8.encode(pass).length > 72) {
+      setState(() => _error = 'Password must contain at least 8 characters and at most 72 UTF-8 bytes.');
       return;
     }
     if (pass != _confirmCtrl.text) {

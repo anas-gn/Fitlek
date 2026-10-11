@@ -1,0 +1,112 @@
+{
+  "verifiedAt": "2026-10-10T19:51:32.167Z",
+  "baseline": "f81eb0d9c776c6a9410e629be9ca73859eca7686",
+  "reference": "c42ba6b98e3776af5981f20c05ba392238799670",
+  "commands": {
+    "flutterPubGet": "PASS",
+    "flutterAnalyze": {
+      "status": "PASS",
+      "issues": 0
+    },
+    "flutterTest": {
+      "status": "PASS",
+      "passed": 83,
+      "skipped": 1,
+      "failed": 0,
+      "concurrency": 1
+    },
+    "releaseWeb": {
+      "status": "PASS",
+      "seconds": 57.9,
+      "api": "http://localhost:3201/api",
+      "wasmDryRun": false
+    },
+    "backend": {
+      "status": "PASS",
+      "passed": 137,
+      "skipped": 0,
+      "failed": 0,
+      "realLocalMySQL": true,
+      "externalProviders": "explicit fixtures"
+    },
+    "referenceVitest": {
+      "status": "PASS",
+      "passed": 192,
+      "files": 7
+    },
+    "npmAudit": {
+      "info": 0,
+      "low": 0,
+      "moderate": 0,
+      "high": 0,
+      "critical": 0,
+      "total": 0
+    },
+    "browser": {
+      "passed": true,
+      "checks": 13,
+      "apiErrors": 0,
+      "exceptions": 0,
+      "realHTTP": true,
+      "realLocalMySQL": true,
+      "externalProviders": false,
+      "nativeDevices": false
+    },
+    "schema": {
+      "tables": 20,
+      "foreignKeys": 34,
+      "orphans": 0,
+      "catalogSources": [
+        {
+          "externalSource": "exercises-dataset",
+          "count": 1324
+        },
+        {
+          "externalSource": "sirvya",
+          "count": 24
+        },
+        {
+          "externalSource": "sirvya-custom",
+          "count": 221
+        }
+      ],
+      "exerciseFilterIndex": "idx_workout_exercise_equipment"
+    },
+    "secretAudit": {
+      "status": "FAIL",
+      "currentFindings": 0,
+      "historicalFindings": 1
+    },
+    "apk": {
+      "status": "NOT RETESTED",
+      "reason": "Latest native build/device execution unavailable; no ADB device/emulator and low disk space"
+    }
+  },
+  "initialFailures": [
+    "Stats calendar week and weighted bodyweight PR regressions",
+    "Wake-lock cleanup regressions",
+    "Firebase v14 legacy namespace incompatibility",
+    "Former chat fixture violates new ownership policy",
+    "Existing password overwritten through initial setup; password limits/types lacked consistent validation",
+    "Parallel post-security Flutter run stalled at 57 passes; stopped, retained log, final serial suite passed",
+    "Offline install initially locked by owned running sharp DLL",
+    "Push Day DECIMAL and rep-sum assertion corrections were test mistakes, not product defects"
+  ],
+  "preview": {
+    "web": "http://localhost:8082",
+    "webStatus": 200,
+    "api": "http://localhost:3201/api",
+    "ready": true,
+    "cors": "http://localhost:8082",
+    "database": "fitlekdb",
+    "scheduledOutboundWorkoutReminders": false
+  },
+  "git": {
+    "reset": false,
+    "discardedChanges": false,
+    "committed": false,
+    "pushed": false
+  },
+  "verdict": "FUNCTIONALLY READY — NEEDS PARITY WORK",
+  "overallScore": 7.5
+}

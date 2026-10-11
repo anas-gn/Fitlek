@@ -1,0 +1,866 @@
+{
+  "version": 1,
+  "videos": [
+    {
+      "videoID": 21,
+      "wgerID": 73,
+      "wgerUUID": "3717d144-7815-4a97-9a56-956fb889c996",
+      "name": "Bench Press",
+      "targets": [
+        [
+          "sirvya",
+          "bench-press"
+        ],
+        [
+          "exercises-dataset",
+          "0025"
+        ]
+      ],
+      "asset": "assets/workout/videos/wger-21.mp4",
+      "poster": "assets/workout/videos/wger-21.jpg",
+      "sourceUrl": "https://wger.de/media/exercise-video/73/2bdb390c-312c-4497-a722-5eed2c823e5a.MOV",
+      "sourceSize": 1108545,
+      "sourceSha256": "f7ef457d364ed24fc1dff86a4c40f9801f42213300e9904b442d96430b869ecc",
+      "sha256": "d231f101493371f15f5a271617ca395a6463bbeb696086cde0cd9045d03cffc8",
+      "posterSha256": "90d21b54ec1c31625e2ef33b10df0e59957b04664e0b44390c59ef1200ba9827",
+      "author": "Goulart",
+      "authorHistory": [
+        "Goulart"
+      ],
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+      "modified": true,
+      "modifications": "Transcoded to H.264 MP4, scaled to fit 640px, resampled to 24fps, audio removed; poster extracted. Original movement speed retained.",
+      "width": 640,
+      "height": 352,
+      "durationSeconds": 15.916667
+    },
+    {
+      "videoID": 17,
+      "wgerID": 75,
+      "wgerUUID": "28321cf3-70e6-48a4-ade1-d11382180cb3",
+      "name": "Benchpress Dumbbells",
+      "targets": [
+        [
+          "sirvya",
+          "dumbbell-press"
+        ],
+        [
+          "exercises-dataset",
+          "0289"
+        ]
+      ],
+      "asset": "assets/workout/videos/wger-17.mp4",
+      "poster": "assets/workout/videos/wger-17.jpg",
+      "sourceUrl": "https://wger.de/media/exercise-video/75/080c799b-8afd-4130-8d72-9cef0cd79f54.MOV",
+      "sourceSize": 4543158,
+      "sourceSha256": "d96fa783d10b476965e926a2c88f4b6d69da5f9e91cd7656fbafadb001981afa",
+      "sha256": "b1184cde1664a2e4390de3beef937c69dce5fc6db2ded0f81f1bb0c07496e284",
+      "posterSha256": "dd329f0f3b23c5f2374206c0cf9eabe7118641b8ec4824d2af3fa803389eb9c2",
+      "author": "Goulart",
+      "authorHistory": [
+        "Goulart"
+      ],
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+      "modified": true,
+      "modifications": "Transcoded to H.264 MP4, scaled to fit 640px, resampled to 24fps, audio removed; poster extracted. Original movement speed retained.",
+      "width": 640,
+      "height": 360,
+      "durationSeconds": 14.166667
+    },
+    {
+      "videoID": 49,
+      "wgerID": 91,
+      "wgerUUID": "7b99a081-6b1a-4aa5-b86a-5a935d083a35",
+      "name": "Biceps Curls With Barbell",
+      "targets": [
+        [
+          "exercises-dataset",
+          "0031"
+        ]
+      ],
+      "asset": "assets/workout/videos/wger-49.mp4",
+      "poster": "assets/workout/videos/wger-49.jpg",
+      "sourceUrl": "https://wger.de/media/exercise-video/91/483f4bff-e108-41f1-8e7b-0caf24952552.MOV",
+      "sourceSize": 22680665,
+      "sourceSha256": "2b75ac783df5a9557e280385f6b1181227c613f4ee1a5427a8a3477736b14a49",
+      "sha256": "1a84dddc79ef41113eb303161a17d944495678a96645069f07c98c43b989c630",
+      "posterSha256": "7806afb9e86d055d887143d74e1e57a45e58779230f22d82724bdd381eb98b73",
+      "author": "Goulart",
+      "authorHistory": [
+        "Goulart"
+      ],
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+      "modified": true,
+      "modifications": "Transcoded to H.264 MP4, scaled to fit 640px, resampled to 24fps, audio removed; poster extracted. Original movement speed retained.",
+      "width": 640,
+      "height": 360,
+      "durationSeconds": 12.416667
+    },
+    {
+      "videoID": 48,
+      "wgerID": 92,
+      "wgerUUID": "1ae6a28d-10e7-4ecf-af4f-905f8193e2c6",
+      "name": "Biceps Curls With Dumbbell",
+      "targets": [
+        [
+          "sirvya",
+          "curl"
+        ],
+        [
+          "exercises-dataset",
+          "0294"
+        ]
+      ],
+      "asset": "assets/workout/videos/wger-48.mp4",
+      "poster": "assets/workout/videos/wger-48.jpg",
+      "sourceUrl": "https://wger.de/media/exercise-video/92/8bfb917c-3d0d-49b9-8073-5d7e01c1b894.MOV",
+      "sourceSize": 31753930,
+      "sourceSha256": "4e5e4bbbf24385e8bbed16b7fb2905243041646f56031c3c3515073d6b9ace75",
+      "sha256": "4a06e9568b47766761bb3a5f2f5c7c2311208d3dd2fbc6957f190fca873d9490",
+      "posterSha256": "3e0a1a9824799bf87ff78b681869fe5555a76e40df8997020300c6dcc81013ef",
+      "author": "Goulart",
+      "authorHistory": [
+        "Goulart"
+      ],
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+      "modified": true,
+      "modifications": "Transcoded to H.264 MP4, scaled to fit 640px, resampled to 24fps, audio removed; poster extracted. Original movement speed retained.",
+      "width": 640,
+      "height": 360,
+      "durationSeconds": 11
+    },
+    {
+      "videoID": 27,
+      "wgerID": 257,
+      "wgerUUID": "d677de4c-5bd9-412a-91f1-857116a666a2",
+      "name": "Front Squats",
+      "targets": [
+        [
+          "exercises-dataset",
+          "0042"
+        ]
+      ],
+      "asset": "assets/workout/videos/wger-27.mp4",
+      "poster": "assets/workout/videos/wger-27.jpg",
+      "sourceUrl": "https://wger.de/media/exercise-video/257/93145935-29db-4e52-9d2d-174b1c30c098.MOV",
+      "sourceSize": 27090822,
+      "sourceSha256": "0b3224e065a0be689366b0f4416ed49a4a89f36e4aaf68d238d705a5bf165a8b",
+      "sha256": "b78c97ad65b52c01a8b9a2ad1752bf620f4b3f8445f342aca47838ccd434c85e",
+      "posterSha256": "7e5b3624fa325b948e5e81f1a019d7d69fea3014280e506bac297ecddee6cad8",
+      "author": "Goulart",
+      "authorHistory": [
+        "Goulart"
+      ],
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+      "modified": true,
+      "modifications": "Transcoded to H.264 MP4, scaled to fit 640px, resampled to 24fps, audio removed; poster extracted. Original movement speed retained.",
+      "width": 640,
+      "height": 360,
+      "durationSeconds": 8.333333
+    },
+    {
+      "videoID": 51,
+      "wgerID": 272,
+      "wgerUUID": "c0d9fe98-f4fe-49f3-8037-05e1984e7d2d",
+      "name": "Hammer Curls",
+      "targets": [
+        [
+          "exercises-dataset",
+          "0313"
+        ]
+      ],
+      "asset": "assets/workout/videos/wger-51.mp4",
+      "poster": "assets/workout/videos/wger-51.jpg",
+      "sourceUrl": "https://wger.de/media/exercise-video/272/df069052-2173-4f24-855f-a0eebe729f24.MOV",
+      "sourceSize": 30154182,
+      "sourceSha256": "1bb9997de44f2c7b1ff182001c988ae1245006458a3a6e1bc85db52dcb1a4e38",
+      "sha256": "d32af410cb61c3d55fbe4468c07f5d91f8a8994fea59aed1e9a409c8f7ab9291",
+      "posterSha256": "fb15a7c3d5e137a389e40f0397efc0c1f4eec8fc132193fd79ade60a4db95c63",
+      "author": "Goulart",
+      "authorHistory": [
+        "Goulart"
+      ],
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+      "modified": true,
+      "modifications": "Transcoded to H.264 MP4, scaled to fit 640px, resampled to 24fps, audio removed; poster extracted. Original movement speed retained.",
+      "width": 640,
+      "height": 360,
+      "durationSeconds": 10.416667
+    },
+    {
+      "videoID": 47,
+      "wgerID": 275,
+      "wgerUUID": "04365177-e078-489b-983a-8ac61b7346f1",
+      "name": "Hammercurls on Cable",
+      "targets": [
+        [
+          "exercises-dataset",
+          "0165"
+        ]
+      ],
+      "asset": "assets/workout/videos/wger-47.mp4",
+      "poster": "assets/workout/videos/wger-47.jpg",
+      "sourceUrl": "https://wger.de/media/exercise-video/275/af1fff93-eb58-4ba7-97a4-b38ee67853b4.MOV",
+      "sourceSize": 38048587,
+      "sourceSha256": "3306077ea6ba80601490e4de5e37c31eafdb0af7457be1f7e2b877d481130dd8",
+      "sha256": "a2dd5f80d0031fdd419661f75a08e7e41d842034f69b67d6eedabb64b165602f",
+      "posterSha256": "b217153049cb8fb02ccf1f4af9f46214ca7d10f7e538c103ea3d7e4654543a99",
+      "author": "Goulart",
+      "authorHistory": [
+        "Goulart"
+      ],
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+      "modified": true,
+      "modifications": "Transcoded to H.264 MP4, scaled to fit 640px, resampled to 24fps, audio removed; poster extracted. Original movement speed retained.",
+      "width": 640,
+      "height": 360,
+      "durationSeconds": 11.916667
+    },
+    {
+      "videoID": 6,
+      "wgerID": 348,
+      "wgerUUID": "63375f5b-2d81-471c-bea4-fc3d207e96cb",
+      "name": "Lateral Raises",
+      "targets": [
+        [
+          "sirvya",
+          "lateral-raise"
+        ],
+        [
+          "exercises-dataset",
+          "0334"
+        ]
+      ],
+      "asset": "assets/workout/videos/wger-6.mp4",
+      "poster": "assets/workout/videos/wger-6.jpg",
+      "sourceUrl": "https://wger.de/media/exercise-video/348/de69928a-8a35-4096-821c-1f46de5e0e03.MOV",
+      "sourceSize": 43874331,
+      "sourceSha256": "41c47c5efd245d0dfbcd25e4c1e6a4f46f2093281871df3503278ea9e5444d7f",
+      "sha256": "68fb23cf27b9e9e259b8e7f9615fc23fd228922ac56ceee5e08e745fe45525c8",
+      "posterSha256": "229fbe99c7e7a8a28f3ebaa0c9af510ad15c1e0aedd7cdda7695d7912d8de8cf",
+      "author": "Goulart",
+      "authorHistory": [
+        "Goulart"
+      ],
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+      "modified": true,
+      "modifications": "Transcoded to H.264 MP4, scaled to fit 640px, resampled to 24fps, audio removed; poster extracted. Original movement speed retained.",
+      "width": 640,
+      "height": 360,
+      "durationSeconds": 18.333333
+    },
+    {
+      "videoID": 35,
+      "wgerID": 365,
+      "wgerUUID": "3bc8b411-a28d-4e1c-a6d1-769e18fe9881",
+      "name": "Leg Curls (laying)",
+      "targets": [
+        [
+          "exercises-dataset",
+          "0586"
+        ]
+      ],
+      "asset": "assets/workout/videos/wger-35.mp4",
+      "poster": "assets/workout/videos/wger-35.jpg",
+      "sourceUrl": "https://wger.de/media/exercise-video/365/becaf013-5044-40d0-bae9-7ed60c973737.MOV",
+      "sourceSize": 31825446,
+      "sourceSha256": "77d70320a6d87af02532379039874eaf805d569462cc540060b04da915fcecb3",
+      "sha256": "e16be5cf62f2b2b305557c2f3983fedd7bdde441ae65bf2a96289e65d82b1632",
+      "posterSha256": "3b9f9f8804e741b9616cb73e0a89cfdded2ab16a901ebfb84235b20fb51dcdbd",
+      "author": "Goulart",
+      "authorHistory": [
+        "Goulart"
+      ],
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+      "modified": true,
+      "modifications": "Transcoded to H.264 MP4, scaled to fit 640px, resampled to 24fps, audio removed; poster extracted. Original movement speed retained.",
+      "width": 640,
+      "height": 360,
+      "durationSeconds": 15.125
+    },
+    {
+      "videoID": 37,
+      "wgerID": 366,
+      "wgerUUID": "440a5184-de58-4a86-a7ba-76ddeafaa855",
+      "name": "Leg Curls (sitting)",
+      "targets": [
+        [
+          "exercises-dataset",
+          "0599"
+        ]
+      ],
+      "asset": "assets/workout/videos/wger-37.mp4",
+      "poster": "assets/workout/videos/wger-37.jpg",
+      "sourceUrl": "https://wger.de/media/exercise-video/366/43df4b79-d4c3-4fbf-bcb5-e0d825b84120.MOV",
+      "sourceSize": 72266814,
+      "sourceSha256": "87d8c5fb1787d11942b20182fd08c0324288f9ab7a6665d949de8afa5048d244",
+      "sha256": "0ed073c3019d885ab46749f1826cdebd33295ec1d6852975f564975e6a48e448",
+      "posterSha256": "b0e3fb827d22bd4c4f52fd6930b38a625e22040b1e5322815920156ac413365f",
+      "author": "Goulart",
+      "authorHistory": [
+        "Goulart"
+      ],
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+      "modified": true,
+      "modifications": "Transcoded to H.264 MP4, scaled to fit 640px, resampled to 24fps, audio removed; poster extracted. Original movement speed retained.",
+      "width": 640,
+      "height": 360,
+      "durationSeconds": 24.958333
+    },
+    {
+      "videoID": 24,
+      "wgerID": 537,
+      "wgerUUID": "57e17672-52b9-43cf-8d0d-4b3f06a0c0d0",
+      "name": "Incline Bench Press - Dumbbell",
+      "targets": [
+        [
+          "exercises-dataset",
+          "0314"
+        ]
+      ],
+      "asset": "assets/workout/videos/wger-24.mp4",
+      "poster": "assets/workout/videos/wger-24.jpg",
+      "sourceUrl": "https://wger.de/media/exercise-video/537/b9c937e9-daeb-42a9-be8e-7a77e368478c.MOV",
+      "sourceSize": 10602354,
+      "sourceSha256": "4861d89988c8e8886435e62064aedd68c04484f0c4646270d182307025c3a162",
+      "sha256": "249c157f4dd41a942151e029de89fe33d72eda962725e1bede210a65c511e995",
+      "posterSha256": "7363a12331a272f535c2a81711b4a676ee592b71a1efad753b945aeba102aa1a",
+      "author": "Goulart",
+      "authorHistory": [
+        "Goulart"
+      ],
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+      "modified": true,
+      "modifications": "Transcoded to H.264 MP4, scaled to fit 640px, resampled to 24fps, audio removed; poster extracted. Original movement speed retained.",
+      "width": 640,
+      "height": 360,
+      "durationSeconds": 27.5
+    },
+    {
+      "videoID": 16,
+      "wgerID": 538,
+      "wgerUUID": "275fb49f-975c-4d6e-9d63-2c86ed740f40",
+      "name": "Incline Bench Press - Barbell",
+      "targets": [
+        [
+          "exercises-dataset",
+          "0047"
+        ]
+      ],
+      "asset": "assets/workout/videos/wger-16.mp4",
+      "poster": "assets/workout/videos/wger-16.jpg",
+      "sourceUrl": "https://wger.de/media/exercise-video/538/4349a6f6-4cee-4c09-828b-c5e7fc2c1ff1.MOV",
+      "sourceSize": 6205424,
+      "sourceSha256": "d7510c0a6a2bb7bd88bc89c0f5e1a7bbd1297794217c08e841140bcd75bb65fa",
+      "sha256": "36171bd2b49cc957e9ce7ff6a7560aae159b04d0e60403faadb225cd4f4fc2b5",
+      "posterSha256": "6d400d27ea381157675ef296b3abc1577d201dd665d6816563faf2f114263c8c",
+      "author": "Goulart",
+      "authorHistory": [
+        "Goulart"
+      ],
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+      "modified": true,
+      "modifications": "Transcoded to H.264 MP4, scaled to fit 640px, resampled to 24fps, audio removed; poster extracted. Original movement speed retained.",
+      "width": 640,
+      "height": 360,
+      "durationSeconds": 19.916667
+    },
+    {
+      "videoID": 12,
+      "wgerID": 567,
+      "wgerUUID": "87affa4b-395b-437c-9581-2bd20ea5aa7c",
+      "name": "Shoulder Press, Dumbbells",
+      "targets": [
+        [
+          "exercises-dataset",
+          "0405"
+        ]
+      ],
+      "asset": "assets/workout/videos/wger-12.mp4",
+      "poster": "assets/workout/videos/wger-12.jpg",
+      "sourceUrl": "https://wger.de/media/exercise-video/567/64f33c19-1d96-4b7c-af17-6c6a4941c614.MOV",
+      "sourceSize": 62860017,
+      "sourceSha256": "0151a7cd43894d60c1fe1ffb34f4f4b709fc17aa6a5913c7edea4a14c9113985",
+      "sha256": "fbc423dcb71f13b5eecb12e68a199bb7910bccdd7942fd58c3d82d99f2ce10cc",
+      "posterSha256": "a04c35305fe16866f76a081b5133bbf0974e25777b786112441b6a086169599e",
+      "author": "Goulart",
+      "authorHistory": [
+        "Goulart"
+      ],
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+      "modified": true,
+      "modifications": "Transcoded to H.264 MP4, scaled to fit 640px, resampled to 24fps, audio removed; poster extracted. Original movement speed retained.",
+      "width": 640,
+      "height": 360,
+      "durationSeconds": 23.208333
+    },
+    {
+      "videoID": 2,
+      "wgerID": 507,
+      "wgerUUID": "2e7ffff9-e603-4b28-98c8-31d1a6ce8cd9",
+      "name": "Romanian Deadlift",
+      "targets": [
+        [
+          "exercises-dataset",
+          "1459"
+        ]
+      ],
+      "asset": "assets/workout/videos/wger-2.mp4",
+      "poster": "assets/workout/videos/wger-2.jpg",
+      "sourceUrl": "https://wger.de/media/exercise-video/507/307e7276-a14d-4ea0-b579-f5b0dbc6f5af.MOV",
+      "sourceSize": 38136083,
+      "sourceSha256": "0526207ce774dd9e15c5be5198c3bd5233e2d434fcabe3db67f1060af51c5d84",
+      "sha256": "e08ac9030b53fb1a0c1b9859e217300d9b93c8344a21ad04c51f274962efe753",
+      "posterSha256": "11ea9b0041cf3812fa3314caf510fc42b77fbc7bf6408b0af2bd91828153cec1",
+      "author": "Goulart",
+      "authorHistory": [
+        "Goulart"
+      ],
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+      "modified": true,
+      "modifications": "Transcoded to H.264 MP4, scaled to fit 640px, resampled to 24fps, audio removed; poster extracted. Original movement speed retained.",
+      "width": 640,
+      "height": 360,
+      "durationSeconds": 13.083333,
+      "reviewNote": "Source exercise equipment says barbell, but this specific clip shows dumbbells. Visually reviewed and mapped to dumbbell Romanian deadlift."
+    },
+    {
+      "videoID": 30,
+      "wgerID": 46,
+      "wgerUUID": "04e7d7e4-f8d2-406d-97df-3df3bceec22c",
+      "name": "Barbell Lunges Standing",
+      "targets": [
+        [
+          "exercises-dataset",
+          "0054"
+        ]
+      ],
+      "asset": "assets/workout/videos/wger-30.mp4",
+      "poster": "assets/workout/videos/wger-30.jpg",
+      "sourceUrl": "https://wger.de/media/exercise-video/46/d45df7af-586b-42d0-bc56-d1e028812f12.MOV",
+      "sourceSize": 23571954,
+      "sourceSha256": "4246d6c1973de9cd0b56b0ff03ac75e759a5f27d68235be6748848de3d2e1d15",
+      "sha256": "d11f914b02be7c3c80d5a8337d730a1c28901ec32e2733253c15668a36c3cba5",
+      "posterSha256": "e4cf402a5297a77b186e7a935b47ea4abe03b81aa05b42bc09014db881fe555c",
+      "author": "Goulart",
+      "authorHistory": [
+        "Goulart"
+      ],
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+      "modified": true,
+      "modifications": "Transcoded to H.264 MP4, scaled to fit 640px, resampled to 24fps, audio removed; poster extracted. Original movement speed retained.",
+      "width": 640,
+      "height": 360,
+      "durationSeconds": 8.166667
+    },
+    {
+      "videoID": 31,
+      "wgerID": 205,
+      "wgerUUID": "2f1a2707-e7ff-46ac-9112-3e31e6e961ee",
+      "name": "Dumbbell Lunges Standing",
+      "targets": [
+        [
+          "exercises-dataset",
+          "0336"
+        ]
+      ],
+      "asset": "assets/workout/videos/wger-31.mp4",
+      "poster": "assets/workout/videos/wger-31.jpg",
+      "sourceUrl": "https://wger.de/media/exercise-video/205/c167ac34-ddbc-4e1b-8edf-1192e9d00e22.MOV",
+      "sourceSize": 49889363,
+      "sourceSha256": "6fc1b2969a40253e8f27eebee8d150efaec8dbe8bc668a348ad8562feee013a5",
+      "sha256": "8daac2721c3bbcdb8b2c1811c9b67052db7008e83c7505079148a669e6376994",
+      "posterSha256": "4cdbd18e52cc4e8026674158dbfc4ae3ce2f785103f597facd2b23e16522202b",
+      "author": "Goulart",
+      "authorHistory": [
+        "Goulart"
+      ],
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+      "modified": true,
+      "modifications": "Transcoded to H.264 MP4, scaled to fit 640px, resampled to 24fps, audio removed; poster extracted. Original movement speed retained.",
+      "width": 640,
+      "height": 360,
+      "durationSeconds": 17.166667
+    },
+    {
+      "videoID": 11,
+      "wgerID": 543,
+      "wgerUUID": "5912d7ed-6a0e-4b4c-b30a-fc9f3f890fc1",
+      "name": "Shoulder Press, on Machine",
+      "targets": [
+        [
+          "exercises-dataset",
+          "0603"
+        ]
+      ],
+      "asset": "assets/workout/videos/wger-11.mp4",
+      "poster": "assets/workout/videos/wger-11.jpg",
+      "sourceUrl": "https://wger.de/media/exercise-video/543/dbfd396b-1aab-4a64-a50b-2c31ff0a2cf7.MOV",
+      "sourceSize": 23511495,
+      "sourceSha256": "1b3f5619a871ea77871a17b777c606e793f1d728a8253bad45c13f3877e999d6",
+      "sha256": "c6d8acffacc6239110889f475ea3a4d62531c2ff84ae251a9caed8d0bb5cd623",
+      "posterSha256": "2206752099e147dacb492ec3f16de2b4129c762ca23a483ce8f24c1801604600",
+      "author": "Goulart",
+      "authorHistory": [
+        "Goulart"
+      ],
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+      "modified": true,
+      "modifications": "Transcoded to H.264 MP4, scaled to fit 640px, resampled to 24fps, audio removed; poster extracted. Original movement speed retained.",
+      "width": 640,
+      "height": 360,
+      "durationSeconds": 12.333333
+    },
+    {
+      "videoID": 13,
+      "wgerID": 590,
+      "wgerUUID": "6e46833d-fd83-4c1a-90af-eb3f3a917199",
+      "name": "Sitting Calf Raises",
+      "targets": [
+        [
+          "exercises-dataset",
+          "0594"
+        ]
+      ],
+      "asset": "assets/workout/videos/wger-13.mp4",
+      "poster": "assets/workout/videos/wger-13.jpg",
+      "sourceUrl": "https://wger.de/media/exercise-video/590/a325ae2e-686b-4a1f-aff2-ba37fa3fa157.MOV",
+      "sourceSize": 27735168,
+      "sourceSha256": "81156e03df81f84c2ceef9f15ba5d4f55042600f6966365916cf5a3a20e7b65b",
+      "sha256": "9669921eedaa990b11642afa40e1eea2f61e43574f4b2f8c85a863ef166b3ebe",
+      "posterSha256": "6bb508e679e8e6545bc88c7ceb83f2c658b938cf9378ce6eacadd69fe64b25d8",
+      "author": "Goulart",
+      "authorHistory": [
+        "Goulart"
+      ],
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+      "modified": true,
+      "modifications": "Transcoded to H.264 MP4, scaled to fit 640px, resampled to 24fps, audio removed; poster extracted. Original movement speed retained.",
+      "width": 640,
+      "height": 360,
+      "durationSeconds": 20.791667
+    },
+    {
+      "videoID": 15,
+      "wgerID": 622,
+      "wgerUUID": "7ce443b6-eb84-4f65-b05f-461c1cc8bcc0",
+      "name": "Standing Calf Raises",
+      "targets": [
+        [
+          "exercises-dataset",
+          "0605"
+        ]
+      ],
+      "asset": "assets/workout/videos/wger-15.mp4",
+      "poster": "assets/workout/videos/wger-15.jpg",
+      "sourceUrl": "https://wger.de/media/exercise-video/622/461171e5-2b16-407d-bf27-27aeef43f105.MOV",
+      "sourceSize": 27311167,
+      "sourceSha256": "fe75fcc7d54693a0637624e048b32d64623d134358f1e5985ae9740ee3a68e49",
+      "sha256": "53600b61df3d62c302d138e5a425f28af3f1cf505fc0b49844e53e393c0c7064",
+      "posterSha256": "aeebc797c0471048d472c3748b09226b96a7ad7224eb926e5624cb781daab4c4",
+      "author": "Goulart",
+      "authorHistory": [
+        "Goulart"
+      ],
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+      "modified": true,
+      "modifications": "Transcoded to H.264 MP4, scaled to fit 640px, resampled to 24fps, audio removed; poster extracted. Original movement speed retained.",
+      "width": 640,
+      "height": 360,
+      "durationSeconds": 16.5
+    },
+    {
+      "videoID": 5,
+      "wgerID": 349,
+      "wgerUUID": "57263316-6f34-4539-952b-b07e09bac3ba",
+      "name": "Lateral Rows on Cable, One Armed",
+      "targets": [
+        [
+          "exercises-dataset",
+          "0178"
+        ]
+      ],
+      "asset": "assets/workout/videos/wger-5.mp4",
+      "poster": "assets/workout/videos/wger-5.jpg",
+      "sourceUrl": "https://wger.de/media/exercise-video/349/9896d82e-d8b6-48af-bdd5-b8545dc523e9.MOV",
+      "sourceSize": 33127028,
+      "sourceSha256": "14b3c3fc75f882edd98b0af2f685441753349f239aeb5f4cb09c54a4809a7f58",
+      "sha256": "f6cb571cd43531adfa4c5727dbe872935fbda788ab403a2465750afd64cb7e32",
+      "posterSha256": "9cf5464c614458fe9f61346908dd42998b9ce232b23c49c36605be3ec500280a",
+      "author": "Goulart",
+      "authorHistory": [
+        "Goulart"
+      ],
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+      "modified": true,
+      "modifications": "Transcoded to H.264 MP4, scaled to fit 640px, resampled to 24fps, audio removed; poster extracted. Original movement speed retained.",
+      "width": 640,
+      "height": 360,
+      "durationSeconds": 13.291667
+    },
+    {
+      "videoID": 42,
+      "wgerID": 341,
+      "wgerUUID": "316aca47-6f5b-40b7-b04f-f69e68387354",
+      "name": "Squats on Multipress",
+      "targets": [
+        [
+          "exercises-dataset",
+          "0770"
+        ]
+      ],
+      "asset": "assets/workout/videos/wger-42.mp4",
+      "poster": "assets/workout/videos/wger-42.jpg",
+      "sourceUrl": "https://wger.de/media/exercise-video/341/0cbfeace-dda9-4166-8424-f51358e88a4f.MOV",
+      "sourceSize": 34036878,
+      "sourceSha256": "41bc3318429e26325e3ece262250dd82d1de80345714ae20929db78d20607180",
+      "sha256": "492904f1199396ae00713341935a816d8e4569fc5e09b6c220f6b87a8e9960b2",
+      "posterSha256": "903a5ebf06de75b52cd461a5b8a5bb920f1092e33d2a8bf7c78399dfbbff97b8",
+      "author": "Goulart",
+      "authorHistory": [
+        "Goulart"
+      ],
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+      "modified": true,
+      "modifications": "Transcoded to H.264 MP4, scaled to fit 640px, resampled to 24fps, audio removed; poster extracted. Original movement speed retained.",
+      "width": 640,
+      "height": 360,
+      "durationSeconds": 12.041667
+    },
+    {
+      "videoID": 40,
+      "wgerID": 375,
+      "wgerUUID": "18104387-4567-4c1e-8d03-db0b274646dd",
+      "name": "Leg Press on Hackenschmidt Machine",
+      "targets": [
+        [
+          "exercises-dataset",
+          "0743"
+        ]
+      ],
+      "asset": "assets/workout/videos/wger-40.mp4",
+      "poster": "assets/workout/videos/wger-40.jpg",
+      "sourceUrl": "https://wger.de/media/exercise-video/375/effa7a81-dbdd-4014-83ee-ddf0fd835301.MOV",
+      "sourceSize": 80419952,
+      "sourceSha256": "0b59e2f24a6ba1892ab1f136a1ef0b41aa8f5ded0f62a6fe38488d757095bfa1",
+      "sha256": "4a4556916ac6c6f943add6e6ad209293064e3ba63a1b1d9e673a973b5427903a",
+      "posterSha256": "3adecc15ccdbafa252f748beb786bea41302faa9c5cc379edfba984b14beb061",
+      "author": "Goulart",
+      "authorHistory": [
+        "Goulart"
+      ],
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+      "modified": true,
+      "modifications": "Transcoded to H.264 MP4, scaled to fit 640px, resampled to 24fps, audio removed; poster extracted. Original movement speed retained.",
+      "width": 640,
+      "height": 360,
+      "durationSeconds": 32.166667
+    },
+    {
+      "videoID": 50,
+      "wgerID": 95,
+      "wgerUUID": "bcb7020c-8678-496d-8f4d-aad0e233a5bd",
+      "name": "Biceps Curl With Cable",
+      "targets": [
+        [
+          "exercises-dataset",
+          "0868"
+        ]
+      ],
+      "asset": "assets/workout/videos/wger-50.mp4",
+      "poster": "assets/workout/videos/wger-50.jpg",
+      "sourceUrl": "https://wger.de/media/exercise-video/95/ab770931-47d3-44fd-aef0-ac7a64c3b794.MOV",
+      "sourceSize": 34233084,
+      "sourceSha256": "4a7f995405ea08af81ede59bc07ed05458596b420a7ca596a154f9e27a24c2cb",
+      "sha256": "5a9d7e39b5707009ad599f9e87c662bb67e596b0e37810cbabb4c8266100054e",
+      "posterSha256": "20daecd87284a805751350ad3a54163c3bfabcd8d67263b01e798e7b24409cf0",
+      "author": "Goulart",
+      "authorHistory": [
+        "Goulart"
+      ],
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+      "modified": true,
+      "modifications": "Transcoded to H.264 MP4, scaled to fit 640px, resampled to 24fps, audio removed; poster extracted. Original movement speed retained.",
+      "width": 640,
+      "height": 360,
+      "durationSeconds": 10.5
+    },
+    {
+      "videoID": 54,
+      "wgerID": 465,
+      "wgerUUID": "dd52fb99-9426-4a78-b446-20a8e3e4ec47",
+      "name": "Preacher Curls",
+      "targets": [
+        [
+          "exercises-dataset",
+          "1627"
+        ]
+      ],
+      "asset": "assets/workout/videos/wger-54.mp4",
+      "poster": "assets/workout/videos/wger-54.jpg",
+      "sourceUrl": "https://wger.de/media/exercise-video/465/5d2339a4-815f-46ba-aa19-8a763cfdeba0.MOV",
+      "sourceSize": 46887882,
+      "sourceSha256": "7d02193438479b9322c92b6aa63db92424d3724abecd923212d3ceb5ce428948",
+      "sha256": "bfce04c3c6fde0c92adfc00e385861790a856fb8564f3636e995b728ecd90710",
+      "posterSha256": "65e3ef5ec6be77de8b3c82d7e48ba98d58b422fd80123e96ca12ead4cff83e43",
+      "author": "Goulart",
+      "authorHistory": [
+        "Goulart"
+      ],
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+      "modified": true,
+      "modifications": "Transcoded to H.264 MP4, scaled to fit 640px, resampled to 24fps, audio removed; poster extracted. Original movement speed retained.",
+      "width": 640,
+      "height": 360,
+      "durationSeconds": 14.375
+    },
+    {
+      "videoID": 55,
+      "wgerID": 659,
+      "wgerUUID": "3188868c-84e2-4a3b-b7dc-f79d8650988d",
+      "name": "Triceps Extensions on Cable",
+      "targets": [
+        [
+          "exercises-dataset",
+          "0201"
+        ]
+      ],
+      "asset": "assets/workout/videos/wger-55.mp4",
+      "poster": "assets/workout/videos/wger-55.jpg",
+      "sourceUrl": "https://wger.de/media/exercise-video/659/1f2eb3b6-3185-429f-8330-26dc88f39aff.MOV",
+      "sourceSize": 7557215,
+      "sourceSha256": "2b1cb2e47da66abd03bba3ef51ff83f5aebb84e3ac31cbad2435db91417fdf0e",
+      "sha256": "e7b3480c9fcd9711e63bab4da2a3d7a8ee6c05fd94677850f87db1cfe1a444e5",
+      "posterSha256": "5030091b72dfd06adf4f784b8d9fd75f8096a97a916f247b209a90961d18fd3e",
+      "author": "Goulart",
+      "authorHistory": [
+        "Goulart"
+      ],
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+      "modified": true,
+      "modifications": "Transcoded to H.264 MP4, scaled to fit 640px, resampled to 24fps, audio removed; poster extracted. Original movement speed retained.",
+      "width": 640,
+      "height": 360,
+      "durationSeconds": 15.083333
+    },
+    {
+      "videoID": 60,
+      "wgerID": 245,
+      "wgerUUID": "893c07ea-2e24-49b6-92e4-d0033eedec62",
+      "name": "Skullcrusher Dumbbells",
+      "targets": [
+        [
+          "exercises-dataset",
+          "0351"
+        ]
+      ],
+      "asset": "assets/workout/videos/wger-60.mp4",
+      "poster": "assets/workout/videos/wger-60.jpg",
+      "sourceUrl": "https://wger.de/media/exercise-video/245/c253303e-9160-4f1f-b4fe-daf1e6c8661d.MOV",
+      "sourceSize": 5813842,
+      "sourceSha256": "ea90aab3561008a60ae462277b49332be8d76567713fc90abe2ee4a047753f09",
+      "sha256": "33b5ab8b7818c59dec17623a601bfef8b22abe3de749d4faaa739fd9b1d17eea",
+      "posterSha256": "ddc9d9f97cb0748510c255a259d7ca9c3bd3243fd4c62bd090ecddc687f60f8f",
+      "author": "Goulart",
+      "authorHistory": [
+        "Goulart"
+      ],
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+      "modified": true,
+      "modifications": "Transcoded to H.264 MP4, scaled to fit 640px, resampled to 24fps, audio removed; poster extracted. Original movement speed retained.",
+      "width": 640,
+      "height": 360,
+      "durationSeconds": 18.75
+    },
+    {
+      "videoID": 71,
+      "wgerID": 475,
+      "wgerUUID": "8e420408-0682-4ab6-89f5-2681e54c7ce0",
+      "name": "Pull-ups",
+      "targets": [
+        [
+          "sirvya",
+          "pull-up"
+        ],
+        [
+          "exercises-dataset",
+          "0652"
+        ]
+      ],
+      "asset": "assets/workout/videos/wger-71.mp4",
+      "poster": "assets/workout/videos/wger-71.jpg",
+      "sourceUrl": "https://wger.de/media/exercise-video/475/83067ffe-ccb9-4e22-8507-5131b211ce74.MOV",
+      "sourceSize": 57098527,
+      "sourceSha256": "4c459f322f506eb7bd0b51e7efd81aaf6bd1e10fc0569e182a4815dee325f1b8",
+      "sha256": "9f0f8d458af37ec6cc6c544ee4d2e738ccba0740ca7293942a77949ea0a46533",
+      "posterSha256": "8a21df15f8c13f57b95942e3e6e7bcd4340699ea60a4b0a8e623f8c98bf4c0ee",
+      "author": "Goulart",
+      "authorHistory": [
+        "Goulart"
+      ],
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+      "modified": true,
+      "modifications": "Transcoded to H.264 MP4, scaled to fit 640px, resampled to 24fps, audio removed; poster extracted. Original movement speed retained.",
+      "width": 640,
+      "height": 360,
+      "durationSeconds": 18.833333
+    },
+    {
+      "videoID": 74,
+      "wgerID": 12,
+      "wgerUUID": "53906cd1-61f1-4d56-ac60-e4fcc5824861",
+      "name": "Seated Hip Adduction",
+      "targets": [
+        [
+          "exercises-dataset",
+          "0598"
+        ]
+      ],
+      "asset": "assets/workout/videos/wger-74.mp4",
+      "poster": "assets/workout/videos/wger-74.jpg",
+      "sourceUrl": "https://wger.de/media/exercise-video/12/5148c579-5df2-4618-9a7b-a2e29ac4dd7d.MOV",
+      "sourceSize": 60138928,
+      "sourceSha256": "9ea2e87291d7445c801f058a13f4c2c62a14c34869577a1ae1601824778e0f66",
+      "sha256": "918f02f112b62b933a2576f416ea3ba1cd433dd9cbcebed24c6dcc98182ca3ab",
+      "posterSha256": "688a78c168be93f313b3403f85078c38faf05e24e934a8dd4e8521d6622f20f9",
+      "author": "Goulart",
+      "authorHistory": [
+        "Goulart"
+      ],
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+      "modified": true,
+      "modifications": "Transcoded to H.264 MP4, scaled to fit 640px, resampled to 24fps, audio removed; poster extracted. Original movement speed retained.",
+      "width": 640,
+      "height": 360,
+      "durationSeconds": 20.916667
+    }
+  ]
+}

@@ -17,6 +17,8 @@ test('SIRVYA Workout HTTP / MySQL lifecycle and existing endpoint regression', {
   const users = [];
   const prefix = `workout-test-${Date.now()}-${process.pid}`;
   const notifications = [];
+  const demonstrationCalls = [];
+  const demonstrationPriorities = [];
   try {
     await ensureWorkoutSchema(db);
     await ensureWorkoutSchema(db); // Idempotency and stable catalog IDs.
@@ -28,7 +30,16 @@ test('SIRVYA Workout HTTP / MySQL lifecycle and existing endpoint regression', {
     const [coach, client, otherCoach, otherClient, manager] = users;
     await db.query('INSERT INTO coachclients (coachID, clientID) VALUES (?, ?)', [coach.id, client.id]);
     const app = express(); app.use(express.json({limit:'10mb'}));
-    app.use('/api/workout', createWorkoutRouter(db, {notify: async n => { notifications.push(n); }}));
+    app.use('/api/workout', createWorkoutRouter(db, {notify: async n => { notifications.push(n); },
+      resolveDemonstration: async (exercise, options) => {
+        demonstrationCalls.push(exercise.id);
+        demonstrationPriorities.push(options.priority);
+        return exercise.externalSource==='exercises-dataset'?{
+          name:exercise.name,asset:`https://static.exercisedb.dev/media/fixture.gif?revision=${demonstrationCalls.length}`,
+          poster:'https://static.exercisedb.dev/media/fixture.gif',author:'AscendAPI',license:'Test fixture',
+          licenseUrl:'https://ascendapi.com',sourceUrl:'https://ascendapi.com',modifications:'',
+        }:null;
+      }}));
     // Existing profile, reservation, message and notification routes remain mounted normally.
     const {default: clients} = await import('../routes/anas/client.js');
     const {default: reservations} = await import('../routes/anas/reservations.js');
@@ -45,11 +56,59 @@ test('SIRVYA Workout HTTP / MySQL lifecycle and existing endpoint regression', {
     const request = async (user, path, method = 'GET', body) => {
       const token = user ? jwt.sign(user, process.env.JWT_SECRET, {expiresIn: '5m'}) : null;
       const response = await fetch(origin + path, {method, headers: {'Content-Type': 'application/json', ...(token ? {Authorization: `Bearer ${token}`} : {})}, ...(body === undefined ? {} : {body: JSON.stringify(body)})});
-      return {status: response.status, body: await response.json()};
+      return {status: response.status, body: await response.json(), headers: response.headers};
     };
     const conversationBaseline = await request(client, `/conversations?userID=${client.id}&role=client`);
     assert.equal(conversationBaseline.status,200,JSON.stringify(conversationBaseline.body));
     let planID, sessionID, originalExerciseID, secondDayID, body;
+    await t.test('hosted demonstrations are fresh, authenticated and respect exercise visibility',async()=>{
+      const [[exercise]]=await db.query("SELECT id FROM exercises WHERE externalSource='exercises-dataset' AND externalId='0001'");
+      const path=`/workout/exercises/${exercise.id}/demonstration`;
+      const first=await request(client,path),second=await request(client,path);
+      assert.equal(first.status,200);assert.equal(first.headers.get('cache-control'),'private, no-store');
+      assert.notEqual(first.body.video.asset,second.body.video.asset);
+      assert.equal(demonstrationPriorities.at(-1),'detail');
+      assert.equal((await request(client,path+'?priority=preview')).status,200);
+      assert.equal(demonstrationPriorities.at(-1),'preview');
+      const count=demonstrationCalls.length;
+      assert.equal((await request(null,path)).status,401);assert.equal(demonstrationCalls.length,count);
+      const created=await request(client,'/workout/exercises','POST',{
+        name:`${prefix}-private-demo`,muscleGroup:'chest',equipment:'barbell',isBodyweight:false,exerciseType:'reps',instructions:[],
+      });
+      assert.equal(created.status,201);
+      try{
+        assert.equal((await request(otherClient,`/workout/exercises/${created.body.id}/demonstration`)).status,404);
+        assert.equal(demonstrationCalls.length,count);
+        assert.equal((await request(client,`/workout/exercises/${created.body.id}/demonstration`)).body.video,null);
+      }finally{await db.query('DELETE FROM exercises WHERE id=? AND ownerID=?',[created.body.id,client.id]);}
+    });
+    await t.test('supplied GIFs participate in video search while private exercise visibility is preserved',async()=>{
+      const created=await request(client,'/workout/exercises','POST',{
+        name:`${prefix}-media`,muscleGroup:'chest',equipment:'barbell',isBodyweight:false,exerciseType:'reps',instructions:[],
+      });
+      assert.equal(created.status,201);
+      const id=created.body.id;
+      try{
+        await db.query('UPDATE exercises SET videoUrl=? WHERE id=? AND ownerID=?',
+          ['https://media.example/exercise.GIF?version=1',id,client.id]);
+        const own=await request(client,`/workout/exercises?video=true&search=${prefix}-media`);
+        assert.equal(own.status,200);assert.equal(own.body.total,1);assert.equal(own.body.data[0].hasVideo,true);
+        const other=await request(otherClient,`/workout/exercises?video=true&search=${prefix}-media`);
+        assert.equal(other.body.total,0);
+        await db.query('UPDATE exercises SET videoUrl=? WHERE id=? AND ownerID=?',
+          ['https://youtube.com/watch?v=demo',id,client.id]);
+        assert.equal((await request(client,`/workout/exercises?video=true&search=${prefix}-media`)).body.total,0);
+      }finally{await db.query('DELETE FROM exercises WHERE id=? AND ownerID=?',[id,client.id]);}
+    });
+    await t.test('video-only search retains account scoping, filters and real totals',async()=>{
+      const videos=await request(client,'/workout/exercises?video=true&search=bench');
+      assert.equal(videos.status,200);assert.ok(videos.body.total>0);
+      assert.ok(videos.body.data.length>0&&videos.body.data.every(e=>e.hasVideo===true));
+      assert.ok(videos.body.data.every(e=>['sirvya','exercises-dataset'].includes(e.externalSource)));
+      const absent=await request(client,'/workout/exercises?video=true&search=nonexistent-video-exercise');
+      assert.equal(absent.body.total,0);assert.deepEqual(absent.body.data,[]);
+      assert.equal((await request(null,'/workout/exercises?video=true')).status,401);
+    });
     await t.test('malformed workout collections, history rows and tokens fail safely',async()=>{
       for(const workoutDayIDs of ['1',{},1])assert.equal((await request(client,'/workout/sessions','POST',{workoutDayIDs})).status,400);
       for(const token of ['malformed',jwt.sign(client,process.env.JWT_SECRET,{expiresIn:-1})]){

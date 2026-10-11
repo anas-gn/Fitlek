@@ -121,6 +121,7 @@ class _WorkoutExerciseLibraryState extends State<WorkoutExerciseLibrary> {
   int _total = 0;
   int _chosenCount = 0;
   bool _chosen = false;
+  bool _videosOnly = false;
   bool _selectingExercise = false;
 
   Future<void> _pick(Exercise exercise) async {
@@ -171,6 +172,7 @@ class _WorkoutExerciseLibraryState extends State<WorkoutExerciseLibrary> {
         if (widget.selecting) 'picker': 'true',
         if (_favorites) 'favorite': 'true',
         if (_chosen) 'chosen': 'true',
+        if (_videosOnly) 'video': 'true',
         if (_bodyweight) 'bodyweight': 'true',
         if (profile != null && (profile['equipment'] as List).isNotEmpty)
           'equipmentList': (profile['equipment'] as List).join(','),
@@ -328,6 +330,14 @@ class _WorkoutExerciseLibraryState extends State<WorkoutExerciseLibrary> {
                     const SizedBox(height: 4),
                     _chips('equipment', 'Any equipment')
                   ],
+                  Align(alignment: Alignment.centerLeft, child: FilterChip(
+                      avatar: const Icon(Icons.play_circle_outline, size: 16),
+                      label: const WorkoutLabel('Video demos'),
+                      selected: _videosOnly,
+                      onSelected: (selected) {
+                        setState(() => _videosOnly = selected);
+                        _load();
+                      })),
                   if (widget.selecting)
                     Row(children: [
                       Expanded(
@@ -448,6 +458,7 @@ class _WorkoutExerciseLibraryState extends State<WorkoutExerciseLibrary> {
                                                 children: [
                                                   WorkoutLabel(workoutExerciseTitle(
                                                       '${e.muscleGroup.workoutTr(context)} · ${e.equipment.workoutTr(context)}')),
+                                                  WorkoutMediaKindLabel(exercise: e),
                                                   if (e.bestWeight > 0)
                                                     WorkoutLabel(
                                                         'Best: ${workoutValue(WorkoutService.displayWeight(e.bestWeight))} ${WorkoutService.unit}',
@@ -809,19 +820,7 @@ class _WorkoutExerciseDetailState extends State<WorkoutExerciseDetail> {
                 ? const Center(child: CircularProgressIndicator())
                 : ListView(padding: const EdgeInsets.all(20), children: [
                     if (_offline) const WorkoutOfflineNotice(),
-                    if (e.imageUrl == null)
-                      WorkoutDemonstrationPanel(exercise: e),
-                    if (e.imageUrl != null)
-                      ClipRRect(
-                          borderRadius: BorderRadius.circular(16),
-                          child: Image.network(e.imageUrl!,
-                              height: 220,
-                              fit: BoxFit.contain,
-                              errorBuilder: (_, __, ___) => const SizedBox(
-                                  height: 100,
-                                  child: Center(
-                                      child: Icon(Icons.fitness_center_rounded,
-                                          size: 48))))),
+                    WorkoutDemonstrationPanel(exercise: e),
                     Wrap(spacing: 8, children: [
                       Chip(label: WorkoutLabel(e.muscleGroup)),
                       Chip(label: WorkoutLabel(e.equipment)),

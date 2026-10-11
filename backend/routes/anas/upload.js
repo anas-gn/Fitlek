@@ -7,6 +7,8 @@ import fs from 'fs';
 import db from '../../config/db.js';
 import {publicOrigin} from '../../config/runtime.js';
 import {ownIdentity} from '../../middleware/ownership.js';
+import {signedChatMedia} from '../../services/chatMedia.js';
+import {randomUUID} from 'node:crypto';
 
 const storage = multer.memoryStorage();
 const uploadImage = multer({
@@ -124,7 +126,7 @@ router.post('/chat-image', (req, res) => {
         fs.mkdirSync(uploadDir, { recursive: true });
       }
 
-      const filename = `chat_img_${Date.now()}_${Math.floor(Math.random() * 1000)}.webp`;
+      const filename = `chat_img_${randomUUID()}.webp`;
       const filepath = path.join(uploadDir, filename);
 
       await sharp(req.file.buffer)
@@ -133,8 +135,9 @@ router.post('/chat-image', (req, res) => {
         .toFile(filepath);
 
       const url = `${publicOrigin(req)}/uploads/chat_media/${filename}`;
+      await db.query('INSERT INTO chat_uploads(filename,ownerID) VALUES(?,?)',[filename,req.user.id]);
       console.log('✅ Uploaded chat image:', url);
-      res.json({ url });
+      res.json({ url:signedChatMedia(req,url) });
     } catch (e) {
       console.error('❌ Handler error:', e.message);
       res.status(500).json({ error: e.message });
@@ -161,15 +164,18 @@ router.post('/chat-audio', (req, res) => {
       if (!ext || ext === req.file.originalname) {
         ext = 'm4a'; // Default extension for AAC
       }
+      ext=ext.toLowerCase();
+      if(!['m4a','aac','mp3','wav','ogg','webm','mp4'].includes(ext))return res.status(400).json({error:'Unsupported audio format'});
       
-      const filename = `chat_aud_${Date.now()}_${Math.floor(Math.random() * 1000)}.${ext}`;
+      const filename = `chat_aud_${randomUUID()}.${ext}`;
       const filepath = path.join(uploadDir, filename);
 
       fs.writeFileSync(filepath, req.file.buffer);
 
       const url = `${publicOrigin(req)}/uploads/chat_media/${filename}`;
+      await db.query('INSERT INTO chat_uploads(filename,ownerID) VALUES(?,?)',[filename,req.user.id]);
       console.log('✅ Uploaded chat audio:', url);
-      res.json({ url });
+      res.json({ url:signedChatMedia(req,url) });
     } catch (e) {
       console.error('❌ Handler error:', e.message);
       res.status(500).json({ error: e.message });

@@ -224,7 +224,8 @@ class _WorkoutOverview extends StatefulWidget {
 }
 
 class _WorkoutOverviewState extends State<_WorkoutOverview> {
-  DateTime get _now => widget.clock?.call() ?? DateTime.now();
+  DateTime get _now =>
+      WorkoutService.trainingTime(widget.clock?.call() ?? DateTime.now());
   int _section = 0;
   bool _starting = false, _activeRouteOpen = false;
   List<Map<String, dynamic>>? _weekly;
