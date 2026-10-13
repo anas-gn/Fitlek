@@ -64,15 +64,19 @@ class _VideoSplashScreenState extends State<VideoSplashScreen> {
     if (_hasNavigated) return;
     _hasNavigated = true;
 
-    Navigator.of(context).pushReplacement(
-      PageRouteBuilder(
-        pageBuilder: (context, animation, secondaryAnimation) => widget.nextScreen,
-        transitionsBuilder: (context, animation, secondaryAnimation, child) {
-          return FadeTransition(opacity: animation, child: child);
-        },
-        transitionDuration: const Duration(milliseconds: 500),
-      ),
-    );
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        Navigator.of(context).pushReplacement(
+          PageRouteBuilder(
+            pageBuilder: (context, animation, secondaryAnimation) => widget.nextScreen,
+            transitionsBuilder: (context, animation, secondaryAnimation, child) {
+              return FadeTransition(opacity: animation, child: child);
+            },
+            transitionDuration: const Duration(milliseconds: 500),
+          ),
+        );
+      }
+    });
   }
 
   @override

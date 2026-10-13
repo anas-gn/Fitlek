@@ -1,13 +1,16 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 
 class ImagePreview extends StatelessWidget {
   final String imageUrl;
   final String tag;
+  final bool localFile;
 
   const ImagePreview({
     super.key,
     required this.imageUrl,
     required this.tag,
+    this.localFile = false,
   });
 
   @override
@@ -26,12 +29,19 @@ class ImagePreview extends StatelessWidget {
           maxScale: 4.0,
           child: Hero(
             tag: tag,
-            child: Image.network(
-              imageUrl,
-              fit: BoxFit.contain,
-              errorBuilder: (context, error, stackTrace) =>
-                  const Icon(Icons.broken_image, color: Colors.white, size: 50),
-            ),
+            child: localFile
+                ? Image.file(File(imageUrl),
+                    fit: BoxFit.contain,
+                    errorBuilder: (_, __, ___) => const Icon(Icons.broken_image,
+                        color: Colors.white, size: 50))
+                : Image.network(
+                    imageUrl,
+                    fit: BoxFit.contain,
+                    errorBuilder: (context, error, stackTrace) => const Icon(
+                        Icons.broken_image,
+                        color: Colors.white,
+                        size: 50),
+                  ),
           ),
         ),
       ),

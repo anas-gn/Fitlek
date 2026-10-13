@@ -153,7 +153,7 @@ class _LoginScreenState extends State<LoginScreen>
       } else if (res.statusCode == 403 && body['authProvider'] == 'google') {
         // Google-only account trying to use email/password
         setState(() {
-          _errorMsg = 'This account uses Google Sign-In. Tap "Continue with Google" below to log in.';
+          _errorMsg = 'This account uses Google or Apple sign-in. Continue with your original sign-in method below.';
           _loading = false;
         });
       } else {
@@ -254,7 +254,7 @@ class _LoginScreenState extends State<LoginScreen>
       _errorMsg = null;
     });
     try {
-      final result = await GoogleAuthService.signInWithGoogle(role: 'client');
+      final result = await GoogleAuthService.signInWithGoogle(role: 'client', action: 'login');
       await _completeSignIn(
         token: result.accessToken,
         role: result.user['role'] as String? ?? 'client',
@@ -442,7 +442,7 @@ class _LoginScreenState extends State<LoginScreen>
                               _buildGoogleButton(),
                               if (!kIsWeb && (Platform.isIOS || Platform.isMacOS)) ...[
                                 const SizedBox(height: 12),
-                                _buildAppleButton(),
+                                if (!kIsWeb && defaultTargetPlatform == TargetPlatform.iOS) _buildAppleButton(),
                               ],
                               const SizedBox(height: 40),
                               _buildDivider(),

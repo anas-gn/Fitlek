@@ -1,72 +1,49 @@
+import '../../services/live_updates.dart';
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:fitlek1/constants/urls.dart';
 import 'package:fitlek1/models/anas/reservation.dart';
 import 'package:fitlek1/models/anas/coach.dart';
+import 'package:fitlek1/models/anas/coachPackage.dart';
+import 'package:fitlek1/models/anas/review.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'clientBooking.dart';
+import 'clientCoachReviews.dart';
 import 'clientConversation.dart';
 import '../../theme/fitlek_theme_extension.dart';
 import '../../components/ENG/imagePreview.dart';
-
-class _ReviewItem {
-  final int id;
-  final int coachID;
-  final int clientID;
-  final int rating;
-  final String? comment;
-  final String clientName;
-  final String? clientAvatar;
-  final DateTime createdAt;
-
-  const _ReviewItem({
-    required this.id,
-    required this.coachID,
-    required this.clientID,
-    required this.rating,
-    this.comment,
-    required this.clientName,
-    this.clientAvatar,
-    required this.createdAt,
-  });
-
-  factory _ReviewItem.fromJson(Map<String, dynamic> j) => _ReviewItem(
-        id: j['id'],
-        coachID: j['coachID'],
-        clientID: j['clientID'],
-        rating: j['rating'],
-        comment: j['comment'],
-        clientName: j['clientName'] ?? 'Anonymous',
-        clientAvatar: j['clientAvatar'],
-        createdAt: DateTime.parse(j['createdAt']),
-      );
-}
+import 'package:url_launcher/url_launcher.dart';
 
 class CoachDetailScreen extends StatefulWidget {
   final ReservationModel session;
   final int clientID;
   final String token;
+  final bool preview;
 
   const CoachDetailScreen({
     super.key,
     required this.session,
     required this.clientID,
     required this.token,
+    this.preview = false,
   });
 
   @override
   State<CoachDetailScreen> createState() => _CoachDetailScreenState();
 }
 
-class _CoachDetailScreenState extends State<CoachDetailScreen>
-    with SingleTickerProviderStateMixin {
+class _CoachDetailScreenState extends State<CoachDetailScreen> with SingleTickerProviderStateMixin, LiveUpdates<CoachDetailScreen> {
+  @override
+  Set<String> get liveDomains => {'coaches','profile','edit','packages','reviews','locations','availability','calendar','reservations','favorites','bans'};
+  @override
+  Future<void> refreshLiveData() async { await Future.wait([_fetchAll(silent:true),_fetchPackages(),_fetchAvailability()]); }
+
   CoachModel? _coach;
-  List<_ReviewItem> _reviews = [];
+  List<ReviewItem> _reviews = [];
   double _avgRating = 0;
   int _totalReviews = 0;
-  _ReviewItem? _myReview;
+  ReviewItem? _myReview;
 
   bool _loadingCoach = true;
   bool _loadingReviews = true;
@@ -74,6 +51,8 @@ class _CoachDetailScreenState extends State<CoachDetailScreen>
   String? _errorCoach;
 
   List<Map<String, dynamic>> _galleryImages = [];
+  final PageController _galleryController = PageController();
+  int _galleryIndex = 0;
 
   int _pendingRating = 0;
   bool _submittingReview = false;
@@ -87,6 +66,14 @@ class _CoachDetailScreenState extends State<CoachDetailScreen>
   String _inviteStatus = 'none';
   int? _conversationID;
 
+  List<CoachPackage> _packages = [];
+  bool _loadingPackages = true;
+
+  Map<String, List<String>> _blockedSlots = {};
+  Map<String, List<String>> _reservedSlots = {};
+  int _selectedDayIndex = 0;
+  bool _loadingAvailability = true;
+
   late AnimationController _animCtrl;
   late Animation<double> _fadeAnim;
 
@@ -97,12 +84,17 @@ class _CoachDetailScreenState extends State<CoachDetailScreen>
         vsync: this, duration: const Duration(milliseconds: 700));
     _fadeAnim = CurvedAnimation(parent: _animCtrl, curve: Curves.easeOut);
     _fetchAll();
-    _checkInvitationStatus();
-    _fetchFavoriteStatus();
+    if (!widget.preview) {
+      _checkInvitationStatus();
+      _fetchFavoriteStatus();
+    }
+    _fetchPackages();
+    _fetchAvailability();
   }
 
   @override
   void dispose() {
+    _galleryController.dispose();
     _animCtrl.dispose();
     _commentCtrl.dispose();
     super.dispose();
@@ -128,6 +120,7 @@ class _CoachDetailScreenState extends State<CoachDetailScreen>
   }
 
   Future<void> _toggleFavorite() async {
+    if (widget.preview) return;
     if (_togglingFavorite) return;
     final previous = _isFavorite;
     setState(() {
@@ -149,7 +142,8 @@ class _CoachDetailScreenState extends State<CoachDetailScreen>
           )
           .timeout(const Duration(seconds: 8));
       if (res.statusCode == 200 || res.statusCode == 201) {
-        _showSnack(previous ? 'Removed from favorites' : 'Added to favorites ✓');
+        _showSnack(
+            previous ? 'Removed from favorites' : 'Added to favorites ✓');
       } else {
         if (mounted) setState(() => _isFavorite = previous);
         _showSnack('Failed to update favorites', isError: true);
@@ -162,13 +156,121 @@ class _CoachDetailScreenState extends State<CoachDetailScreen>
     }
   }
 
-  Future<void> _fetchAll() async {
-    await Future.wait([_fetchCoach(), _fetchReviews(), _fetchGallery()]);
-    _animCtrl.forward();
+  Future<void> _fetchAll({bool silent = false}) async {
+    await Future.wait([_fetchCoach(silent:silent), _fetchReviews(silent:silent), _fetchGallery(silent:silent)]);
+    if (mounted && !silent) _animCtrl.forward();
   }
 
-  Future<void> _fetchGallery() async {
-    setState(() => _loadingGallery = true);
+  Future<void> _fetchPackages() async {
+    try {
+      final coachID = widget.session.coachID;
+      final res = await http.get(
+        Uri.parse('$baseUrl/packages/coach/$coachID'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ${widget.token}',
+        },
+      ).timeout(const Duration(seconds: 8));
+      if (res.statusCode == 200 && mounted) {
+        final List data = jsonDecode(res.body);
+        setState(() {
+          _packages = data.map((e) => CoachPackage.fromJson(e)).toList();
+          _loadingPackages = false;
+        });
+      } else {
+        if (mounted) setState(() => _loadingPackages = false);
+      }
+    } catch (_) {
+      if (mounted) setState(() => _loadingPackages = false);
+    }
+  }
+
+  Future<void> _fetchAvailability() async {
+    try {
+      final coachID = widget.session.coachID;
+      final today = DateTime.now();
+      final endDay = today.add(const Duration(days: 4));
+      final fromStr =
+          '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
+      final toStr =
+          '${endDay.year}-${endDay.month.toString().padLeft(2, '0')}-${endDay.day.toString().padLeft(2, '0')}';
+
+      final blockRes = await http.get(
+        Uri.parse('$baseUrl/availability/$coachID'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ${widget.token}',
+        },
+      ).timeout(const Duration(seconds: 8));
+
+      final resRes = await http.get(
+        Uri.parse(
+            '$baseUrl/reservations?role=coach&userID=$coachID&from=$fromStr&to=$toStr'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ${widget.token}',
+        },
+      ).timeout(const Duration(seconds: 8));
+
+      if (!mounted) return;
+
+      final Map<String, List<String>> blocked = {};
+      final Map<String, List<String>> reserved = {};
+      final allSlots = [
+        '08:00',
+        '09:00',
+        '10:00',
+        '11:00',
+        '12:00',
+        '13:00',
+        '14:00',
+        '15:00',
+        '16:00',
+        '17:00',
+        '18:00',
+        '19:00',
+        '20:00',
+        '21:00',
+        '22:00'
+      ];
+
+      if (blockRes.statusCode == 200) {
+        final List blocks = jsonDecode(blockRes.body);
+        for (final b in blocks) {
+          final dateKey = (b['blockedDate'] as String).substring(0, 10);
+          final start = (b['startTime'] as String).substring(0, 5);
+          final end = (b['endTime'] as String).substring(0, 5);
+          for (final slot in allSlots) {
+            if (slot.compareTo(start) >= 0 && slot.compareTo(end) < 0) {
+              blocked.putIfAbsent(dateKey, () => []).add(slot);
+            }
+          }
+        }
+      }
+
+      if (resRes.statusCode == 200) {
+        final List reservations = jsonDecode(resRes.body);
+        for (final r in reservations) {
+          final status = r['status'] as String;
+          if (status == 'cancelled') continue;
+          final dateKey = (r['reservedDate'] as String).substring(0, 10);
+          final time = (r['reservedTime'] as String).substring(0, 5);
+          reserved.putIfAbsent(dateKey, () => []).add(time);
+        }
+      }
+
+      setState(() {
+        _blockedSlots = blocked;
+        _reservedSlots = reserved;
+        _loadingAvailability = false;
+      });
+    } catch (_) {
+      if (mounted) setState(() => _loadingAvailability = false);
+    }
+  }
+
+  Future<void> _fetchGallery({bool silent = false}) async {
+    if (!silent) setState(() => _loadingGallery = true);
     try {
       final res = await http.get(
         Uri.parse('$baseUrl/coaches/${widget.session.coachID}/images'),
@@ -193,8 +295,8 @@ class _CoachDetailScreenState extends State<CoachDetailScreen>
     }
   }
 
-  Future<void> _fetchCoach() async {
-    setState(() {
+  Future<void> _fetchCoach({bool silent = false}) async {
+    if (!silent) setState(() {
       _loadingCoach = true;
       _errorCoach = null;
     });
@@ -206,6 +308,7 @@ class _CoachDetailScreenState extends State<CoachDetailScreen>
           'Authorization': 'Bearer ${widget.token}',
         },
       ).timeout(const Duration(seconds: 10));
+      if (!mounted) return;
       if (res.statusCode == 200) {
         final jsonData = jsonDecode(res.body);
         setState(() {
@@ -226,8 +329,8 @@ class _CoachDetailScreenState extends State<CoachDetailScreen>
     }
   }
 
-  Future<void> _fetchReviews() async {
-    setState(() => _loadingReviews = true);
+  Future<void> _fetchReviews({bool silent = false}) async {
+    if (!silent) setState(() => _loadingReviews = true);
     try {
       final res = await http.get(
         Uri.parse('$baseUrl/reviews/coach/${widget.session.coachID}'),
@@ -236,10 +339,11 @@ class _CoachDetailScreenState extends State<CoachDetailScreen>
           'Authorization': 'Bearer ${widget.token}',
         },
       ).timeout(const Duration(seconds: 10));
+      if (!mounted) return;
       if (res.statusCode == 200) {
         final data = jsonDecode(res.body) as Map<String, dynamic>;
         final list = (data['reviews'] as List)
-            .map((e) => _ReviewItem.fromJson(e))
+            .map((e) => ReviewItem.fromJson(e))
             .toList();
         final myReview =
             list.where((r) => r.clientID == widget.clientID).isNotEmpty
@@ -247,10 +351,10 @@ class _CoachDetailScreenState extends State<CoachDetailScreen>
                 : null;
         setState(() {
           _reviews = list;
-          _avgRating = (data['avg'] as num).toDouble();
-          _totalReviews = data['total'] as int;
+          _avgRating = double.tryParse('${data['avg']}') ?? 0;
+          _totalReviews = int.tryParse('${data['total']}') ?? 0;
           _myReview = myReview;
-          if (myReview != null) {
+          if (myReview != null && !silent) {
             _pendingRating = myReview.rating;
             _commentCtrl.text = myReview.comment ?? '';
           }
@@ -258,11 +362,12 @@ class _CoachDetailScreenState extends State<CoachDetailScreen>
         });
       }
     } catch (e) {
-      setState(() => _loadingReviews = false);
+      if (mounted) setState(() => _loadingReviews = false);
     }
   }
 
   Future<void> _submitReview() async {
+    if (widget.preview) return;
     if (_pendingRating == 0) {
       _showSnack('Select a rating first', isError: true);
       return;
@@ -302,6 +407,7 @@ class _CoachDetailScreenState extends State<CoachDetailScreen>
   }
 
   Future<void> _sendInvitation() async {
+    if (widget.preview) return;
     setState(() => _sendingInvite = true);
     try {
       final res = await http
@@ -358,6 +464,7 @@ class _CoachDetailScreenState extends State<CoachDetailScreen>
   }
 
   Future<void> _fetchConversation() async {
+    if (widget.preview) return;
     try {
       final res = await http
           .post(
@@ -379,19 +486,32 @@ class _CoachDetailScreenState extends State<CoachDetailScreen>
     } catch (_) {}
   }
 
-  void _openConversation() {
-    if (_conversationID == null) return;
+  Future<void> _openConversation() async {
+    if (widget.preview) return;
+    if (widget.clientID == null) {
+      _showSnack('Please login to message the coach', isError: true);
+      return;
+    }
+    if (_conversationID == null) {
+      await _fetchConversation();
+    }
+    if (_conversationID == null) {
+      _showSnack('Unable to start conversation. Please try again.',
+          isError: true);
+      return;
+    }
+    if (!mounted) return;
     Navigator.push(
         context,
         PageRouteBuilder(
           pageBuilder: (_, __, ___) => ClientConversationScreen(
             conversationID: _conversationID!,
-            clientID: widget.clientID,
+            clientID: widget.clientID!,
             token: widget.token,
             coachName: _coach?.fullName ?? widget.session.coachName,
             coachAvatar: _coach?.avatarUrl ?? widget.session.coachImageUrl,
             coachSpeciality:
-                _coach?.speciality ?? widget.session.coachSpeciality,
+                _coach?.displaySpecialties ?? widget.session.coachSpeciality,
           ),
           transitionsBuilder: (_, anim, __, child) => FadeTransition(
             opacity: anim,
@@ -451,8 +571,8 @@ class _CoachDetailScreenState extends State<CoachDetailScreen>
             children: [
               Text(
                   'Why are you reporting this user? We take these reports seriously.',
-                  style: TextStyle(
-                      color: context.fitlek.textMuted, fontSize: 13)),
+                  style:
+                      TextStyle(color: context.fitlek.textMuted, fontSize: 13)),
               const SizedBox(height: 16),
               ...reasons.map((r) => RadioListTile<String>(
                     title: Text(r,
@@ -495,6 +615,7 @@ class _CoachDetailScreenState extends State<CoachDetailScreen>
   }
 
   Future<void> _submitReport(int reportedID, String reason) async {
+    if (widget.preview) return;
     try {
       final res = await http.post(
         Uri.parse('$baseUrl/ugc/report'),
@@ -523,8 +644,7 @@ class _CoachDetailScreenState extends State<CoachDetailScreen>
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: context.fitlek.card,
-        shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Text('Block $name?',
             style: TextStyle(
                 color: Theme.of(context).colorScheme.onSurface,
@@ -545,8 +665,7 @@ class _CoachDetailScreenState extends State<CoachDetailScreen>
             },
             child: Text('Block',
                 style: TextStyle(
-                    color: context.fitlek.error,
-                    fontWeight: FontWeight.bold)),
+                    color: context.fitlek.error, fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -554,6 +673,7 @@ class _CoachDetailScreenState extends State<CoachDetailScreen>
   }
 
   Future<void> _submitBlock(int blockedID) async {
+    if (widget.preview) return;
     try {
       final res = await http.post(
         Uri.parse('$baseUrl/ugc/block'),
@@ -579,8 +699,7 @@ class _CoachDetailScreenState extends State<CoachDetailScreen>
       context: context,
       builder: (ctx) => Dialog(
         backgroundColor: context.fitlek.card,
-        shape:
-            RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
         child: Padding(
           padding: const EdgeInsets.all(28),
           child: Column(
@@ -678,9 +797,13 @@ class _CoachDetailScreenState extends State<CoachDetailScreen>
         (c.avatarUrl?.isNotEmpty == true) ? c.avatarUrl! : s.coachImageUrl;
     final name = c.fullName.isNotEmpty ? c.fullName : s.coachName;
     final speciality =
-        (c.speciality?.isNotEmpty == true) ? c.speciality! : s.coachSpeciality;
+        (c.displaySpecialties.isNotEmpty && c.displaySpecialties != 'Coach')
+            ? c.displaySpecialties
+            : (s.coachSpeciality.isNotEmpty ? s.coachSpeciality : '');
     final rating = _avgRating > 0 ? _avgRating : (c.rating ?? s.coachRating);
-    final canReview = s.isConfirmed && s.sessionStart.isBefore(DateTime.now());
+    final canReview = !widget.preview &&
+        s.isConfirmed &&
+        s.sessionStart.isBefore(DateTime.now());
 
     return FadeTransition(
       opacity: _fadeAnim,
@@ -691,26 +814,488 @@ class _CoachDetailScreenState extends State<CoachDetailScreen>
               child: _buildHero(context, imageUrl, name, speciality, c)),
           SliverToBoxAdapter(
               child: _buildStats(rating, c.totalInvitations, _totalReviews)),
-          SliverToBoxAdapter(child: _buildPrimaryActions(context, s, c)),
-          if (speciality.isNotEmpty)
-            SliverToBoxAdapter(child: _buildTags(speciality)),
-          if (c.bio.isNotEmpty)
-            SliverToBoxAdapter(child: _buildBio(c.bio)),
-          if (c.ville != null || c.tel != null)
-            SliverToBoxAdapter(child: _buildContactInfo(c)),
-          if (c.instagramPage.isNotEmpty)
-            SliverToBoxAdapter(child: _buildInstagram(c.instagramPage)),
+          SliverToBoxAdapter(child: _buildPriceBar()),
+          if (c.bio.isNotEmpty) SliverToBoxAdapter(child: _buildBio(c.bio)),
+          if ((c.specialties != null && c.specialties!.isNotEmpty) ||
+              speciality.isNotEmpty)
+            SliverToBoxAdapter(child: _buildTags(c, speciality)),
+          if (c.certifications != null && c.certifications!.isNotEmpty)
+            SliverToBoxAdapter(child: _buildCertifications(c)),
+          if (_packages.isNotEmpty)
+            SliverToBoxAdapter(child: _buildPackagesSection()),
           if (!_loadingGallery && _galleryImages.isNotEmpty)
-            SliverToBoxAdapter(child: _buildGallery()),
-          if (c.invitationCode.isNotEmpty)
-            SliverToBoxAdapter(child: _buildQrCode(c)),
+            SliverToBoxAdapter(child: _buildGallery(speciality)),
           SliverToBoxAdapter(
-              child: _buildReviewsSection(rating, canReview)),
-          const SliverToBoxAdapter(child: SizedBox(height: 48)),
+              child: IgnorePointer(
+                  ignoring: widget.preview, child: _buildAvailability())),
+          if (c.hasGym) SliverToBoxAdapter(child: _buildGym(c)),
+          SliverToBoxAdapter(child: _buildPracticalInfo(c)),
+          SliverToBoxAdapter(child: _buildReviewsSection(rating, canReview)),
+          const SliverToBoxAdapter(child: SizedBox(height: 100)),
         ]),
+        bottomNavigationBar: SafeArea(
+          child: IgnorePointer(
+              ignoring: widget.preview,
+              child: _buildPrimaryActions(context, s, c)),
+        ),
       ),
     );
   }
+
+  Widget _sectionHeaderWithIcon(String title, IconData icon,
+      {Widget? trailing}) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Row(
+          children: [
+            Icon(icon, color: Colors.white, size: 20),
+            const SizedBox(width: 8),
+            Text(title,
+                style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold)),
+          ],
+        ),
+        if (trailing != null) trailing,
+      ],
+    );
+  }
+
+  Widget _buildCertifications(CoachModel c) {
+    final certs = c.certifications;
+    if (certs == null || certs.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _sectionHeaderWithIcon(
+              'Certifications', Icons.workspace_premium_outlined),
+          const SizedBox(height: 16),
+          ...certs
+              .map((cert) => Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF0C2420),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.1)),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                              c.isApproved
+                                  ? Icons.verified_user_outlined
+                                  : Icons.workspace_premium_outlined,
+                              color: Colors.white,
+                              size: 24),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(cert,
+                                    style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w600)),
+                                const SizedBox(height: 2),
+                                Text(
+                                    c.isApproved
+                                        ? 'Verified by Sirvya'
+                                        : 'Self-reported',
+                                    style: TextStyle(
+                                        color:
+                                            Colors.white.withValues(alpha: 0.7),
+                                        fontSize: 12)),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ))
+              .toList(),
+        ],
+      ),
+    );
+  }
+
+  void _navigateToBooking([CoachPackage? pkg]) {
+    if (widget.preview) return;
+    Navigator.push(
+      context,
+      PageRouteBuilder(
+        pageBuilder: (_, __, ___) => BookingScreen(
+          session: widget.session,
+          clientID: widget.clientID,
+          token: widget.token,
+          packages: _packages,
+          initialPackage: pkg,
+        ),
+        transitionsBuilder: (_, anim, __, child) => FadeTransition(
+          opacity: anim,
+          child: child,
+        ),
+      ),
+    );
+  }
+
+  void _openAllPackagesSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) {
+        return Container(
+          height: MediaQuery.of(ctx).size.height * 0.75,
+          decoration: const BoxDecoration(
+            color: Color(0xFF0F2C24),
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: Column(
+            children: [
+              const SizedBox(height: 12),
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.3),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Row(
+                      children: [
+                        Icon(Icons.inventory_2_outlined,
+                            color: Colors.white, size: 22),
+                        SizedBox(width: 10),
+                        Text(
+                          'Coaching packages',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close, color: Colors.white),
+                      onPressed: () => Navigator.pop(ctx),
+                    ),
+                  ],
+                ),
+              ),
+              Divider(color: Colors.white.withValues(alpha: 0.1), height: 1),
+              Expanded(
+                child: _packages.isEmpty
+                    ? Center(
+                        child: Text(
+                          'No packages available for this coach.',
+                          style: TextStyle(
+                              color: Colors.white.withValues(alpha: 0.6)),
+                        ),
+                      )
+                    : ListView.separated(
+                        padding: const EdgeInsets.all(20),
+                        itemCount: _packages.length,
+                        separatorBuilder: (_, __) => const SizedBox(height: 14),
+                        itemBuilder: (c, idx) {
+                          final pkg = _packages[idx];
+                          return Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF0C2420),
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                  color: Colors.white.withValues(alpha: 0.12)),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Expanded(
+                                      child: Text(
+                                        pkg.name,
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                    if (pkg.price != null)
+                                      Text(
+                                        '${pkg.price!.toInt()} MAD',
+                                        style: const TextStyle(
+                                          color: Color(0xFF38BDF8),
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                                if (pkg.description != null &&
+                                    pkg.description!.isNotEmpty) ...[
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    pkg.description!,
+                                    style: TextStyle(
+                                      color:
+                                          Colors.white.withValues(alpha: 0.7),
+                                      fontSize: 13,
+                                      height: 1.4,
+                                    ),
+                                  ),
+                                ],
+                                const SizedBox(height: 14),
+                                Row(
+                                  children: [
+                                    const Icon(Icons.access_time_rounded,
+                                        color: Color(0xFF94A8A3), size: 14),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      '${pkg.sessions ?? 1} session${pkg.sessions != null && pkg.sessions! > 1 ? 's' : ''} · 60 min${pkg.sessions != null && pkg.sessions! > 1 ? ' each' : ''}',
+                                      style: TextStyle(
+                                          color: Colors.white
+                                              .withValues(alpha: 0.6),
+                                          fontSize: 12),
+                                    ),
+                                    const Spacer(),
+                                    ElevatedButton(
+                                      onPressed: () {
+                                        Navigator.pop(ctx);
+                                        _navigateToBooking(pkg);
+                                      },
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor:
+                                            const Color(0xFF38BDF8),
+                                        foregroundColor: Colors.black,
+                                        elevation: 0,
+                                        padding: const EdgeInsets.symmetric(
+                                            horizontal: 16, vertical: 8),
+                                        shape: RoundedRectangleBorder(
+                                            borderRadius:
+                                                BorderRadius.circular(10)),
+                                      ),
+                                      child: const Text(
+                                        'Choose & Book',
+                                        style: TextStyle(
+                                            fontWeight: FontWeight.w700,
+                                            fontSize: 13),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildPackagesSection() {
+    final cs = Theme.of(context).colorScheme;
+    final f = context.fitlek;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        _sectionHeaderWithIcon(
+          'Coaching packages',
+          Icons.inventory_2_outlined,
+          trailing: GestureDetector(
+            onTap: _openAllPackagesSheet,
+            child: const Text('See all >',
+                style: TextStyle(
+                    color: Color(0xFF38BDF8),
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600)),
+          ),
+        ),
+        const SizedBox(height: 16),
+        if (_loadingPackages)
+          const Center(
+            child: Padding(
+              padding: EdgeInsets.all(16),
+              child: SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                      color: Color(0xFF38BDF8), strokeWidth: 2)),
+            ),
+          )
+        else if (_packages.isEmpty)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: const Color(0xFF0C2420),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+            ),
+            child: Text('No packages available for this coach.',
+                style: TextStyle(color: f.textMuted, fontSize: 13)),
+          )
+        else
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: _packages
+                  .map((pkg) => _buildClientPackageCard(pkg, cs, f))
+                  .toList(),
+            ),
+          ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            const Icon(Icons.info_outline_rounded,
+                color: Color(0xFF94A8A3), size: 14),
+            const SizedBox(width: 6),
+            Text('Agree on the price before confirmation.',
+                style: TextStyle(color: f.textMuted, fontSize: 12)),
+          ],
+        ),
+      ]),
+    );
+  }
+
+  Widget _buildClientPackageCard(
+      CoachPackage pkg, ColorScheme cs, FitlekColors f) {
+    return GestureDetector(
+      onTap: () => _navigateToBooking(pkg),
+      child: Container(
+        width: 240,
+        margin: const EdgeInsets.only(right: 12),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: const Color(0xFF0C2420),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(pkg.name,
+                style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 14.5,
+                    fontWeight: FontWeight.w800)),
+            if (pkg.description != null && pkg.description!.isNotEmpty) ...[
+              const SizedBox(height: 4),
+              Text(pkg.description!,
+                  style: TextStyle(
+                      color: f.textSecondary, fontSize: 12.5, height: 1.5),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis),
+            ],
+            const SizedBox(height: 12),
+            Container(
+                width: double.infinity,
+                height: 1,
+                color: Colors.white.withValues(alpha: 0.05)),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                const Icon(Icons.access_time_rounded,
+                    color: Color(0xFF94A8A3), size: 14),
+                const SizedBox(width: 6),
+                Text(
+                    '${pkg.sessions ?? 1} session${pkg.sessions != null && pkg.sessions! > 1 ? 's' : ''} · 60 min${pkg.sessions != null && pkg.sessions! > 1 ? ' each' : ''}',
+                    style: TextStyle(color: f.textSecondary, fontSize: 12)),
+              ],
+            ),
+            const SizedBox(height: 10),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Row(
+                    children: [
+                      const Icon(Icons.layers_outlined,
+                          color: Colors.white, size: 14),
+                      const SizedBox(width: 6),
+                      Flexible(
+                        child: Text(
+                            pkg.price != null
+                                ? '${pkg.price!.toInt()} MAD'
+                                : 'On request',
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold)),
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF38BDF8).withValues(alpha: 0.15),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                        color: const Color(0xFF38BDF8).withValues(alpha: 0.3)),
+                  ),
+                  child: const Text('Book >',
+                      style: TextStyle(
+                          color: Color(0xFF38BDF8),
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700)),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _pkgTag(String label, IconData icon, ColorScheme cs, FitlekColors f,
+          {bool colored = false}) =>
+      Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: colored ? cs.primary.withValues(alpha: 0.1) : f.card2,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+              color: colored ? cs.primary.withValues(alpha: 0.3) : f.border),
+        ),
+        child: Row(mainAxisSize: MainAxisSize.min, children: [
+          Icon(icon, size: 10, color: colored ? cs.primary : f.textMuted),
+          const SizedBox(width: 4),
+          Text(label,
+              style: TextStyle(
+                  color: colored ? cs.primary : f.textMuted,
+                  fontSize: 10.5,
+                  fontWeight: FontWeight.w700)),
+        ]),
+      );
 
   Widget _buildHero(BuildContext ctx, String imageUrl, String name,
       String speciality, CoachModel c) {
@@ -740,8 +1325,9 @@ class _CoachDetailScreenState extends State<CoachDetailScreen>
                   child: Image.network(
                     imageUrl,
                     fit: BoxFit.cover,
-                    loadingBuilder: (_, child, p) =>
-                        p == null ? child : Container(color: context.fitlek.card),
+                    loadingBuilder: (_, child, p) => p == null
+                        ? child
+                        : Container(color: context.fitlek.card),
                     errorBuilder: (_, __, ___) => _avatarPlaceholder(name),
                   ),
                 )
@@ -774,54 +1360,6 @@ class _CoachDetailScreenState extends State<CoachDetailScreen>
                   _backBtn(onTap: () => Navigator.pop(ctx), transparent: true),
                   const Spacer(),
                   Row(children: [
-                    if (_avgRating > 0 || _totalReviews > 0)
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 6),
-                        decoration: BoxDecoration(
-                            color: Colors.black.withValues(alpha: 0.52),
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .primary
-                                    .withValues(alpha: 0.5))),
-                        child: Row(mainAxisSize: MainAxisSize.min, children: [
-                          Icon(Icons.star_rounded,
-                              color: Theme.of(context).colorScheme.primary,
-                              size: 13),
-                          const SizedBox(width: 4),
-                          Text(
-                              _avgRating > 0
-                                  ? '${_avgRating.toStringAsFixed(1)}  ·  $_totalReviews'
-                                  : '$_totalReviews reviews',
-                              style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w700)),
-                        ]),
-                      ),
-                    const SizedBox(width: 8),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 10, vertical: 6),
-                      decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.primary,
-                          borderRadius: BorderRadius.circular(20)),
-                      child: Row(mainAxisSize: MainAxisSize.min, children: [
-                        Icon(Icons.verified_rounded,
-                            color: Theme.of(context).colorScheme.onPrimary,
-                            size: 11),
-                        const SizedBox(width: 4),
-                        Text('VERIFIED',
-                            style: TextStyle(
-                                color: Theme.of(context).colorScheme.onPrimary,
-                                fontSize: 9,
-                                fontWeight: FontWeight.w900,
-                                letterSpacing: 1.4)),
-                      ]),
-                    ),
-                    const SizedBox(width: 8),
                     GestureDetector(
                       onTap: _toggleFavorite,
                       child: Container(
@@ -851,52 +1389,88 @@ class _CoachDetailScreenState extends State<CoachDetailScreen>
             bottom: 24,
             left: 20,
             right: 20,
-            child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+            child:
+                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  Text(name,
-                      style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 34,
-                          fontWeight: FontWeight.w900,
-                          letterSpacing: -1.2,
-                          height: 1.0)),
-                  const SizedBox(height: 6),
-                  Row(children: [
-                    Icon(Icons.fitness_center_rounded,
-                        color: Colors.white.withValues(alpha: 0.6), size: 13),
-                    const SizedBox(width: 5),
-                    Flexible(
-                      child: Text(speciality,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                              color: Colors.white.withValues(alpha: 0.6),
-                              fontSize: 14,
-                              fontWeight: FontWeight.w500)),
-                    ),
-                    if (c.ville != null && c.ville!.isNotEmpty) ...[
-                      const SizedBox(width: 12),
-                      Container(
-                        width: 3,
-                        height: 3,
-                        decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.4),
-                            shape: BoxShape.circle),
-                      ),
-                      const SizedBox(width: 12),
-                      Icon(Icons.location_on_rounded,
-                          color: Colors.white.withValues(alpha: 0.6),
-                          size: 12),
-                      const SizedBox(width: 3),
-                      Text(c.ville!,
-                          style: TextStyle(
-                              color: Colors.white.withValues(alpha: 0.6),
-                              fontSize: 13,
-                              fontWeight: FontWeight.w500)),
-                    ],
-                  ]),
+                  Flexible(
+                    child: Text(name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 34,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: -1.2,
+                            height: 1.0)),
+                  ),
+                  if (c.isApproved) ...[
+                    const SizedBox(width: 8),
+                    const Icon(Icons.verified_rounded,
+                        color: Color(0xFF38BDF8), size: 22),
+                  ]
+                ],
+              ),
+              if (speciality.isNotEmpty) ...[
+                const SizedBox(height: 6),
+                Row(children: [
+                  Flexible(
+                    child: Text(speciality,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                            color: Colors.white.withValues(alpha: 0.85),
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600)),
+                  ),
                 ]),
+              ],
+              const SizedBox(height: 8),
+              Row(children: [
+                Icon(Icons.location_on_rounded,
+                    color: Colors.white.withValues(alpha: 0.6), size: 14),
+                const SizedBox(width: 4),
+                Flexible(child: Text(c.locationLabel,
+                    maxLines: 1, overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.8),
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500))),
+                if (c.isAvailableToday) ...[
+                  const SizedBox(width: 12),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF0C381E),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Container(
+                          width: 6,
+                          height: 6,
+                          decoration: const BoxDecoration(
+                            color: Color(0xFF10B981),
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        const Text(
+                          'Available today',
+                          style: TextStyle(
+                              color: Color(0xFF10B981),
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ]),
+            ]),
           ),
         ]),
       ),
@@ -912,8 +1486,8 @@ class _CoachDetailScreenState extends State<CoachDetailScreen>
           color: Colors.black.withValues(alpha: 0.45),
           shape: BoxShape.circle,
         ),
-        child: const Icon(Icons.more_horiz_rounded,
-            color: Colors.white, size: 18),
+        child:
+            const Icon(Icons.more_horiz_rounded, color: Colors.white, size: 18),
       ),
       color: context.fitlek.card,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
@@ -929,8 +1503,7 @@ class _CoachDetailScreenState extends State<CoachDetailScreen>
         PopupMenuItem(
           value: 'report',
           child: Row(children: [
-            Icon(Icons.flag_rounded,
-                color: context.fitlek.textMuted, size: 18),
+            Icon(Icons.flag_rounded, color: context.fitlek.textMuted, size: 18),
             const SizedBox(width: 10),
             Text('Report Coach',
                 style: TextStyle(
@@ -958,169 +1531,175 @@ class _CoachDetailScreenState extends State<CoachDetailScreen>
   Widget _buildStats(double rating, int totalInvitations, int totalReviews) {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
-      child: Row(children: [
-        _statBox(
-            totalReviews > 0 ? rating.toStringAsFixed(1) : '—',
-            'Rating',
-            Icons.star_rounded),
-        const SizedBox(width: 10),
-        _statBox('$totalReviews', 'Reviews', Icons.chat_bubble_outline_rounded),
-        const SizedBox(width: 10),
-        _statBox('$totalInvitations', 'Clients', Icons.group_add_outlined),
-      ]),
+      child: Container(
+        decoration: BoxDecoration(
+          color: const Color(0xFF0F2C24),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+        ),
+        child: IntrinsicHeight(
+          child: Row(
+            children: [
+              _statSegment(
+                rating > 0 ? rating.toStringAsFixed(1) : '—',
+                'Rating',
+                Icons.star_rounded,
+              ),
+              VerticalDivider(
+                  color: Colors.white.withValues(alpha: 0.1),
+                  thickness: 1,
+                  width: 1),
+              _statSegment(
+                '$totalReviews',
+                'Reviews',
+                Icons.chat_bubble_outline_rounded,
+              ),
+              VerticalDivider(
+                  color: Colors.white.withValues(alpha: 0.1),
+                  thickness: 1,
+                  width: 1),
+              _statSegment(
+                '$totalInvitations',
+                'Clients',
+                Icons.people_outline_rounded,
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
-  Widget _statBox(String value, String label, IconData icon) => Expanded(
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
-          decoration: BoxDecoration(
-            color: context.fitlek.card,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: context.fitlek.border, width: 1),
-          ),
-          child: Column(children: [
-            Container(
-              width: 34,
-              height: 34,
-              decoration: BoxDecoration(
-                color: Theme.of(context)
-                    .colorScheme
-                    .primary
-                    .withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Icon(icon,
-                  color: Theme.of(context).colorScheme.primary, size: 16),
+  Widget _statSegment(String value, String label, IconData icon) {
+    return Expanded(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, color: Colors.white, size: 20),
+            const SizedBox(width: 12),
+            Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  value,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Text(
+                  label,
+                  style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.7),
+                    fontSize: 11,
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: 8),
-            Text(value,
-                style: TextStyle(
-                    color: Theme.of(context).colorScheme.onSurface,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: -0.5),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis),
-            const SizedBox(height: 2),
-            Text(label,
-                style:
-                    TextStyle(color: context.fitlek.textMuted, fontSize: 10)),
-          ]),
+          ],
         ),
-      );
+      ),
+    );
+  }
+
+  Widget _buildPriceBar() {
+    double? minPrice;
+    if (_packages.isNotEmpty) {
+      final validPrices =
+          _packages.map((p) => p.price).whereType<double>().toList();
+      if (validPrices.isNotEmpty) {
+        minPrice = validPrices.reduce((a, b) => a < b ? a : b);
+      }
+    }
+
+    final title = minPrice != null
+        ? 'From ${minPrice.toStringAsFixed(0)} MAD'
+        : 'Price on request';
+    final subtitle = minPrice != null
+        ? 'Session rates starting from ${minPrice.toStringAsFixed(0)} MAD'
+        : 'Contact the coach for session rates';
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF2F4E2), // Pale beige color
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.layers_outlined, color: Colors.black, size: 28),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      color: Colors.black,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      color: Colors.black.withValues(alpha: 0.6),
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
   Widget _buildPrimaryActions(
       BuildContext ctx, ReservationModel s, CoachModel c) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      decoration: BoxDecoration(
+        color: Theme.of(context).scaffoldBackgroundColor,
+        border: Border(
+            top: BorderSide(
+                color: Colors.white.withValues(alpha: 0.1), width: 1)),
+      ),
       child: Row(children: [
-        Expanded(child: _buildInviteCTA()),
-        const SizedBox(width: 10),
-        _buildBookBtn(ctx, s),
+        Expanded(flex: 3, child: _buildBookBtn(ctx, s)),
+        const SizedBox(width: 12),
+        Expanded(flex: 2, child: _buildMessageBtn()),
       ]),
     );
   }
 
-  Widget _buildInviteCTA() {
-    final String btnText;
-    final IconData btnIcon;
-    final Color btnColor;
-    final Color textColor;
-    final bool isDisabled;
-    final VoidCallback? onTap;
-
-    switch (_inviteStatus) {
-      case 'accepted':
-        btnText = 'Message';
-        btnIcon = Icons.chat_bubble_rounded;
-        btnColor = Theme.of(context).colorScheme.primary;
-        textColor = Theme.of(context).colorScheme.onPrimary;
-        isDisabled = false;
-        onTap = _openConversation;
-        break;
-      case 'pending':
-        btnText = 'Pending';
-        btnIcon = Icons.schedule_rounded;
-        btnColor =
-            Theme.of(context).colorScheme.primary.withValues(alpha: 0.13);
-        textColor = Theme.of(context).colorScheme.primary;
-        isDisabled = true;
-        onTap = null;
-        break;
-      case 'refused':
-        btnText = 'Declined';
-        btnIcon = Icons.cancel_rounded;
-        btnColor = Colors.red.withValues(alpha: 0.12);
-        textColor = Colors.redAccent;
-        isDisabled = true;
-        onTap = null;
-        break;
-      default:
-        btnText = 'Invite Coach';
-        btnIcon = Icons.person_add_rounded;
-        btnColor = Theme.of(context).colorScheme.primary;
-        textColor = Theme.of(context).colorScheme.onPrimary;
-        isDisabled = false;
-        onTap = _sendInvitation;
-    }
-
+  Widget _buildMessageBtn() {
     return GestureDetector(
-      onTap: _sendingInvite ? null : onTap,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        width: double.infinity,
+      onTap: _openConversation,
+      child: Container(
         padding: const EdgeInsets.symmetric(vertical: 16),
         decoration: BoxDecoration(
-          color: btnColor,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(
-            color: isDisabled
-                ? (_inviteStatus == 'refused'
-                    ? Colors.red.withValues(alpha: 0.35)
-                    : Theme.of(context)
-                        .colorScheme
-                        .primary
-                        .withValues(alpha: 0.35))
-                : Theme.of(context)
-                    .colorScheme
-                    .primary
-                    .withValues(alpha: 0.6),
-            width: 1,
-          ),
-          boxShadow: isDisabled
-              ? null
-              : [
-                  BoxShadow(
-                    color: Theme.of(context)
-                        .colorScheme
-                        .primary
-                        .withValues(alpha: 0.22),
-                    blurRadius: 18,
-                    offset: const Offset(0, 6),
-                  ),
-                ],
+          color: const Color(0xFF0F2C24),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0xFF38BDF8)),
         ),
         child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-          _sendingInvite
-              ? SizedBox(
-                  width: 16,
-                  height: 16,
-                  child: CircularProgressIndicator(
-                    color: Theme.of(context).colorScheme.onPrimary,
-                    strokeWidth: 2,
-                  ),
-                )
-              : Icon(btnIcon, color: textColor, size: 16),
+          const Icon(Icons.chat_bubble_outline_rounded,
+              color: Colors.white, size: 20),
           const SizedBox(width: 8),
-          Text(
-            btnText,
+          const Text(
+            'Message',
             style: TextStyle(
-              color: textColor,
-              fontWeight: FontWeight.w800,
-              fontSize: 13,
-              letterSpacing: 0.4,
-            ),
+                color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
           ),
         ]),
       ),
@@ -1135,83 +1714,141 @@ class _CoachDetailScreenState extends State<CoachDetailScreen>
                 session: s,
                 clientID: widget.clientID,
                 token: widget.token,
+                packages: _packages,
               ),
               transitionsBuilder: (_, anim, __, child) => FadeTransition(
                 opacity: anim,
-                child: SlideTransition(
-                  position: Tween<Offset>(
-                    begin: const Offset(0, 0.04),
-                    end: Offset.zero,
-                  ).animate(CurvedAnimation(
-                      parent: anim, curve: Curves.easeOutCubic)),
-                  child: child,
-                ),
+                child: child,
               ),
-              transitionDuration: const Duration(milliseconds: 380),
             )),
         child: Container(
-          padding:
-              const EdgeInsets.symmetric(vertical: 16, horizontal: 18),
+          padding: const EdgeInsets.symmetric(vertical: 16),
           decoration: BoxDecoration(
-            color: context.fitlek.card,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: context.fitlek.border),
+            color: const Color(0xFFF2F4E2), // Pale beige color
+            borderRadius: BorderRadius.circular(16),
           ),
-          child: Row(children: [
-            Icon(Icons.calendar_month_rounded,
-                color: Theme.of(context).colorScheme.onSurface, size: 18),
-            const SizedBox(width: 7),
-            Text('Book',
+          child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+            const Icon(Icons.calendar_month_outlined,
+                color: Colors.black, size: 20),
+            const SizedBox(width: 8),
+            const Text('Request booking',
                 style: TextStyle(
-                    color: Theme.of(context).colorScheme.onSurface,
-                    fontWeight: FontWeight.w800,
-                    fontSize: 13,
-                    letterSpacing: 0.2)),
+                    color: Colors.black,
+                    fontWeight: FontWeight.w900,
+                    fontSize: 14)),
           ]),
         ),
       );
 
-  Widget _buildTags(String speciality) {
-    final tags = speciality
-        .split(RegExp(r'[,/]'))
-        .map((t) => t.trim())
-        .where((t) => t.isNotEmpty)
-        .toList();
+  Widget _buildTags(CoachModel c, String fallbackSpeciality) {
+    List<String> tags = [];
+    if (c.specialties != null && c.specialties!.isNotEmpty) {
+      tags = c.specialties!;
+    } else if (fallbackSpeciality.isNotEmpty) {
+      tags = fallbackSpeciality
+          .split(RegExp(r'[,/]'))
+          .map((t) => t.trim())
+          .where((t) => t.isNotEmpty)
+          .toList();
+    }
+    if (tags.isEmpty) return const SizedBox.shrink();
+
+    IconData getIconForTag(String tag) {
+      final t = tag.toLowerCase();
+      if (t.contains('strength')) return Icons.fitness_center_rounded;
+      if (t.contains('power')) return Icons.bar_chart_rounded;
+      if (t.contains('recover')) return Icons.eco_rounded;
+      if (t.contains('cardio')) return Icons.directions_run_rounded;
+      return Icons.bolt_rounded;
+    }
+
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
-      child: Wrap(
-          spacing: 8,
-          runSpacing: 8,
-          children: tags
-              .map((tag) => Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 13, vertical: 7),
+      padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _sectionHeaderWithIcon('Specialties', Icons.fitness_center_rounded),
+          const SizedBox(height: 16),
+          Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: tags.map((tag) {
+                final isInsta = tag.startsWith('@') ||
+                    tag.toLowerCase().contains('instagram');
+                return GestureDetector(
+                  onTap: isInsta
+                      ? () async {
+                          String username = tag.trim();
+                          while (username.startsWith('@')) {
+                            username = username.substring(1).trim();
+                          }
+                          if (username.contains('instagram.com/')) {
+                            username = username
+                                .split('instagram.com/')
+                                .last
+                                .split('?')
+                                .first
+                                .replaceAll('/', '');
+                          }
+                          final url =
+                              Uri.parse('https://instagram.com/$username');
+                          try {
+                            await launchUrl(url,
+                                mode: LaunchMode.externalApplication);
+                          } catch (_) {
+                            await launchUrl(url);
+                          }
+                        }
+                      : null,
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                     decoration: BoxDecoration(
-                        color: Theme.of(context)
-                            .colorScheme
-                            .primary
-                            .withValues(alpha: 0.08),
-                        borderRadius: BorderRadius.circular(30),
-                        border: Border.all(
-                            color: Theme.of(context)
-                                .colorScheme
-                                .primary
-                                .withValues(alpha: 0.22))),
-                    child: Text(tag,
-                        style: TextStyle(
-                            color: Theme.of(context).colorScheme.primary,
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 0.3)),
-                  ))
-              .toList()),
+                        color: const Color(0xFF0C2420),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: const Color(0xFF1E5C53))),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        isInsta
+                            ? const InstagramIcon(size: 14)
+                            : Icon(getIconForTag(tag),
+                                color: const Color(0xFF38BDF8), size: 14),
+                        const SizedBox(width: 6),
+                        Text(tag,
+                            style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w500)),
+                      ],
+                    ),
+                  ),
+                );
+              }).toList()),
+        ],
+      ),
     );
   }
 
   Widget _buildBio(String bio) => Padding(
         padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          _sectionHeader('About'),
+          Row(
+            children: [
+              Container(
+                  width: 3,
+                  height: 16,
+                  decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(4))),
+              const SizedBox(width: 8),
+              const Text('About',
+                  style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold)),
+            ],
+          ),
           const SizedBox(height: 14),
           Text(bio,
               style: TextStyle(
@@ -1222,204 +1859,51 @@ class _CoachDetailScreenState extends State<CoachDetailScreen>
         ]),
       );
 
-  Widget _buildContactInfo(CoachModel c) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
-      child: Container(
-        padding: const EdgeInsets.all(18),
-        decoration: BoxDecoration(
-          color: context.fitlek.card,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: context.fitlek.border),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _sectionHeader('Practical info'),
-            const SizedBox(height: 16),
-            if (c.ville != null && c.ville!.isNotEmpty)
-              _infoRow(
-                icon: Icons.location_on_rounded,
-                label: 'City',
-                value: c.ville!,
-                valueColor: Theme.of(context).colorScheme.primary,
-                onTap: null,
+  void _openGallery(int initialIndex, String speciality) {
+    int currentIndex = initialIndex;
+    final controller = PageController(initialPage: initialIndex);
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => StatefulBuilder(
+          builder: (context, setState) => Scaffold(
+            backgroundColor: Colors.black,
+            appBar: AppBar(
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+              iconTheme: const IconThemeData(color: Colors.white),
+              centerTitle: true,
+              title: Text(
+                '${currentIndex + 1}/${_galleryImages.length}',
+                style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold),
               ),
-            if (c.ville != null && c.ville!.isNotEmpty && c.tel != null)
-              const SizedBox(height: 14),
-            if (c.tel != null)
-              _infoRow(
-                icon: Icons.phone_rounded,
-                label: 'Phone',
-                value: c.tel!,
-                valueColor: Theme.of(context).colorScheme.onSurface,
-                onTap: () {
-                  Clipboard.setData(ClipboardData(text: c.tel!));
-                  _showSnack('Number copied ✓');
-                },
-              ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _infoRow({
-    required IconData icon,
-    required String label,
-    required String value,
-    required Color valueColor,
-    VoidCallback? onTap,
-  }) {
-    final child = Row(
-      children: [
-        Container(
-          width: 42,
-          height: 42,
-          decoration: BoxDecoration(
-            color: Theme.of(context)
-                .colorScheme
-                .primary
-                .withValues(alpha: 0.09),
-            borderRadius: BorderRadius.circular(13),
-          ),
-          child: Icon(icon,
-              color: Theme.of(context).colorScheme.primary, size: 18),
-        ),
-        const SizedBox(width: 14),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(label,
-                  style: TextStyle(
-                      color: context.fitlek.textMuted, fontSize: 10)),
-              const SizedBox(height: 2),
-              Text(value,
-                  style: TextStyle(
-                      color: valueColor,
-                      fontSize: 15,
-                      fontWeight: FontWeight.w800)),
-            ],
-          ),
-        ),
-        if (onTap != null)
-          Container(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
-            decoration: BoxDecoration(
-              color: Theme.of(context)
-                  .colorScheme
-                  .primary
-                  .withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(
-                  color: Theme.of(context)
-                      .colorScheme
-                      .primary
-                      .withValues(alpha: 0.2)),
             ),
-            child: Text('COPY',
-                style: TextStyle(
-                    color: Theme.of(context).colorScheme.primary,
-                    fontSize: 9,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 0.5)),
-          ),
-      ],
-    );
-    if (onTap != null) {
-      return GestureDetector(
-          onTap: onTap, behavior: HitTestBehavior.opaque, child: child);
-    }
-    return child;
-  }
-
-  Widget _buildInstagram(String handle) {
-    final display =
-        handle.startsWith('http') ? handle.split('/').last : handle;
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
-      child: Container(
-        padding:
-            const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-        decoration: BoxDecoration(
-            color: context.fitlek.card,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: context.fitlek.border)),
-        child: Row(children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-                color: context.fitlek.instagram.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(12)),
-            child: Icon(Icons.camera_alt_rounded,
-                color: context.fitlek.instagram, size: 18),
-          ),
-          const SizedBox(width: 14),
-          Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text('Instagram',
-                style: TextStyle(
-                    color: context.fitlek.textMuted, fontSize: 10)),
-            const SizedBox(height: 2),
-            Text('@$display',
-                style: TextStyle(
-                    color: Theme.of(context).colorScheme.onSurface,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700)),
-          ]),
-          const Spacer(),
-          Icon(Icons.open_in_new_rounded,
-              color: context.fitlek.textMuted, size: 16),
-        ]),
-      ),
-    );
-  }
-
-  Widget _buildGallery() {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(0, 28, 0, 0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: _sectionHeader('Gallery'),
-          ),
-          const SizedBox(height: 14),
-          SizedBox(
-            height: 150,
-            child: ListView.builder(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              scrollDirection: Axis.horizontal,
+            extendBodyBehindAppBar: true,
+            body: PageView.builder(
               itemCount: _galleryImages.length,
-              itemBuilder: (ctx, i) {
-                final img = _galleryImages[i];
-                return GestureDetector(
-                  onTap: () {
-                    Navigator.push(
-                      ctx,
-                      MaterialPageRoute(
-                        builder: (_) => ImagePreview(
-                          imageUrl: img['urlImage'],
-                          tag: 'gallery_${img['id']}',
-                        ),
-                      ),
-                    );
-                  },
-                  child: Hero(
-                    tag: 'gallery_${img['id']}',
-                    child: Container(
-                      width: 150,
-                      margin: const EdgeInsets.symmetric(horizontal: 4),
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(18),
-                        color: context.fitlek.card2,
-                        image: DecorationImage(
-                          image: NetworkImage(img['urlImage']),
-                          fit: BoxFit.cover,
-                        ),
+              controller: controller,
+              onPageChanged: (index) {
+                setState(() {
+                  currentIndex = index;
+                });
+              },
+              itemBuilder: (context, index) {
+                return InteractiveViewer(
+                  minScale: 1.0,
+                  maxScale: 4.0,
+                  child: Center(
+                    child: Hero(
+                      tag: 'gallery_${_galleryImages[index]['id']}',
+                      child: Image.network(
+                        _galleryImages[index]['urlImage'],
+                        fit: BoxFit.contain,
+                        errorBuilder: (_, __, ___) => const Icon(
+                            Icons.broken_image,
+                            color: Colors.white,
+                            size: 50),
                       ),
                     ),
                   ),
@@ -1427,7 +1911,618 @@ class _CoachDetailScreenState extends State<CoachDetailScreen>
               },
             ),
           ),
+        ),
+      ),
+    ).whenComplete(controller.dispose);
+  }
+
+  Widget _galleryPhoto(int index) => Image.network(
+        _galleryImages[index]['urlImage'],
+        width: double.infinity,
+        height: double.infinity,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => ColoredBox(
+            color: context.fitlek.card2,
+            child: Center(
+                child: Icon(Icons.broken_image_outlined,
+                    color: context.fitlek.textMuted))),
+      );
+
+  Widget _buildGallery(String speciality) {
+    final primary = Theme.of(context).colorScheme.primary;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          Icon(Icons.photo_library_outlined,
+              color: Theme.of(context).colorScheme.onSurface, size: 20),
+          const SizedBox(width: 8),
+          Expanded(
+              child: Text('Coaching gallery',
+                  style: TextStyle(
+                      color: Theme.of(context).colorScheme.onSurface,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800))),
+          TextButton(
+              onPressed: () => _openGallery(_galleryIndex, speciality),
+              child: Text('View all (${_galleryImages.length})',
+                  style: TextStyle(color: primary, fontSize: 12))),
+        ]),
+        const SizedBox(height: 10),
+        ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: AspectRatio(
+              aspectRatio: 1.65,
+              child: PageView.builder(
+                controller: _galleryController,
+                itemCount: _galleryImages.length,
+                onPageChanged: (index) => setState(() => _galleryIndex = index),
+                itemBuilder: (_, index) => GestureDetector(
+                  onTap: () => _openGallery(index, speciality),
+                  child: Stack(fit: StackFit.expand, children: [
+                    Hero(
+                        tag: 'gallery_${_galleryImages[index]['id']}',
+                        child: _galleryPhoto(index)),
+                    Positioned(
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        child: Container(
+                          padding: const EdgeInsets.fromLTRB(14, 24, 14, 12),
+                          decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                  begin: Alignment.topCenter,
+                                  end: Alignment.bottomCenter,
+                                  colors: [
+                                Colors.transparent,
+                                Colors.black.withValues(alpha: 0.8)
+                              ])),
+                          child: Row(children: [
+                            Expanded(
+                                child: Text(
+                                    speciality.isNotEmpty
+                                        ? speciality
+                                        : 'Coaching',
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w600))),
+                            const SizedBox(width: 12),
+                            Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 10, vertical: 5),
+                                decoration: BoxDecoration(
+                                    color: Colors.black54,
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(color: Colors.white24)),
+                                child: Text(
+                                    '${index + 1} / ${_galleryImages.length}',
+                                    style: const TextStyle(
+                                        color: Colors.white, fontSize: 12))),
+                          ]),
+                        )),
+                  ]),
+                ),
+              ),
+            )),
+        if (_galleryImages.length > 1) ...[
+          const SizedBox(height: 8),
+          SizedBox(
+              height: 66,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount: _galleryImages.length,
+                separatorBuilder: (_, __) => const SizedBox(width: 8),
+                itemBuilder: (_, index) => GestureDetector(
+                  onTap: () => _galleryController.animateToPage(index,
+                      duration: const Duration(milliseconds: 250),
+                      curve: Curves.easeOut),
+                  child: Container(
+                      width: 100,
+                      padding: const EdgeInsets.all(2),
+                      decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                              color: _galleryIndex == index
+                                  ? primary
+                                  : context.fitlek.border,
+                              width: 2)),
+                      child: ClipRRect(
+                          borderRadius: BorderRadius.circular(7),
+                          child: _galleryPhoto(index))),
+                ),
+              )),
         ],
+      ]),
+    );
+  }
+
+  Widget _buildAvailability() {
+    final today = DateTime.now();
+    final days = List.generate(3, (i) => today.add(Duration(days: i)));
+
+    String getDayName(DateTime d) =>
+        ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][d.weekday - 1];
+    String getMonthName(DateTime d) => [
+          'Jan',
+          'Feb',
+          'Mar',
+          'Apr',
+          'May',
+          'Jun',
+          'Jul',
+          'Aug',
+          'Sep',
+          'Oct',
+          'Nov',
+          'Dec'
+        ][d.month - 1];
+
+    final selectedDate = days[_selectedDayIndex];
+    final selectedDateStr =
+        '${selectedDate.year}-${selectedDate.month.toString().padLeft(2, '0')}-${selectedDate.day.toString().padLeft(2, '0')}';
+
+    final blockedSlots = _blockedSlots[selectedDateStr] ?? [];
+    final reservedSlots = _reservedSlots[selectedDateStr] ?? [];
+
+    final allSlots = [
+      '08:00',
+      '09:00',
+      '10:00',
+      '11:00',
+      '12:00',
+      '13:00',
+      '14:00',
+      '15:00',
+      '16:00',
+      '17:00',
+      '18:00',
+      '19:00',
+      '20:00',
+      '21:00',
+      '22:00'
+    ];
+    final isToday = selectedDate.year == today.year &&
+        selectedDate.month == today.month &&
+        selectedDate.day == today.day;
+    final currentHourStr =
+        '${today.hour.toString().padLeft(2, '0')}:${today.minute.toString().padLeft(2, '0')}';
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  const Icon(Icons.calendar_today_outlined,
+                      color: Colors.white, size: 20),
+                  const SizedBox(width: 8),
+                  const Text('Availability',
+                      style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold)),
+                ],
+              ),
+              GestureDetector(
+                onTap: () => Navigator.push(
+                  context,
+                  PageRouteBuilder(
+                    pageBuilder: (_, __, ___) => BookingScreen(
+                      session: widget.session,
+                      clientID: widget.clientID,
+                      token: widget.token,
+                      packages: _packages,
+                    ),
+                    transitionsBuilder: (_, anim, __, child) => FadeTransition(
+                      opacity: anim,
+                      child: child,
+                    ),
+                  ),
+                ),
+                child: const Text('See all >',
+                    style: TextStyle(
+                        color: Color(0xFF38BDF8),
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600)),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              for (int i = 0; i < days.length; i++) ...[
+                _dateChip(
+                    getDayName(days[i]),
+                    '${getMonthName(days[i])} ${days[i].day}',
+                    _selectedDayIndex == i, () {
+                  setState(() => _selectedDayIndex = i);
+                }),
+                if (i < days.length - 1) const SizedBox(width: 8),
+              ],
+              const SizedBox(width: 16),
+              Container(
+                  width: 1,
+                  height: 40,
+                  color: Colors.white.withValues(alpha: 0.1)),
+              const SizedBox(width: 16),
+              Expanded(
+                child: _loadingAvailability
+                    ? const Center(
+                        child: SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                                strokeWidth: 2, color: Color(0xFF38BDF8))))
+                    : allSlots.isEmpty
+                        ? const Text('No slots available',
+                            style: TextStyle(color: Colors.grey, fontSize: 12))
+                        : Builder(
+                            builder: (context) {
+                              final availableList = allSlots
+                                  .where((s) {
+                                    if (isToday) {
+                                      final currentHour =
+                                          '${today.hour.toString().padLeft(2, '0')}:00';
+                                      return s.compareTo(currentHour) >= 0;
+                                    }
+                                    return true;
+                                  })
+                                  .take(4)
+                                  .toList();
+
+                              if (availableList.isEmpty) {
+                                return const Text('No slots available',
+                                    style: TextStyle(
+                                        color: Colors.grey, fontSize: 12));
+                              }
+
+                              Widget buildSlot(String time) {
+                                final isPastToday = isToday &&
+                                    time.compareTo(currentHourStr) <= 0;
+                                final isBooked = blockedSlots.contains(time) ||
+                                    reservedSlots.contains(time) ||
+                                    isPastToday;
+                                return _timeChip(
+                                    time,
+                                    false,
+                                    isBooked
+                                        ? null
+                                        : () {
+                                            Navigator.push(
+                                              context,
+                                              PageRouteBuilder(
+                                                pageBuilder: (_, __, ___) =>
+                                                    BookingScreen(
+                                                  session: widget.session,
+                                                  clientID: widget.clientID,
+                                                  token: widget.token,
+                                                  packages: _packages,
+                                                  initialDate: selectedDate,
+                                                  initialTime: time,
+                                                ),
+                                                transitionsBuilder:
+                                                    (_, anim, __, child) =>
+                                                        FadeTransition(
+                                                  opacity: anim,
+                                                  child: child,
+                                                ),
+                                              ),
+                                            );
+                                          },
+                                    width: null);
+                              }
+
+                              return Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                          child: buildSlot(availableList[0])),
+                                      const SizedBox(width: 6),
+                                      if (availableList.length > 1)
+                                        Expanded(
+                                            child: buildSlot(availableList[1]))
+                                      else
+                                        const Expanded(child: SizedBox()),
+                                    ],
+                                  ),
+                                  if (availableList.length > 2) ...[
+                                    const SizedBox(height: 6),
+                                    Row(
+                                      children: [
+                                        Expanded(
+                                            child: buildSlot(availableList[2])),
+                                        const SizedBox(width: 6),
+                                        if (availableList.length > 3)
+                                          Expanded(
+                                              child:
+                                                  buildSlot(availableList[3]))
+                                        else
+                                          const Expanded(child: SizedBox()),
+                                      ],
+                                    ),
+                                  ],
+                                ],
+                              );
+                            },
+                          ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _dateChip(String day, String date, bool selected, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 60,
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        decoration: BoxDecoration(
+          color: const Color(0xFF0C2420),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+              color: selected
+                  ? const Color(0xFF38BDF8)
+                  : Colors.white.withValues(alpha: 0.1)),
+        ),
+        child: Column(
+          children: [
+            Text(day,
+                style: TextStyle(
+                    color: Colors.white.withValues(alpha: selected ? 1 : 0.7),
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600)),
+            const SizedBox(height: 2),
+            Text(date,
+                style: TextStyle(
+                    color: Colors.white.withValues(alpha: selected ? 1 : 0.7),
+                    fontSize: 11)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _timeChip(String time, bool selected, VoidCallback? onTap,
+      {double? width}) {
+    final bool available = onTap != null;
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: width,
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        alignment: Alignment.center,
+        decoration: BoxDecoration(
+          color: available
+              ? const Color(0xFF0C2420)
+              : Colors.black.withValues(alpha: 0.3),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+              color: selected
+                  ? const Color(0xFF38BDF8)
+                  : Colors.white.withValues(alpha: 0.1)),
+        ),
+        child: Text(
+          time,
+          style: TextStyle(
+            color: available
+                ? Colors.white.withValues(alpha: selected ? 1 : 0.7)
+                : Colors.white.withValues(alpha: 0.3),
+            fontSize: 13,
+            decoration:
+                available ? TextDecoration.none : TextDecoration.lineThrough,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildGym(CoachModel c) {
+    final image = c.gymImage?.trim() ?? '';
+    final address = c.gymAddress?.trim() ?? '';
+    final tag = 'coach_gym_${c.id}';
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+            color: context.fitlek.card,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: context.fitlek.border)),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text('Associated gym',
+              style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurface,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w800)),
+          const SizedBox(height: 10),
+          Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Icon(Icons.location_on_rounded,
+                color: Theme.of(context).colorScheme.primary, size: 22),
+            const SizedBox(width: 8),
+            Expanded(
+                child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                  Text(c.gymName!.trim(),
+                      style: TextStyle(
+                          color: Theme.of(context).colorScheme.onSurface,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700)),
+                  if (address.isNotEmpty) ...[
+                    const SizedBox(height: 3),
+                    Text(address,
+                        style: TextStyle(
+                            color: context.fitlek.textSecondary,
+                            fontSize: 12,
+                            height: 1.4)),
+                  ],
+                ])),
+          ]),
+          const SizedBox(height: 12),
+          GestureDetector(
+            onTap: image.isEmpty
+                ? null
+                : () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) =>
+                            ImagePreview(imageUrl: image, tag: tag))),
+            child: ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: AspectRatio(
+                  aspectRatio: 2.4,
+                  child: Stack(fit: StackFit.expand, children: [
+                    ColoredBox(
+                        color: context.fitlek.card2,
+                        child: Center(
+                            child: Icon(Icons.fitness_center_rounded,
+                                size: 38, color: context.fitlek.textMuted))),
+                    if (image.isNotEmpty) ...[
+                      Hero(
+                          tag: tag,
+                          child: Image.network(image,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => Center(
+                                  child: Icon(Icons.broken_image_outlined,
+                                      color: context.fitlek.textMuted)))),
+                      Positioned(
+                          right: 8,
+                          bottom: 8,
+                          child: Container(
+                              padding: const EdgeInsets.all(7),
+                              decoration: BoxDecoration(
+                                  color: Colors.black54,
+                                  borderRadius: BorderRadius.circular(8)),
+                              child: const Icon(Icons.fullscreen_rounded,
+                                  color: Colors.white, size: 20))),
+                    ],
+                  ]),
+                )),
+          ),
+        ]),
+      ),
+    );
+  }
+
+  Widget _buildPracticalInfo(CoachModel c) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.location_on_outlined,
+                  color: Colors.white, size: 20),
+              const SizedBox(width: 8),
+              const Text('Practical info',
+                  style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold)),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Container(
+            clipBehavior: Clip.antiAlias,
+            decoration: BoxDecoration(
+              color: const Color(0xFF0F2C24),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+            ),
+            child: Column(
+              children: [
+                _practicalRow(Icons.location_on, 'Casablanca', null),
+                Divider(color: Colors.white.withValues(alpha: 0.05), height: 1),
+                if (c.instagramPage.isNotEmpty) ...[
+                  Builder(builder: (context) {
+                    String handle = c.instagramPage.trim();
+                    while (handle.startsWith('@')) {
+                      handle = handle.substring(1).trim();
+                    }
+                    if (handle.contains('instagram.com/')) {
+                      handle = handle
+                          .split('instagram.com/')
+                          .last
+                          .split('?')
+                          .first
+                          .replaceAll('/', '');
+                    }
+                    return _practicalRow(
+                      Icons.camera_alt,
+                      '@$handle',
+                      Icons.open_in_new,
+                      customIcon: const InstagramIcon(size: 20),
+                      onTap: () async {
+                        final url = Uri.parse('https://instagram.com/$handle');
+                        try {
+                          await launchUrl(url,
+                              mode: LaunchMode.externalApplication);
+                        } catch (_) {
+                          await launchUrl(url);
+                        }
+                      },
+                    );
+                  }),
+                  Divider(
+                      color: Colors.white.withValues(alpha: 0.05), height: 1),
+                ],
+                _practicalRow(
+                  Icons.qr_code_2,
+                  'Coach QR code',
+                  Icons.chevron_right,
+                  onTap: () {
+                    if (c.invitationCode.isNotEmpty) {
+                      _showQrDialog(c.invitationCode);
+                    }
+                  },
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _practicalRow(IconData icon, String text, IconData? trailingIcon,
+      {VoidCallback? onTap, Widget? customIcon}) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+          child: Row(
+            children: [
+              customIcon ??
+                  Icon(icon,
+                      color: Colors.white.withValues(alpha: 0.7), size: 20),
+              const SizedBox(width: 16),
+              Expanded(
+                  child: Text(text,
+                      style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500))),
+              if (trailingIcon != null)
+                Icon(trailingIcon,
+                    color: Colors.white.withValues(alpha: 0.5), size: 20),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -1463,9 +2558,30 @@ class _CoachDetailScreenState extends State<CoachDetailScreen>
             ),
             const SizedBox(height: 10),
             Text('Tap to enlarge',
-                style: TextStyle(
-                    color: context.fitlek.textMuted, fontSize: 11)),
+                style:
+                    TextStyle(color: context.fitlek.textMuted, fontSize: 11)),
           ],
+        ),
+      ),
+    );
+  }
+
+  void _openAllReviews() {
+    Navigator.push(
+      context,
+      PageRouteBuilder(
+        pageBuilder: (_, __, ___) => ClientCoachReviewsScreen(
+          coachID: widget.session.coachID,
+          coachName: _coach?.fullName ?? widget.session.coachName,
+          clientID: widget.clientID,
+          token: widget.token,
+          initialReviews: _reviews,
+          initialAvgRating: _avgRating,
+          initialTotalReviews: _totalReviews,
+        ),
+        transitionsBuilder: (_, anim, __, child) => FadeTransition(
+          opacity: anim,
+          child: child,
         ),
       ),
     );
@@ -1477,48 +2593,49 @@ class _CoachDetailScreenState extends State<CoachDetailScreen>
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: Row(children: [
-            _sectionHeader('Client reviews'),
-            const Spacer(),
-            if (_totalReviews > 0)
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                decoration: BoxDecoration(
-                    color: Theme.of(context)
-                        .colorScheme
-                        .primary
-                        .withValues(alpha: 0.08),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                        color: Theme.of(context)
-                            .colorScheme
-                            .primary
-                            .withValues(alpha: 0.25))),
-                child: Row(mainAxisSize: MainAxisSize.min, children: [
-                  Icon(Icons.star_rounded,
-                      color: Theme.of(context).colorScheme.primary, size: 11),
-                  const SizedBox(width: 4),
-                  Text('${_avgRating.toStringAsFixed(1)} / 5',
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Row(
+                children: [
+                  Icon(Icons.chat_bubble_outline_rounded,
+                      color: Colors.white, size: 20),
+                  SizedBox(width: 8),
+                  Text('Client reviews',
                       style: TextStyle(
-                          color: Theme.of(context).colorScheme.primary,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700)),
-                ]),
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold)),
+                ],
               ),
-          ]),
+              GestureDetector(
+                onTap: _openAllReviews,
+                child: Row(
+                  children: [
+                    const Icon(Icons.star, color: Color(0xFF38BDF8), size: 16),
+                    const SizedBox(width: 4),
+                    Text(
+                        '${_avgRating.toStringAsFixed(1)} · $_totalReviews reviews >',
+                        style: const TextStyle(
+                            color: Color(0xFF38BDF8),
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600)),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
         if (canReview) ...[
           const SizedBox(height: 16),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20),
             child: GestureDetector(
-              onTap: () =>
-                  setState(() => _showReviewForm = !_showReviewForm),
+              onTap: () => setState(() => _showReviewForm = !_showReviewForm),
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 16, vertical: 13),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
                 decoration: BoxDecoration(
                     color: _showReviewForm
                         ? Theme.of(context)
@@ -1542,10 +2659,7 @@ class _CoachDetailScreenState extends State<CoachDetailScreen>
                       color: Theme.of(context).colorScheme.primary,
                       size: 16),
                   const SizedBox(width: 10),
-                  Text(
-                      _myReview != null
-                          ? 'Edit my review'
-                          : 'Leave a review',
+                  Text(_myReview != null ? 'Edit my review' : 'Leave a review',
                       style: TextStyle(
                           color: Theme.of(context).colorScheme.primary,
                           fontSize: 13,
@@ -1583,8 +2697,43 @@ class _CoachDetailScreenState extends State<CoachDetailScreen>
           ))
         else if (_reviews.isEmpty)
           _buildEmptyReviews()
-        else
-          ..._reviews.map(_buildReviewCard),
+        else ...[
+          ..._reviews.take(5).map(_buildReviewCard),
+          if (_reviews.length > 5 || _totalReviews > 5) ...[
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 0),
+              child: SizedBox(
+                width: double.infinity,
+                child: OutlinedButton(
+                  onPressed: _openAllReviews,
+                  style: OutlinedButton.styleFrom(
+                    side: BorderSide(
+                        color: const Color(0xFF38BDF8).withValues(alpha: 0.4)),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(14)),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        'View all ${_totalReviews > _reviews.length ? _totalReviews : _reviews.length} reviews',
+                        style: const TextStyle(
+                          color: Color(0xFF38BDF8),
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(width: 6),
+                      const Icon(Icons.arrow_forward_rounded,
+                          color: Color(0xFF38BDF8), size: 16),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ],
       ]),
     );
   }
@@ -1681,16 +2830,14 @@ class _CoachDetailScreenState extends State<CoachDetailScreen>
                           width: 18,
                           height: 18,
                           child: CircularProgressIndicator(
-                              color:
-                                  Theme.of(context).colorScheme.onPrimary,
+                              color: Theme.of(context).colorScheme.onPrimary,
                               strokeWidth: 2))
                       : Text(
                           _myReview != null
                               ? 'Update review'
                               : 'Publish review',
                           style: TextStyle(
-                              color:
-                                  Theme.of(context).colorScheme.onPrimary,
+                              color: Theme.of(context).colorScheme.onPrimary,
                               fontWeight: FontWeight.w800,
                               fontSize: 13,
                               letterSpacing: 0.4)),
@@ -1701,7 +2848,7 @@ class _CoachDetailScreenState extends State<CoachDetailScreen>
         ]),
       );
 
-  Widget _buildReviewCard(_ReviewItem review) {
+  Widget _buildReviewCard(ReviewItem review) {
     final isMyReview = review.clientID == widget.clientID;
     final month = [
       'Jan',
@@ -1725,13 +2872,9 @@ class _CoachDetailScreenState extends State<CoachDetailScreen>
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
               color: isMyReview
-                  ? Theme.of(context)
-                      .colorScheme
-                      .primary
-                      .withValues(alpha: 0.3)
+                  ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.3)
                   : context.fitlek.border)),
-      child:
-          Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [
           Container(
             width: 38,
@@ -1762,13 +2905,19 @@ class _CoachDetailScreenState extends State<CoachDetailScreen>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                 Row(children: [
-                  Text(review.clientName,
+                  Flexible(
+                    child: Text(
+                      review.clientName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                           color: isMyReview
                               ? Theme.of(context).colorScheme.primary
                               : Theme.of(context).colorScheme.onSurface,
                           fontWeight: FontWeight.w700,
-                          fontSize: 13)),
+                          fontSize: 13),
+                    ),
+                  ),
                   if (isMyReview) ...[
                     const SizedBox(width: 7),
                     Container(
@@ -1782,8 +2931,7 @@ class _CoachDetailScreenState extends State<CoachDetailScreen>
                           borderRadius: BorderRadius.circular(6)),
                       child: Text('My review',
                           style: TextStyle(
-                              color:
-                                  Theme.of(context).colorScheme.primary,
+                              color: Theme.of(context).colorScheme.primary,
                               fontSize: 9,
                               fontWeight: FontWeight.w700)),
                     ),
@@ -1816,30 +2964,38 @@ class _CoachDetailScreenState extends State<CoachDetailScreen>
     );
   }
 
-  Widget _buildEmptyReviews() => Padding(
-        padding: const EdgeInsets.fromLTRB(20, 4, 20, 0),
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 32),
-          decoration: BoxDecoration(
-              color: context.fitlek.card,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: context.fitlek.border)),
-          child: Column(children: [
-            Icon(Icons.star_border_rounded,
-                color: context.fitlek.textMuted, size: 38),
-            const SizedBox(height: 10),
-            Text('No reviews yet',
-                style: TextStyle(
-                    color: context.fitlek.textMuted,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600)),
+  Widget _buildEmptyReviews() {
+    final canReview = !widget.preview &&
+        widget.session.isConfirmed &&
+        widget.session.sessionStart.isBefore(DateTime.now());
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 4, 20, 0),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 32),
+        decoration: BoxDecoration(
+            color: context.fitlek.card,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: context.fitlek.border)),
+        child: Column(children: [
+          Icon(Icons.star_border_rounded,
+              color: context.fitlek.textMuted, size: 38),
+          const SizedBox(height: 10),
+          Text('No reviews yet',
+              style: TextStyle(
+                  color: context.fitlek.textMuted,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600)),
+          if (canReview) ...[
             const SizedBox(height: 4),
             Text('Be the first to share your experience',
-                style: TextStyle(
-                    color: context.fitlek.textMuted, fontSize: 11)),
-          ]),
-        ),
-      );
+                style:
+                    TextStyle(color: context.fitlek.textMuted, fontSize: 11)),
+          ],
+        ]),
+      ),
+    );
+  }
 
   Widget _avatarPlaceholder(String name) => Container(
         color: context.fitlek.card,
@@ -1895,13 +3051,10 @@ class _CoachDetailScreenState extends State<CoachDetailScreen>
   Widget _retryBtn({required VoidCallback onTap}) => GestureDetector(
         onTap: onTap,
         child: Container(
-          padding:
-              const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
           decoration: BoxDecoration(
-              color: Theme.of(context)
-                  .colorScheme
-                  .primary
-                  .withValues(alpha: 0.1),
+              color:
+                  Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(10),
               border: Border.all(
                   color: Theme.of(context)
@@ -1915,4 +3068,64 @@ class _CoachDetailScreenState extends State<CoachDetailScreen>
                   fontSize: 13)),
         ),
       );
+}
+
+class InstagramIcon extends StatelessWidget {
+  final double size;
+  const InstagramIcon({super.key, this.size = 24.0});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(size * 0.25),
+        gradient: const LinearGradient(
+          begin: Alignment.bottomLeft,
+          end: Alignment.topRight,
+          colors: [
+            Color(0xFFFEDA77),
+            Color(0xFFF58529),
+            Color(0xFFDD2A7B),
+            Color(0xFF8134AF),
+            Color(0xFF515BD4),
+          ],
+        ),
+      ),
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Container(
+            width: size * 0.7,
+            height: size * 0.7,
+            decoration: BoxDecoration(
+              border: Border.all(color: Colors.white, width: size * 0.08),
+              borderRadius: BorderRadius.circular(size * 0.2),
+            ),
+          ),
+          Container(
+            width: size * 0.35,
+            height: size * 0.35,
+            decoration: BoxDecoration(
+              border: Border.all(color: Colors.white, width: size * 0.08),
+              shape: BoxShape.circle,
+            ),
+          ),
+          Positioned(
+            top: size * 0.18,
+            right: size * 0.18,
+            child: Container(
+              width: size * 0.1,
+              height: size * 0.1,
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                shape: BoxShape.circle,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }

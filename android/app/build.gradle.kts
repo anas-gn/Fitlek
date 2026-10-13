@@ -14,6 +14,22 @@ val keystoreProperties = Properties()
 if (keystorePropertiesFile.exists()) {
     keystoreProperties.load(FileInputStream(keystorePropertiesFile))
 }
+val releaseSigningRequested = gradle.startParameter.taskNames.any {
+    it.contains("release", ignoreCase = true)
+}
+if (releaseSigningRequested) {
+    require(keystorePropertiesFile.exists()) {
+        "Release signing requires android/key.properties. Configure the production upload keystore first."
+    }
+    listOf("storeFile", "storePassword", "keyAlias", "keyPassword").forEach {
+        require(!keystoreProperties.getProperty(it).isNullOrBlank()) {
+            "Missing release signing property: $it"
+        }
+    }
+    require(rootProject.file(keystoreProperties.getProperty("storeFile")).isFile) {
+        "The configured release keystore does not exist."
+    }
+}
 
 android {
     namespace = "com.sirvya.app"
@@ -31,6 +47,7 @@ android {
     }
 
     defaultConfig {
+        manifestPlaceholders["usesCleartextTraffic"] = "false"
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
         applicationId = "com.sirvya.app"
         // You can update the following values to match your application needs.
@@ -53,8 +70,12 @@ android {
 }
 
     buildTypes {
+        debug {
+            manifestPlaceholders["usesCleartextTraffic"] = "true"
+        }
         release {
-            signingConfig = if (keystorePropertiesFile.exists()) signingConfigs.getByName("release") else signingConfigs.getByName("debug")
+            manifestPlaceholders["usesCleartextTraffic"] = "false"
+            signingConfig = signingConfigs.getByName("release")
             isMinifyEnabled = true
         }
     }

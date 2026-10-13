@@ -1,3 +1,9 @@
+import 'services/campaign_service.dart';
+import 'services/live_updates.dart';
+import 'globals.dart';
+import 'services/location_reminder.dart';
+import 'services/user_location_service.dart';
+import 'services/notification_service.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'components/ENG/coachHeader.dart';
@@ -12,6 +18,7 @@ import 'screens/ENG/coachChat.dart';
 import 'models/coachConversation.dart';
 import 'screens/ENG/login.dart';
 import 'services/apiService.dart';
+
 class MainLayoutCoach extends StatefulWidget {
   const MainLayoutCoach({super.key});
 
@@ -19,7 +26,14 @@ class MainLayoutCoach extends StatefulWidget {
   State<MainLayoutCoach> createState() => _MainLayoutCoachState();
 }
 
-class _MainLayoutCoachState extends State<MainLayoutCoach> with WidgetsBindingObserver {
+class _MainLayoutCoachState extends State<MainLayoutCoach>
+    with WidgetsBindingObserver, LiveUpdates<MainLayoutCoach> {
+  @override
+  Set<String> get liveDomains => {'notifications','profile','edit','messages'};
+  @override
+  Future<void> refreshLiveData() async {
+    await Future.wait([_loadUnreadCount(),_loadCoachProfile()]);
+  }
   int _currentIndex = 0;
   bool _loading = true;
 
@@ -40,15 +54,36 @@ class _MainLayoutCoachState extends State<MainLayoutCoach> with WidgetsBindingOb
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addPostFrameCallback(
+        (_) => NotificationService.instance.navigationReady());
     WidgetsBinding.instance.addObserver(this);
     _loadSession();
+    campaignDestination.addListener(_onCampaignDestination);
+    CampaignService.start(context);
+    UserLocationService.start();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) LocationReminder.showOnce(context, 'coach');
+    });
   }
 
   @override
   void dispose() {
+    campaignDestination.removeListener(_onCampaignDestination);
+    CampaignService.stop();
     _pollTimer?.cancel();
+    UserLocationService.stop();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
+  }
+
+  void _onCampaignDestination() {
+    final destination = campaignDestination.value;
+    if (!mounted || destination == null) return;
+    final route = ModalRoute.of(context);
+    if (route != null) Navigator.of(context).popUntil((r) => r == route);
+    final tab = {'/sessions':1, '/messages':2, '/profile':4}[destination];
+    if (tab != null) { setState(() => _currentIndex = tab); return; }
+    if (destination == '/notifications') Navigator.of(context).push(MaterialPageRoute(builder: (_) => const CoachNotifications()));
   }
 
   @override
@@ -73,7 +108,9 @@ class _MainLayoutCoachState extends State<MainLayoutCoach> with WidgetsBindingOb
     }
 
     setState(() {
-      _coachID = userData['id'] is int ? userData['id'] as int : int.tryParse(userData['id'].toString());
+      _coachID = userData['id'] is int
+          ? userData['id'] as int
+          : int.tryParse(userData['id'].toString());
       _token = token;
       _firstName = userData['firstName']?.toString() ?? '';
       _loading = false;
@@ -87,14 +124,16 @@ class _MainLayoutCoachState extends State<MainLayoutCoach> with WidgetsBindingOb
     // (no realtime/socket infrastructure exists in this project).
     _loadUnreadCount();
     _pollTimer?.cancel();
-    _pollTimer = Timer.periodic(const Duration(seconds: 45), (_) => _loadUnreadCount());
+    _pollTimer =
+        Timer.periodic(const Duration(seconds: 45), (_) => _loadUnreadCount());
   }
 
   Future<void> _loadUnreadCount() async {
     final res = await ApiService.get('/coach/notifications/unread-count');
     if (!mounted || res['ok'] != true) return;
     final count = res['count'];
-    setState(() => _unreadCount = count is int ? count : int.tryParse('$count') ?? 0);
+    setState(() =>
+        _unreadCount = count is int ? count : int.tryParse('$count') ?? 0);
   }
 
   Future<void> _openNotifications() async {
@@ -111,19 +150,21 @@ class _MainLayoutCoachState extends State<MainLayoutCoach> with WidgetsBindingOb
       case 'new_message':
         final convId = n['relatedEntityID'];
         if (convId == null) return;
-        Navigator.of(context).push(MaterialPageRoute(
-          builder: (_) => CoachChat(
-            conversation: CoachConversation(
-              id: convId.toString(),
-              clientId: '',
-              clientName: (n['actorName'] ?? 'Client').toString(),
-              clientPhotoUrl: (n['actorAvatar'] ?? '').toString(),
-              lastMessage: '',
-              lastMessageTime: DateTime.now(),
-              unreadCount: 0,
-            ),
-          ),
-        )).then((_) => _loadUnreadCount());
+        Navigator.of(context)
+            .push(MaterialPageRoute(
+              builder: (_) => CoachChat(
+                conversation: CoachConversation(
+                  id: convId.toString(),
+                  clientId: '',
+                  clientName: (n['actorName'] ?? 'Client').toString(),
+                  clientPhotoUrl: (n['actorAvatar'] ?? '').toString(),
+                  lastMessage: '',
+                  lastMessageTime: DateTime.now(),
+                  unreadCount: 0,
+                ),
+              ),
+            ))
+            .then((_) => _loadUnreadCount());
         break;
       case 'new_reservation':
       case 'upcoming_session':
@@ -163,13 +204,16 @@ class _MainLayoutCoachState extends State<MainLayoutCoach> with WidgetsBindingOb
     if (_loading || _coachID == null) {
       return Scaffold(
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-        body: Center(child: CircularProgressIndicator(color: Theme.of(context).colorScheme.primary)),
+        body: Center(
+            child: CircularProgressIndicator(
+                color: Theme.of(context).colorScheme.primary)),
       );
     }
 
     final screens = [
       CoachDashboard(
         key: ValueKey(_dashboardRevision),
+        coachName: '$_firstName $_lastName'.trim(),
         onViewCalendar: () => setState(() => _currentIndex = 1),
         onViewNotifications: _openNotifications,
         onViewInvitations: () => setState(() => _currentIndex = 3),

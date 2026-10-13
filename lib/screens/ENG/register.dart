@@ -1,3 +1,6 @@
+import '../../services/referral_link_service.dart';
+import 'userLocationSettings.dart';
+import '../../components/location_picker.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:ui';
@@ -25,9 +28,7 @@ const _orange = Color(0xFFFFB74D);
 const _green = Color(0xFF4CAF50);
 const _red = Color(0xFFFF5252);
 
-
-const _bgImageUrl =
-    'assets/branding/sirvya1.jfif';
+const _bgImageUrl = 'assets/branding/sirvya1.jfif';
 
 const _googleLogoSvg = '''
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
@@ -59,6 +60,44 @@ class _RegisterScreenState extends State<RegisterScreen>
   final _passwordCtrl = TextEditingController();
   final _confirmCtrl = TextEditingController();
   final _heightCtrl = TextEditingController();
+  final _weightCtrl = TextEditingController();
+  Map<String, dynamic>? _location;
+  Future<bool> _ensureSignupLocation() async {
+    if (_role != 'client' && _role != 'coach') return true;
+    if (_role == 'client' && _selectedInterests.isEmpty) {
+      final continued = await showDialog<bool>(
+          context: context,
+          builder: (ctx) => StatefulBuilder(
+              builder: (ctx, update) => AlertDialog(
+                    title: const Text('Your interests'),
+                    content: SingleChildScrollView(
+                        child: _buildSpecialtiesSelector(
+                            interests: true, update: () => update(() {}))),
+                    actions: [
+                      TextButton(
+                          onPressed: () => Navigator.pop(ctx, false),
+                          child: const Text('Cancel')),
+                      FilledButton(
+                          onPressed: _selectedInterests.isEmpty
+                              ? null
+                              : () => Navigator.pop(ctx, true),
+                          child: const Text('Continue'))
+                    ],
+                  )));
+      if (!mounted || continued != true) return false;
+    }
+    if (_location?['city']?.toString().isNotEmpty == true &&
+        _location?['latitude'] != null &&
+        _location?['longitude'] != null) return true;
+    final location = await Navigator.of(context)
+        .push<Map<String, dynamic>>(MaterialPageRoute(
+      builder: (_) => const UserLocationSettings(forSignup: true),
+    ));
+    if (!mounted || location == null) return false;
+    _location = location;
+    return true;
+  }
+
   final _referralCtrl = TextEditingController();
   final _otpCtrl = TextEditingController();
 
@@ -76,8 +115,20 @@ class _RegisterScreenState extends State<RegisterScreen>
   bool _appleLoading = false;
   String? _errorMsg;
 
-  List<Map<String, dynamic>> _categories = [];
-  int? _selectedCategoryId;
+  final List<String> _selectedSpecialties = [];
+  final List<String> _selectedInterests = [];
+  static const _specialtyOptions = [
+    'Musculation',
+    'Perte de poids',
+    'Yoga',
+    'CrossFit',
+    'Boxe',
+    'Nutrition',
+    'Pilates',
+    'Cardio',
+    'Stretching',
+    'Functional Training'
+  ];
 
   late AnimationController _fadeCtrl;
   late Animation<double> _fadeAnim;
@@ -94,24 +145,10 @@ class _RegisterScreenState extends State<RegisterScreen>
         vsync: this, duration: const Duration(milliseconds: 400));
     _slideAnim = Tween<Offset>(begin: const Offset(0.05, 0), end: Offset.zero)
         .animate(CurvedAnimation(parent: _slideCtrl, curve: Curves.easeOut));
+    _referralCtrl.text = ReferralLinkService.instance.code.value;
+    if (_referralCtrl.text.isNotEmpty) _onReferralChanged(_referralCtrl.text);
     _fadeCtrl.forward();
     _slideCtrl.forward();
-    _fetchCategories();
-  }
-
-  Future<void> _fetchCategories() async {
-    try {
-      final res = await http.get(Uri.parse('$baseUrl/categories'))
-          .timeout(const Duration(seconds: 8));
-      if (res.statusCode == 200) {
-        final List data = jsonDecode(res.body);
-        if (mounted) {
-          setState(() {
-            _categories = List<Map<String, dynamic>>.from(data);
-          });
-        }
-      }
-    } catch (_) {}
   }
 
   @override
@@ -124,6 +161,7 @@ class _RegisterScreenState extends State<RegisterScreen>
     _passwordCtrl.dispose();
     _confirmCtrl.dispose();
     _heightCtrl.dispose();
+    _weightCtrl.dispose();
     _referralCtrl.dispose();
     _otpCtrl.dispose();
     _referralDebounce?.cancel();
@@ -189,7 +227,11 @@ class _RegisterScreenState extends State<RegisterScreen>
   String? _validateStep(int step) {
     switch (step) {
       case 0:
-        return _role == null ? 'Select your role to continue' : null;
+        if (_role == null) return 'Select your role to continue';
+        if (!_acceptedTerms) {
+          return 'You must accept the Sirvya Legal & Compliance Framework to create an account.';
+        }
+        return null;
       case 1:
         if (_firstNameCtrl.text.trim().isEmpty) return 'First name required';
         if (_lastNameCtrl.text.trim().isEmpty) return 'Last name required';
@@ -198,11 +240,27 @@ class _RegisterScreenState extends State<RegisterScreen>
           return 'Invalid email';
         }
         if (_heightCtrl.text.trim().isEmpty) return 'Height required';
-        if (double.tryParse(_heightCtrl.text.trim()) == null) {
+        final height =
+            double.tryParse(_heightCtrl.text.trim().replaceAll(',', '.'));
+        if (height == null || !height.isFinite || height <= 0 || height > 300) {
           return 'Invalid height';
         }
-        if ((_role == 'coach' || _role == 'advisor') && _selectedCategoryId == null) {
-          return 'Please select your coaching category';
+        if (_role == 'client') {
+          final weight =
+              double.tryParse(_weightCtrl.text.trim().replaceAll(',', '.'));
+          if (weight == null || !weight.isFinite || weight <= 0 || weight > 500)
+            return 'Enter a valid weight in kg';
+        }
+        if (_role == 'client' && _selectedInterests.isEmpty)
+          return 'Choose at least one interest (up to 5)';
+        if ((_role == 'client' || _role == 'coach') &&
+            ((_location?['city']?.toString().trim().isEmpty ?? true) ||
+                _location?['latitude'] == null ||
+                _location?['longitude'] == null))
+          return 'Press Use my current location to fill your location';
+        if ((_role == 'coach' || _role == 'advisor') &&
+            _selectedSpecialties.isEmpty) {
+          return 'Please select at least one specialty (up to 5)';
         }
         return null;
       case 2:
@@ -215,9 +273,6 @@ class _RegisterScreenState extends State<RegisterScreen>
         return null;
       case 3:
         if (_gender == null) return 'Select your gender to continue';
-        if (!_acceptedTerms) {
-          return 'You must accept the Sirvya Legal & Compliance Framework to create an account.';
-        }
         return null;
       case 4:
         if (_otpCtrl.text.trim().length != 6) {
@@ -255,17 +310,20 @@ class _RegisterScreenState extends State<RegisterScreen>
       _errorMsg = null;
     });
     try {
-      final res = await http.post(
-        Uri.parse('$baseUrl/auth/send-signup-otp'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'email': _emailCtrl.text.trim().toLowerCase()}),
-      ).timeout(const Duration(seconds: 12));
+      final res = await http
+          .post(
+            Uri.parse('$baseUrl/auth/send-signup-otp'),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({'email': _emailCtrl.text.trim().toLowerCase()}),
+          )
+          .timeout(const Duration(seconds: 12));
 
       final data = jsonDecode(res.body) as Map<String, dynamic>;
       if (res.statusCode == 200) {
         return true;
       } else {
-        setState(() => _errorMsg = data['error'] as String? ?? 'Failed to send verification code');
+        setState(() => _errorMsg =
+            data['error'] as String? ?? 'Failed to send verification code');
         return false;
       }
     } catch (_) {
@@ -282,14 +340,16 @@ class _RegisterScreenState extends State<RegisterScreen>
       _errorMsg = null;
     });
     try {
-      final res = await http.post(
-        Uri.parse('$baseUrl/auth/verify-signup-otp'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'email': _emailCtrl.text.trim().toLowerCase(),
-          'otp': _otpCtrl.text.trim(),
-        }),
-      ).timeout(const Duration(seconds: 12));
+      final res = await http
+          .post(
+            Uri.parse('$baseUrl/auth/verify-signup-otp'),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({
+              'email': _emailCtrl.text.trim().toLowerCase(),
+              'otp': _otpCtrl.text.trim(),
+            }),
+          )
+          .timeout(const Duration(seconds: 12));
 
       final data = jsonDecode(res.body) as Map<String, dynamic>;
       if (res.statusCode == 200 && data['verified'] == true) {
@@ -307,9 +367,6 @@ class _RegisterScreenState extends State<RegisterScreen>
       });
     }
   }
-
-
-
 
   void _prevStep() {
     if (_step > 0) {
@@ -332,7 +389,6 @@ class _RegisterScreenState extends State<RegisterScreen>
   }
 
   Future<void> _register() async {
-
     setState(() {
       _loading = true;
       _errorMsg = null;
@@ -345,16 +401,21 @@ class _RegisterScreenState extends State<RegisterScreen>
         'password': _passwordCtrl.text,
         'gender': _gender,
         'role': _role,
-        'height': double.tryParse(_heightCtrl.text.trim()),
+        'height': double.tryParse(_heightCtrl.text.trim().replaceAll(',', '.')),
+        if (_role == 'client')
+          'weight':
+              double.tryParse(_weightCtrl.text.trim().replaceAll(',', '.')),
         'acceptedTerms': _acceptedTerms,
+        if (_location != null) 'location': _location,
+        if (_role == 'client')
+          'interests': List<String>.from(_selectedInterests),
       };
-      if (_role == 'coach' || _role == 'advisor') {
+      if (_role == 'client' || _role == 'coach' || _role == 'advisor') {
         if (_referralCtrl.text.trim().isNotEmpty) {
           body['referralCode'] = _referralCtrl.text.trim();
         }
-        if (_selectedCategoryId != null) {
-          body['categoryID'] = _selectedCategoryId;
-        }
+        if (_role != 'client')
+          body['specialties'] = List<String>.from(_selectedSpecialties);
       }
       final res = await http
           .post(
@@ -366,6 +427,7 @@ class _RegisterScreenState extends State<RegisterScreen>
 
       final data = jsonDecode(res.body) as Map<String, dynamic>;
       if (res.statusCode == 201) {
+        await ReferralLinkService.instance.clear();
         if (!mounted) return;
         _showSuccess();
       } else {
@@ -381,10 +443,17 @@ class _RegisterScreenState extends State<RegisterScreen>
 
   Future<void> _registerWithGoogle() async {
     if (_role == null) {
-      setState(() => _errorMsg = 'Select your role before continuing with Google.');
+      setState(
+          () => _errorMsg = 'Select your role before continuing with Google.');
+      return;
+    }
+    if (!_acceptedTerms) {
+      setState(
+          () => _errorMsg = 'Please agree to the Terms of Service to sign up.');
       return;
     }
 
+    if (!await _ensureSignupLocation()) return;
     setState(() {
       _googleLoading = true;
       _errorMsg = null;
@@ -393,17 +462,26 @@ class _RegisterScreenState extends State<RegisterScreen>
     try {
       final result = await GoogleAuthService.signInWithGoogle(
         role: _role!,
-        referralCode: (_role == 'coach' && _referralCtrl.text.trim().isNotEmpty)
+        referralCode: (_referralCtrl.text.trim().isNotEmpty)
             ? _referralCtrl.text.trim()
+            : null,
+        action: 'signup',
+        termsAccepted: _acceptedTerms,
+        location: _location,
+        interests: _role == 'client' ? _selectedInterests : null,
+        height: double.tryParse(_heightCtrl.text.trim().replaceAll(',', '.')),
+        weight: _role == 'client'
+            ? double.tryParse(_weightCtrl.text.trim().replaceAll(',', '.'))
             : null,
       );
 
+      await ReferralLinkService.instance.clear();
       final role = result.user['role'] as String? ?? _role!;
       final id = result.user['id'] as int? ?? 0;
       final firstName = result.user['firstName'] as String? ?? '';
 
-      // Coach/Advisor pending approval — show success sheet, don't navigate
-      if ((role == 'coach' || role == 'advisor') && !result.isApproved) {
+      // Advisors awaiting approval stay on the success sheet.
+      if (role == 'advisor' && !result.isApproved) {
         setState(() => _googleLoading = false);
         _showGoogleSuccess(firstName: firstName, role: role);
         return;
@@ -481,10 +559,17 @@ class _RegisterScreenState extends State<RegisterScreen>
 
   Future<void> _registerWithApple() async {
     if (_role == null) {
-      setState(() => _errorMsg = 'Select your role before continuing with Apple.');
+      setState(
+          () => _errorMsg = 'Select your role before continuing with Apple.');
+      return;
+    }
+    if (!_acceptedTerms) {
+      setState(
+          () => _errorMsg = 'Please agree to the Terms of Service to sign up.');
       return;
     }
 
+    if (!await _ensureSignupLocation()) return;
     setState(() {
       _appleLoading = true;
       _errorMsg = null;
@@ -493,17 +578,26 @@ class _RegisterScreenState extends State<RegisterScreen>
     try {
       final result = await AppleAuthService.signInWithApple(
         role: _role!,
-        referralCode: (_role == 'coach' && _referralCtrl.text.trim().isNotEmpty)
+        referralCode: (_referralCtrl.text.trim().isNotEmpty)
             ? _referralCtrl.text.trim()
+            : null,
+        action: 'signup',
+        termsAccepted: _acceptedTerms,
+        location: _location,
+        interests: _role == 'client' ? _selectedInterests : null,
+        height: double.tryParse(_heightCtrl.text.trim().replaceAll(',', '.')),
+        weight: _role == 'client'
+            ? double.tryParse(_weightCtrl.text.trim().replaceAll(',', '.'))
             : null,
       );
 
+      await ReferralLinkService.instance.clear();
       final role = result.user['role'] as String? ?? _role!;
       final id = result.user['id'] as int? ?? 0;
       final firstName = result.user['firstName'] as String? ?? '';
 
-      // Coach/Advisor pending approval — show success sheet, don't navigate
-      if ((role == 'coach' || role == 'advisor') && !result.isApproved) {
+      // Advisors awaiting approval stay on the success sheet.
+      if (role == 'advisor' && !result.isApproved) {
         setState(() => _appleLoading = false);
         _showGoogleSuccess(firstName: firstName, role: role);
         return;
@@ -561,7 +655,9 @@ class _RegisterScreenState extends State<RegisterScreen>
       );
     } on Exception catch (e) {
       final msg = e.toString().replaceFirst('Exception: ', '');
-      if (msg == 'cancelled' || msg.contains('canceled') || msg.contains('1001')) {
+      if (msg == 'cancelled' ||
+          msg.contains('canceled') ||
+          msg.contains('1001')) {
         setState(() => _appleLoading = false);
         return;
       }
@@ -578,7 +674,6 @@ class _RegisterScreenState extends State<RegisterScreen>
       });
     }
   }
-
 
   void _showGoogleSuccess({required String firstName, required String role}) {
     showModalBottomSheet(
@@ -611,7 +706,9 @@ class _RegisterScreenState extends State<RegisterScreen>
             const Text(
               'Account created!',
               style: TextStyle(
-                  color: Colors.white, fontSize: 26, fontWeight: FontWeight.w900),
+                  color: Colors.white,
+                  fontSize: 26,
+                  fontWeight: FontWeight.w900),
             ),
             const SizedBox(height: 12),
             Text(
@@ -643,7 +740,10 @@ class _RegisterScreenState extends State<RegisterScreen>
                   gradient: LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
-                    colors: [AppColors.sand, AppColors.sand.withValues(alpha: 0.85)],
+                    colors: [
+                      AppColors.sand,
+                      AppColors.sand.withValues(alpha: 0.85)
+                    ],
                   ),
                   borderRadius: BorderRadius.circular(14),
                   boxShadow: [
@@ -688,91 +788,102 @@ class _RegisterScreenState extends State<RegisterScreen>
             24 + MediaQuery.of(ctx).viewInsets.bottom,
           ),
           child: Column(mainAxisSize: MainAxisSize.min, children: [
-          Container(
-            width: 80,
-            height: 80,
-            decoration: BoxDecoration(
-              color: AppColors.sand.withValues(alpha: 0.15),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(Icons.check_rounded,
-                color: AppColors.sand, size: 40),
-          ),
-          const SizedBox(height: 24),
-          const Text(
-            'Account created!',
-            style: TextStyle(
-                color: Colors.white, fontSize: 26, fontWeight: FontWeight.w900),
-          ),
-          const SizedBox(height: 12),
-          RichText(
-            textAlign: TextAlign.center,
-            text: TextSpan(children: [
-              TextSpan(
-                text: 'Welcome ${_firstNameCtrl.text.trim()}. ',
-                style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.65),
-                    fontSize: 14,
-                    height: 1.6),
+            Container(
+              width: 80,
+              height: 80,
+              decoration: BoxDecoration(
+                color: AppColors.sand.withValues(alpha: 0.15),
+                shape: BoxShape.circle,
               ),
-              if (_role == 'coach' || _role == 'advisor')
-                const TextSpan(
-                  text: 'Your account is pending approval.',
-                  style: TextStyle(color: _orange, fontSize: 14, height: 1.6),
-                )
-              else
+              child: const Icon(Icons.check_rounded,
+                  color: AppColors.sand, size: 40),
+            ),
+            const SizedBox(height: 24),
+            const Text(
+              'Account created!',
+              style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 26,
+                  fontWeight: FontWeight.w900),
+            ),
+            const SizedBox(height: 12),
+            RichText(
+              textAlign: TextAlign.center,
+              text: TextSpan(children: [
                 TextSpan(
-                  text: 'You can now log in.',
+                  text: 'Welcome ${_firstNameCtrl.text.trim()}. ',
                   style: TextStyle(
                       color: Colors.white.withValues(alpha: 0.65),
                       fontSize: 14,
                       height: 1.6),
                 ),
-            ]),
-          ),
-          const SizedBox(height: 32),
-          GestureDetector(
-            onTap: () {
-              Navigator.pop(context);
-              Navigator.pushReplacement(
-                context,
-                PageRouteBuilder(
-                  pageBuilder: (_, __, ___) => const LoginScreen(),
-                  transitionsBuilder: (_, a, __, child) =>
-                      FadeTransition(opacity: a, child: child),
-                  transitionDuration: const Duration(milliseconds: 500),
-                ),
-              );
-            },
-            child: Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [AppColors.sand, AppColors.sand.withValues(alpha: 0.85)],
-                ),
-                borderRadius: BorderRadius.circular(14),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.sand.withValues(alpha: 0.3),
-                    blurRadius: 16,
-                    offset: const Offset(0, 6),
+                if (_role == 'coach')
+                  const TextSpan(
+                    text:
+                        'You can now log in. Your Sirvya verified badge is pending verification, which can take up to 48 hours.',
+                    style: TextStyle(color: _orange, fontSize: 14, height: 1.6),
+                  )
+                else if (_role == 'advisor')
+                  const TextSpan(
+                    text: 'Your account is pending approval.',
+                    style: TextStyle(color: _orange, fontSize: 14, height: 1.6),
+                  )
+                else
+                  TextSpan(
+                    text: 'You can now log in.',
+                    style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.65),
+                        fontSize: 14,
+                        height: 1.6),
                   ),
-                ],
-              ),
-              child: const Text(
-                'Log in',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                    color: AppColors.cyprus,
-                    fontSize: 15,
-                    fontWeight: FontWeight.w800,
-                    letterSpacing: 0.5),
+              ]),
+            ),
+            const SizedBox(height: 32),
+            GestureDetector(
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.pushReplacement(
+                  context,
+                  PageRouteBuilder(
+                    pageBuilder: (_, __, ___) => const LoginScreen(),
+                    transitionsBuilder: (_, a, __, child) =>
+                        FadeTransition(opacity: a, child: child),
+                    transitionDuration: const Duration(milliseconds: 500),
+                  ),
+                );
+              },
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      AppColors.sand,
+                      AppColors.sand.withValues(alpha: 0.85)
+                    ],
+                  ),
+                  borderRadius: BorderRadius.circular(14),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppColors.sand.withValues(alpha: 0.3),
+                      blurRadius: 16,
+                      offset: const Offset(0, 6),
+                    ),
+                  ],
+                ),
+                child: const Text(
+                  'Log in',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                      color: AppColors.cyprus,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0.5),
+                ),
               ),
             ),
-          ),
           ]),
         ),
       ),
@@ -782,90 +893,94 @@ class _RegisterScreenState extends State<RegisterScreen>
   @override
   Widget build(BuildContext context) {
     return Theme(
-    data: ThemeData.dark().copyWith(
-      scaffoldBackgroundColor: Colors.black,
-    ),
-    child: GestureDetector(
-      onHorizontalDragEnd: (details) {
-        if (details.primaryVelocity != null && details.primaryVelocity! > 300) {
-          _prevStep();
-        }
-      },
-      child: Scaffold(
-      backgroundColor: Colors.black,
-      body: Stack(
-        children: [
-          // â”€â”€ Fond image + flou lÃ©ger, identique Ã  l'Ã©cran de login â”€â”€
-          Positioned.fill(
-            child: Image.asset(
-              _bgImageUrl,
-              fit: BoxFit.cover,
-              frameBuilder: (_, child, frame, __) =>
-                  frame == null ? Container(color: const Color(0xFF111111)) : child,
-              errorBuilder: (_, __, ___) => Container(color: const Color(0xFF111111)),
-            ),
-          ),
-          Positioned.fill(
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 1.2, sigmaY: 1.2),
-              child: Container(color: Colors.black.withValues(alpha: 0.25)),
-            ),
-          ),
-          // â”€â”€ DÃ©gradÃ© de lisibilitÃ© (cyprus), identique au login â”€â”€
-          Positioned.fill(
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [
-                    Colors.transparent,
-                    AppColors.cyprus.withValues(alpha: 0.05),
-                    AppColors.cyprus.withValues(alpha: 0.55),
-                    AppColors.cyprus.withValues(alpha: 0.92),
-                    AppColors.cyprus,
-                  ],
-                  stops: const [0.0, 0.28, 0.5, 0.78, 1.0],
+      data: ThemeData.dark().copyWith(
+        scaffoldBackgroundColor: Colors.black,
+      ),
+      child: GestureDetector(
+        onHorizontalDragEnd: (details) {
+          if (details.primaryVelocity != null &&
+              details.primaryVelocity! > 300) {
+            _prevStep();
+          }
+        },
+        child: Scaffold(
+          backgroundColor: Colors.black,
+          body: Stack(
+            children: [
+              // â”€â”€ Fond image + flou lÃ©ger, identique Ã  l'Ã©cran de login â”€â”€
+              Positioned.fill(
+                child: Image.asset(
+                  _bgImageUrl,
+                  fit: BoxFit.cover,
+                  frameBuilder: (_, child, frame, __) => frame == null
+                      ? Container(color: const Color(0xFF111111))
+                      : child,
+                  errorBuilder: (_, __, ___) =>
+                      Container(color: const Color(0xFF111111)),
                 ),
               ),
-            ),
-          ),
-          SafeArea(
-            child: Column(children: [
-              _buildTopBar(),
-              _buildStepper(),
-              Expanded(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(horizontal: 24),
-                  child: FadeTransition(
-                    opacity: _fadeAnim,
-                    child: SlideTransition(
-                      position: _slideAnim,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const SizedBox(height: 24),
-                          _buildStepHeader(),
-                          const SizedBox(height: 28),
-                          _buildStepContent(),
-                          if (_errorMsg != null) ...[
-                            const SizedBox(height: 16),
-                            _buildErrorBanner(),
-                          ],
-                          const SizedBox(height: 28),
-                          _buildCTA(),
-                          const SizedBox(height: 24),
-                        ],
-                      ),
+              Positioned.fill(
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 1.2, sigmaY: 1.2),
+                  child: Container(color: Colors.black.withValues(alpha: 0.25)),
+                ),
+              ),
+              // â”€â”€ DÃ©gradÃ© de lisibilitÃ© (cyprus), identique au login â”€â”€
+              Positioned.fill(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Colors.transparent,
+                        AppColors.cyprus.withValues(alpha: 0.05),
+                        AppColors.cyprus.withValues(alpha: 0.55),
+                        AppColors.cyprus.withValues(alpha: 0.92),
+                        AppColors.cyprus,
+                      ],
+                      stops: const [0.0, 0.28, 0.5, 0.78, 1.0],
                     ),
                   ),
                 ),
               ),
-            ]),
+              SafeArea(
+                child: Column(children: [
+                  _buildTopBar(),
+                  _buildStepper(),
+                  Expanded(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      child: FadeTransition(
+                        opacity: _fadeAnim,
+                        child: SlideTransition(
+                          position: _slideAnim,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const SizedBox(height: 24),
+                              _buildStepHeader(),
+                              const SizedBox(height: 28),
+                              _buildStepContent(),
+                              if (_errorMsg != null) ...[
+                                const SizedBox(height: 16),
+                                _buildErrorBanner(),
+                              ],
+                              const SizedBox(height: 28),
+                              _buildCTA(),
+                              const SizedBox(height: 24),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ]),
+              ),
+            ],
           ),
-        ],
-      ),),
-    ),
+        ),
+      ),
     );
   }
 
@@ -1025,8 +1140,10 @@ class _RegisterScreenState extends State<RegisterScreen>
             ),
             TextButton.icon(
               onPressed: _loading ? null : _sendSignUpOTP,
-              icon: const Icon(Icons.refresh_rounded, color: AppColors.sand, size: 16),
-              label: const Text('Resend Code', style: TextStyle(color: AppColors.sand, fontSize: 12)),
+              icon: const Icon(Icons.refresh_rounded,
+                  color: AppColors.sand, size: 16),
+              label: const Text('Resend Code',
+                  style: TextStyle(color: AppColors.sand, fontSize: 12)),
             ),
           ],
         ),
@@ -1059,12 +1176,25 @@ class _RegisterScreenState extends State<RegisterScreen>
         }),
       ),
       const SizedBox(height: 24),
+      if (_role != null) ...[
+        _RegisterField(
+            controller: _referralCtrl,
+            label: 'Inviter code (optional)',
+            hint: 'Enter your coach’s invitation code',
+            icon: Icons.card_giftcard_rounded,
+            onChanged: _onReferralChanged,
+            suffix: _referralSuffixIcon()),
+        const SizedBox(height: 20),
+      ],
       _buildOrDivider(),
       const SizedBox(height: 20),
+      _buildTermsAcceptanceTile(),
+      const SizedBox(height: 16),
       _buildGoogleButton(),
       if (!kIsWeb && (Platform.isIOS || Platform.isMacOS)) ...[
         const SizedBox(height: 12),
-        _buildAppleButton(),
+        if (!kIsWeb && defaultTargetPlatform == TargetPlatform.iOS)
+          _buildAppleButton(),
       ],
     ]);
   }
@@ -1097,7 +1227,8 @@ class _RegisterScreenState extends State<RegisterScreen>
   }
 
   Widget _buildGoogleButton() {
-    final enabled = _role != null && !_googleLoading && !_loading && !_appleLoading;
+    final enabled =
+        _role != null && !_googleLoading && !_loading && !_appleLoading;
     return GestureDetector(
       onTap: enabled ? _registerWithGoogle : null,
       child: AnimatedOpacity(
@@ -1153,7 +1284,8 @@ class _RegisterScreenState extends State<RegisterScreen>
   }
 
   Widget _buildAppleButton() {
-    final enabled = _role != null && !_appleLoading && !_loading && !_googleLoading;
+    final enabled =
+        _role != null && !_appleLoading && !_loading && !_googleLoading;
     return GestureDetector(
       onTap: enabled ? _registerWithApple : null,
       child: AnimatedOpacity(
@@ -1179,7 +1311,8 @@ class _RegisterScreenState extends State<RegisterScreen>
                 : Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(Icons.apple_rounded, color: Colors.black, size: 26),
+                      const Icon(Icons.apple_rounded,
+                          color: Colors.black, size: 26),
                       const SizedBox(width: 10),
                       const Text(
                         'CONTINUE WITH APPLE',
@@ -1236,72 +1369,98 @@ class _RegisterScreenState extends State<RegisterScreen>
         icon: Icons.straighten_rounded,
         keyboardType: TextInputType.number,
       ),
+      if (_role == 'client') ...[
+        const SizedBox(height: 14),
+        _RegisterField(
+            controller: _weightCtrl,
+            label: 'Weight (kg)',
+            hint: '70',
+            icon: Icons.monitor_weight_rounded,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true)),
+      ],
       if (_role == 'coach' || _role == 'advisor') ...[
         const SizedBox(height: 14),
-        _buildCategorySelector(),
+        _buildSpecialtiesSelector(),
+      ],
+      if (_role == 'client') ...[
+        const SizedBox(height: 14),
+        _buildSpecialtiesSelector(interests: true)
+      ],
+      if (_role == 'client' || _role == 'coach') ...[
+        const SizedBox(height: 18),
+        LocationPicker(
+            initial: _location, onChanged: (value) => _location = value),
       ],
     ]);
   }
 
-  Widget _buildCategorySelector() {
+  Widget _buildSpecialtiesSelector(
+      {bool interests = false, VoidCallback? update}) {
+    final selectedValues =
+        interests ? _selectedInterests : _selectedSpecialties;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Padding(
-          padding: const EdgeInsets.only(left: 4, bottom: 8),
-          child: Text(
-            'Primary Coaching Category',
+        Text(
+            '${interests ? 'Your interests' : 'Coaching specialties'} (${selectedValues.length}/5)',
             style: TextStyle(
-              color: Colors.white.withValues(alpha: 0.9),
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.05),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: Colors.white.withValues(alpha: 0.15),
-              width: 1,
-            ),
-          ),
-          child: DropdownButtonHideUnderline(
-            child: DropdownButton<int>(
-              value: _selectedCategoryId,
-              hint: Text(
-                'Select a category',
-                style: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.5),
-                  fontSize: 15,
-                ),
-              ),
-              isExpanded: true,
-              dropdownColor: AppColors.cyprus,
-              icon: Icon(
-                Icons.keyboard_arrow_down_rounded,
-                color: Colors.white.withValues(alpha: 0.5),
-              ),
-              items: _categories.map((cat) {
-                return DropdownMenuItem<int>(
-                  value: cat['id'] as int,
-                  child: Text(
-                    cat['name'] as String,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 15,
-                    ),
+                color: update == null
+                    ? Colors.white
+                    : Theme.of(context).colorScheme.onSurface,
+                fontWeight: FontWeight.w600)),
+        const SizedBox(height: 8),
+        Text(
+            interests
+                ? 'Choose up to 5 interests to personalize your coach recommendations.'
+                : 'Choose up to 5 specialties.',
+            style: TextStyle(
+                color: update == null
+                    ? Colors.white70
+                    : Theme.of(context).colorScheme.onSurfaceVariant,
+                fontSize: 12)),
+        const SizedBox(height: 8),
+        Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: _specialtyOptions.map((name) {
+              final selected = selectedValues.contains(name);
+              return FilterChip(
+                  label: Text(name),
+                  labelStyle: TextStyle(
+                    color: selected
+                        ? const Color(0xFF064B43)
+                        : Colors.white.withValues(
+                            alpha: selectedValues.length >= 5 ? 0.45 : 0.9),
+                    fontSize: 12,
+                    fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
                   ),
-                );
-              }).toList(),
-              onChanged: (val) {
-                setState(() => _selectedCategoryId = val);
-              },
-            ),
-          ),
-        ),
+                  color: WidgetStateProperty.resolveWith((states) => states
+                          .contains(WidgetState.selected)
+                      ? const Color(0xFFF1F0E5)
+                      : states.contains(WidgetState.disabled)
+                          ? const Color(0xFF164B43).withValues(alpha: 0.3)
+                          : const Color(0xFF164B43).withValues(alpha: 0.65)),
+                  checkmarkColor: const Color(0xFF064B43),
+                  side: BorderSide(
+                      color: selected
+                          ? const Color(0xFFF1F0E5)
+                          : Colors.white.withValues(alpha: 0.22)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
+                  selected: selected,
+                  onSelected: !selected && selectedValues.length >= 5
+                      ? null
+                      : (value) => setState(() {
+                            if (value) {
+                              selectedValues.add(name);
+                            } else {
+                              selectedValues.remove(name);
+                            }
+                            update?.call();
+                          }));
+            }).toList()),
       ],
     );
   }
@@ -1312,7 +1471,7 @@ class _RegisterScreenState extends State<RegisterScreen>
       _RegisterField(
         controller: _passwordCtrl,
         label: 'Password',
-        hint: 'â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢',
+        hint: '••••••••',
         icon: Icons.lock_rounded,
         obscure: _obscurePass,
         showToggle: true,
@@ -1324,7 +1483,7 @@ class _RegisterScreenState extends State<RegisterScreen>
       _RegisterField(
         controller: _confirmCtrl,
         label: 'Confirm password',
-        hint: 'â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢',
+        hint: '••••••••',
         icon: Icons.lock_outline_rounded,
         obscure: _obscureConf,
         showToggle: true,
@@ -1359,9 +1518,7 @@ class _RegisterScreenState extends State<RegisterScreen>
         selected: _gender == 'Other',
         onTap: () => setState(() => _gender = 'Other'),
       ),
-      const SizedBox(height: 20),
-      _buildTermsAcceptanceTile(),
-      if (_role == 'coach') ...[
+      if (_role == 'coach' || _role == 'client') ...[
         const SizedBox(height: 20),
         _RegisterField(
           controller: _referralCtrl,
@@ -1375,7 +1532,7 @@ class _RegisterScreenState extends State<RegisterScreen>
         Padding(
           padding: const EdgeInsets.only(left: 2),
           child: Text(
-            'Enter a Coach referral code if another Coach invited you.',
+            'Invited by a coach? Enter their code to credit your signup.',
             style: TextStyle(
                 color: Colors.white.withValues(alpha: 0.55),
                 fontSize: 12,
@@ -1397,8 +1554,6 @@ class _RegisterScreenState extends State<RegisterScreen>
                 style: TextStyle(color: _green, fontSize: 12)),
           ),
         ],
-        const SizedBox(height: 20),
-        _NoticeBanner(role: _role!),
       ],
     ]);
   }
@@ -1412,7 +1567,9 @@ class _RegisterScreenState extends State<RegisterScreen>
             : AppColors.cyprus.withValues(alpha: 0.55),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: _acceptedTerms ? AppColors.sand : Colors.white.withValues(alpha: 0.2),
+          color: _acceptedTerms
+              ? AppColors.sand
+              : Colors.white.withValues(alpha: 0.2),
           width: _acceptedTerms ? 1.5 : 1,
         ),
       ),
@@ -1433,12 +1590,15 @@ class _RegisterScreenState extends State<RegisterScreen>
                     color: _acceptedTerms ? AppColors.sand : Colors.transparent,
                     borderRadius: BorderRadius.circular(6),
                     border: Border.all(
-                      color: _acceptedTerms ? AppColors.sand : Colors.white.withValues(alpha: 0.5),
+                      color: _acceptedTerms
+                          ? AppColors.sand
+                          : Colors.white.withValues(alpha: 0.5),
                       width: 1.5,
                     ),
                   ),
                   child: _acceptedTerms
-                      ? const Icon(Icons.check_rounded, size: 16, color: AppColors.cyprus)
+                      ? const Icon(Icons.check_rounded,
+                          size: 16, color: AppColors.cyprus)
                       : null,
                 ),
               ),
@@ -1468,7 +1628,8 @@ class _RegisterScreenState extends State<RegisterScreen>
                           ),
                         ),
                         TextSpan(
-                          text: ' including Terms of Service, Privacy Policy & Disclaimers.',
+                          text:
+                              ' including Terms of Service, Privacy Policy & Disclaimers.',
                           style: TextStyle(
                             color: Colors.white.withValues(alpha: 0.85),
                             fontSize: 13,
@@ -1488,11 +1649,14 @@ class _RegisterScreenState extends State<RegisterScreen>
             child: TextButton.icon(
               onPressed: () => _showTermsModal(context),
               style: TextButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 backgroundColor: AppColors.sand.withValues(alpha: 0.15),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8)),
               ),
-              icon: const Icon(Icons.description_rounded, size: 14, color: AppColors.sand),
+              icon: const Icon(Icons.description_rounded,
+                  size: 14, color: AppColors.sand),
               label: const Text(
                 'Read Full Framework',
                 style: TextStyle(
@@ -1541,7 +1705,8 @@ class _RegisterScreenState extends State<RegisterScreen>
                   const SizedBox(height: 16),
                   Row(
                     children: [
-                      const Icon(Icons.gavel_rounded, color: AppColors.sand, size: 24),
+                      const Icon(Icons.gavel_rounded,
+                          color: AppColors.sand, size: 24),
                       const SizedBox(width: 10),
                       const Expanded(
                         child: Text(
@@ -1556,7 +1721,8 @@ class _RegisterScreenState extends State<RegisterScreen>
                       ),
                       IconButton(
                         onPressed: () => Navigator.pop(ctx),
-                        icon: const Icon(Icons.close_rounded, color: Colors.white70),
+                        icon: const Icon(Icons.close_rounded,
+                            color: Colors.white70),
                       ),
                     ],
                   ),
@@ -1577,38 +1743,38 @@ class _RegisterScreenState extends State<RegisterScreen>
                           ),
                           _buildLegalTextSection(
                             'Definitions',
-                            'â€¢ Platform: Refers to the Sirvya application, its associated web infrastructure, and services provided by DevUnivers.\n'
-                            'â€¢ Company: Refers to DevUnivers, the legal entity operating the Sirvya platform in Morocco.\n'
-                            'â€¢ User: Refers to any individual who creates an account on the Platform to book services, view content, or interact with Coaches and Gyms.\n'
-                            'â€¢ Coach: Refers to an independent fitness professional, personal trainer, or instructor offering services, advice, or training sessions via the Platform.\n'
-                            'â€¢ Gym: Refers to an independent fitness facility, studio, or center listed on the Platform for booking purposes.',
+                            '• Platform: Refers to the Sirvya application, its associated web infrastructure, and services provided by DevUnivers.\n'
+                                '• Company: Refers to DevUnivers, the legal entity operating the Sirvya platform in Morocco.\n'
+                                '• User: Refers to any individual who creates an account on the Platform to book services, view content, or interact with Coaches and Gyms.\n'
+                                '• Coach: Refers to an independent fitness professional, personal trainer, or instructor offering services, advice, or training sessions via the Platform.\n'
+                                '• Gym: Refers to an independent fitness facility, studio, or center listed on the Platform for booking purposes.',
                           ),
                           _buildLegalTextSection(
                             '1. Terms of Service (ToS)',
                             '1.1 Acceptance of Terms\nBy creating an account, accessing, or using Sirvya, you agree to be bound by these Terms of Service. Sirvya is developed, maintained, and operated by DevUnivers. If you do not agree to all the terms and conditions outlined in this framework, you must immediately cease all use of the Platform and uninstall the application.\n\n'
-                            '1.2 Eligibility & Age Requirements\nUsers must be at least 18 years old (or the legal age of majority in their jurisdiction) to independently register for an account. Minors between the ages of 13 and 17 may only use the platform with verifiable parental or guardian consent. Sirvya is not intended for children under the age of 13. We reserve the right to request age verification and terminate accounts that violate this provision.\n\n'
-                            '1.3 Account Security, Integrity, & Prohibited Actions\nYou are fully responsible for safeguarding your account credentials. You must promptly notify us of any unauthorized use of your account. Sirvya strictly prohibits: account sharing/selling/transferring; using bots/scripts/scraping tools; reverse engineering/decompiling; or attempting to bypass platform security.\n\n'
-                            '1.4 Future Subscription & Marketplace Terms\nWhile Sirvya does not currently process direct financial transactions, the platform is structured for future monetization, including subscriptions and marketplace transactions. Separate terms covering chargebacks, recurring billing, and processing fees will take effect upon integration.\n\n'
-                            '1.5 Limitation of Liability & Force Majeure\nTo the maximum extent permitted by applicable law, DevUnivers and Sirvya shall not be held liable for indirect, incidental, special, or consequential damages arising from app usage, booking disputes, or interactions between Users and Coaches/Gyms.\n\n'
-                            '1.6 Governing Law & Dispute Resolution\nThese terms are governed by and construed in accordance with the laws of the Kingdom of Morocco. Any disputes shall be subject to the exclusive jurisdiction of the competent courts of Morocco.',
+                                '1.2 Eligibility & Age Requirements\nUsers must be at least 18 years old (or the legal age of majority in their jurisdiction) to independently register for an account. Minors between the ages of 13 and 17 may only use the platform with verifiable parental or guardian consent. Sirvya is not intended for children under the age of 13. We reserve the right to request age verification and terminate accounts that violate this provision.\n\n'
+                                '1.3 Account Security, Integrity, & Prohibited Actions\nYou are fully responsible for safeguarding your account credentials. You must promptly notify us of any unauthorized use of your account. Sirvya strictly prohibits: account sharing/selling/transferring; using bots/scripts/scraping tools; reverse engineering/decompiling; or attempting to bypass platform security.\n\n'
+                                '1.4 Future Subscription & Marketplace Terms\nWhile Sirvya does not currently process direct financial transactions, the platform is structured for future monetization, including subscriptions and marketplace transactions. Separate terms covering chargebacks, recurring billing, and processing fees will take effect upon integration.\n\n'
+                                '1.5 Limitation of Liability & Force Majeure\nTo the maximum extent permitted by applicable law, DevUnivers and Sirvya shall not be held liable for indirect, incidental, special, or consequential damages arising from app usage, booking disputes, or interactions between Users and Coaches/Gyms.\n\n'
+                                '1.6 Governing Law & Dispute Resolution\nThese terms are governed by and construed in accordance with the laws of the Kingdom of Morocco. Any disputes shall be subject to the exclusive jurisdiction of the competent courts of Morocco.',
                           ),
                           _buildLegalTextSection(
                             '2. Privacy Policy',
                             '2.1 Data Collection & Purpose\nSirvya collects personal and usage data exclusively to provide, personalize, and improve the user experience (Name, email, phone number, profile picture, height, weight, BMI, chat messages, booking history).\n\n'
-                            '2.2 Data Security, Storage, & Encryption\nSirvya employs robust security measures. All passwords are cryptographically hashed and never stored in plain text. Communications between the app and servers use TLS/SSL encryption.\n\n'
-                            '2.3 Data Retention\nWe retain personal data as long as your account remains active or as strictly necessary to fulfill operational/legal obligations.',
+                                '2.2 Data Security, Storage, & Encryption\nSirvya employs robust security measures. All passwords are cryptographically hashed and never stored in plain text. Communications between the app and servers use TLS/SSL encryption.\n\n'
+                                '2.3 Data Retention\nWe retain personal data as long as your account remains active or as strictly necessary to fulfill operational/legal obligations.',
                           ),
                           _buildLegalTextSection(
                             '3. Health & Medical Disclaimer',
                             '3.1 Not a Healthcare Provider\nSIRVYA IS NOT A MEDICAL PLATFORM, HEALTHCARE PROVIDER, OR DIAGNOSTIC TOOL. Platform features and independent Coach services are not substitutes for professional medical advice, diagnosis, or treatment.\n\n'
-                            '3.2 Assumption of Risk\nEngaging in physical exercise involves inherent risks. Users must consult a physician before starting any training or nutrition program booked through Sirvya. Users voluntarily assume all physical risks.\n\n'
-                            '3.3 Emergencies\nIn a medical emergency during a session, users must immediately contact local emergency medical services.',
+                                '3.2 Assumption of Risk\nEngaging in physical exercise involves inherent risks. Users must consult a physician before starting any training or nutrition program booked through Sirvya. Users voluntarily assume all physical risks.\n\n'
+                                '3.3 Emergencies\nIn a medical emergency during a session, users must immediately contact local emergency medical services.',
                           ),
                           _buildLegalTextSection(
                             '4. Coach & Gym Terms (Independent Contractor Agreement)',
                             '4.1 Platform Role & Independent Status\nSirvya does not employ coaches, trainers, nutritionists, or gym staff. All Coaches and Gyms operate as independent businesses/contractors.\n\n'
-                            '4.2 Comprehensive Liability Waiver\nCoaches and Gyms are solely responsible for workout safety, nutrition advice, injury prevention, and qualification maintenance.\n\n'
-                            '4.3 Fraudulent Credentials & Misrepresentation\nUploading false certificates or lying about qualifications results in immediate account termination and potential legal action.',
+                                '4.2 Comprehensive Liability Waiver\nCoaches and Gyms are solely responsible for workout safety, nutrition advice, injury prevention, and qualification maintenance.\n\n'
+                                '4.3 Fraudulent Credentials & Misrepresentation\nUploading false certificates or lying about qualifications results in immediate account termination and potential legal action.',
                           ),
                           _buildLegalTextSection(
                             '5. Community Guidelines',
@@ -1617,7 +1783,7 @@ class _RegisterScreenState extends State<RegisterScreen>
                           _buildLegalTextSection(
                             '6. Data Deletion Policy',
                             '6.1 Requesting Deletion\nUsers may request account deletion directly through app settings or by writing to privacy@devunivers.com.\n\n'
-                            '6.2 Processing\nData is anonymized or erased within 30 days, subject to legal/regulatory exceptions.',
+                                '6.2 Processing\nData is anonymized or erased within 30 days, subject to legal/regulatory exceptions.',
                           ),
                           _buildLegalTextSection(
                             '7. Cookie Policy',
@@ -1626,12 +1792,12 @@ class _RegisterScreenState extends State<RegisterScreen>
                           _buildLegalTextSection(
                             '8. Copyright & Intellectual Property',
                             '8.1 Platform IP: All branding, source code, UI/UX, and logos belong exclusively to DevUnivers.\n'
-                            '8.2 User & AI-Generated Content: Uploading copyrighted or fraudulent AI-generated content is strictly prohibited.',
+                                '8.2 User & AI-Generated Content: Uploading copyrighted or fraudulent AI-generated content is strictly prohibited.',
                           ),
                           _buildLegalTextSection(
                             '9. Booking & Cancellation Policy',
                             '9.1 Commitment: Automated systems detect and block fake bookings.\n'
-                            '9.2 Cancellations: Enforced per the individual provider\'s rules.',
+                                '9.2 Cancellations: Enforced per the individual provider\'s rules.',
                           ),
                         ],
                       ),
@@ -1646,7 +1812,8 @@ class _RegisterScreenState extends State<RegisterScreen>
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.sand,
                       minimumSize: const Size.fromHeight(50),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14)),
                     ),
                     child: const Text(
                       'I AGREE & ACCEPT TERMS',
@@ -1694,7 +1861,6 @@ class _RegisterScreenState extends State<RegisterScreen>
       ),
     );
   }
-
 
   Widget _buildCTA() {
     return Column(children: [
@@ -1942,7 +2108,9 @@ class _RoleTile extends StatelessWidget {
               ? AppColors.sand.withValues(alpha: 0.10)
               : AppColors.cyprus.withValues(alpha: 0.45),
           border: Border.all(
-            color: selected ? AppColors.sand : Colors.white.withValues(alpha: 0.15),
+            color: selected
+                ? AppColors.sand
+                : Colors.white.withValues(alpha: 0.15),
             width: selected ? 1.5 : 1,
           ),
           borderRadius: BorderRadius.circular(16),
@@ -1991,12 +2159,15 @@ class _RoleTile extends StatelessWidget {
               shape: BoxShape.circle,
               color: selected ? AppColors.sand : Colors.transparent,
               border: Border.all(
-                color: selected ? AppColors.sand : Colors.white.withValues(alpha: 0.3),
+                color: selected
+                    ? AppColors.sand
+                    : Colors.white.withValues(alpha: 0.3),
                 width: 1.5,
               ),
             ),
             child: selected
-                ? const Icon(Icons.check_rounded, size: 13, color: AppColors.cyprus)
+                ? const Icon(Icons.check_rounded,
+                    size: 13, color: AppColors.cyprus)
                 : null,
           ),
         ]),
@@ -2032,20 +2203,26 @@ class _GenderTile extends StatelessWidget {
               ? AppColors.sand.withValues(alpha: 0.10)
               : AppColors.cyprus.withValues(alpha: 0.45),
           border: Border.all(
-            color: selected ? AppColors.sand : Colors.white.withValues(alpha: 0.15),
+            color: selected
+                ? AppColors.sand
+                : Colors.white.withValues(alpha: 0.15),
             width: selected ? 1.5 : 1,
           ),
           borderRadius: BorderRadius.circular(14),
         ),
         child: Row(children: [
           Icon(icon,
-              color: selected ? AppColors.sand : Colors.white.withValues(alpha: 0.55),
+              color: selected
+                  ? AppColors.sand
+                  : Colors.white.withValues(alpha: 0.55),
               size: 22),
           const SizedBox(width: 14),
           Text(
             label,
             style: TextStyle(
-              color: selected ? Colors.white : Colors.white.withValues(alpha: 0.55),
+              color: selected
+                  ? Colors.white
+                  : Colors.white.withValues(alpha: 0.55),
               fontSize: 15,
               fontWeight: selected ? FontWeight.w600 : FontWeight.w400,
             ),
@@ -2059,12 +2236,15 @@ class _GenderTile extends StatelessWidget {
               shape: BoxShape.circle,
               color: selected ? AppColors.sand : Colors.transparent,
               border: Border.all(
-                color: selected ? AppColors.sand : Colors.white.withValues(alpha: 0.3),
+                color: selected
+                    ? AppColors.sand
+                    : Colors.white.withValues(alpha: 0.3),
                 width: 1.5,
               ),
             ),
             child: selected
-                ? const Icon(Icons.check_rounded, size: 12, color: AppColors.cyprus)
+                ? const Icon(Icons.check_rounded,
+                    size: 12, color: AppColors.cyprus)
                 : null,
           ),
         ]),
@@ -2134,7 +2314,9 @@ class _PasswordStrengthBar extends StatelessWidget {
               margin: const EdgeInsets.only(right: 4),
               height: 4,
               decoration: BoxDecoration(
-                color: i < _strength ? _strengthColor : Colors.white.withValues(alpha: 0.15),
+                color: i < _strength
+                    ? _strengthColor
+                    : Colors.white.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -2212,7 +2394,9 @@ class _RegisterFieldState extends State<_RegisterField> {
         AnimatedDefaultTextStyle(
           duration: const Duration(milliseconds: 200),
           style: TextStyle(
-            color: _isFocused ? AppColors.sand : Colors.white.withValues(alpha: 0.55),
+            color: _isFocused
+                ? AppColors.sand
+                : Colors.white.withValues(alpha: 0.55),
             fontSize: 12,
             fontWeight: FontWeight.w700,
             letterSpacing: 0.8,
@@ -2265,7 +2449,9 @@ class _RegisterFieldState extends State<_RegisterField> {
                 ),
                 child: Icon(
                   widget.icon,
-                  color: _isFocused ? AppColors.sand : Colors.white.withValues(alpha: 0.45),
+                  color: _isFocused
+                      ? AppColors.sand
+                      : Colors.white.withValues(alpha: 0.45),
                   size: 17,
                 ),
               ),
@@ -2329,51 +2515,3 @@ class _RegisterFieldState extends State<_RegisterField> {
 }
 
 // â”€â”€â”€ Notice Banner â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-
-class _NoticeBanner extends StatelessWidget {
-  final String role;
-
-  const _NoticeBanner({required this.role});
-
-  @override
-  Widget build(BuildContext context) {
-    final isCoach = role == 'coach';
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: _orange.withValues(alpha: 0.08),
-        border: Border.all(color: _orange.withValues(alpha: 0.3)),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        const Icon(Icons.info_outline_rounded, color: _orange, size: 18),
-        const SizedBox(width: 10),
-        Expanded(
-          child:
-              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            const Text(
-              'Approval required',
-              style: TextStyle(
-                color: _orange,
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              isCoach
-                  ? 'Your coach account will be reviewed by an advisor. You can start once approved.'
-                  : 'Your advisor account will be activated after verification by the administration.',
-              style: TextStyle(
-                color: Colors.white.withValues(alpha: 0.6),
-                fontSize: 12,
-                height: 1.5,
-              ),
-            ),
-          ]),
-        ),
-      ]),
-    );
-  }
-}
-

@@ -1,3 +1,4 @@
+import '../../services/live_updates.dart';
 import 'package:flutter/material.dart';
 import '../../services/apiService.dart';
 import 'coachInviteClients.dart';
@@ -20,7 +21,23 @@ class CoachClients extends StatefulWidget {
 
 enum _ClientSort { az, za, newest }
 
-class _CoachClientsState extends State<CoachClients> {
+class _CoachClientsState extends State<CoachClients>
+    with LiveUpdates<CoachClients> {
+  @override
+  Set<String> get liveDomains => {
+        'clients',
+        'invitations',
+        'coach-clients',
+        'profile',
+        'edit',
+        'reservations',
+        'pricing'
+      };
+  @override
+  Future<void> refreshLiveData() async {
+    await _load(silent: true);
+  }
+
   final _searchCtrl = TextEditingController();
   String _query = '';
   String _filter = 'All';
@@ -43,11 +60,12 @@ class _CoachClientsState extends State<CoachClients> {
     super.dispose();
   }
 
-  Future<void> _load() async {
-    setState(() {
-      _loading = true;
-      _error = false;
-    });
+  Future<void> _load({bool silent = false}) async {
+    if (!silent)
+      setState(() {
+        _loading = true;
+        _error = false;
+      });
     final results = await Future.wait([
       ApiService.get('/coach/clients'),
       ApiService.get('/coach/invitations'),
@@ -77,18 +95,21 @@ class _CoachClientsState extends State<CoachClients> {
   List<dynamic> get _filtered {
     final q = _query.trim().toLowerCase();
     final list = _clients.where((c) {
-      final name = '${c['firstName'] ?? ''} ${c['lastName'] ?? ''}'.toLowerCase();
+      final name =
+          '${c['firstName'] ?? ''} ${c['lastName'] ?? ''}'.toLowerCase();
       final email = (c['email'] ?? '').toString().toLowerCase();
       final matchQuery = q.isEmpty || name.contains(q) || email.contains(q);
       final matchFilter = _filter == 'All' ||
-          (_filter == 'Premium' && _premiumOf(c)) ||
-          (_filter == 'Standard' && !_premiumOf(c));
+          (_filter == 'Upcoming' && _count(c, 'upcomingCount') > 0) ||
+          (_filter == 'Pending' && _count(c, 'pendingCount') > 0);
       return matchQuery && matchFilter;
     }).toList();
 
     int byName(dynamic a, dynamic b) {
-      final an = '${a['firstName'] ?? ''} ${a['lastName'] ?? ''}'.trim().toLowerCase();
-      final bn = '${b['firstName'] ?? ''} ${b['lastName'] ?? ''}'.trim().toLowerCase();
+      final an =
+          '${a['firstName'] ?? ''} ${a['lastName'] ?? ''}'.trim().toLowerCase();
+      final bn =
+          '${b['firstName'] ?? ''} ${b['lastName'] ?? ''}'.trim().toLowerCase();
       return an.compareTo(bn);
     }
 
@@ -113,7 +134,11 @@ class _CoachClientsState extends State<CoachClients> {
     return list;
   }
 
-  int get _premiumCount => _clients.where(_premiumOf).length;
+  int _count(dynamic c, String key) => int.tryParse('${c[key] ?? 0}') ?? 0;
+  int get _upcomingCount =>
+      _clients.where((c) => _count(c, 'upcomingCount') > 0).length;
+  int get _pendingCount =>
+      _clients.where((c) => _count(c, 'pendingCount') > 0).length;
   // Only pending invitations are actionable. Accepted invitations become
   // connected clients and declined ones are dismissed, so neither should
   // linger in the invitations section.
@@ -178,46 +203,46 @@ class _CoachClientsState extends State<CoachClients> {
       body: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 720),
-          child: Column(children: [
-            _buildTopBar(),
-            Expanded(
-              child: _loading
-                  ? Center(child: CircularProgressIndicator(color: cs.primary))
-                  : _error
-                      ? _buildError()
-                      : RefreshIndicator(
-                          color: cs.primary,
-                          backgroundColor: f.card,
-                          onRefresh: _load,
-                          child: ListView(
-                            physics: const AlwaysScrollableScrollPhysics(),
-                            padding: const EdgeInsets.fromLTRB(20, 4, 20, 20),
-                            children: [
-                              if (_pendingInvitations.isNotEmpty) ...[
-                                _buildInvitationsSection(),
-                                const SizedBox(height: 20),
-                              ],
-                              Text(
-                                'CONNECTED CLIENTS',
-                                style: TextStyle(
-                                  color: f.textMuted,
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w800,
-                                  letterSpacing: 0.8,
-                                ),
-                              ),
-                              const SizedBox(height: 10),
-                              if (_clients.isEmpty)
-                                _buildClientsEmptyCard()
-                              else if (_filtered.isEmpty)
-                                _buildNoResults()
-                              else
-                                ..._filtered.map(_buildClientCard),
-                            ],
-                          ),
-                        ),
-            ),
-          ]),
+          child: _loading
+              ? Center(child: CircularProgressIndicator(color: cs.primary))
+              : _error
+                  ? _buildError()
+                  : RefreshIndicator(
+                      color: cs.primary,
+                      backgroundColor: f.card,
+                      onRefresh: _load,
+                      child: ListView(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        padding: const EdgeInsets.only(bottom: 24),
+                        children: [
+                          _buildTopBar(),
+                          Padding(
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 20),
+                              child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    if (_pendingInvitations.isNotEmpty) ...[
+                                      _buildInvitationsSection(),
+                                      const SizedBox(height: 20)
+                                    ],
+                                    Text('YOUR CLIENTS',
+                                        style: TextStyle(
+                                            color: f.textMuted,
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w800,
+                                            letterSpacing: .8)),
+                                    const SizedBox(height: 10),
+                                    if (_clients.isEmpty)
+                                      _buildClientsEmptyCard()
+                                    else if (_filtered.isEmpty)
+                                      _buildNoResults()
+                                    else
+                                      ..._filtered.map(_buildClientCard),
+                                  ])),
+                        ],
+                      ),
+                    ),
         ),
       ),
     );
@@ -232,16 +257,21 @@ class _CoachClientsState extends State<CoachClients> {
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [
           Expanded(
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            child:
+                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text('My Clients',
-                  style: TextStyle(color: cs.onSurface, fontSize: 26, fontWeight: FontWeight.w800, letterSpacing: -0.5)),
+                  style: TextStyle(
+                      color: cs.onSurface,
+                      fontSize: 26,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: -0.5)),
               const SizedBox(height: 2),
               Text(
                 _loading
                     ? 'Loading…'
                     : count == 0
-                        ? 'Clients connected to you will appear here'
-                        : '$count client${count == 1 ? '' : 's'} connected to you',
+                        ? 'Bookings and invitations bring your clients here'
+                        : '$count client${count == 1 ? '' : 's'} • Sessions and conversations',
                 style: TextStyle(color: f.textMuted, fontSize: 12.5),
               ),
             ]),
@@ -249,31 +279,39 @@ class _CoachClientsState extends State<CoachClients> {
           _buildSortButton(),
           const SizedBox(width: 8),
           GestureDetector(
-            onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => const CoachInviteClients())),
+            onTap: () => Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const CoachInviteClients())),
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
-              decoration: BoxDecoration(color: cs.primary, borderRadius: BorderRadius.circular(12)),
+              decoration: BoxDecoration(
+                  color: cs.primary, borderRadius: BorderRadius.circular(12)),
               child: Row(mainAxisSize: MainAxisSize.min, children: [
                 Icon(Icons.person_add_rounded, color: cs.onPrimary, size: 16),
                 const SizedBox(width: 6),
-                Text('Invite', style: TextStyle(color: cs.onPrimary, fontSize: 13, fontWeight: FontWeight.w700)),
+                Text('Invite',
+                    style: TextStyle(
+                        color: cs.onPrimary,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700)),
               ]),
             ),
           ),
         ]),
         const SizedBox(height: 14),
         Row(children: [
-          Expanded(child: _statBox('${_clients.length}', 'Total', cs.onSurface)),
-          const SizedBox(width: 10),
           Expanded(
-              child: _statBox(
-                  '$_pendingInvitationCount', 'Pending', f.warning)),
+              child: _statBox('${_clients.length}', 'Total', cs.onSurface)),
           const SizedBox(width: 10),
-          Expanded(child: _statBox('$_premiumCount', 'Premium', cs.primary)),
+          Expanded(child: _statBox('$_pendingCount', 'Pending', f.warning)),
+          const SizedBox(width: 10),
+          Expanded(child: _statBox('$_upcomingCount', 'Upcoming', cs.primary)),
         ]),
         const SizedBox(height: 14),
         Container(
-          decoration: BoxDecoration(color: f.card, borderRadius: BorderRadius.circular(14), border: Border.all(color: f.border)),
+          decoration: BoxDecoration(
+              color: f.card,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: f.border)),
           child: TextField(
             controller: _searchCtrl,
             onChanged: (v) => setState(() => _query = v),
@@ -281,31 +319,39 @@ class _CoachClientsState extends State<CoachClients> {
             decoration: InputDecoration(
               hintText: 'Search clients...',
               hintStyle: TextStyle(color: f.textMuted, fontSize: 14),
-              prefixIcon: Icon(Icons.search_rounded, color: f.textMuted, size: 20),
+              prefixIcon:
+                  Icon(Icons.search_rounded, color: f.textMuted, size: 20),
               suffixIcon: _isSearching
                   ? GestureDetector(
                       onTap: () {
                         _searchCtrl.clear();
                         setState(() => _query = '');
                       },
-                      child: Icon(Icons.close_rounded, color: f.textMuted, size: 18),
+                      child: Icon(Icons.close_rounded,
+                          color: f.textMuted, size: 18),
                     )
                   : null,
               border: InputBorder.none,
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              enabledBorder: InputBorder.none,
+              focusedBorder: InputBorder.none,
+              filled: false,
+              contentPadding:
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             ),
           ),
         ),
         const SizedBox(height: 12),
-        Row(
-          children: ['All', 'Premium', 'Standard'].map((filter) {
+        Wrap(
+          runSpacing: 8,
+          children: ['All', 'Upcoming', 'Pending'].map((filter) {
             final sel = _filter == filter;
             return GestureDetector(
               onTap: () => setState(() => _filter = filter),
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 200),
                 margin: const EdgeInsets.only(right: 8),
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
                 decoration: BoxDecoration(
                   color: sel ? cs.primary : f.card,
                   borderRadius: BorderRadius.circular(20),
@@ -339,7 +385,10 @@ class _CoachClientsState extends State<CoachClients> {
       ],
       child: Container(
         padding: const EdgeInsets.all(9),
-        decoration: BoxDecoration(color: f.card, borderRadius: BorderRadius.circular(12), border: Border.all(color: f.border)),
+        decoration: BoxDecoration(
+            color: f.card,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: f.border)),
         child: Icon(Icons.sort_rounded, color: cs.onSurface, size: 20),
       ),
     );
@@ -355,7 +404,10 @@ class _CoachClientsState extends State<CoachClients> {
             size: 18, color: selected ? cs.primary : context.fitlek.textMuted),
         const SizedBox(width: 10),
         Text(label,
-            style: TextStyle(color: cs.onSurface, fontSize: 13.5, fontWeight: selected ? FontWeight.w700 : FontWeight.w500)),
+            style: TextStyle(
+                color: cs.onSurface,
+                fontSize: 13.5,
+                fontWeight: selected ? FontWeight.w700 : FontWeight.w500)),
       ]),
     );
   }
@@ -364,11 +416,16 @@ class _CoachClientsState extends State<CoachClients> {
     final f = context.fitlek;
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 12),
-      decoration: BoxDecoration(color: f.card, borderRadius: BorderRadius.circular(12)),
+      decoration:
+          BoxDecoration(color: f.card, borderRadius: BorderRadius.circular(12)),
       child: Column(children: [
-        Text(value, style: TextStyle(color: color, fontSize: 22, fontWeight: FontWeight.w800)),
+        Text(value,
+            style: TextStyle(
+                color: color, fontSize: 22, fontWeight: FontWeight.w800)),
         const SizedBox(height: 2),
-        Text(label, style: TextStyle(color: f.textMuted, fontSize: 11, fontWeight: FontWeight.w500)),
+        Text(label,
+            style: TextStyle(
+                color: f.textMuted, fontSize: 11, fontWeight: FontWeight.w500)),
       ]),
     );
   }
@@ -393,8 +450,7 @@ class _CoachClientsState extends State<CoachClients> {
             const Spacer(),
             if (_pendingInvitationCount > 0)
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
                 decoration: BoxDecoration(
                   color: f.warning.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(20),
@@ -433,8 +489,7 @@ class _CoachClientsState extends State<CoachClients> {
             decoration: BoxDecoration(
               color: f.card,
               borderRadius: BorderRadius.circular(18),
-              border:
-                  Border.all(color: statusColor.withValues(alpha: 0.25)),
+              border: Border.all(color: statusColor.withValues(alpha: 0.25)),
             ),
             child: Column(
               children: [
@@ -486,8 +541,7 @@ class _CoachClientsState extends State<CoachClients> {
                           const SizedBox(height: 3),
                           Text(
                             _formatInvitationDate(invitation['clickedAt']),
-                            style:
-                                TextStyle(color: f.textMuted, fontSize: 11),
+                            style: TextStyle(color: f.textMuted, fontSize: 11),
                           ),
                         ],
                       ),
@@ -522,8 +576,7 @@ class _CoachClientsState extends State<CoachClients> {
                         child: OutlinedButton(
                           onPressed: isResponding
                               ? null
-                              : () =>
-                                  _respondToInvitation(invitation, false),
+                              : () => _respondToInvitation(invitation, false),
                           style: OutlinedButton.styleFrom(
                             foregroundColor: f.error,
                             side: BorderSide(
@@ -598,7 +651,7 @@ class _CoachClientsState extends State<CoachClients> {
           Icon(Icons.people_outline_rounded, color: f.textMuted, size: 44),
           const SizedBox(height: 10),
           Text(
-            'No connected clients yet',
+            'Your coaching clients will appear here',
             style: TextStyle(
               color: cs.onSurface,
               fontSize: 14,
@@ -607,13 +660,19 @@ class _CoachClientsState extends State<CoachClients> {
           ),
           const SizedBox(height: 4),
           Text(
-            'Accept a pending invitation to add the client.',
+            'Clients appear when they book with you or when you accept their invitation.',
             textAlign: TextAlign.center,
             style: TextStyle(color: f.textMuted, fontSize: 12.5),
           ),
         ],
       ),
     );
+  }
+
+  String _nextSessionLabel(dynamic raw) {
+    final date = DateTime.tryParse(raw.toString())?.toLocal();
+    if (date == null) return 'Upcoming session';
+    return 'Next: ${date.day}/${date.month} at ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
   }
 
   Widget _buildClientCard(dynamic c) {
@@ -629,7 +688,8 @@ class _CoachClientsState extends State<CoachClients> {
         decoration: BoxDecoration(
           color: f.card,
           borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: isPremium ? cs.primary.withValues(alpha: 0.15) : f.border),
+          border: Border.all(
+              color: isPremium ? cs.primary.withValues(alpha: 0.15) : f.border),
         ),
         child: Row(children: [
           Stack(children: [
@@ -638,11 +698,18 @@ class _CoachClientsState extends State<CoachClients> {
               height: 50,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                border: Border.all(color: isPremium ? cs.primary.withValues(alpha: 0.5) : f.border, width: 1.5),
+                border: Border.all(
+                    color: isPremium
+                        ? cs.primary.withValues(alpha: 0.5)
+                        : f.border,
+                    width: 1.5),
               ),
               child: ClipOval(
                 child: (avatar != null && avatar.isNotEmpty)
-                    ? Image.network(avatar, fit: BoxFit.cover, errorBuilder: (_, __, ___) => Icon(Icons.person, color: f.textMuted, size: 24))
+                    ? Image.network(avatar,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) =>
+                            Icon(Icons.person, color: f.textMuted, size: 24))
                     : Icon(Icons.person, color: f.textMuted, size: 24),
               ),
             ),
@@ -653,23 +720,40 @@ class _CoachClientsState extends State<CoachClients> {
                 child: Container(
                   width: 18,
                   height: 18,
-                  decoration: BoxDecoration(color: cs.primary, shape: BoxShape.circle),
-                  child: Icon(Icons.star_rounded, color: cs.onPrimary, size: 11),
+                  decoration:
+                      BoxDecoration(color: cs.primary, shape: BoxShape.circle),
+                  child:
+                      Icon(Icons.star_rounded, color: cs.onPrimary, size: 11),
                 ),
               ),
           ]),
           const SizedBox(width: 14),
           Expanded(
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            child:
+                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Text('${c['firstName'] ?? ''} ${c['lastName'] ?? ''}'.trim(),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: TextStyle(color: cs.onSurface, fontSize: 14, fontWeight: FontWeight.w600)),
+                  style: TextStyle(
+                      color: cs.onSurface,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600)),
               const SizedBox(height: 3),
-              Text((c['email'] ?? '').toString(),
+              Text(
+                  '${_count(c, 'sessionCount')} sessions • ${_count(c, 'upcomingCount')} upcoming • ${_count(c, 'pendingCount')} pending',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(color: f.textMuted, fontSize: 12)),
+              if (c['nextSessionAt'] != null) ...[
+                const SizedBox(height: 4),
+                Text(_nextSessionLabel(c['nextSessionAt']),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                        color: f.success,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600)),
+              ],
             ]),
           ),
           const SizedBox(width: 8),
@@ -686,14 +770,20 @@ class _CoachClientsState extends State<CoachClients> {
       child: Column(mainAxisSize: MainAxisSize.min, children: [
         Icon(Icons.wifi_off_rounded, color: f.textMuted, size: 52),
         const SizedBox(height: 12),
-        Text('Unable to load clients', style: TextStyle(color: f.textMuted, fontSize: 15)),
+        Text('Unable to load clients',
+            style: TextStyle(color: f.textMuted, fontSize: 15)),
         const SizedBox(height: 20),
         GestureDetector(
           onTap: _load,
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 26, vertical: 12),
-            decoration: BoxDecoration(color: cs.primary, borderRadius: BorderRadius.circular(14)),
-            child: Text('Retry', style: TextStyle(color: cs.onPrimary, fontWeight: FontWeight.w800, fontSize: 13)),
+            decoration: BoxDecoration(
+                color: cs.primary, borderRadius: BorderRadius.circular(14)),
+            child: Text('Retry',
+                style: TextStyle(
+                    color: cs.onPrimary,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 13)),
           ),
         ),
       ]),
@@ -709,8 +799,15 @@ class _CoachClientsState extends State<CoachClients> {
         child: Column(mainAxisSize: MainAxisSize.min, children: [
           Icon(Icons.search_off_rounded, color: f.textMuted, size: 52),
           const SizedBox(height: 12),
-          Text(_isSearching ? 'No clients match your search.' : 'No clients match this filter.',
-              textAlign: TextAlign.center, style: TextStyle(color: cs.onSurface, fontSize: 14.5, fontWeight: FontWeight.w600)),
+          Text(
+              _isSearching
+                  ? 'No clients match your search.'
+                  : 'No clients match this filter.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                  color: cs.onSurface,
+                  fontSize: 14.5,
+                  fontWeight: FontWeight.w600)),
         ]),
       ),
     );

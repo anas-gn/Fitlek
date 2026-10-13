@@ -1,8 +1,17 @@
+import 'campaign_service.dart';
+import 'socketService.dart';
+import 'notification_delivery_gate.dart';
+import 'package:audioplayers/audioplayers.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'apiService.dart';
+import 'dart:convert';
+import 'dart:async';
+import '../globals.dart';
+import 'notification_navigation.dart';
 
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
@@ -21,24 +30,59 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 class NotificationService {
   NotificationService._privateConstructor();
 
-  static final NotificationService instance = NotificationService._privateConstructor();
+  static final NotificationService instance =
+      NotificationService._privateConstructor();
 
-  final FirebaseMessaging _messaging = FirebaseMessaging.instance;
-  final FlutterLocalNotificationsPlugin _localNotifications = FlutterLocalNotificationsPlugin();
+  late final FirebaseMessaging _messaging = FirebaseMessaging.instance;
+  final FlutterLocalNotificationsPlugin _localNotifications =
+      FlutterLocalNotificationsPlugin();
 
   bool _isInitialized = false;
+  bool _navigationReady = false;
+  String? _pendingPayload;
+  final _deliveryGate = NotificationDeliveryGate();
+  late final _sound = AudioPlayer();
+  Timer? _apnsRetry;
+  int _apnsAttempts = 0;
+
+  void resetSession() {
+    _navigationReady = false;
+    _pendingPayload = null;
+    _deliveryGate.clear();
+    _apnsRetry?.cancel();
+    _apnsAttempts = 0;
+  }
+
+  void navigationReady() {
+    _navigationReady = true;
+    SocketService().connect();
+    getFCMToken();
+    final payload = _pendingPayload;
+    _pendingPayload = null;
+    if (payload != null) _handleNotificationClick(payload);
+  }
 
   /// Get the current FCM token and save it locally & on server
   Future<String?> getFCMToken() async {
     try {
+      if (!kIsWeb &&
+          defaultTargetPlatform == TargetPlatform.iOS &&
+          await _messaging.getAPNSToken() == null) {
+        if (_apnsAttempts++ < 10 && _apnsRetry?.isActive != true) {
+          _apnsRetry = Timer(const Duration(seconds: 3), () => getFCMToken());
+        }
+        return null;
+      }
+      _apnsRetry?.cancel();
+      _apnsAttempts = 0;
       final token = await _messaging.getToken();
       if (token != null) {
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('fcm_token', token);
         if (kDebugMode) {
-          print('FCM Token retrieved and saved locally: $token');
+          print('FCM token saved locally');
         }
-        
+
         // Try uploading to server if user is logged in
         final userToken = await ApiService.getToken();
         if (userToken != null && userToken.isNotEmpty) {
@@ -51,7 +95,12 @@ class NotificationService {
       return token;
     } catch (e) {
       if (kDebugMode) {
-        print('Error getting FCM token: $e');
+        if (e.toString().contains('permission-blocked')) {
+          print(
+              ' FCM Token ignored: Notification permission was blocked by the browser.');
+        } else {
+          print('Error getting FCM token: $e');
+        }
       }
       return null;
     }
@@ -60,6 +109,7 @@ class NotificationService {
   /// Initialize notification services
   Future<void> init() async {
     if (_isInitialized) return;
+    if (kIsWeb) _pendingPayload = Uri.base.queryParameters['notification'];
 
     // 1. Request Permission (iOS and Android 13+)
     NotificationSettings settings = await _messaging.requestPermission(
@@ -68,6 +118,8 @@ class NotificationService {
       sound: true,
       provisional: false,
     );
+    await _messaging.setForegroundNotificationPresentationOptions(
+        alert: false, badge: false, sound: false);
 
     // Request permission for local notifications (Android 13+ and iOS)
     if (!kIsWeb) {
@@ -87,14 +139,16 @@ class NotificationService {
     }
 
     if (kDebugMode) {
-      print('User granted notification permission: ${settings.authorizationStatus}');
+      print(
+          'User granted notification permission: ${settings.authorizationStatus}');
     }
 
     // 4. Create high importance Android notification channel
     const AndroidNotificationChannel channel = AndroidNotificationChannel(
       'sirvya_high_importance_channel', // id
       'Sirvya Notifications', // title
-      description: 'This channel is used for important notifications.', // description
+      description:
+          'This channel is used for important notifications.', // description
       importance: Importance.max,
       playSound: true,
       enableVibration: true,
@@ -102,7 +156,8 @@ class NotificationService {
 
     if (!kIsWeb) {
       // 2. Set up background message handler
-      FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+      FirebaseMessaging.onBackgroundMessage(
+          _firebaseMessagingBackgroundHandler);
 
       // 3. Initialize Flutter Local Notifications for foreground notifications
       const AndroidInitializationSettings initializationSettingsAndroid =
@@ -115,7 +170,8 @@ class NotificationService {
         requestSoundPermission: false,
       );
 
-      const InitializationSettings initializationSettings = InitializationSettings(
+      const InitializationSettings initializationSettings =
+          InitializationSettings(
         android: initializationSettingsAndroid,
         iOS: initializationSettingsDarwin,
       );
@@ -126,6 +182,11 @@ class NotificationService {
           _handleNotificationClick(details.payload);
         },
       );
+      final launch =
+          await _localNotifications.getNotificationAppLaunchDetails();
+      if (launch?.didNotificationLaunchApp == true) {
+        _handleNotificationClick(launch?.notificationResponse?.payload);
+      }
 
       await _localNotifications
           .resolvePlatformSpecificImplementation<
@@ -133,41 +194,15 @@ class NotificationService {
           ?.createNotificationChannel(channel);
     }
 
-    // 5. Handle foreground messages
-    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-      if (kDebugMode) {
-        print('Received a foreground message: ${message.messageId}');
-      }
-
-      RemoteNotification? notification = message.notification;
-      AndroidNotification? android = message.notification?.android;
-
-      // If Android notification exists, display it using local notifications
-      if (notification != null && android != null && !kIsWeb) {
-        _localNotifications.show(
-          id: notification.hashCode,
-          title: notification.title,
-          body: notification.body,
-          notificationDetails: NotificationDetails(
-            android: AndroidNotificationDetails(
-              channel.id,
-              channel.name,
-              channelDescription: channel.description,
-              importance: channel.importance,
-              priority: Priority.high,
-              icon: android.smallIcon ?? '@mipmap/ic_launcher',
-              playSound: true,
-              enableVibration: true,
-            ),
-            iOS: const DarwinNotificationDetails(
-              presentAlert: true,
-              presentBadge: true,
-              presentSound: true,
-            ),
-          ),
-          payload: message.data.toString(),
-        );
-      }
+    // One presenter for socket and Firebase delivery; the notification ID deduplicates both.
+    SocketService().notifications.listen(presentIncoming);
+    FirebaseMessaging.onMessage.listen((message) {
+      presentIncoming({
+        ...message.data,
+        'title': message.notification?.title ?? message.data['title'],
+        'body': message.notification?.body ?? message.data['body'],
+        'messageID': message.messageId
+      });
     });
 
     // 6. Handle notification click when app is in background but open
@@ -175,7 +210,7 @@ class NotificationService {
       if (kDebugMode) {
         print('A new onMessageOpenedApp event was published!');
       }
-      _handleNotificationClick(message.data.toString());
+      _handleNotificationClick(jsonEncode(message.data));
     });
 
     // 7. Check if app was opened from a terminated state via a notification
@@ -184,7 +219,7 @@ class NotificationService {
       if (kDebugMode) {
         print('App opened from terminated state via notification');
       }
-      _handleNotificationClick(initialMessage.data.toString());
+      _handleNotificationClick(jsonEncode(initialMessage.data));
     }
 
     // 8. Log FCM Token for development/testing
@@ -195,7 +230,7 @@ class NotificationService {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString('fcm_token', newToken);
       if (kDebugMode) {
-        print('FCM Token Refreshed and saved locally: $newToken');
+        print('FCM token refreshed');
       }
       // Try uploading to server if user is logged in
       final userToken = await ApiService.getToken();
@@ -210,12 +245,80 @@ class NotificationService {
     _isInitialized = true;
   }
 
-  /// Handle actions on notification click
-  void _handleNotificationClick(String? payload) {
-    if (payload == null) return;
-    if (kDebugMode) {
-      print('Notification Clicked with payload: $payload');
+  Future<void> presentIncoming(Map<String, dynamic> item) async {
+    if (!_navigationReady ||
+        WidgetsBinding.instance.lifecycleState != AppLifecycleState.resumed)
+      return;
+    final user = await ApiService.getUserData();
+    if (user == null ||
+        (item['recipientUserID'] != null &&
+            '${item['recipientUserID']}' != '${user['id']}')) return;
+    final id = '${item['notificationID'] ?? item['messageID'] ?? ''}';
+    if (!_deliveryGate.accept(item)) return;
+    SocketService().invalidate('notifications');
+    if (item['type'] == 'new_message') SocketService().invalidate('messages');
+    if (item['type'] == 'app_campaign') CampaignService.check();
+    if (item['silent'] == true) return;
+    final title = '${item['title'] ?? 'Sirvya'}';
+    final body = '${item['body'] ?? ''}';
+    if (kIsWeb) {
+      // Browsers may require an earlier user gesture before allowing audio.
+      try {
+        await _sound.play(AssetSource('sounds/notification.wav'));
+      } catch (_) {}
+      final context = globalNavigatorKey.currentContext;
+      if (context != null && context.mounted) {
+        ScaffoldMessenger.maybeOf(context)?.showSnackBar(SnackBar(
+            content: Text('$title: $body'),
+            action: SnackBarAction(
+                label: 'Open',
+                onPressed: () => _handleNotificationClick(jsonEncode(item)))));
+      }
+      return;
     }
-    // TODO: Navigate to specific screen based on payload
+    await _localNotifications.show(
+        id: int.tryParse(id) ??
+            DateTime.now().millisecondsSinceEpoch.remainder(2147483647),
+        title: title,
+        body: body,
+        notificationDetails: const NotificationDetails(
+            android: AndroidNotificationDetails(
+                'sirvya_high_importance_channel', 'Sirvya Notifications',
+                channelDescription:
+                    'This channel is used for important notifications.',
+                importance: Importance.max,
+                priority: Priority.high,
+                playSound: true,
+                enableVibration: true,
+                icon: '@mipmap/ic_launcher'),
+            iOS: DarwinNotificationDetails(
+                presentAlert: true, presentBadge: true, presentSound: true)),
+        payload: jsonEncode(item));
+  }
+
+  /// Handle actions on notification click
+  Future<void> _handleNotificationClick(String? payload) async {
+    if (payload == null) return;
+    final context = globalNavigatorKey.currentContext;
+    if (!_navigationReady ||
+        context == null ||
+        await ApiService.getToken() == null) {
+      _pendingPayload = payload;
+      return;
+    }
+    try {
+      final item = Map<String, dynamic>.from(jsonDecode(payload));
+      final user = await ApiService.getUserData();
+      if (user == null ||
+          (item['recipientUserID'] != null &&
+              '${item['recipientUserID']}' != '${user['id']}')) return;
+      if (item['notificationID'] != null) {
+        await ApiService.patch(
+            '/reservations/notifications/${item['notificationID']}/read');
+      }
+      if (context.mounted) await NotificationNavigation.open(context, item);
+    } catch (error) {
+      debugPrint('Unable to open notification: $error');
+    }
   }
 }

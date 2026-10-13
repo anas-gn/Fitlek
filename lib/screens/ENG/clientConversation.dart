@@ -1,3 +1,9 @@
+import '../../components/ENG/chatImageBatchPreview.dart';
+import '../../components/ENG/chatSelection.dart';
+import '../../services/chat_media_store.dart';
+import '../../components/ENG/localChatMedia.dart';
+import '../../services/media_picker_service.dart';
+import '../../services/live_updates.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
@@ -8,14 +14,10 @@ import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 import 'package:record/record.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import '../../services/apiService.dart';
-import '../../components/ENG/audioPlayerWidget.dart';
 import '../../components/ENG/imagePreview.dart';
 import '../../services/socketService.dart';
 import 'package:flutter/foundation.dart'; // Add kIsWeb
-import 'package:http/http.dart' as http; // Add http
-
 
 class _Message {
   final int id;
@@ -25,6 +27,7 @@ class _Message {
   final String? mediaUrl;
   final String mediaType;
   final bool mediaExpired;
+  final bool deleted;
   final bool isRead;
   final DateTime createdAt;
   final String? senderName;
@@ -38,13 +41,27 @@ class _Message {
     this.mediaUrl,
     this.mediaType = 'text',
     this.mediaExpired = false,
+    this.deleted = false,
     required this.isRead,
     required this.createdAt,
     this.senderName,
     this.senderAvatar,
   });
 
+  _Message asDeleted() => _Message(
+      id: id,
+      conversationID: conversationID,
+      senderID: senderID,
+      body: 'This message was deleted',
+      mediaType: 'text',
+      deleted: true,
+      isRead: isRead,
+      createdAt: createdAt,
+      senderName: senderName,
+      senderAvatar: senderAvatar);
+
   factory _Message.fromJson(Map<String, dynamic> j) => _Message(
+        deleted: j['deletedAt'] != null,
         id: j['id'],
         conversationID: j['conversationID'],
         senderID: j['senderID'],
@@ -78,19 +95,132 @@ class ClientConversationScreen extends StatefulWidget {
   });
 
   @override
-  State<ClientConversationScreen> createState() => _ClientConversationScreenState();
+  State<ClientConversationScreen> createState() =>
+      _ClientConversationScreenState();
 }
 
-class _ClientConversationScreenState extends State<ClientConversationScreen> {
+class _ClientConversationScreenState extends State<ClientConversationScreen>
+    with LiveUpdates<ClientConversationScreen> {
+  @override
+  Set<String> get liveDomains => {'read_receipts', 'chat-actions', 'all'};
+  @override
+  Future<void> refreshLiveData() async {
+    final hidden =
+        await ApiService.get('/chat-actions/${widget.conversationID}/hidden');
+    if (!mounted) return;
+    if (hidden['ok'] == true && hidden['data'] is List) {
+      final rows = hidden['data'] as List;
+      final ids = rows
+          .where((m) => m['hidden'] == 1 || m['hidden'] == true)
+          .map((m) => int.tryParse('${m['id']}'))
+          .toSet();
+      final deleted = rows
+          .where((m) => m['deletedAt'] != null)
+          .map((m) => int.tryParse('${m['id']}'))
+          .toSet();
+      setState(() {
+        _messages.removeWhere((m) => ids.contains(m.id));
+        _messages = _messages
+            .map((m) => deleted.contains(m.id) ? m.asDeleted() : m)
+            .toList();
+      });
+    }
+    await _fetchMessages(silent: true);
+  }
+
   final TextEditingController _msgCtrl = TextEditingController();
   final ScrollController _scrollCtrl = ScrollController();
   final FocusNode _focusNode = FocusNode();
+
+  bool _selecting = false;
+  bool _deleting = false;
+  final Set<int> _selected = {};
+  void _toggleSelected(int id) {
+    if (id <= 0 || _deleting) return;
+    if (!_selected.contains(id) && _selected.length >= 100) {
+      ApiService.showError(context, 'Select up to 100 messages at a time.');
+      return;
+    }
+    setState(() {
+      _selecting = true;
+      if (!_selected.add(id)) _selected.remove(id);
+    });
+  }
+
+  Widget _selectionBar() => ChatSelectionBar(
+      count: _selected.length,
+      onClose: () => setState(() {
+            _selecting = false;
+            _selected.clear();
+          }),
+      onSelectAll: () => setState(() {
+            _selected.addAll(
+                _messages.map((m) => m.id).where((id) => id > 0).take(100));
+          }),
+      onDelete: _deleteSelected);
+  Future<void> _deleteSelected() async {
+    if (_deleting || _selected.isEmpty) return;
+    final selected = _messages.where((m) => _selected.contains(m.id)).toList();
+    final now = DateTime.now();
+    final everyone = selected.isNotEmpty &&
+        selected.every((m) =>
+            _isMe(m) &&
+            !m.deleted &&
+            now.difference(m.createdAt).inSeconds < 1800);
+    final scope = await showDialog<String>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+                title: Text('Delete ${_selected.length} messages?'),
+                content: const Text(
+                    'Delete for everyone is available for your own messages during the first 30 minutes.'),
+                actions: [
+                  TextButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      child: const Text('Cancel')),
+                  TextButton(
+                      onPressed: () => Navigator.pop(ctx, 'me'),
+                      child: const Text('Delete for me')),
+                  if (everyone)
+                    TextButton(
+                        onPressed: () => Navigator.pop(ctx, 'everyone'),
+                        child: const Text('Delete for everyone'))
+                ]));
+    if (scope == null || !mounted) return;
+    _deleting = true;
+    final ids = _selected.toList();
+    try {
+      final result = await ApiService.post(
+          '/chat-actions/${widget.conversationID}/delete',
+          {'messageIDs': ids, 'scope': scope});
+      if (!mounted) return;
+      if (result['ok'] != true) {
+        ApiService.showError(
+            context, result['message'] ?? 'Could not delete messages.');
+        return;
+      }
+      for (final id in ids) {
+        try {
+          await ChatMediaStore.instance.deleteLocal(id, removeThumbnail: true);
+        } catch (_) {}
+      }
+      if (!mounted) return;
+      setState(() {
+        _messages.removeWhere((m) => ids.contains(m.id));
+        _selected.clear();
+        _selecting = false;
+      });
+      await _fetchMessages();
+    } finally {
+      _deleting = false;
+    }
+  }
 
   List<_Message> _messages = [];
   bool _loading = true;
   bool _sending = false;
   String? _error;
   Timer? _refreshTimer;
+  StreamSubscription<Map<String, dynamic>>? _socketMessages;
 
   int _page = 1;
   bool _hasMore = true;
@@ -115,7 +245,7 @@ class _ClientConversationScreenState extends State<ClientConversationScreen> {
 
   @override
   void dispose() {
-    SocketService().offNewMessage();
+    _socketMessages?.cancel();
     SocketService().leaveRoom(widget.conversationID.toString());
     _msgCtrl.dispose();
     _scrollCtrl.dispose();
@@ -126,7 +256,10 @@ class _ClientConversationScreenState extends State<ClientConversationScreen> {
   }
 
   void _onScroll() {
-    if (_scrollCtrl.position.pixels >= _scrollCtrl.position.maxScrollExtent - 100 && !_loadingMore && _hasMore) {
+    if (_scrollCtrl.position.pixels >=
+            _scrollCtrl.position.maxScrollExtent - 100 &&
+        !_loadingMore &&
+        _hasMore) {
       _loadMore();
     }
   }
@@ -143,14 +276,19 @@ class _ClientConversationScreenState extends State<ClientConversationScreen> {
     final socketService = SocketService();
     socketService.connect();
     socketService.joinRoom(widget.conversationID.toString());
-    socketService.onNewMessage((data) {
+    _socketMessages?.cancel();
+    _socketMessages = socketService.messages.listen((data) {
       if (!mounted) return;
       // If message is from someone else, we add it to the list
-      if (data['senderID'].toString() != widget.clientID.toString()) {
+      if (data['conversationID'].toString() ==
+              widget.conversationID.toString() &&
+          data['senderID'].toString() != widget.clientID.toString() &&
+          !_messages.any((m) => m.id.toString() == data['id'].toString())) {
         setState(() {
           _messages.add(_Message.fromJson(data));
         });
         _scrollToBottom();
+        _fetchMessages(silent: true);
       }
     });
   }
@@ -159,15 +297,31 @@ class _ClientConversationScreenState extends State<ClientConversationScreen> {
     if (!silent) setState(() => _loading = true);
     try {
       final url = _getMessagesUrl(1);
-      final res = await http.get(Uri.parse(url), headers: _headers).timeout(const Duration(seconds: 10));
+      final res = await http
+          .get(Uri.parse(url), headers: _headers)
+          .timeout(Duration(seconds: 10));
 
       if (res.statusCode == 200) {
         final List data = jsonDecode(res.body);
-        final msgs = data.map((e) => _Message.fromJson(e as Map<String, dynamic>)).toList();
+        final msgs = data
+            .map((e) => _Message.fromJson(e as Map<String, dynamic>))
+            .toList();
 
         if (mounted) {
           setState(() {
-            _messages = msgs;
+            if (silent) {
+              final merged = <int, _Message>{
+                for (final m in _messages) m.id: m
+              };
+              for (final m in msgs) {
+                merged[m.id] = m;
+              }
+              _messages = merged.values.toList()
+                ..sort((a, b) => a.id.compareTo(b.id));
+            } else {
+              _messages = msgs;
+              _page = 1;
+            }
             _loading = false;
             _error = null;
           });
@@ -197,18 +351,24 @@ class _ClientConversationScreenState extends State<ClientConversationScreen> {
     try {
       final nextPage = _page + 1;
       final url = _getMessagesUrl(nextPage);
-      final res = await http.get(Uri.parse(url), headers: _headers).timeout(const Duration(seconds: 10));
+      final res = await http
+          .get(Uri.parse(url), headers: _headers)
+          .timeout(Duration(seconds: 10));
 
       if (res.statusCode == 200) {
         final List data = jsonDecode(res.body);
-        final newMsgs = data.map((e) => _Message.fromJson(e as Map<String, dynamic>)).toList();
+        final newMsgs = data
+            .map((e) => _Message.fromJson(e as Map<String, dynamic>))
+            .toList();
 
         if (mounted) {
           setState(() {
             if (newMsgs.isEmpty) {
               _hasMore = false;
             } else {
-              _messages.insertAll(0, newMsgs);
+              final existing = _messages.map((m) => m.id).toSet();
+              _messages.insertAll(
+                  0, newMsgs.where((m) => !existing.contains(m.id)));
               _page = nextPage;
             }
             _loadingMore = false;
@@ -223,6 +383,7 @@ class _ClientConversationScreenState extends State<ClientConversationScreen> {
   }
 
   Future<void> _sendMessage() async {
+    if (_batchSending) return;
     final text = _msgCtrl.text.trim();
     if (text.isEmpty) return;
 
@@ -241,7 +402,7 @@ class _ClientConversationScreenState extends State<ClientConversationScreen> {
               'mediaType': 'text',
             }),
           )
-          .timeout(const Duration(seconds: 10));
+          .timeout(Duration(seconds: 10));
 
       if (res.statusCode == 201) {
         await _fetchMessages(silent: true);
@@ -256,16 +417,17 @@ class _ClientConversationScreenState extends State<ClientConversationScreen> {
   }
 
   void _showAttachOptions() {
+    if (_batchSending || _isUploadingMedia) return;
     final cs = Theme.of(context).colorScheme;
     showModalBottomSheet(
       context: context,
       backgroundColor: context.fitlek.card,
-      shape: const RoundedRectangleBorder(
+      shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (_) => SafeArea(
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 20),
+          padding: EdgeInsets.symmetric(vertical: 20),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
@@ -273,7 +435,8 @@ class _ClientConversationScreenState extends State<ClientConversationScreen> {
                 Navigator.pop(context);
                 _pickAndSendSingleImage(ImageSource.camera);
               }),
-              _attachOption(Icons.photo_library_rounded, 'Gallery', cs.primary, () {
+              _attachOption(Icons.photo_library_rounded, 'Gallery', cs.primary,
+                  () {
                 Navigator.pop(context);
                 _pickAndSendMultipleImages();
               }),
@@ -284,28 +447,82 @@ class _ClientConversationScreenState extends State<ClientConversationScreen> {
     );
   }
 
-  Widget _attachOption(IconData icon, String label, Color color, VoidCallback onTap) {
+  Widget _attachOption(
+      IconData icon, String label, Color color, VoidCallback onTap) {
     return GestureDetector(
       onTap: onTap,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           Container(
-            width: 56, height: 56,
-            decoration: BoxDecoration(color: color.withValues(alpha: 0.1), shape: BoxShape.circle),
+            width: 56,
+            height: 56,
+            decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.1), shape: BoxShape.circle),
             child: Icon(icon, color: color, size: 28),
           ),
-          const SizedBox(height: 8),
-          Text(label, style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 13, fontWeight: FontWeight.w600)),
+          SizedBox(height: 8),
+          Text(label,
+              style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurface,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600)),
+        ],
+      ),
+    );
+  }
+
+  Future<String?> _showCaptionDialog(XFile file) async {
+    final ctrl = TextEditingController();
+    return showDialog<String>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: context.fitlek.card,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        contentPadding: EdgeInsets.all(16),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: kIsWeb
+                  ? Image.network(file.path, height: 200, fit: BoxFit.cover)
+                  : Image.file(File(file.path), height: 200, fit: BoxFit.cover),
+            ),
+            SizedBox(height: 16),
+            TextField(
+              controller: ctrl,
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+              decoration: InputDecoration(
+                hintText: 'Ajouter une lÃ©gende...',
+                hintStyle: TextStyle(color: context.fitlek.textMuted),
+                border: InputBorder.none,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: Text('Annuler',
+                  style: TextStyle(color: context.fitlek.textMuted))),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, ctrl.text),
+              child: Text('Envoyer',
+                  style:
+                      TextStyle(color: Theme.of(context).colorScheme.primary))),
         ],
       ),
     );
   }
 
   Future<void> _pickAndSendSingleImage(ImageSource source) async {
-    final picker = ImagePicker();
+    final picker = AppMediaPicker(context);
     final xFile = await picker.pickImage(source: source, imageQuality: 70);
     if (xFile == null) return;
+
+    final caption = await _showCaptionDialog(xFile);
+    if (caption == null) return; // User cancelled
 
     setState(() => _isUploadingMedia = true);
     final bytes = await xFile.readAsBytes();
@@ -320,42 +537,72 @@ class _ClientConversationScreenState extends State<ClientConversationScreen> {
 
     if (!mounted) return;
     if (result['ok'] == true && result['url'] != null) {
-      await _sendMediaMessage(result['url'], 'image');
+      await _sendMediaMessage(result['url'], 'image', caption: caption);
     } else {
       setState(() => _isUploadingMedia = false);
-      _showSnack('Image upload failed', isError: true);
+      _showSnack(result['message']?.toString() ?? 'Image upload failed',
+          isError: true);
     }
   }
 
+  bool _batchSending = false;
+  int _batchCurrent = 0, _batchTotal = 0;
   Future<void> _pickAndSendMultipleImages() async {
-    final picker = ImagePicker();
-    final xFiles = await picker.pickMultiImage(imageQuality: 70);
-    if (xFiles.isEmpty) return;
-
-    setState(() => _isUploadingMedia = true);
-    for (var xFile in xFiles) {
-      final bytes = await xFile.readAsBytes();
-      final result = await ApiService.uploadMultipart(
-        '/upload/chat-image',
-        fields: {},
-        fileBytes: bytes,
-        fileField: 'image',
-        fileName: xFile.name,
-        mimeType: 'image/webp',
-      );
-
-      if (!mounted) return;
-      if (result['ok'] == true && result['url'] != null) {
-        await _sendMediaMessage(result['url'], 'image');
-        if (mounted) setState(() => _isUploadingMedia = true);
-      } else {
-        _showSnack('Failed to upload some images', isError: true);
-      }
+    if (_batchSending || _isUploadingMedia) return;
+    final files =
+        await AppMediaPicker(context).pickMultiImage(imageQuality: 85);
+    if (!mounted || files.isEmpty) return;
+    if (files.length > 30) {
+      ApiService.showError(context, 'Choose up to 30 photos per batch.');
+      return;
     }
-    if (mounted) setState(() => _isUploadingMedia = false);
+    final caption = await previewChatImages(context, files);
+    if (!mounted || caption == null) return;
+    setState(() {
+      _batchSending = true;
+      _isUploadingMedia = true;
+      _batchTotal = files.length;
+    });
+    int failed = 0;
+    try {
+      for (int i = 0; i < files.length; i++) {
+        if (!mounted) return;
+        setState(() {
+          _batchCurrent = i + 1;
+          _isUploadingMedia = true;
+        });
+        try {
+          final result = await ApiService.uploadMultipart('/upload/chat-image',
+              fields: {},
+              fileBytes: await files[i].readAsBytes(),
+              fileField: 'image',
+              fileName: files[i].name,
+              mimeType: 'image/jpeg');
+          if (!mounted) return;
+          if (result['ok'] == true && result['url'] != null) {
+            if (!await _sendMediaMessage(result['url'], 'image',
+                caption: i == 0 ? caption : null)) failed++;
+          } else {
+            failed++;
+          }
+        } catch (_) {
+          failed++;
+        }
+      }
+      if (mounted && failed > 0)
+        ApiService.showError(
+            context, '$failed photos could not be sent. The others were sent.');
+    } finally {
+      if (mounted)
+        setState(() {
+          _batchSending = false;
+          _isUploadingMedia = false;
+        });
+    }
   }
 
   Future<void> _toggleRecording() async {
+    if (_batchSending) return;
     if (_isRecording) {
       final path = await _audioRecorder.stop();
       setState(() => _isRecording = false);
@@ -369,7 +616,7 @@ class _ClientConversationScreenState extends State<ClientConversationScreen> {
           final file = File(path);
           bytes = await file.readAsBytes();
         }
-        
+
         final result = await ApiService.uploadMultipart(
           '/upload/chat-audio',
           fields: {},
@@ -390,18 +637,26 @@ class _ClientConversationScreenState extends State<ClientConversationScreen> {
     } else {
       if (await _audioRecorder.hasPermission()) {
         if (kIsWeb) {
-          await _audioRecorder.start(const RecordConfig(encoder: AudioEncoder.aacLc), path: '');
+          await _audioRecorder.start(RecordConfig(encoder: AudioEncoder.aacLc),
+              path: '');
         } else {
           final dir = await getTemporaryDirectory();
-          final path = '${dir.path}/audio_${DateTime.now().millisecondsSinceEpoch}.m4a';
-          await _audioRecorder.start(const RecordConfig(encoder: AudioEncoder.aacLc), path: path);
+          final path =
+              '${dir.path}/audio_${DateTime.now().millisecondsSinceEpoch}.m4a';
+          await _audioRecorder.start(RecordConfig(encoder: AudioEncoder.aacLc),
+              path: path);
         }
         setState(() => _isRecording = true);
+      } else if (mounted) {
+        _showSnack(
+            'Allow microphone access for Sirvya in your phone Settings to record voice messages.',
+            isError: true);
       }
     }
   }
 
-  Future<void> _sendMediaMessage(String url, String type) async {
+  Future<bool> _sendMediaMessage(String url, String type,
+      {String? caption}) async {
     setState(() => _sending = true);
     try {
       final reqUrl = _getSendUrl();
@@ -413,20 +668,27 @@ class _ClientConversationScreenState extends State<ClientConversationScreen> {
               'senderID': widget.clientID,
               'mediaUrl': url,
               'mediaType': type,
+              if (caption != null && caption.isNotEmpty) 'body': caption,
             }),
           )
-          .timeout(const Duration(seconds: 10));
+          .timeout(Duration(seconds: 10));
 
       if (res.statusCode == 201) {
         await _fetchMessages(silent: true);
+        return true;
       } else {
         _showSnack('Failed to send media message', isError: true);
       }
     } catch (_) {
       _showSnack('Network error', isError: true);
     } finally {
-      if (mounted) setState(() { _sending = false; _isUploadingMedia = false; });
+      if (mounted)
+        setState(() {
+          _sending = false;
+          _isUploadingMedia = false;
+        });
     }
+    return false;
   }
 
   void _scrollToBottom() {
@@ -434,7 +696,7 @@ class _ClientConversationScreenState extends State<ClientConversationScreen> {
       if (_scrollCtrl.hasClients) {
         _scrollCtrl.animateTo(
           _scrollCtrl.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 300),
+          duration: Duration(milliseconds: 300),
           curve: Curves.easeOutCubic,
         );
       }
@@ -443,7 +705,8 @@ class _ClientConversationScreenState extends State<ClientConversationScreen> {
 
   bool _isMe(_Message msg) => msg.senderID == widget.clientID;
 
-  bool _isSameDay(DateTime a, DateTime b) => a.year == b.year && a.month == b.month && a.day == b.day;
+  bool _isSameDay(DateTime a, DateTime b) =>
+      a.year == b.year && a.month == b.month && a.day == b.day;
 
   List<dynamic> _buildTimeline() {
     final items = <dynamic>[];
@@ -467,7 +730,20 @@ class _ClientConversationScreenState extends State<ClientConversationScreen> {
 
     if (diff == 0) return 'Today';
     if (diff == 1) return 'Yesterday';
-    const m = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const m = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec'
+    ];
     return '${d.day} ${m[d.month - 1]} ${d.year}';
   }
 
@@ -483,17 +759,23 @@ class _ClientConversationScreenState extends State<ClientConversationScreen> {
               children: [
                 Container(
                   width: double.infinity,
-                  color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
-                  padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 16),
+                  color: context.fitlek.card,
+                  padding: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.info_outline_rounded, size: 14, color: Theme.of(context).colorScheme.primary),
-                      const SizedBox(width: 6),
+                      Icon(Icons.info_outline_rounded,
+                          size: 16, color: context.fitlek.textMuted),
+                      SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          'Media (images & audio) will be automatically removed after 7 days.',
-                          style: TextStyle(color: Theme.of(context).colorScheme.primary, fontSize: 11, fontWeight: FontWeight.w600),
+                          _batchSending
+                              ? 'Sending photo $_batchCurrent of $_batchTotal…'
+                              : 'Photos and voice messages are saved on your phone. Use Select messages to delete in bulk.',
+                          style: TextStyle(
+                              color: context.fitlek.textMuted,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500),
                           textAlign: TextAlign.center,
                         ),
                       ),
@@ -511,49 +793,62 @@ class _ClientConversationScreenState extends State<ClientConversationScreen> {
   }
 
   PreferredSizeWidget _buildAppBar() {
+    if (_selecting) return _selectionBar() as PreferredSizeWidget;
     return AppBar(
-      backgroundColor: context.fitlek.card,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       elevation: 0,
-      toolbarHeight: 56,
+      toolbarHeight: 64,
       leadingWidth: 44,
       leading: GestureDetector(
         onTap: () => Navigator.pop(context),
         child: Padding(
-          padding: const EdgeInsets.only(left: 12),
-          child: Icon(Icons.arrow_back_ios_rounded, color: Theme.of(context).colorScheme.onSurface, size: 20),
+          padding: EdgeInsets.only(left: 12),
+          child: Icon(Icons.arrow_back_ios_new_rounded,
+              color: Theme.of(context).colorScheme.onSurface, size: 24),
         ),
       ),
       title: Row(
         children: [
           GestureDetector(
             onTap: () {
-              if (widget.coachAvatar != null && widget.coachAvatar!.isNotEmpty) {
-                Navigator.push(context, MaterialPageRoute(
-                  builder: (_) => ImagePreview(imageUrl: widget.coachAvatar!, tag: 'header_avatar'),
-                ));
+              if (widget.coachAvatar != null &&
+                  widget.coachAvatar!.isNotEmpty) {
+                Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => ImagePreview(
+                          imageUrl: widget.coachAvatar!, tag: 'header_avatar'),
+                    ));
               }
             },
             child: Container(
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                border: Border.all(color: Theme.of(context).colorScheme.primary, width: 2),
+                border: Border.all(color: context.fitlek.border, width: 2),
               ),
               child: CircleAvatar(
-                radius: 18,
-                backgroundColor: context.fitlek.card2,
-                backgroundImage: widget.coachAvatar != null && widget.coachAvatar!.isNotEmpty
-                    ? NetworkImage(widget.coachAvatar!)
-                    : null,
-                child: (widget.coachAvatar == null || widget.coachAvatar!.isEmpty)
+                radius: 20,
+                backgroundColor: context.fitlek.border,
+                backgroundImage:
+                    widget.coachAvatar != null && widget.coachAvatar!.isNotEmpty
+                        ? NetworkImage(widget.coachAvatar!)
+                        : null,
+                child: (widget.coachAvatar == null ||
+                        widget.coachAvatar!.isEmpty)
                     ? Text(
-                        widget.coachName != null && widget.coachName!.isNotEmpty ? widget.coachName![0].toUpperCase() : '?',
-                        style: TextStyle(color: Theme.of(context).colorScheme.primary, fontSize: 14, fontWeight: FontWeight.w900),
+                        widget.coachName != null && widget.coachName!.isNotEmpty
+                            ? widget.coachName![0].toUpperCase()
+                            : '?',
+                        style: TextStyle(
+                            color: Theme.of(context).colorScheme.onSurface,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w900),
                       )
                     : null,
               ),
             ),
           ),
-          const SizedBox(width: 10),
+          SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -561,14 +856,20 @@ class _ClientConversationScreenState extends State<ClientConversationScreen> {
               children: [
                 Text(
                   widget.coachName ?? 'Conversation',
-                  style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 14, fontWeight: FontWeight.w800),
+                  style: TextStyle(
+                      color: Theme.of(context).colorScheme.onSurface,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
                 if (widget.coachSpeciality != null)
                   Text(
                     widget.coachSpeciality!,
-                    style: TextStyle(color: context.fitlek.textSecondary, fontSize: 11, fontWeight: FontWeight.w500),
+                    style: TextStyle(
+                        color: context.fitlek.textMuted,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -578,11 +879,15 @@ class _ClientConversationScreenState extends State<ClientConversationScreen> {
         ],
       ),
       actions: [
+        IconButton(
+            tooltip: 'Select messages',
+            onPressed: () => setState(() => _selecting = true),
+            icon: const Icon(Icons.checklist)),
         _buildMoreMenu(),
       ],
       bottom: PreferredSize(
-        preferredSize: const Size.fromHeight(1),
-        child: Container(height: 1, color: context.fitlek.border),
+        preferredSize: Size.fromHeight(1),
+        child: Container(height: 1, color: context.fitlek.card),
       ),
     );
   }
@@ -593,7 +898,8 @@ class _ClientConversationScreenState extends State<ClientConversationScreen> {
         child: SizedBox(
           width: 20,
           height: 20,
-          child: CircularProgressIndicator(color: Theme.of(context).colorScheme.primary, strokeWidth: 2),
+          child: CircularProgressIndicator(
+              color: Theme.of(context).colorScheme.primary, strokeWidth: 2),
         ),
       );
     }
@@ -604,23 +910,37 @@ class _ClientConversationScreenState extends State<ClientConversationScreen> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const SizedBox(height: 60),
-              Icon(Icons.error_outline_rounded, color: context.fitlek.textMuted, size: 40),
-              const SizedBox(height: 12),
-              Text(_error!, style: TextStyle(color: context.fitlek.textMuted, fontSize: 13)),
-              const SizedBox(height: 16),
+              SizedBox(height: 60),
+              Icon(Icons.error_outline_rounded,
+                  color: context.fitlek.textMuted, size: 40),
+              SizedBox(height: 12),
+              Text(_error!,
+                  style:
+                      TextStyle(color: context.fitlek.textMuted, fontSize: 13)),
+              SizedBox(height: 16),
               GestureDetector(
                 onTap: _fetchMessages,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                  padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                   decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+                    color: Theme.of(context)
+                        .colorScheme
+                        .primary
+                        .withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3)),
+                    border: Border.all(
+                        color: Theme.of(context)
+                            .colorScheme
+                            .primary
+                            .withValues(alpha: 0.3)),
                   ),
                   child: Text(
                     'RETRY',
-                    style: TextStyle(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w800, fontSize: 11, letterSpacing: 1),
+                    style: TextStyle(
+                        color: Theme.of(context).colorScheme.primary,
+                        fontWeight: FontWeight.w800,
+                        fontSize: 11,
+                        letterSpacing: 1),
                   ),
                 ),
               ),
@@ -638,15 +958,28 @@ class _ClientConversationScreenState extends State<ClientConversationScreen> {
             Container(
               width: 64,
               height: 64,
-              decoration: BoxDecoration(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.08), shape: BoxShape.circle),
-              child: Icon(Icons.chat_bubble_outline_rounded, color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.4), size: 28),
+              decoration: BoxDecoration(
+                  color: Theme.of(context)
+                      .colorScheme
+                      .primary
+                      .withValues(alpha: 0.08),
+                  shape: BoxShape.circle),
+              child: Icon(Icons.chat_bubble_outline_rounded,
+                  color: Theme.of(context)
+                      .colorScheme
+                      .primary
+                      .withValues(alpha: 0.4),
+                  size: 28),
             ),
-            const SizedBox(height: 16),
+            SizedBox(height: 16),
             Text(
               'Start the conversation',
-              style: TextStyle(color: context.fitlek.textMuted, fontSize: 14, fontWeight: FontWeight.w600),
+              style: TextStyle(
+                  color: context.fitlek.textMuted,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600),
             ),
-            const SizedBox(height: 6),
+            SizedBox(height: 6),
             Text(
               'Send your first message',
               style: TextStyle(color: context.fitlek.textMuted, fontSize: 12),
@@ -660,17 +993,19 @@ class _ClientConversationScreenState extends State<ClientConversationScreen> {
 
     return ListView.builder(
       controller: _scrollCtrl,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       itemCount: timeline.length + (_loadingMore ? 1 : 0),
       itemBuilder: (context, i) {
         if (_loadingMore && i == 0) {
           return Padding(
-            padding: const EdgeInsets.only(bottom: 12),
+            padding: EdgeInsets.only(bottom: 12),
             child: Center(
               child: SizedBox(
                 width: 16,
                 height: 16,
-                child: CircularProgressIndicator(color: Theme.of(context).colorScheme.primary, strokeWidth: 2),
+                child: CircularProgressIndicator(
+                    color: Theme.of(context).colorScheme.primary,
+                    strokeWidth: 2),
               ),
             ),
           );
@@ -680,18 +1015,20 @@ class _ClientConversationScreenState extends State<ClientConversationScreen> {
 
         if (item is DateTime) {
           return Padding(
-            padding: const EdgeInsets.symmetric(vertical: 14),
+            padding: EdgeInsets.symmetric(vertical: 14),
             child: Center(
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                padding: EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                 decoration: BoxDecoration(
                   color: context.fitlek.card,
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: context.fitlek.border, width: 1),
                 ),
                 child: Text(
                   _formatDivider(item),
-                  style: TextStyle(color: context.fitlek.textSecondary, fontSize: 10.5, fontWeight: FontWeight.w700, letterSpacing: 0.5),
+                  style: TextStyle(
+                      color: context.fitlek.textSecondary,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w500),
                 ),
               ),
             ),
@@ -702,179 +1039,195 @@ class _ClientConversationScreenState extends State<ClientConversationScreen> {
         final isMe = _isMe(msg);
         final idx = _messages.indexOf(msg);
         final next = idx + 1 < _messages.length ? _messages[idx + 1] : null;
-        final isLastOfGroup = next == null || next.senderID != msg.senderID || !_isSameDay(next.createdAt, msg.createdAt);
+        final isLastOfGroup = next == null ||
+            next.senderID != msg.senderID ||
+            !_isSameDay(next.createdAt, msg.createdAt);
         final showAvatar = !isMe && isLastOfGroup;
 
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 10),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            mainAxisAlignment: isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
-            children: [
-              if (!isMe)
-                SizedBox(
-                  width: 32,
-                  child: showAvatar
-                      ? Container(
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            border: Border.all(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3), width: 1.5),
-                          ),
-                          child: CircleAvatar(
-                            radius: 14,
-                            backgroundColor: context.fitlek.card2,
-                            backgroundImage: msg.senderAvatar != null && msg.senderAvatar!.isNotEmpty
-                                ? NetworkImage(msg.senderAvatar!)
-                                : null,
-                            child: (msg.senderAvatar == null || msg.senderAvatar!.isEmpty)
-                                ? Text(
-                                    msg.senderName != null && msg.senderName!.isNotEmpty ? msg.senderName![0].toUpperCase() : '?',
-                                    style: TextStyle(color: Theme.of(context).colorScheme.primary, fontSize: 10, fontWeight: FontWeight.w900),
-                                  )
-                                : null,
-                          ),
-                        )
-                      : null,
-                ),
-              if (!isMe) const SizedBox(width: 8),
-              Flexible(
-                child: Container(
-                  constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.68),
-                  padding: EdgeInsets.all(msg.mediaType == 'image' && !msg.mediaExpired ? 4 : 10),
-                  decoration: BoxDecoration(
-                    color: isMe ? Theme.of(context).colorScheme.primary : context.fitlek.card,
-                    borderRadius: BorderRadius.only(
-                      topLeft: const Radius.circular(16),
-                      topRight: const Radius.circular(16),
-                      bottomLeft: Radius.circular(isMe ? 16 : 4),
-                      bottomRight: Radius.circular(isMe ? 4 : 16),
+        return SelectableChatMessage(
+            selecting: _selecting,
+            selected: _selected.contains(msg.id),
+            onToggle: () => _toggleSelected(msg.id),
+            child: Padding(
+              padding: EdgeInsets.only(bottom: 10),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                mainAxisAlignment:
+                    isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
+                children: [
+                  if (!isMe)
+                    SizedBox(
+                      width: 32,
+                      child: showAvatar
+                          ? Container(
+                              decoration: BoxDecoration(
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .primary
+                                        .withValues(alpha: 0.3),
+                                    width: 1.5),
+                              ),
+                              child: CircleAvatar(
+                                radius: 14,
+                                backgroundColor: context.fitlek.card2,
+                                backgroundImage: msg.senderAvatar != null &&
+                                        msg.senderAvatar!.isNotEmpty
+                                    ? NetworkImage(msg.senderAvatar!)
+                                    : null,
+                                child: (msg.senderAvatar == null ||
+                                        msg.senderAvatar!.isEmpty)
+                                    ? Text(
+                                        msg.senderName != null &&
+                                                msg.senderName!.isNotEmpty
+                                            ? msg.senderName![0].toUpperCase()
+                                            : '?',
+                                        style: TextStyle(
+                                            color: Theme.of(context)
+                                                .colorScheme
+                                                .primary,
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.w900),
+                                      )
+                                    : null,
+                              ),
+                            )
+                          : null,
                     ),
-                    border: isMe ? null : Border.all(color: context.fitlek.border, width: 1),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      _buildBubbleContent(msg, isMe),
-                      const SizedBox(height: 4),
-                      Row(
+                  if (!isMe) SizedBox(width: 8),
+                  Flexible(
+                    child: Container(
+                      constraints: BoxConstraints(
+                          maxWidth: MediaQuery.of(context).size.width * 0.68),
+                      padding: EdgeInsets.all(
+                          msg.mediaType == 'image' && !msg.mediaExpired
+                              ? 4
+                              : 10),
+                      decoration: BoxDecoration(
+                        color: isMe
+                            ? Theme.of(context).colorScheme.primary
+                            : context.fitlek.border,
+                        borderRadius: BorderRadius.only(
+                          topLeft: Radius.circular(16),
+                          topRight: Radius.circular(16),
+                          bottomLeft: Radius.circular(isMe ? 16 : 4),
+                          bottomRight: Radius.circular(isMe ? 4 : 16),
+                        ),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Text(
-                            _formatTime(msg.createdAt),
-                            style: TextStyle(
-                              color: isMe ? Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.6) : context.fitlek.textMuted,
-                              fontSize: 9,
-                              fontWeight: FontWeight.w600,
-                            ),
+                          _buildBubbleContent(msg, isMe),
+                          SizedBox(height: 4),
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            mainAxisAlignment: MainAxisAlignment.end,
+                            children: [
+                              Text(
+                                _formatTime(msg.createdAt),
+                                style: TextStyle(
+                                  color: isMe
+                                      ? Theme.of(context)
+                                          .colorScheme
+                                          .onPrimary
+                                          .withValues(alpha: 0.6)
+                                      : context.fitlek.textMuted,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                              if (isMe) ...[
+                                SizedBox(width: 4),
+                                Icon(
+                                  msg.isRead
+                                      ? Icons.done_all_rounded
+                                      : Icons.done_rounded,
+                                  color: msg.isRead
+                                      ? Color(0xFF00A884)
+                                      : Theme.of(context)
+                                          .colorScheme
+                                          .onPrimary
+                                          .withValues(
+                                              alpha:
+                                                  0.6), // WhatsApp blue tick equivalent
+                                  size: 14,
+                                ),
+                              ],
+                            ],
                           ),
-                          if (isMe) ...[
-                            const SizedBox(width: 4),
-                            Icon(
-                              msg.isRead ? Icons.done_all_rounded : Icons.done_rounded,
-                              color: msg.isRead ? const Color(0xFF4ade80) : Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.6),
-                              size: 12,
-                            ),
-                          ],
                         ],
                       ),
-                    ],
+                    ),
                   ),
-                ),
+                ],
               ),
-            ],
-          ),
-        );
+            ));
       },
     );
   }
 
   Widget _buildBubbleContent(_Message message, bool isMe) {
-    final cs = Theme.of(context).colorScheme;
-    final fgColor = isMe ? cs.onPrimary : cs.onSurface;
+    final fgColor = isMe
+        ? Theme.of(context).colorScheme.onPrimary
+        : Theme.of(context).colorScheme.onSurface;
 
-    if (message.mediaType == 'image') {
-      if (message.mediaExpired || message.mediaUrl == null) {
-        return Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.image_not_supported_rounded, color: fgColor.withValues(alpha: 0.7), size: 20),
-            const SizedBox(width: 8),
-            Text('Image Expired', style: TextStyle(color: fgColor.withValues(alpha: 0.8), fontSize: 13, fontStyle: FontStyle.italic)),
-          ],
-        );
-      }
-      return GestureDetector(
-        onTap: () {
-          Navigator.push(context, MaterialPageRoute(
-            builder: (_) => ImagePreview(imageUrl: message.mediaUrl!, tag: message.id.toString()),
-          ));
-        },
-        child: Hero(
-          tag: message.id.toString(),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(12),
-            child: CachedNetworkImage(
-              imageUrl: message.mediaUrl!,
-              fit: BoxFit.cover,
-              placeholder: (context, url) => Container(
-                width: 150, height: 150, color: fgColor.withValues(alpha: 0.1),
-                child: Center(child: CircularProgressIndicator(color: fgColor, strokeWidth: 2)),
-              ),
-              errorWidget: (context, url, error) => Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.image_not_supported_rounded, color: fgColor.withValues(alpha: 0.7), size: 20),
-              const SizedBox(width: 8),
-              Text('Image Expired', style: TextStyle(color: fgColor.withValues(alpha: 0.8), fontSize: 13, fontStyle: FontStyle.italic)),
-            ],
-          ),
-        ),
-      ),
-      ),
-      );
-    } else if (message.mediaType == 'audio') {
-      return AudioPlayerWidget(
-        url: message.mediaUrl,
-        isMe: isMe,
-        isExpired: message.mediaExpired,
-      );
+    if (message.deleted)
+      return Text(
+          isMe
+              ? 'You deleted this message'
+              : 'This message was deleted by the sender',
+          style: TextStyle(color: fgColor, fontStyle: FontStyle.italic));
+    if (message.mediaType == 'image' || message.mediaType == 'audio') {
+      return LocalChatMedia(
+          key: ValueKey('media_${message.id}'),
+          messageID: message.id,
+          url: message.mediaUrl,
+          type: message.mediaType,
+          expired: message.mediaExpired,
+          isMe: isMe,
+          caption: message.body);
     }
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 5),
-      child: Text(message.body ?? '', style: TextStyle(color: fgColor, fontSize: 13.5, height: 1.4)),
+      padding: EdgeInsets.symmetric(horizontal: 5),
+      child: Text(message.body ?? '',
+          style: TextStyle(color: fgColor, fontSize: 13.5, height: 1.4)),
     );
   }
 
   Widget _buildInputBar() {
     return Container(
-      padding: EdgeInsets.fromLTRB(12, 8, 12, 8 + MediaQuery.of(context).padding.bottom),
+      padding: EdgeInsets.fromLTRB(
+          12, 8, 12, 8 + MediaQuery.of(context).padding.bottom),
       decoration: BoxDecoration(
-        color: context.fitlek.card,
-        border: Border(top: BorderSide(color: context.fitlek.border, width: 1)),
+        color: Theme.of(context).scaffoldBackgroundColor,
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           GestureDetector(
             onTap: _showAttachOptions,
-            child: Container(
-              padding: const EdgeInsets.all(8),
-              child: Icon(Icons.add_photo_alternate_rounded, color: context.fitlek.textMuted, size: 24),
+            child: Padding(
+              padding: EdgeInsets.only(bottom: 10, right: 8),
+              child: Icon(Icons.add,
+                  color: Theme.of(context).colorScheme.onSurface, size: 28),
             ),
           ),
           Expanded(
             child: Container(
               decoration: BoxDecoration(
-                color: context.fitlek.inputFill,
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: context.fitlek.border, width: 1),
+                color: Colors.transparent,
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(color: context.fitlek.border, width: 1.5),
               ),
               child: TextField(
                 controller: _msgCtrl,
                 focusNode: _focusNode,
-                style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 14),
+                style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurface,
+                    fontSize: 15),
                 maxLines: 4,
                 minLines: 1,
                 textInputAction: TextInputAction.send,
@@ -882,48 +1235,81 @@ class _ClientConversationScreenState extends State<ClientConversationScreen> {
                 onSubmitted: (_) => _sendMessage(),
                 readOnly: _isRecording || _isUploadingMedia,
                 decoration: InputDecoration(
-                  hintText: _isRecording ? 'Recording...' : 'Write a message...',
-                  hintStyle: TextStyle(color: context.fitlek.textMuted, fontSize: 14),
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  hintText:
+                      _isRecording ? 'Recording...' : 'Ã‰crire un message...',
+                  hintStyle:
+                      TextStyle(color: context.fitlek.textMuted, fontSize: 15),
+                  contentPadding:
+                      EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   border: InputBorder.none,
                 ),
               ),
             ),
           ),
-          const SizedBox(width: 8),
+          SizedBox(width: 8),
           if (_isUploadingMedia)
-            SizedBox(width: 44, height: 44, child: Center(child: CircularProgressIndicator(color: Theme.of(context).colorScheme.primary, strokeWidth: 2)))
+            SizedBox(
+                width: 44,
+                height: 44,
+                child: Center(
+                    child: CircularProgressIndicator(
+                        color: Theme.of(context).colorScheme.primary,
+                        strokeWidth: 2)))
           else if (_msgCtrl.text.isEmpty && !_isRecording)
-            GestureDetector(onTap: _toggleRecording,
-              child: Container(width: 44, height: 44,
-                decoration: BoxDecoration(color: context.fitlek.card, shape: BoxShape.circle, border: Border.all(color: context.fitlek.border)),
-                child: Icon(Icons.mic_none_rounded, color: Theme.of(context).colorScheme.primary, size: 22)))
+            GestureDetector(
+                onTap: _toggleRecording,
+                child: Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                        color: context.fitlek.border, shape: BoxShape.circle),
+                    child: Icon(Icons.mic_none_rounded,
+                        color: Theme.of(context).colorScheme.onSurface,
+                        size: 22)))
           else if (_isRecording)
-            GestureDetector(onTap: _toggleRecording,
-              child: Container(width: 44, height: 44,
-                decoration: BoxDecoration(color: Colors.redAccent, shape: BoxShape.circle,
-                  boxShadow: [BoxShadow(color: Colors.redAccent.withValues(alpha: 0.35), blurRadius: 12, offset: const Offset(0, 4))]),
-                child: const Icon(Icons.stop_rounded, color: Colors.white, size: 20)))
+            GestureDetector(
+                onTap: _toggleRecording,
+                child: Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                        color: Colors.redAccent,
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                              color: Colors.redAccent.withValues(alpha: 0.35),
+                              blurRadius: 12,
+                              offset: Offset(0, 4))
+                        ]),
+                    child: Icon(Icons.stop_rounded,
+                        color: Theme.of(context).colorScheme.onSurface,
+                        size: 20)))
           else
             GestureDetector(
               onTap: _sending ? null : _sendMessage,
               child: AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
+                duration: Duration(milliseconds: 200),
                 width: 44,
                 height: 44,
                 decoration: BoxDecoration(
-                  color: _sending ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.25) : Theme.of(context).colorScheme.primary,
-                  borderRadius: BorderRadius.circular(12),
+                  color: _sending
+                      ? context.fitlek.border.withValues(alpha: 0.5)
+                      : context.fitlek.border,
+                  shape: BoxShape.circle,
                 ),
                 child: _sending
                     ? Center(
                         child: SizedBox(
                           width: 18,
                           height: 18,
-                          child: CircularProgressIndicator(color: Theme.of(context).colorScheme.onPrimary, strokeWidth: 2),
+                          child: CircularProgressIndicator(
+                              color: Theme.of(context).colorScheme.onSurface,
+                              strokeWidth: 2),
                         ),
                       )
-                    : Icon(Icons.send_rounded, color: Theme.of(context).colorScheme.onPrimary, size: 20),
+                    : Icon(Icons.send_rounded,
+                        color: Theme.of(context).colorScheme.onSurface,
+                        size: 20),
               ),
             ),
         ],
@@ -937,10 +1323,11 @@ class _ClientConversationScreenState extends State<ClientConversationScreen> {
 
   Widget _buildMoreMenu() {
     return PopupMenuButton<String>(
-      icon: Icon(Icons.more_vert_rounded, color: context.fitlek.textMuted, size: 20),
+      icon: Icon(Icons.more_vert_rounded,
+          color: Theme.of(context).colorScheme.onSurface, size: 24),
       color: context.fitlek.card,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      offset: const Offset(0, 40),
+      offset: Offset(0, 40),
       onSelected: (val) {
         if (val == 'report') {
           _showReportDialog();
@@ -953,9 +1340,14 @@ class _ClientConversationScreenState extends State<ClientConversationScreen> {
           value: 'report',
           child: Row(
             children: [
-              Icon(Icons.flag_rounded, color: context.fitlek.textMuted, size: 18),
-              const SizedBox(width: 8),
-              Text('Report Coach', style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 13, fontWeight: FontWeight.w600)),
+              Icon(Icons.flag_rounded,
+                  color: context.fitlek.textMuted, size: 18),
+              SizedBox(width: 8),
+              Text('Report Coach',
+                  style: TextStyle(
+                      color: Theme.of(context).colorScheme.onSurface,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600)),
             ],
           ),
         ),
@@ -964,8 +1356,12 @@ class _ClientConversationScreenState extends State<ClientConversationScreen> {
           child: Row(
             children: [
               Icon(Icons.block_rounded, color: context.fitlek.error, size: 18),
-              const SizedBox(width: 8),
-              Text('Block Coach', style: TextStyle(color: context.fitlek.error, fontSize: 13, fontWeight: FontWeight.w600)),
+              SizedBox(width: 8),
+              Text('Block Coach',
+                  style: TextStyle(
+                      color: context.fitlek.error,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600)),
             ],
           ),
         ),
@@ -975,7 +1371,13 @@ class _ClientConversationScreenState extends State<ClientConversationScreen> {
 
   void _showReportDialog() {
     String? selectedReason;
-    final reasons = ['Spam', 'Harassment', 'Inappropriate content', 'Fraud / Scam', 'Other'];
+    final reasons = [
+      'Spam',
+      'Harassment',
+      'Inappropriate content',
+      'Fraud / Scam',
+      'Other'
+    ];
     final name = widget.coachName ?? 'this coach';
 
     showDialog(
@@ -983,32 +1385,53 @@ class _ClientConversationScreenState extends State<ClientConversationScreen> {
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) => AlertDialog(
           backgroundColor: context.fitlek.card,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: Text('Report $name', style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 16)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Text('Report $name',
+              style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurface,
+                  fontSize: 16)),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text('Why are you reporting this user? We take these reports seriously.', style: TextStyle(color: context.fitlek.textMuted, fontSize: 13)),
-              const SizedBox(height: 16),
+              Text(
+                  'Why are you reporting this user? We take these reports seriously.',
+                  style:
+                      TextStyle(color: context.fitlek.textMuted, fontSize: 13)),
+              SizedBox(height: 16),
               ...reasons.map((r) => RadioListTile<String>(
-                title: Text(r, style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 13)),
-                value: r,
-                groupValue: selectedReason,
-                activeColor: Theme.of(context).colorScheme.primary,
-                contentPadding: EdgeInsets.zero,
-                dense: true,
-                onChanged: (val) => setDialogState(() => selectedReason = val),
-              )),
+                    title: Text(r,
+                        style: TextStyle(
+                            color: Theme.of(context).colorScheme.onSurface,
+                            fontSize: 13)),
+                    value: r,
+                    groupValue: selectedReason,
+                    activeColor: Theme.of(context).colorScheme.primary,
+                    contentPadding: EdgeInsets.zero,
+                    dense: true,
+                    onChanged: (val) =>
+                        setDialogState(() => selectedReason = val),
+                  )),
             ],
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Cancel', style: TextStyle(color: context.fitlek.textMuted))),
             TextButton(
-              onPressed: selectedReason == null ? null : () async {
-                Navigator.pop(ctx);
-                _submitReport(selectedReason!);
-              },
-              child: Text('Submit', style: TextStyle(color: selectedReason == null ? context.fitlek.textMuted : Theme.of(context).colorScheme.primary, fontWeight: FontWeight.bold)),
+                onPressed: () => Navigator.pop(ctx),
+                child: Text('Cancel',
+                    style: TextStyle(color: context.fitlek.textMuted))),
+            TextButton(
+              onPressed: selectedReason == null
+                  ? null
+                  : () async {
+                      Navigator.pop(ctx);
+                      _submitReport(selectedReason!);
+                    },
+              child: Text('Submit',
+                  style: TextStyle(
+                      color: selectedReason == null
+                          ? context.fitlek.textMuted
+                          : Theme.of(context).colorScheme.primary,
+                      fontWeight: FontWeight.bold)),
             ),
           ],
         ),
@@ -1019,11 +1442,17 @@ class _ClientConversationScreenState extends State<ClientConversationScreen> {
   void _showSnack(String msg, {bool isError = false}) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(msg, style: TextStyle(color: isError ? Theme.of(context).colorScheme.onError : Theme.of(context).colorScheme.onPrimary, fontWeight: FontWeight.w700)),
-      backgroundColor: isError ? Colors.redAccent : Theme.of(context).colorScheme.primary,
+      content: Text(msg,
+          style: TextStyle(
+              color: isError
+                  ? Theme.of(context).colorScheme.onError
+                  : Theme.of(context).colorScheme.onPrimary,
+              fontWeight: FontWeight.w700)),
+      backgroundColor:
+          isError ? Colors.redAccent : Theme.of(context).colorScheme.primary,
       behavior: SnackBarBehavior.floating,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      margin: const EdgeInsets.all(16),
+      margin: EdgeInsets.all(16),
     ));
   }
 
@@ -1037,7 +1466,8 @@ class _ClientConversationScreenState extends State<ClientConversationScreen> {
         Uri.parse('$baseUrl/ugc/report'),
         headers: _headers,
         body: jsonEncode({
-          'reportedID': widget.conversationID, // This might need server-side resolution if type='conversation'
+          'reportedID': widget
+              .conversationID, // This might need server-side resolution if type='conversation'
           'reason': reason,
           'type': 'conversation',
         }),
@@ -1059,19 +1489,25 @@ class _ClientConversationScreenState extends State<ClientConversationScreen> {
       builder: (ctx) => AlertDialog(
         backgroundColor: context.fitlek.card,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text('Block $name?', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
+        title: Text('Block $name?',
+            style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
         content: Text(
           'They won\'t be able to find your profile or send you messages. They will not be notified that you blocked them.',
           style: TextStyle(color: context.fitlek.textMuted),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Cancel', style: TextStyle(color: context.fitlek.textMuted))),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: Text('Cancel',
+                  style: TextStyle(color: context.fitlek.textMuted))),
           TextButton(
             onPressed: () async {
               Navigator.pop(ctx);
               _submitBlock();
             },
-            child: Text('Block', style: TextStyle(color: context.fitlek.error, fontWeight: FontWeight.bold)),
+            child: Text('Block',
+                style: TextStyle(
+                    color: context.fitlek.error, fontWeight: FontWeight.bold)),
           ),
         ],
       ),

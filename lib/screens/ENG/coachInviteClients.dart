@@ -1,330 +1,291 @@
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:qr_flutter/qr_flutter.dart';
+import 'package:share_plus/share_plus.dart';
 import '../../services/apiService.dart';
+import '../../services/live_updates.dart';
 import '../../theme/fitlek_theme_extension.dart';
+
 class CoachInviteClients extends StatefulWidget {
   const CoachInviteClients({super.key});
   @override
   State<CoachInviteClients> createState() => _CoachInviteClientsState();
 }
 
-class _CoachInviteClientsState extends State<CoachInviteClients> with SingleTickerProviderStateMixin {
+class _CoachInviteClientsState extends State<CoachInviteClients>
+    with LiveUpdates<CoachInviteClients> {
   bool _loading = true;
-  String _invitationCode = '';
-  int _earnedPoints = 0;
-  int _totalInvitations = 0;
-  List<dynamic> _referrals = [];
-  bool _copied = false;
-  late AnimationController _pulseController;
-  late Animation<double> _pulseAnim;
-
+  String? _error;
+  String _code = '', _link = '';
+  int _clients = 0, _coaches = 0, _points = 0;
+  List<dynamic> _history = [];
+  String _filter = 'All';
+  @override
+  Set<String> get liveDomains =>
+      {'invitations', 'invite', 'referrals', 'notifications', 'profile'};
+  @override
+  Future<void> refreshLiveData() => _load(silent: true);
   @override
   void initState() {
     super.initState();
-    _pulseController = AnimationController(vsync: this, duration: const Duration(seconds: 2))..repeat(reverse: true);
-    _pulseAnim = Tween<double>(begin: 0.97, end: 1.03).animate(CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut));
     _load();
   }
 
-  @override
-  void dispose() { _pulseController.dispose(); super.dispose(); }
-
-  Future<void> _load() async {
-    setState(() => _loading = true);
-    final result = await ApiService.get('/coach/invite');
-    final refs = await ApiService.get('/coach/invite/referrals');
-    if (!mounted) return;
-    if (result['ok'] == true) {
+  Future<void> _load({bool silent = false}) async {
+    if (!silent)
       setState(() {
-        _invitationCode   = result['invitationCode']   ?? '';
-        _earnedPoints     = result['earnedPoints']     ?? 0;
-        _totalInvitations = result['totalInvitations'] ?? 0;
-        _referrals = refs['ok'] == true ? List<dynamic>.from(refs['data'] ?? []) : [];
-        _loading = false;
+        _loading = true;
+        _error = null;
       });
-    } else {
-      setState(() => _loading = false);
-    }
-  }
-
-  void _copyCode() async {
-    await Clipboard.setData(ClipboardData(text: _invitationCode));
-    setState(() => _copied = true);
-    await Future.delayed(const Duration(seconds: 2));
-    if (mounted) setState(() => _copied = false);
-  }
-
-  void _shareCode() async {
-    final msg =
-        'Join me on SIRVYA as a Coach! Use my referral code $_invitationCode when you sign up.';
-    await Clipboard.setData(ClipboardData(text: msg));
+    final results = await Future.wait([
+      ApiService.get('/coach/invite'),
+      ApiService.get('/coach/invite/referrals')
+    ]);
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-        content: const Text('Invite message copied to clipboard'),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))));
+    setState(() {
+      if (results.any((r) => r['ok'] != true)) {
+        _error = 'Unable to load invitations. Please try again.';
+      } else {
+        final data = results[0];
+        _code = '${data['invitationCode'] ?? ''}';
+        _link = _code.isEmpty
+            ? ''
+            : 'https://sirvya.com/invite/${Uri.encodeComponent(_code)}';
+        _clients = int.tryParse('${data['clientSignups']}') ?? 0;
+        _coaches = int.tryParse('${data['coachSignups']}') ?? 0;
+        _points = int.tryParse('${data['earnedPoints']}') ?? 0;
+        _history = List<dynamic>.from(results[1]['data'] ?? []);
+        _error = null;
+      }
+      _loading = false;
+    });
   }
 
-  String _formatRefDate(dynamic raw) {
-    if (raw == null) return '';
-    final d = DateTime.tryParse(raw.toString());
-    if (d == null) return '';
-    return '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
+  Future<void> _copy(String value) async {
+    await Clipboard.setData(ClipboardData(text: value));
+    if (mounted)
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text('Copied to clipboard')));
+  }
+
+  Future<void> _share(BuildContext buttonContext) async {
+    final box = buttonContext.findRenderObject() as RenderBox?;
+    try {
+      await SharePlus.instance.share(ShareParams(
+          title: 'Join me on SIRVYA',
+          text:
+              'You are invited to join me on SIRVYA. Find your coach or grow your coaching business.\n\n$_link\n\nInvitation code: $_code',
+          sharePositionOrigin:
+              box == null ? null : box.localToGlobal(Offset.zero) & box.size));
+    } catch (_) {
+      if (mounted)
+        await _copy('Join me on SIRVYA: $_link\nInvitation code: $_code');
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_loading) {
-      return Scaffold(
-        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-        appBar: _buildAppBar(),
-        body: Center(
-          child: CircularProgressIndicator(
-            color: Theme.of(context).colorScheme.primary,
-          ),
-        ),
-      );
-    }
+    final cs = Theme.of(context).colorScheme, f = context.fitlek;
     return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      appBar: _buildAppBar(),
-      body: RefreshIndicator(color: Theme.of(context).colorScheme.primary, backgroundColor: context.fitlek.card, onRefresh: _load,
-        child: SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.all(24),
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 640),
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                const SizedBox(height: 8),
-                Text('Invite a new Coach to SIRVYA. You earn 40 points after their Coach account is successfully created.', style: TextStyle(color: context.fitlek.textSecondary, fontSize: 14)),
-                const SizedBox(height: 36),
-                _buildQRSection(),
-                const SizedBox(height: 32),
-                _buildCodeSection(),
-                const SizedBox(height: 28),
-                _buildActionButtons(),
-                const SizedBox(height: 32),
-                _buildStatsRow(),
-                const SizedBox(height: 32),
-                _buildReferralHistory(),
-                const SizedBox(height: 32),
-                _buildHowItWorks(),
-              ]),
+      appBar: AppBar(title: const Text('Invite & grow')),
+      body: _loading
+          ? const Center(child: CircularProgressIndicator())
+          : RefreshIndicator(
+              onRefresh: _load,
+              child: Center(
+                  child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 640),
+                      child: ListView(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        padding: const EdgeInsets.all(20),
+                        children: [
+                          if (_error != null) ...[
+                            Text(_error!, style: TextStyle(color: f.error)),
+                            TextButton(
+                                onPressed: _load, child: const Text('Retry'))
+                          ],
+                          Text('Grow your SIRVYA network',
+                              style: TextStyle(
+                                  color: cs.onSurface,
+                                  fontSize: 23,
+                                  fontWeight: FontWeight.w800)),
+                          const SizedBox(height: 8),
+                          Text(
+                              'One code for clients and coaches. Track the people who successfully sign up through your invitation.',
+                              style: TextStyle(
+                                  color: f.textSecondary, height: 1.5)),
+                          const SizedBox(height: 20),
+                          Container(
+                              padding: const EdgeInsets.all(20),
+                              decoration: BoxDecoration(
+                                  color: f.card,
+                                  borderRadius: BorderRadius.circular(22),
+                                  border: Border.all(color: f.border)),
+                              child: Column(children: [
+                                if (_link.isNotEmpty)
+                                  Container(
+                                      padding: const EdgeInsets.all(12),
+                                      decoration: BoxDecoration(
+                                          color: Colors.white,
+                                          borderRadius:
+                                              BorderRadius.circular(16)),
+                                      child: QrImageView(
+                                          data: _link,
+                                          size: 170,
+                                          backgroundColor: Colors.white)),
+                                const SizedBox(height: 16),
+                                const Text('Your invitation code'),
+                                const SizedBox(height: 6),
+                                SelectableText(_code,
+                                    style: TextStyle(
+                                        color: cs.onSurface,
+                                        fontSize: 21,
+                                        fontWeight: FontWeight.w800,
+                                        letterSpacing: 2)),
+                                const SizedBox(height: 16),
+                                Wrap(
+                                    spacing: 8,
+                                    runSpacing: 8,
+                                    alignment: WrapAlignment.center,
+                                    children: [
+                                      OutlinedButton.icon(
+                                          onPressed: _code.isEmpty
+                                              ? null
+                                              : () => _copy(_code),
+                                          icon: const Icon(Icons.copy_rounded,
+                                              size: 18),
+                                          label: const Text('Copy code')),
+                                      OutlinedButton.icon(
+                                          onPressed: _link.isEmpty
+                                              ? null
+                                              : () => _copy(_link),
+                                          icon: const Icon(Icons.link_rounded,
+                                              size: 18),
+                                          label: const Text('Copy link')),
+                                      Builder(
+                                          builder: (ctx) => FilledButton.icon(
+                                              onPressed: _link.isEmpty
+                                                  ? null
+                                                  : () => _share(ctx),
+                                              icon: const Icon(
+                                                  Icons.share_rounded,
+                                                  size: 18),
+                                              label: const Text('Share'))),
+                                    ]),
+                              ])),
+                          const SizedBox(height: 20),
+                          Row(children: [
+                            Expanded(
+                                child: _stat('$_clients', 'Clients joined')),
+                            const SizedBox(width: 10),
+                            Expanded(
+                                child: _stat('$_coaches', 'Coaches joined'))
+                          ]),
+                          const SizedBox(height: 10),
+                          _stat('$_points points', 'Your total reward balance'),
+                          const SizedBox(height: 20),
+                          Text('How rewards work',
+                              style: TextStyle(
+                                  color: cs.onSurface,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w700)),
+                          const SizedBox(height: 8),
+                          Text(
+                              'Coach: 40 points after a new account is created.\nClient: 20 points when you accept their connection in Clients. Sharing or opening a link does not earn points.',
+                              style: TextStyle(
+                                  color: f.textSecondary, height: 1.6)),
+                          const SizedBox(height: 24),
+                          Text('People you invited',
+                              style: TextStyle(
+                                  color: cs.onSurface,
+                                  fontSize: 17,
+                                  fontWeight: FontWeight.w700)),
+                          const SizedBox(height: 12),
+                          Wrap(
+                              spacing: 8,
+                              children: ['All', 'Clients', 'Coaches']
+                                  .map((value) => ChoiceChip(
+                                      label: Text(value),
+                                      selected: _filter == value,
+                                      onSelected: (_) =>
+                                          setState(() => _filter = value)))
+                                  .toList()),
+                          const SizedBox(height: 12),
+                          if (_history.where(_matches).isEmpty)
+                            Padding(
+                                padding: const EdgeInsets.all(20),
+                                child: Text(
+                                    'No signups in this category yet. Share your link to get started.',
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(color: f.textMuted))),
+                          ..._history.where(_matches).map((r) => _person(r)),
+                        ],
+                      ))),
             ),
-          ),
-        ),
-      ),
     );
   }
 
-  PreferredSizeWidget _buildAppBar() {
-    final cs = Theme.of(context).colorScheme;
-    return AppBar(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      surfaceTintColor: Colors.transparent,
-      elevation: 0,
-      leading: IconButton(
-        tooltip: 'Back',
-        onPressed: () => Navigator.of(context).pop(),
-        icon: Icon(Icons.arrow_back_ios_new_rounded, color: cs.onSurface),
-      ),
-      title: Text(
-        'Invite Coaches',
-        style: TextStyle(
-          color: cs.onSurface,
-          fontSize: 20,
-          fontWeight: FontWeight.w800,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildQRSection() => Center(child: AnimatedBuilder(
-    animation: _pulseAnim,
-    builder: (_, child) => Transform.scale(scale: _pulseAnim.value, child: child),
-    child: Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(28),
-          boxShadow: [BoxShadow(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.4), blurRadius: 40, offset: const Offset(0, 12))]),
-      child: Column(mainAxisSize: MainAxisSize.min, children: [
-        // Placeholder for QR image when qr_flutter package is not available.
-        Container(
-          width: 180,
-          height: 180,
-          color: Colors.white,
-          child: Center(
-            child: Text(
-              _invitationCode.isNotEmpty ? _invitationCode : 'No Code',
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.black, fontSize: 14, fontWeight: FontWeight.w700),
-            ),
-          ),
-        ),
-        const SizedBox(height: 10),
-        Container(padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-          decoration: BoxDecoration(color: Colors.black, borderRadius: BorderRadius.circular(8)),
-          child: Text(_invitationCode, style: TextStyle(color: Theme.of(context).colorScheme.primary, fontSize: 13, fontWeight: FontWeight.w800, letterSpacing: 1.5))),
-      ]),
-    ),
-  ));
-
-  Widget _buildCodeSection() => Container(
-    padding: const EdgeInsets.all(20),
-    decoration: BoxDecoration(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3), width: 1.5)),
-    child: Column(children: [
-      Text('Your Invitation Code', style: TextStyle(color: context.fitlek.textSecondary, fontSize: 13, fontWeight: FontWeight.w600, letterSpacing: 0.3)),
-      const SizedBox(height: 14),
-      Row(mainAxisAlignment: MainAxisAlignment.center, children: _buildCodeChars()),
-      const SizedBox(height: 12),
-      Text('You earn 40 points when a new coach registers with your code.',
-          textAlign: TextAlign.center,
-          style: TextStyle(color: context.fitlek.textMuted, fontSize: 12, fontWeight: FontWeight.w500)),
-    ]),
-  );
-
-  List<Widget> _buildCodeChars() {
-    if (_invitationCode.isEmpty) return [];
-    final parts = _invitationCode.split('-');
-    final widgets = <Widget>[];
-    for (int p = 0; p < parts.length; p++) {
-      for (final char in parts[p].split('')) {
-        widgets.add(Container(margin: const EdgeInsets.symmetric(horizontal: 2), width: 28, height: 40,
-          decoration: BoxDecoration(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(6), border: Border.all(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.25))),
-          child: Center(child: Text(char, style: TextStyle(color: Theme.of(context).colorScheme.primary, fontSize: 15, fontWeight: FontWeight.w800)))));
-      }
-      if (p < parts.length - 1) {
-        widgets.add(Padding(padding: const EdgeInsets.symmetric(horizontal: 2),
-          child: Text('-', style: TextStyle(color: context.fitlek.textMuted, fontSize: 18, fontWeight: FontWeight.w300))));
-      }
-    }
-    return widgets;
-  }
-
-  Widget _buildActionButtons() => Row(children: [
-    Expanded(child: GestureDetector(onTap: _copyCode,
-      child: AnimatedContainer(duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(vertical: 16),
-        decoration: BoxDecoration(
-          color: _copied ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.12) : Theme.of(context).colorScheme.primary,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: _copied ? null : [BoxShadow(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3), blurRadius: 16, offset: const Offset(0, 6))],
-          border: _copied ? Border.all(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.4), width: 1.5) : null),
-        child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-          Icon(_copied ? Icons.check_rounded : Icons.copy_rounded, color: _copied ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.onPrimary, size: 18),
-          const SizedBox(width: 8),
-          Text(_copied ? 'Copied!' : 'Copy Code', style: TextStyle(color: _copied ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.onPrimary, fontSize: 14, fontWeight: FontWeight.w700)),
-        ])))),
-    const SizedBox(width: 12),
-    Expanded(child: GestureDetector(onTap: _shareCode,
-      child: Container(padding: const EdgeInsets.symmetric(vertical: 16),
-        decoration: BoxDecoration(color: context.fitlek.card, borderRadius: BorderRadius.circular(16), border: Border.all(color: context.fitlek.border)),
-        child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-          Icon(Icons.share_rounded, color: context.fitlek.textSecondary, size: 18), const SizedBox(width: 8),
-          Text('Share', style: TextStyle(color: context.fitlek.textSecondary, fontSize: 14, fontWeight: FontWeight.w700)),
-        ])))),
-  ]);
-
-  Widget _buildStatsRow() => Row(children: [
-    Expanded(child: _statCard('$_totalInvitations', 'Total Invitations', Icons.link_rounded)),
-    const SizedBox(width: 12),
-    Expanded(child: _statCard('$_earnedPoints pts', 'Points Earned', Icons.star_rounded)),
-  ]);
-
-  Widget _statCard(String value, String label, IconData icon) => Container(
-    padding: const EdgeInsets.all(16),
-    decoration: BoxDecoration(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.08), borderRadius: BorderRadius.circular(16), border: Border.all(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2))),
-    child: Row(children: [
-      Icon(icon, color: Theme.of(context).colorScheme.primary, size: 20), const SizedBox(width: 10),
-      Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text(value, style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 18, fontWeight: FontWeight.w800)),
-        Text(label, style: TextStyle(color: context.fitlek.textMuted, fontSize: 11)),
-      ])),
-    ]),
-  );
-
-  Widget _buildHowItWorks() => Container(
-    padding: const EdgeInsets.all(20),
-    decoration: BoxDecoration(color: context.fitlek.card, borderRadius: BorderRadius.circular(20), border: Border.all(color: context.fitlek.border)),
-    child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Text('How It Works', style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 15, fontWeight: FontWeight.w700)),
-      const SizedBox(height: 16),
-      _buildStep('1', 'Share your code', 'Send your referral code to another coach'),
-      _buildStep('2', 'They register', 'They enter your code during Coach sign up'),
-      _buildStep('3', 'Earn 40 points', 'Added to your balance once their account is created'),
-    ]),
-  );
-
-  Widget _buildReferralHistory() {
-    final cs = Theme.of(context).colorScheme;
-    final f = context.fitlek;
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Text('Coaches You Invited', style: TextStyle(color: cs.onSurface, fontSize: 15, fontWeight: FontWeight.w700)),
-      const SizedBox(height: 12),
-      if (_referrals.isEmpty)
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(vertical: 24),
-          decoration: BoxDecoration(color: f.card, borderRadius: BorderRadius.circular(16), border: Border.all(color: f.border)),
-          child: Column(children: [
-            Icon(Icons.group_add_rounded, color: f.textMuted, size: 40),
-            const SizedBox(height: 10),
-            Text('No coach referrals yet', style: TextStyle(color: f.textMuted, fontSize: 13)),
-          ]),
-        )
-      else
-        ..._referrals.map(_buildReferralItem),
-    ]);
-  }
-
-  Widget _buildReferralItem(dynamic r) {
-    final cs = Theme.of(context).colorScheme;
-    final f = context.fitlek;
+  bool _matches(dynamic r) =>
+      _filter == 'All' ||
+      (_filter == 'Clients' ? r['role'] == 'client' : r['role'] == 'coach');
+  Widget _stat(String value, String label) => Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+          color: context.fitlek.card, borderRadius: BorderRadius.circular(16)),
+      child: Column(children: [
+        Text(value,
+            style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurface,
+                fontSize: 22,
+                fontWeight: FontWeight.w800)),
+        const SizedBox(height: 4),
+        Text(label,
+            style: TextStyle(color: context.fitlek.textMuted, fontSize: 12))
+      ]));
+  Widget _person(dynamic r) {
+    final cs = Theme.of(context).colorScheme, f = context.fitlek;
     final name = '${r['firstName'] ?? ''} ${r['lastName'] ?? ''}'.trim();
-    final avatar = r['avatarUrl']?.toString();
-    final pts = r['pointsAwarded'] ?? 20;
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(color: f.card, borderRadius: BorderRadius.circular(16), border: Border.all(color: f.border)),
-      child: Row(children: [
-        Container(
-          width: 42, height: 42,
-          decoration: BoxDecoration(shape: BoxShape.circle, border: Border.all(color: f.border)),
-          child: ClipOval(
-            child: (avatar != null && avatar.isNotEmpty)
-                ? Image.network(avatar, fit: BoxFit.cover, errorBuilder: (_, __, ___) => Icon(Icons.person, color: f.textMuted, size: 20))
-                : Icon(Icons.person, color: f.textMuted, size: 20),
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(name.isEmpty ? 'Coach' : name, maxLines: 1, overflow: TextOverflow.ellipsis,
-              style: TextStyle(color: cs.onSurface, fontSize: 14, fontWeight: FontWeight.w600)),
-          const SizedBox(height: 2),
-          Text(_formatRefDate(r['createdAt']), style: TextStyle(color: f.textMuted, fontSize: 12)),
-        ])),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-          decoration: BoxDecoration(color: cs.primary.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(10), border: Border.all(color: cs.primary.withValues(alpha: 0.3))),
-          child: Text('+$pts pts', style: TextStyle(color: cs.primary, fontSize: 12, fontWeight: FontWeight.w700)),
-        ),
-      ]),
-    );
+    final date = DateTime.tryParse('${r['createdAt']}')?.toLocal();
+    final role = r['role'] == 'coach' ? 'Coach' : 'Client';
+    final status = r['status'] == 'pending'
+        ? 'Connection pending'
+        : r['status'] == 'accepted'
+            ? 'Connected'
+            : r['status'] == 'refused'
+                ? 'Connection declined'
+                : 'Registered';
+    return Card(
+        child: Padding(
+            padding: const EdgeInsets.all(14),
+            child: Row(children: [
+              CircleAvatar(
+                  backgroundColor: f.card2,
+                  child: Icon(
+                      role == 'Coach'
+                          ? Icons.fitness_center_rounded
+                          : Icons.person_outline_rounded,
+                      color: cs.primary)),
+              const SizedBox(width: 12),
+              Expanded(
+                  child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                    Text(name.isEmpty ? role : name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                            color: cs.onSurface, fontWeight: FontWeight.w700)),
+                    const SizedBox(height: 4),
+                    Text('$role • $status',
+                        style: TextStyle(color: f.textSecondary, fontSize: 12)),
+                    if (date != null)
+                      Text('${date.day}/${date.month}/${date.year}',
+                          style: TextStyle(color: f.textMuted, fontSize: 11))
+                  ])),
+              const SizedBox(width: 8),
+              Text('+${r['pointsAwarded'] ?? 0} pts',
+                  style: TextStyle(
+                      color: cs.primary, fontWeight: FontWeight.w700)),
+            ])));
   }
-
-  Widget _buildStep(String num, String title, String subtitle) => Padding(
-    padding: const EdgeInsets.only(bottom: 14),
-    child: Row(children: [
-      Container(width: 32, height: 32, decoration: BoxDecoration(color: Theme.of(context).colorScheme.primary, shape: BoxShape.circle),
-        child: Center(child: Text(num, style: TextStyle(color: Theme.of(context).colorScheme.onPrimary, fontSize: 13, fontWeight: FontWeight.w800)))),
-      const SizedBox(width: 14),
-      Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text(title, style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 13, fontWeight: FontWeight.w600)),
-        Text(subtitle, style: TextStyle(color: context.fitlek.textMuted, fontSize: 12)),
-      ])),
-    ]),
-  );
 }

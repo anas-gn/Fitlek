@@ -40,7 +40,7 @@ class CoachHeader extends StatelessWidget {
     final f = context.fitlek;
 
     return Container(
-      padding: const EdgeInsets.fromLTRB(24, 14, 24, 14),
+      padding: const EdgeInsets.fromLTRB(20, 10, 20, 10),
       decoration: BoxDecoration(
         color: theme.scaffoldBackgroundColor,
         border: Border(
@@ -51,7 +51,9 @@ class CoachHeader extends StatelessWidget {
       child: Row(
         children: [
           // ── Brand area (SIRVYA logo) ──
-          const SirvyaLogo(variant: SirvyaLogoVariant.wordmark, height: 28),
+          const Flexible(
+            child: SirvyaLogo(variant: SirvyaLogoVariant.wordmark, height: 20),
+          ),
 
           const Spacer(),
 

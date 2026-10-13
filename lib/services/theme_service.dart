@@ -14,8 +14,10 @@ class ThemeService {
         return AppThemeMode.light;
       case 'dark':
         return AppThemeMode.dark;
-      default:
+      case 'system':
         return AppThemeMode.system;
+      default:
+        return AppThemeMode.dark;
     }
   }
 
@@ -48,7 +50,7 @@ class ThemeService {
 }
 
 class ThemeController extends ChangeNotifier {
-  AppThemeMode _mode = AppThemeMode.system;
+  AppThemeMode _mode = AppThemeMode.dark;
   bool _loaded = false;
 
   AppThemeMode get mode => _mode;

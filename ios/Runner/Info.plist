@@ -67,11 +67,21 @@
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
 	<key>NSCameraUsageDescription</key>
-	<string>SIRVYA needs access to your camera so you can scan QR codes and update your profile picture.</string>
+	<string>SIRVYA uses your camera to scan QR codes and capture photos for your profile and chat messages.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>SIRVYA needs access to your photo library so you can choose and upload a profile picture.</string>
+	<string>SIRVYA uses photos you select for your profile, coach gallery, certificates and chat messages.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>SIRVYA uses your microphone when you record a voice message to send in chat.</string>
+	<key>UIBackgroundModes</key>
+	<array><string>fetch</string><string>location</string><string>remote-notification</string></array>
+	<key>BGTaskSchedulerPermittedIdentifiers</key>
+	<array><string>com.sirvya.location.refresh</string></array>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>SIRVYA updates your private location to improve nearby coach recommendations and approximate distances, even while the app is in the background.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>SIRVYA needs access to your location to show fitness centers and trainers near you on the map.</string>
+	<key>FlutterDeepLinkingEnabled</key>
+	<false/>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
@@ -79,11 +89,18 @@
 			<string>Editor</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
-				<string>com.googleusercontent.apps.256158398727-01aql5h5hl2db4cepi6stft6cobje8ee</string>
+				<string>sirvya</string>
+				<string>com.googleusercontent.apps.256158398727-5r7fq1g8aonlpov8mqe5rshmeu322krn</string>
 			</array>
 		</dict>
 	</array>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
+	<key>GIDClientID</key>
+	<string>256158398727-5r7fq1g8aonlpov8mqe5rshmeu322krn.apps.googleusercontent.com</string>
+	<key>GIDServerClientID</key>
+	<string>256158398727-12phehhv4i9lt5lemdpur3lmte5ob3hf.apps.googleusercontent.com</string>
+	<key>FirebaseAppDelegateProxyEnabled</key>
+	<true/>
 </dict>
 </plist>

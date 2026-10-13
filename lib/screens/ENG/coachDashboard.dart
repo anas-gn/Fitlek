@@ -1,18 +1,26 @@
+import '../../services/live_updates.dart';
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:shimmer/shimmer.dart';
 import '../../services/apiService.dart';
+import 'coachCalendar.dart';
+import '../../services/notification_navigation.dart';
 import '../../theme/fitlek_theme_extension.dart';
 
 class CoachDashboard extends StatefulWidget {
   final VoidCallback? onViewCalendar;
   final VoidCallback? onViewNotifications;
   final VoidCallback? onViewInvitations;
+  final String coachName;
+  final Future<Map<String, dynamic>> Function(String)? load;
 
   const CoachDashboard({
     super.key,
     this.onViewCalendar,
     this.onViewNotifications,
     this.onViewInvitations,
+    this.coachName = '',
+    this.load,
   });
 
   @override
@@ -21,7 +29,16 @@ class CoachDashboard extends StatefulWidget {
 
 enum _DashState { loading, success, error }
 
-class _CoachDashboardState extends State<CoachDashboard> {
+class _CoachDashboardState extends State<CoachDashboard> with LiveUpdates<CoachDashboard> {
+  @override
+  Set<String> get liveDomains => {'calendar','reservations','notifications','messages','profile','edit','invitations','reviews','clients'};
+  @override
+  Future<void> refreshLiveData() async { await _loadData(silent:true); await _refreshVerification(); }
+
+  Future<Map<String, dynamic>> _get(String path) =>
+      (widget.load ?? ApiService.get)(path);
+  bool? _isVerified;
+  Timer? _verificationTimer;
   _DashState _state = _DashState.loading;
 
   int _totalReservations = 0;
@@ -35,14 +52,109 @@ class _CoachDashboardState extends State<CoachDashboard> {
   int _nextTier = 2;
   int _tierProgress = 0;
   int _pointsRemaining = 0;
+  int _periodClients = 0;
   List<Map<String, dynamic>> _recentReservations = [];
   List<Map<String, dynamic>> _notifications = [];
   List<Map<String, dynamic>> _recentClientInvitations = [];
+
+  int _selectedFilterIndex = 0; // 0=Today, 1=This Week, 2=This Month
+
+  String get _periodParam {
+    if (_selectedFilterIndex == 0) return 'today';
+    if (_selectedFilterIndex == 1) return 'week';
+    return 'month';
+  }
+
+  String get _periodLabel {
+    if (_selectedFilterIndex == 0) return 'today';
+    if (_selectedFilterIndex == 1) return 'this week';
+    return 'this month';
+  }
+
+  String _getTodaySubtitle() {
+    final now = DateTime.now();
+    const m = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec'
+    ];
+    return '${m[now.month - 1]} ${now.day}, ${now.year}';
+  }
+
+  String _getWeekSubtitle() {
+    final now = DateTime.now();
+    final startOfWeek = now.subtract(Duration(days: now.weekday - 1));
+    final endOfWeek = startOfWeek.add(const Duration(days: 6));
+    const m = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec'
+    ];
+    if (startOfWeek.month == endOfWeek.month) {
+      return '${m[startOfWeek.month - 1]} ${startOfWeek.day} - ${endOfWeek.day}';
+    } else {
+      return '${m[startOfWeek.month - 1]} ${startOfWeek.day} - ${m[endOfWeek.month - 1]} ${endOfWeek.day}';
+    }
+  }
+
+  String _getMonthSubtitle() {
+    final now = DateTime.now();
+    const m = [
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December'
+    ];
+    return '${m[now.month - 1]} ${now.year}';
+  }
 
   @override
   void initState() {
     super.initState();
     _loadData();
+    _verificationTimer = Timer.periodic(
+        const Duration(seconds: 30), (_) => _refreshVerification());
+  }
+
+  @override
+  void dispose() {
+    _verificationTimer?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _refreshVerification() async {
+    if (_isVerified == true) return;
+    final result = await _get('/coaches/me/profile');
+    if (!mounted || result['ok'] != true || result['isApproved'] == null)
+      return;
+    setState(() => _isVerified =
+        result['isApproved'] == true || result['isApproved'].toString() == '1');
   }
 
   /// Safe numeric parsing: null aggregates become 0.
@@ -52,19 +164,21 @@ class _CoachDashboardState extends State<CoachDashboard> {
     return int.tryParse('${v ?? ''}') ?? 0;
   }
 
-  Future<void> _loadData() async {
-    if (mounted && _state != _DashState.loading) {
+  Future<void> _loadData({bool silent = false}) async {
+    if (!silent && mounted && _state != _DashState.loading) {
       setState(() => _state = _DashState.loading);
     }
-    final result = await ApiService.get('/coach/dashboard');
+    final result = await _get('/coach/dashboard?period=$_periodParam');
     if (!mounted) return;
 
     if (result['ok'] == true) {
       setState(() {
+        _isVerified = result['isVerified'] == true;
         _totalReservations = _asInt(result['totalReservations']);
         _pendingReservations = _asInt(result['pendingReservations']);
         _confirmedReservations = _asInt(result['confirmedReservations']);
         _totalClients = _asInt(result['totalClients']);
+        _periodClients = _asInt(result['periodClients']);
         _invitationPoints = _asInt(result['invitationPoints']);
         _totalInvitations = _asInt(result['totalInvitations']);
         _invitationsThisWeek = _asInt(result['invitationsThisWeek']);
@@ -134,12 +248,49 @@ class _CoachDashboardState extends State<CoachDashboard> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _buildIntro(cs, f),
-                  const SizedBox(height: 18),
-                  _buildClientsOverview(cs, f),
+                  if (_isVerified == false) ...[
+                    const SizedBox(height: 16),
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                          color: cs.primary.withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(
+                              color: cs.primary.withValues(alpha: 0.25))),
+                      child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Icon(Icons.verified_outlined,
+                                color: cs.primary, size: 26),
+                            const SizedBox(width: 12),
+                            Expanded(
+                                child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                  Text('Verification pending',
+                                      style: TextStyle(
+                                          color: cs.onSurface,
+                                          fontWeight: FontWeight.w800)),
+                                  const SizedBox(height: 5),
+                                  Text(
+                                      'We’re reviewing your profile for the Sirvya verified badge. Verification can take up to 48 hours. Your badge will appear once verification is complete.',
+                                      style: TextStyle(
+                                          color: f.textMuted,
+                                          fontSize: 13,
+                                          height: 1.5)),
+                                ])),
+                          ]),
+                    ),
+                  ],
+                  const SizedBox(height: 20),
+                  _buildDateFilters(cs, f),
+                  const SizedBox(height: 20),
+                  _buildClientsOverviewCard(cs, f),
+                  const SizedBox(height: 16),
+                  _buildStatsGrid(cs, f),
                   const SizedBox(height: 16),
                   _buildRewardCards(cs, f),
-                  const SizedBox(height: 22),
-                  _buildClientInvitations(cs, f),
                   const SizedBox(height: 22),
                   _buildRecentReservations(cs, f),
                   const SizedBox(height: 22),
@@ -153,117 +304,386 @@ class _CoachDashboardState extends State<CoachDashboard> {
     );
   }
 
+  Widget _buildDateFilters(ColorScheme cs, FitlekColors f) {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: [
+          _dateFilterTab(
+            cs,
+            f,
+            icon: Icons.calendar_today_rounded,
+            title: 'Today',
+            subtitle: _getTodaySubtitle(),
+            isSelected: _selectedFilterIndex == 0,
+            onTap: () {
+              if (_selectedFilterIndex != 0) {
+                setState(() => _selectedFilterIndex = 0);
+                _loadData();
+              }
+            },
+          ),
+          const SizedBox(width: 12),
+          _dateFilterTab(
+            cs,
+            f,
+            icon: Icons.date_range_rounded,
+            title: 'This Week',
+            subtitle: _getWeekSubtitle(),
+            isSelected: _selectedFilterIndex == 1,
+            onTap: () {
+              if (_selectedFilterIndex != 1) {
+                setState(() => _selectedFilterIndex = 1);
+                _loadData();
+              }
+            },
+          ),
+          const SizedBox(width: 12),
+          _dateFilterTab(
+            cs,
+            f,
+            icon: Icons.calendar_month_rounded,
+            title: 'This Month',
+            subtitle: _getMonthSubtitle(),
+            isSelected: _selectedFilterIndex == 2,
+            onTap: () {
+              if (_selectedFilterIndex != 2) {
+                setState(() => _selectedFilterIndex = 2);
+                _loadData();
+              }
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _dateFilterTab(
+    ColorScheme cs,
+    FitlekColors f, {
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required bool isSelected,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: isSelected ? cs.primary.withValues(alpha: 0.1) : f.card,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: isSelected ? cs.primary : f.border,
+            width: 1.5,
+          ),
+        ),
+        child: Row(
+          children: [
+            Icon(icon,
+                color: isSelected ? cs.primary : f.textSecondary, size: 20),
+            const SizedBox(width: 12),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    color: isSelected ? cs.onSurface : f.textSecondary,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                  ),
+                ),
+                Text(
+                  subtitle,
+                  style: TextStyle(
+                    color: isSelected ? cs.primary : f.textMuted,
+                    fontSize: 11,
+                  ),
+                ),
+              ],
+            ),
+            if (!isSelected) ...[
+              const SizedBox(width: 16),
+              Icon(Icons.chevron_right, color: f.textMuted, size: 16),
+            ]
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildIntro(ColorScheme cs, FitlekColors f) {
+    final name =
+        widget.coachName.isNotEmpty ? widget.coachName.toUpperCase() : 'COACH';
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Dashboard',
+          'Good morning,',
+          style: TextStyle(color: cs.onSurface, fontSize: 14),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          '$name 👋',
           style: TextStyle(
             color: cs.onSurface,
-            fontSize: 30,
-            fontWeight: FontWeight.w800,
+            fontSize: 20,
+            fontWeight: FontWeight.w900,
             letterSpacing: -0.5,
-            height: 1.1,
           ),
         ),
-        const SizedBox(height: 6),
+        const SizedBox(height: 4),
         Text(
-          'Your coaching activity at a glance',
-          style: TextStyle(color: f.textSecondary, fontSize: 14, height: 1.4),
+          'Here\'s your coaching activity today.',
+          style: TextStyle(color: f.textSecondary, fontSize: 12),
         ),
       ],
     );
   }
 
-  Widget _buildClientsOverview(ColorScheme cs, FitlekColors f) {
-    final onPrimary = cs.onPrimary;
+  Widget _buildClientsOverviewCard(ColorScheme cs, FitlekColors f) {
     return Container(
-      width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: cs.primary,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: cs.primary.withValues(alpha: 0.22),
-            blurRadius: 18,
-            offset: const Offset(0, 7),
-          ),
-        ],
+        color: f.card,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: f.border),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: f.card2,
+              shape: BoxShape.circle,
+            ),
+            child:
+                Icon(Icons.people_alt_rounded, color: cs.onSurface, size: 32),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Total Clients',
+                  style: TextStyle(
+                      color: cs.onSurface,
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 6),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    Text(
-                      'Total Clients',
-                      style: TextStyle(
-                        color: onPrimary.withValues(alpha: 0.68),
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 5),
                     Text(
                       '$_totalClients',
                       style: TextStyle(
-                        color: onPrimary,
-                        fontSize: 38,
-                        fontWeight: FontWeight.w900,
-                        height: 1,
+                          color: cs.onSurface,
+                          fontSize: 32,
+                          fontWeight: FontWeight.w900,
+                          height: 1),
+                    ),
+                    const SizedBox(width: 12),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: cs.primary.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.arrow_upward_rounded,
+                              color: cs.primary, size: 12),
+                          const SizedBox(width: 4),
+                          Text(
+                            '100%',
+                            style: TextStyle(
+                                color: cs.primary,
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold),
+                          ),
+                        ],
                       ),
                     ),
                   ],
                 ),
-              ),
-              Icon(
-                Icons.trending_up_rounded,
-                color: onPrimary.withValues(alpha: 0.62),
-                size: 26,
-              ),
-            ],
+                const SizedBox(height: 6),
+                Text(
+                  '+$_periodClients $_periodLabel',
+                  style: TextStyle(color: f.textSecondary, fontSize: 11),
+                ),
+              ],
+            ),
           ),
-          const SizedBox(height: 38),
-          Divider(color: onPrimary.withValues(alpha: 0.13), height: 1),
-          const SizedBox(height: 15),
-          Row(
-            children: [
-              _heroStat('Reservations', _totalReservations, onPrimary),
-              _heroStat('Confirmed', _confirmedReservations, onPrimary),
-              _heroStat('Pending', _pendingReservations, onPrimary),
-            ],
-          ),
+          _buildBarChart(cs, f),
         ],
       ),
     );
   }
 
-  Widget _heroStat(String label, int value, Color color) {
-    return Expanded(
+  Widget _buildBarChart(ColorScheme cs, FitlekColors f) {
+    final days = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+    final heights = [10.0, 20.0, 40.0, 10.0, 10.0, 10.0, 10.0];
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: List.generate(7, (index) {
+        final isToday = index == 2;
+        return Padding(
+          padding: const EdgeInsets.only(left: 6.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 10,
+                height: heights[index],
+                decoration: BoxDecoration(
+                  color:
+                      isToday ? cs.primary : cs.primary.withValues(alpha: 0.3),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                days[index],
+                style: TextStyle(
+                  color: isToday ? cs.primary : f.textMuted,
+                  fontSize: 9,
+                  fontWeight: isToday ? FontWeight.bold : FontWeight.normal,
+                ),
+              ),
+            ],
+          ),
+        );
+      }),
+    );
+  }
+
+  Widget _buildStatsGrid(ColorScheme cs, FitlekColors f) {
+    return GridView.count(
+      crossAxisCount: 2,
+      crossAxisSpacing: 12,
+      mainAxisSpacing: 12,
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      childAspectRatio: 1.35,
+      children: [
+        _statCard(
+          cs,
+          f,
+          icon: Icons.calendar_today_rounded,
+          iconColor: cs.primary,
+          iconBg: cs.primary.withValues(alpha: 0.15),
+          title: 'Reservations',
+          value: '$_totalReservations',
+          subtitle: '$_periodLabel',
+          subtitleColor: cs.primary,
+          subtitleIcon: Icons.arrow_upward_rounded,
+        ),
+        _statCard(
+          cs,
+          f,
+          icon: Icons.check_circle_rounded,
+          iconColor: f.success,
+          iconBg: f.success.withValues(alpha: 0.15),
+          title: 'Confirmed',
+          value: '$_confirmedReservations',
+          subtitle: '12.5% of total',
+          subtitleColor: f.textSecondary,
+        ),
+        _statCard(
+          cs,
+          f,
+          icon: Icons.access_time_rounded,
+          iconColor: f.warning,
+          iconBg: f.warning.withValues(alpha: 0.15),
+          title: 'Pending',
+          value: '$_pendingReservations',
+          subtitle: '87.5% of total',
+          subtitleColor: f.warning,
+        ),
+        _statCard(
+          cs,
+          f,
+          icon: Icons.attach_money_rounded,
+          iconColor: f.textSecondary,
+          iconBg: f.textSecondary.withValues(alpha: 0.15),
+          title: 'Total Earnings',
+          value: '0 MAD',
+          subtitle: '+0 this week',
+          subtitleColor: f.textSecondary,
+        ),
+      ],
+    );
+  }
+
+  Widget _statCard(
+    ColorScheme cs,
+    FitlekColors f, {
+    required IconData icon,
+    required Color iconColor,
+    required Color iconBg,
+    required String title,
+    required String value,
+    required String subtitle,
+    required Color subtitleColor,
+    IconData? subtitleIcon,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: f.card,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: f.border),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(
-            label,
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            style: TextStyle(
-              color: color.withValues(alpha: 0.58),
-              fontSize: 11.5,
-              fontWeight: FontWeight.w500,
-            ),
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: iconBg,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(icon, color: iconColor, size: 16),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  title,
+                  style: TextStyle(
+                      color: cs.onSurface,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 4),
           Text(
-            '$value',
-            style: TextStyle(color: color, fontSize: 14, fontWeight: FontWeight.w800),
+            value,
+            style: TextStyle(
+                color: cs.onSurface, fontSize: 24, fontWeight: FontWeight.w900),
+          ),
+          Row(
+            children: [
+              if (subtitleIcon != null) ...[
+                Icon(subtitleIcon, color: subtitleColor, size: 12),
+                const SizedBox(width: 4),
+              ],
+              Text(
+                subtitle,
+                style: TextStyle(color: subtitleColor, fontSize: 11),
+              ),
+            ],
           ),
         ],
       ),
@@ -271,20 +691,17 @@ class _CoachDashboardState extends State<CoachDashboard> {
   }
 
   Widget _buildRewardCards(ColorScheme cs, FitlekColors f) {
-    // Do NOT use CrossAxisAlignment.stretch here: this Row lives inside a
-    // scrollable Column (unbounded height) and stretch causes a layout crash
-    // that leaves the whole dashboard blank on web.
     return IntrinsicHeight(
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Expanded(
-            flex: 3,
+            flex: 6,
             child: Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 color: f.card,
-                borderRadius: BorderRadius.circular(18),
+                borderRadius: BorderRadius.circular(16),
                 border: Border.all(color: f.border),
               ),
               child: Column(
@@ -292,46 +709,71 @@ class _CoachDashboardState extends State<CoachDashboard> {
                 children: [
                   Row(
                     children: [
-                      Icon(Icons.stars_rounded, color: cs.primary, size: 16),
-                      const SizedBox(width: 7),
+                      Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: Colors.orange.withValues(alpha: 0.15),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.star_rounded,
+                            color: Colors.orange, size: 16),
+                      ),
+                      const SizedBox(width: 8),
                       Expanded(
                         child: Text(
                           'Invitation Points',
                           style: TextStyle(
                             color: cs.onSurface,
-                            fontSize: 12.5,
-                            fontWeight: FontWeight.w700,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
                           ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
+                      Icon(Icons.chevron_right, color: f.textMuted, size: 16),
                     ],
                   ),
-                  const SizedBox(height: 13),
+                  const SizedBox(height: 16),
                   Text(
                     '$_invitationPoints',
                     style: TextStyle(
                       color: cs.onSurface,
-                      fontSize: 26,
+                      fontSize: 28,
                       fontWeight: FontWeight.w900,
                       height: 1,
                     ),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 16),
                   ClipRRect(
                     borderRadius: BorderRadius.circular(4),
                     child: LinearProgressIndicator(
                       value: _tierProgress / 100,
-                      minHeight: 5,
+                      minHeight: 6,
                       backgroundColor: f.border,
                       valueColor: AlwaysStoppedAnimation<Color>(cs.primary),
                     ),
                   ),
-                  const SizedBox(height: 7),
-                  Text(
-                    'Tier $_currentTier · $_tierProgress% to Tier $_nextTier · $_pointsRemaining points left',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(color: f.textMuted, fontSize: 10.5),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Text(
+                        'Tier $_currentTier',
+                        style: TextStyle(
+                            color: cs.onSurface,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(width: 6),
+                      Expanded(
+                        child: Text(
+                          '$_tierProgress% to Tier $_nextTier • $_pointsRemaining points left',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(color: f.textMuted, fontSize: 10),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -339,36 +781,57 @@ class _CoachDashboardState extends State<CoachDashboard> {
           ),
           const SizedBox(width: 12),
           Expanded(
-            flex: 2,
+            flex: 4,
             child: Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: f.card2,
-                borderRadius: BorderRadius.circular(18),
+                color: f.card,
+                borderRadius: BorderRadius.circular(16),
                 border: Border.all(color: f.border),
               ),
               child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'Invitations',
-                    style: TextStyle(color: cs.onSurface, fontSize: 12, fontWeight: FontWeight.w600),
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: Colors.purpleAccent.withValues(alpha: 0.15),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.share_rounded,
+                            color: Colors.purpleAccent, size: 16),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Invitations',
+                          style: TextStyle(
+                              color: cs.onSurface,
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      Icon(Icons.chevron_right, color: f.textMuted, size: 16),
+                    ],
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 16),
                   Text(
                     '$_totalInvitations',
                     style: TextStyle(
                       color: cs.onSurface,
-                      fontSize: 30,
+                      fontSize: 28,
                       fontWeight: FontWeight.w900,
                       height: 1,
                     ),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 16),
                   Text(
                     '+$_invitationsThisWeek this week',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(color: f.textSecondary, fontSize: 10.5),
+                    style: TextStyle(color: f.textSecondary, fontSize: 11),
                   ),
                 ],
               ),
@@ -376,35 +839,6 @@ class _CoachDashboardState extends State<CoachDashboard> {
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildClientInvitations(ColorScheme cs, FitlekColors f) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _sectionHeader(
-          'Client Invitations',
-          action: widget.onViewInvitations == null ? null : 'View all',
-          onAction: widget.onViewInvitations,
-          cs: cs,
-        ),
-        const SizedBox(height: 12),
-        if (_recentClientInvitations.isEmpty)
-          _emptyCard(
-            icon: Icons.mark_email_unread_outlined,
-            title: 'No client invitations',
-            subtitle: 'Invitations sent by clients will appear here.',
-            f: f,
-          )
-        else
-          ..._recentClientInvitations.map(
-            (item) => _ClientInvitationTile(
-              item: item,
-              onTap: widget.onViewInvitations,
-            ),
-          ),
-      ],
     );
   }
 
@@ -421,16 +855,35 @@ class _CoachDashboardState extends State<CoachDashboard> {
         const SizedBox(height: 12),
         if (_recentReservations.isEmpty)
           _emptyCard(
-            icon: Icons.event_busy_rounded,
+            icon: Icons.calendar_today_rounded, // Wait, calendar with an x?
             title: 'No upcoming reservations',
             subtitle: 'New reservations will appear here.',
             f: f,
+            actionButton: OutlinedButton.icon(
+              onPressed: () {}, // Can be wired up later
+              icon: const Icon(Icons.calendar_month_rounded, size: 16),
+              label: const Text('Set Your Availability'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: cs.onSurface,
+                backgroundColor: cs.primary.withValues(alpha: 0.15),
+                side: BorderSide(color: cs.primary.withValues(alpha: 0.3)),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20)),
+              ),
+            ),
           )
         else
           ..._recentReservations.map(
             (item) => _ReservationTile(
               item: item,
-              onTap: widget.onViewCalendar,
+              onTap: () async {
+                await Navigator.of(context).push(MaterialPageRoute(
+                  builder: (_) => CoachCalendar(reservationId: '${item['id']}'),
+                ));
+                if (mounted) _loadData();
+              },
             ),
           ),
       ],
@@ -468,7 +921,13 @@ class _CoachDashboardState extends State<CoachDashboard> {
                   .map(
                     (item) => _NotificationTile(
                       item: item,
-                      onTap: widget.onViewNotifications,
+                      onTap: () async {
+                        await ApiService.patch(
+                            '/coach/notifications/${item['id']}/read', {});
+                        if (!mounted) return;
+                        await NotificationNavigation.open(context, item);
+                        if (mounted) _loadData();
+                      },
                     ),
                   )
                   .toList(),
@@ -501,7 +960,10 @@ class _CoachDashboardState extends State<CoachDashboard> {
             onTap: onAction,
             child: Text(
               action,
-              style: TextStyle(color: cs.primary, fontSize: 12.5, fontWeight: FontWeight.w600),
+              style: TextStyle(
+                  color: cs.primary,
+                  fontSize: 12.5,
+                  fontWeight: FontWeight.w600),
             ),
           ),
       ],
@@ -513,6 +975,7 @@ class _CoachDashboardState extends State<CoachDashboard> {
     required String title,
     required String subtitle,
     required FitlekColors f,
+    Widget? actionButton,
   }) {
     return Container(
       width: double.infinity,
@@ -536,6 +999,10 @@ class _CoachDashboardState extends State<CoachDashboard> {
           ),
           const SizedBox(height: 4),
           Text(subtitle, style: TextStyle(color: f.textMuted, fontSize: 12)),
+          if (actionButton != null) ...[
+            const SizedBox(height: 16),
+            actionButton,
+          ],
         ],
       ),
     );
@@ -630,7 +1097,10 @@ class _CoachDashboardState extends State<CoachDashboard> {
             Text(
               'Couldn\'t load the dashboard',
               textAlign: TextAlign.center,
-              style: TextStyle(color: cs.onSurface, fontSize: 15, fontWeight: FontWeight.w700),
+              style: TextStyle(
+                  color: cs.onSurface,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 6),
             Text(
@@ -642,7 +1112,8 @@ class _CoachDashboardState extends State<CoachDashboard> {
             GestureDetector(
               onTap: _loadData,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 13),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 28, vertical: 13),
                 decoration: BoxDecoration(
                   color: cs.primary,
                   borderRadius: BorderRadius.circular(14),
@@ -702,8 +1173,7 @@ class _ClientInvitationTile extends StatelessWidget {
         : accepted
             ? f.success
             : f.error;
-    final name =
-        '${item['firstName'] ?? ''} ${item['lastName'] ?? ''}'.trim();
+    final name = '${item['firstName'] ?? ''} ${item['lastName'] ?? ''}'.trim();
     final avatar = item['avatarUrl']?.toString();
 
     return GestureDetector(
@@ -715,9 +1185,7 @@ class _ClientInvitationTile extends StatelessWidget {
           color: f.card,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: pending
-                ? f.warning.withValues(alpha: 0.28)
-                : f.border,
+            color: pending ? f.warning.withValues(alpha: 0.28) : f.border,
           ),
         ),
         child: Row(
@@ -758,9 +1226,7 @@ class _ClientInvitationTile extends StatelessWidget {
                   ),
                   const SizedBox(height: 3),
                   Text(
-                    pending
-                        ? 'Wants to connect · ${_timeAgo()}'
-                        : _timeAgo(),
+                    pending ? 'Wants to connect · ${_timeAgo()}' : _timeAgo(),
                     style: TextStyle(
                       color: f.textSecondary,
                       fontSize: 11.5,
@@ -771,8 +1237,7 @@ class _ClientInvitationTile extends StatelessWidget {
             ),
             const SizedBox(width: 8),
             Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               decoration: BoxDecoration(
                 color: statusColor.withValues(alpha: 0.12),
                 borderRadius: BorderRadius.circular(10),
@@ -837,8 +1302,18 @@ class _ReservationTile extends StatelessWidget {
     if (difference == 0) return 'Today';
     if (difference == 1) return 'Tomorrow';
     const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
     ];
     return '${months[date.month - 1]} ${date.day}';
   }
@@ -1042,7 +1517,8 @@ class _NotificationTile extends StatelessWidget {
                         Container(
                           width: 6,
                           height: 6,
-                          decoration: BoxDecoration(color: cs.primary, shape: BoxShape.circle),
+                          decoration: BoxDecoration(
+                              color: cs.primary, shape: BoxShape.circle),
                         ),
                     ],
                   ),
@@ -1052,12 +1528,14 @@ class _NotificationTile extends StatelessWidget {
                       body,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(color: f.textSecondary, fontSize: 11.5, height: 1.35),
+                      style: TextStyle(
+                          color: f.textSecondary, fontSize: 11.5, height: 1.35),
                     ),
                   ],
                   if (time.isNotEmpty) ...[
                     const SizedBox(height: 3),
-                    Text(time, style: TextStyle(color: f.textMuted, fontSize: 10.5)),
+                    Text(time,
+                        style: TextStyle(color: f.textMuted, fontSize: 10.5)),
                   ],
                 ],
               ),

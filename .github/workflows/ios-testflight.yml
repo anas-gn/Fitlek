@@ -1,0 +1,112 @@
+name: SIRVYA iOS - Build and TestFlight
+
+on:
+  workflow_dispatch:
+    inputs:
+      upload_to_testflight:
+        description: Upload the signed build to App Store Connect / TestFlight
+        type: boolean
+        default: true
+      build_number:
+        description: Optional build number (blank selects the next Apple build number)
+        type: string
+        required: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sirvya-ios-distribution
+  cancel-in-progress: false
+
+jobs:
+  preflight:
+    name: Check Apple credentials before using a Mac
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      app_id: ${{ steps.apple.outputs.app_id }}
+      build_number: ${{ steps.apple.outputs.build_number }}
+    env:
+      APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+      APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+      APP_STORE_CONNECT_PRIVATE_KEY_BASE64: ${{ secrets.APP_STORE_CONNECT_PRIVATE_KEY_BASE64 }}
+      IOS_CERTIFICATE_PRIVATE_KEY: ${{ secrets.IOS_CERTIFICATE_PRIVATE_KEY }}
+      REQUESTED_BUILD_NUMBER: ${{ inputs.build_number }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Prepare Apple validation tools
+        run: |
+          python3 -m venv "$RUNNER_TEMP/ios-auth"
+          "$RUNNER_TEMP/ios-auth/bin/pip" install --disable-pip-version-check cryptography==50.0.2
+      - name: Check CI helper behavior
+        run: |
+          "$RUNNER_TEMP/ios-auth/bin/python" -m unittest discover -s scripts/tests -v
+      - name: Verify Apple access and choose build number
+        id: apple
+        run: |
+          "$RUNNER_TEMP/ios-auth/bin/python" scripts/ios_ci.py preflight
+
+  build:
+    name: Sign iOS and optionally upload to TestFlight
+    needs: preflight
+    runs-on: macos-26
+    timeout-minutes: 45
+    env:
+      APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+      APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+      APP_STORE_CONNECT_PRIVATE_KEY_BASE64: ${{ secrets.APP_STORE_CONNECT_PRIVATE_KEY_BASE64 }}
+      IOS_CERTIFICATE_PRIVATE_KEY: ${{ secrets.IOS_CERTIFICATE_PRIVATE_KEY }}
+      BUILD_NUMBER: ${{ needs.preflight.outputs.build_number }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Check Xcode and App Store SDK
+        run: |
+          xcodebuild -version
+          SDK_VERSION="$(xcrun --sdk iphoneos --show-sdk-version)"
+          test "${SDK_VERSION%%.*}" -ge 26
+      - name: Install Flutter
+        uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
+        with:
+          flutter-version: '3.44.6'
+          channel: stable
+          cache: true
+      - name: Install standalone signing tools
+        run: |
+          python3 -m venv "$RUNNER_TEMP/ios-tools"
+          "$RUNNER_TEMP/ios-tools/bin/pip" install --disable-pip-version-check codemagic-cli-tools==0.70.0 cryptography==50.0.2
+          echo "$RUNNER_TEMP/ios-tools/bin" >> "$GITHUB_PATH"
+      - name: Prepare private signing files
+        run: python scripts/ios_ci.py prepare
+      - name: Resolve Flutter dependencies
+        run: flutter pub get
+      - name: Configure App Store signing
+        run: |
+          keychain initialize
+          app-store-connect fetch-signing-files com.sirvya.app --type IOS_APP_STORE --strict-match-identifier --create
+          keychain add-certificates
+          xcode-project use-profiles --project ios/Runner.xcodeproj --archive-method app-store --export-options-plist "$RUNNER_TEMP/ExportOptions.plist"
+      - name: Build signed production IPA
+        run: |
+          flutter build ipa --release --no-pub \
+            --build-number="$BUILD_NUMBER" \
+            --dart-define=API_BASE_URL=https://api.sirvya.com/api \
+            --export-options-plist="$RUNNER_TEMP/ExportOptions.plist"
+      - name: Verify production signing and app capabilities
+        run: python scripts/verify_ios_archive.py
+      - name: Save signed IPA
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: SIRVYA-iOS-${{ needs.preflight.outputs.build_number }}
+          path: build/ios/ipa/*.ipa
+          if-no-files-found: error
+          retention-days: 3
+      - name: Upload to App Store Connect
+        if: inputs.upload_to_testflight
+        run: app-store-connect publish --path 'build/ios/ipa/*.ipa' --enable-package-validation
+      - name: Remove temporary signing material
+        if: always()
+        run: |
+          rm -rf "$RUNNER_TEMP/sirvya-ios-signing"
+          if command -v keychain >/dev/null 2>&1; then keychain delete || true; fi

@@ -7,14 +7,17 @@ import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'package:http/http.dart' as http;
 import 'package:fitlek1/constants/urls.dart';
 import 'google_auth_service.dart' show GoogleAuthResult;
+import 'social_auth_errors.dart';
 
 class AppleAuthService {
   /// Generates a cryptographically secure random nonce, to be included in a
   /// credential request.
   static String generateNonce([int length = 32]) {
-    const charset = '0123456789ABCDEFGHIJKLMNOPQRSTUVXYZabcdefghijklmnopqrstuvwxyz-._';
+    const charset =
+        '0123456789ABCDEFGHIJKLMNOPQRSTUVXYZabcdefghijklmnopqrstuvwxyz-._';
     final random = Random.secure();
-    return List.generate(length, (_) => charset[random.nextInt(charset.length)]).join();
+    return List.generate(length, (_) => charset[random.nextInt(charset.length)])
+        .join();
   }
 
   /// Returns the sha256 hash of [input] in hex notation.
@@ -27,8 +30,18 @@ class AppleAuthService {
   static Future<GoogleAuthResult> signInWithApple({
     String role = 'client',
     String? referralCode,
+    String action = 'login',
+    bool termsAccepted = false,
+    double? height,
+    double? weight,
+    Map<String, dynamic>? location,
+    List<String>? interests,
   }) async {
     try {
+      if (kIsWeb || defaultTargetPlatform != TargetPlatform.iOS) {
+        throw Exception(
+            'Apple sign-in is currently available on iPhone and iPad.');
+      }
       final rawNonce = generateNonce();
       final nonce = sha256ofString(rawNonce);
 
@@ -45,27 +58,44 @@ class AppleAuthService {
         rawNonce: rawNonce,
       );
 
-      final userCredential = await FirebaseAuth.instance.signInWithCredential(oauthCredential);
+      final userCredential =
+          await FirebaseAuth.instance.signInWithCredential(oauthCredential);
       final User? firebaseUser = userCredential.user;
-      
+
       if (firebaseUser == null) {
         throw Exception('Firebase authentication failed.');
       }
+      final name = [appleCredential.givenName, appleCredential.familyName]
+          .whereType<String>()
+          .where((part) => part.trim().isNotEmpty)
+          .join(' ');
+      if (name.isNotEmpty) await firebaseUser.updateDisplayName(name);
 
       final String? firebaseIdToken = await firebaseUser.getIdToken();
       if (firebaseIdToken == null) {
         throw Exception('Could not retrieve Firebase ID token.');
       }
 
-      if (kDebugMode) debugPrint('🔐 Firebase ID Token obtained, sending to backend...');
+      if (kDebugMode)
+        debugPrint('🔐 Firebase ID Token obtained, sending to backend...');
 
       final Map<String, dynamic> requestBody = {
         'idToken': firebaseIdToken,
         'role': role,
+        'action': action,
       };
-      
+
+      if (action == 'signup') {
+        requestBody['termsAccepted'] = termsAccepted;
+        requestBody['height'] = height;
+        requestBody['weight'] = weight;
+        if (interests != null) requestBody['interests'] = interests;
+        if (location != null) requestBody['location'] = location;
+      }
+
       // Pass the name up if it's the first time
-      if (appleCredential.givenName != null || appleCredential.familyName != null) {
+      if (appleCredential.givenName != null ||
+          appleCredential.familyName != null) {
         requestBody['firstName'] = appleCredential.givenName ?? '';
         requestBody['lastName'] = appleCredential.familyName ?? '';
       }
@@ -87,7 +117,8 @@ class AppleAuthService {
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         final String? accessToken = body['accessToken'] as String?;
-        final Map<String, dynamic>? user = body['user'] as Map<String, dynamic>?;
+        final Map<String, dynamic>? user =
+            body['user'] as Map<String, dynamic>?;
 
         if (accessToken == null || accessToken.isEmpty || user == null) {
           throw Exception('Invalid response from server.');
@@ -111,6 +142,11 @@ class AppleAuthService {
       }
     } catch (e) {
       if (kDebugMode) debugPrint('🔥 AppleAuthService Error: $e');
+      if (e is FirebaseAuthException)
+        throw Exception(socialAuthError(e, 'Apple'));
+      if (e is SignInWithAppleAuthorizationException &&
+          e.code == AuthorizationErrorCode.canceled)
+        throw Exception('cancelled');
       rethrow;
     }
   }

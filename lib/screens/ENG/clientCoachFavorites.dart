@@ -11,11 +11,13 @@ import '../../constants/app_colors.dart';
 class ClientCoachFavoriteScreen extends StatefulWidget {
   final int clientID;
   final String token;
+  final http.Client? client;
 
   const ClientCoachFavoriteScreen({
     super.key,
     required this.clientID,
     required this.token,
+    this.client,
   });
 
   @override
@@ -24,6 +26,7 @@ class ClientCoachFavoriteScreen extends StatefulWidget {
 }
 
 class _ClientCoachFavoriteScreenState extends State<ClientCoachFavoriteScreen> {
+  late final http.Client _client = widget.client ?? http.Client();
   final TextEditingController _searchCtrl = TextEditingController();
 
   List<CoachModel> _coaches = [];
@@ -59,6 +62,7 @@ class _ClientCoachFavoriteScreenState extends State<ClientCoachFavoriteScreen> {
 
   @override
   void dispose() {
+    if (widget.client == null) _client.close();
     _searchCtrl.dispose();
     super.dispose();
   }
@@ -71,7 +75,7 @@ class _ClientCoachFavoriteScreenState extends State<ClientCoachFavoriteScreen> {
       });
     }
     try {
-      final res = await http
+      final res = await _client
           .get(
             Uri.parse('$baseUrl/favorites/coaches?clientID=${widget.clientID}'),
             headers: _headers,
@@ -107,7 +111,7 @@ class _ClientCoachFavoriteScreenState extends State<ClientCoachFavoriteScreen> {
     final ids = _coaches.map((c) => c.id).toSet();
     final results = await Future.wait(ids.map((id) async {
       try {
-        final res = await http
+        final res = await _client
             .get(Uri.parse('$baseUrl/reviews/coach/$id'), headers: _headers)
             .timeout(const Duration(seconds: 10));
         if (res.statusCode == 200) {
@@ -140,7 +144,7 @@ class _ClientCoachFavoriteScreenState extends State<ClientCoachFavoriteScreen> {
     setState(() => _coaches.removeWhere((c) => c.id == coach.id));
 
     try {
-      final res = await http
+      final res = await _client
           .post(
             Uri.parse('$baseUrl/favorites/toggle'),
             headers: _headers,
@@ -179,7 +183,7 @@ class _ClientCoachFavoriteScreenState extends State<ClientCoachFavoriteScreen> {
       clientID: widget.clientID,
       coachID: coach.id,
       coachName: coach.fullName,
-      coachSpeciality: coach.speciality ?? '',
+      coachSpeciality: coach.displaySpecialties,
       coachImageUrl: coach.avatarUrl ?? '',
       coachRating: _ratings[coach.id] ?? coach.rating ?? 0.0,
       sessionStart: DateTime.now(),
@@ -204,7 +208,8 @@ class _ClientCoachFavoriteScreenState extends State<ClientCoachFavoriteScreen> {
             position: Tween<Offset>(
               begin: const Offset(0, 0.04),
               end: Offset.zero,
-            ).animate(CurvedAnimation(parent: anim, curve: Curves.easeOutCubic)),
+            ).animate(
+                CurvedAnimation(parent: anim, curve: Curves.easeOutCubic)),
             child: child,
           ),
         ),
@@ -324,7 +329,8 @@ class _ClientCoachFavoriteScreenState extends State<ClientCoachFavoriteScreen> {
             decoration: BoxDecoration(
               color: Colors.redAccent.withValues(alpha: 0.12),
               shape: BoxShape.circle,
-              border: Border.all(color: Colors.redAccent.withValues(alpha: 0.3)),
+              border:
+                  Border.all(color: Colors.redAccent.withValues(alpha: 0.3)),
             ),
             child: const Icon(Icons.favorite_rounded,
                 color: Colors.redAccent, size: 20),
@@ -359,6 +365,9 @@ class _ClientCoachFavoriteScreenState extends State<ClientCoachFavoriteScreen> {
                   hintText: 'Search your favorite coaches...',
                   hintStyle: TextStyle(color: f.textSecondary, fontSize: 14),
                   border: InputBorder.none,
+                  enabledBorder: InputBorder.none,
+                  focusedBorder: InputBorder.none,
+                  filled: false,
                   isDense: true,
                   contentPadding: EdgeInsets.zero,
                 ),
@@ -720,7 +729,9 @@ class _FavoriteCoachTileState extends State<_FavoriteCoachTile> {
                           ),
                           const SizedBox(width: 4),
                           Text(
-                            hasRating ? widget.rating.toStringAsFixed(1) : 'New',
+                            hasRating
+                                ? widget.rating.toStringAsFixed(1)
+                                : 'New',
                             style: TextStyle(
                               color: cs.onSurface,
                               fontSize: 12,
@@ -730,7 +741,8 @@ class _FavoriteCoachTileState extends State<_FavoriteCoachTile> {
                           if (hasRating)
                             Text(
                               ' (${widget.reviewCount})',
-                              style: TextStyle(color: f.textMuted, fontSize: 11),
+                              style:
+                                  TextStyle(color: f.textMuted, fontSize: 11),
                             ),
                           const SizedBox(width: 12),
                           Icon(Icons.location_on_rounded,
@@ -738,17 +750,16 @@ class _FavoriteCoachTileState extends State<_FavoriteCoachTile> {
                           const SizedBox(width: 3),
                           Expanded(
                             child: Text(
-                              coach.ville?.isNotEmpty == true
-                                  ? coach.ville!
-                                  : 'Anywhere',
+                              coach.locationLabel,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
-                              style: TextStyle(color: f.textMuted, fontSize: 11.5),
+                              style:
+                                  TextStyle(color: f.textMuted, fontSize: 11.5),
                             ),
                           ),
                         ],
                       ),
-                      const Spacer(),
+                      const SizedBox(height: 10),
                       Container(
                         width: double.infinity,
                         padding: const EdgeInsets.symmetric(vertical: 8),

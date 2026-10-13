@@ -1,3 +1,13 @@
+import '../../services/coach_qr_navigation.dart';
+import '../../services/live_updates.dart';
+import '../../services/campaign_service.dart';
+import '../../globals.dart';
+import '../../components/ENG/clientNavigationBar.dart';
+import '../../services/location_reminder.dart';
+import '../../services/user_location_service.dart';
+import 'userLocationSettings.dart';
+import '../../services/notification_service.dart';
+import 'dart:async';
 import 'clientConversation.dart';
 import 'dart:convert';
 import 'package:flutter/material.dart';
@@ -13,11 +23,11 @@ import 'clientList.dart';
 import 'clientProfil.dart';
 import 'clientNotifications.dart';
 import 'clientSessionDetail.dart';
-import 'clientQrScanner.dart';
 import 'clientBooking.dart';
 
 import '../../theme/fitlek_theme_extension.dart';
 import '../../components/sirvya_logo.dart';
+import '../../components/ENG/announcementCarousel.dart';
 import '../../constants/app_colors.dart';
 
 class _AdvisorItem {
@@ -86,7 +96,9 @@ class _UpcomingSession {
       coachName: j['coachName'] ?? j['coach_name'] ?? '',
       coachAvatar: j['coachImageUrl'] ?? j['coachAvatar'],
       sessionTitle: j['sessionTitle'] ?? j['title'] ?? 'Session',
-      sessionStart: DateTime.tryParse(j['sessionStart'] ?? j['session_start'] ?? '') ?? DateTime.now(),
+      sessionStart:
+          DateTime.tryParse(j['sessionStart'] ?? j['session_start'] ?? '') ??
+              DateTime.now(),
       location: j['location'] ?? '',
       status: j['status'] ?? 'pending',
     );
@@ -98,7 +110,8 @@ class _CategoryItem {
   final String name;
   final String icon;
 
-  const _CategoryItem({required this.id, required this.name, required this.icon});
+  const _CategoryItem(
+      {required this.id, required this.name, required this.icon});
 
   factory _CategoryItem.fromJson(Map<String, dynamic> j) => _CategoryItem(
         id: j['id'],
@@ -152,8 +165,44 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen> with LiveUpdates<HomeScreen> {
+  @override
+  Set<String> get liveDomains => {
+        'notifications',
+        'messages',
+        'read_receipts',
+        'reservations',
+        'calendar',
+        'coaches',
+        'profile',
+        'edit',
+        'packages',
+        'reviews',
+        'locations',
+        'clients',
+        'favorites',
+        'actualites',
+        'categories',
+        'bans',
+        'ugc'
+      };
+  @override
+  Future<void> refreshLiveData() async {
+    await Future.wait([
+      _fetchNotificationCount(),
+      _fetchUnreadMessagesCount(),
+      _fetchUpcomingSessions(),
+      _fetchCoaches(silent: true),
+      _fetchFavorites(),
+      _fetchClientProfile(),
+      _fetchLocationStatus(),
+      _refreshCompanyVisibility()
+    ]);
+  }
+
+  final _announcementsKey = GlobalKey<AnnouncementCarouselState>();
   int _navIndex = 0;
+  bool _exploreMap = false;
 
   List<CoachModel> _coaches = [];
   List<CoachModel> _allCoaches = [];
@@ -174,7 +223,9 @@ class _HomeScreenState extends State<HomeScreen> {
   Map<int, int> _coachReviewCounts = {};
   String? _avatarUrl;
   String? _clientVille;
+  bool? _hasGpsLocation;
   int _unreadMessagesCount = 0;
+  int _unreadNotificationsCount = 0;
 
   bool _loadingCoaches = true;
   bool _loadingAdvisors = true;
@@ -183,7 +234,7 @@ class _HomeScreenState extends State<HomeScreen> {
   String? _coachError;
   String? _advisorError;
 
-  int? _selectedCategoryId;
+  String? _selectedSpecialty;
 
   Map<String, String> get _headers => {
         'Content-Type': 'application/json',
@@ -193,13 +244,61 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addPostFrameCallback(
+        (_) => NotificationService.instance.navigationReady());
     _fetchCategories();
     _fetchCoaches();
     _fetchAdvisors();
+    _companyVisibilityTimer = Timer.periodic(const Duration(seconds: 30), (_) {
+      _refreshCompanyVisibility();
+      _fetchNotificationCount();
+    });
+    campaignDestination.addListener(_onCampaignDestination);
+    CampaignService.start(context);
     _fetchClientProfile();
+    _fetchLocationStatus();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted)
+        LocationReminder.showOnce(context, 'client').then((_) {
+          if (mounted) {
+            _fetchLocationStatus();
+            _fetchCoaches();
+            _fetchFavorites();
+          }
+        });
+    });
+    UserLocationService.start(onCityChanged: (city) {
+      if (mounted) {
+        setState(() => _clientVille = city);
+        _fetchCoaches();
+        _fetchFavorites();
+        _fetchLocationStatus();
+      }
+    });
     _fetchFavorites();
     _fetchUnreadMessagesCount();
     _fetchUpcomingSessions();
+    _fetchNotificationCount();
+  }
+
+  @override
+  void dispose() {
+    campaignDestination.removeListener(_onCampaignDestination);
+    CampaignService.stop();
+    _companyVisibilityTimer?.cancel();
+    UserLocationService.stop();
+    super.dispose();
+  }
+
+  Future<void> _fetchNotificationCount() async {
+    try {
+      final res = await http.get(
+          Uri.parse('$baseUrl/reservations/notifications/unread'),
+          headers: _headers);
+      if (mounted && res.statusCode == 200)
+        setState(() => _unreadNotificationsCount =
+            (jsonDecode(res.body)['count'] as num?)?.toInt() ?? 0);
+    } catch (_) {}
   }
 
   Future<void> _fetchCoachRatings() async {
@@ -238,7 +337,8 @@ class _HomeScreenState extends State<HomeScreen> {
     try {
       final res = await http
           .get(
-            Uri.parse('$baseUrl/conversations/unread-total?userID=${widget.clientID}'),
+            Uri.parse(
+                '$baseUrl/conversations/unread-total?userID=${widget.clientID}'),
             headers: _headers,
           )
           .timeout(const Duration(seconds: 8));
@@ -256,7 +356,8 @@ class _HomeScreenState extends State<HomeScreen> {
     try {
       final res = await http
           .get(
-            Uri.parse('$baseUrl/reservations?clientID=${widget.clientID}&status=confirmed&limit=3&upcoming=true'),
+            Uri.parse(
+                '$baseUrl/reservations?clientID=${widget.clientID}&status=confirmed&limit=3&upcoming=true'),
             headers: _headers,
           )
           .timeout(const Duration(seconds: 10));
@@ -265,7 +366,8 @@ class _HomeScreenState extends State<HomeScreen> {
         if (mounted) {
           setState(() {
             _upcomingSessions = data
-                .map((e) => _UpcomingSession.fromJson(e as Map<String, dynamic>))
+                .map(
+                    (e) => _UpcomingSession.fromJson(e as Map<String, dynamic>))
                 .where((s) => s.sessionStart.isAfter(DateTime.now()))
                 .take(3)
                 .toList();
@@ -284,13 +386,15 @@ class _HomeScreenState extends State<HomeScreen> {
     setState(() => _loadingCategories = true);
     try {
       final res = await http
-          .get(Uri.parse('$baseUrl/categories'), headers: _headers)
+          .get(Uri.parse('$baseUrl/coaches/specialties'), headers: _headers)
           .timeout(const Duration(seconds: 8));
       if (res.statusCode == 200) {
         final List data = jsonDecode(res.body);
         if (mounted) {
           setState(() {
-            _categories = data.map((e) => _CategoryItem.fromJson(e as Map<String, dynamic>)).toList();
+            _categories = data
+                .map((e) => _CategoryItem.fromJson(e as Map<String, dynamic>))
+                .toList();
             _loadingCategories = false;
           });
         }
@@ -359,6 +463,7 @@ class _HomeScreenState extends State<HomeScreen> {
       if (favorited != !wasFavorite && mounted) {
         await _fetchFavorites();
       }
+      if (mounted) _fetchCoaches();
     } catch (_) {
       if (!mounted) {
         _togglingFavorites.remove(coachId);
@@ -380,7 +485,8 @@ class _HomeScreenState extends State<HomeScreen> {
           content: const Text('Unable to update favorites'),
           backgroundColor: context.fitlek.error,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
           margin: const EdgeInsets.all(16),
         ),
       );
@@ -402,26 +508,41 @@ class _HomeScreenState extends State<HomeScreen> {
         if (mounted) {
           setState(() {
             _avatarUrl = data['avatarUrl'] as String?;
-            _clientVille = data['ville'] as String?;
+            _clientVille = (data['ville'] as String?)?.split(',').first.trim();
           });
         }
       }
     } catch (_) {}
   }
 
-  Future<void> _fetchCoaches() async {
-    setState(() {
-      _loadingCoaches = true;
-      _coachError = null;
-    });
+  Future<void> _fetchLocationStatus() async {
     try {
-      String url = '$baseUrl/coaches?limit=20';
-      if (_selectedCategoryId != null) {
-        url += '&categoryID=$_selectedCategoryId';
+      final res = await http
+          .get(Uri.parse('$baseUrl/locations/me'), headers: _headers)
+          .timeout(const Duration(seconds: 10));
+      if (!mounted || res.statusCode != 200) return;
+      final data = jsonDecode(res.body) as Map<String, dynamic>;
+      setState(() => _hasGpsLocation =
+          data['latitude'] != null && data['longitude'] != null);
+    } catch (_) {}
+  }
+
+  Future<void> _fetchCoaches({bool silent = false}) async {
+    if (!mounted) return;
+    if (!silent)
+      setState(() {
+        _loadingCoaches = true;
+        _coachError = null;
+      });
+    try {
+      String url = '$baseUrl/recommendations?limit=20';
+      if (_selectedSpecialty != null && _selectedSpecialty!.isNotEmpty) {
+        url += '&specialty=${Uri.encodeComponent(_selectedSpecialty!)}';
       }
       final res = await http
           .get(Uri.parse(url), headers: _headers)
           .timeout(const Duration(seconds: 10));
+      if (!mounted) return;
       if (res.statusCode == 200) {
         final List data = jsonDecode(res.body);
         setState(() {
@@ -438,11 +559,39 @@ class _HomeScreenState extends State<HomeScreen> {
           _loadingCoaches = false;
         });
       }
-    } catch (_) {
+    } catch (error) {
+      if (!mounted) return;
       setState(() {
-        _coachError = 'Server unreachable';
+        _coachError = error is FormatException || error is TypeError
+            ? 'Could not load recommendations. Please try again.'
+            : 'Unable to connect. Please try again.';
         _loadingCoaches = false;
       });
+    }
+  }
+
+  bool _coachingCompaniesEnabled = false;
+  Timer? _companyVisibilityTimer;
+
+  Future<void> _refreshCompanyVisibility() async {
+    try {
+      final res = await http
+          .get(Uri.parse('$baseUrl/advisors/visibility'), headers: _headers)
+          .timeout(const Duration(seconds: 10));
+      if (!mounted || res.statusCode != 200) return;
+      final enabled = jsonDecode(res.body)['coachingCompanies'] == true;
+      if (enabled == _coachingCompaniesEnabled) return;
+      if (enabled) {
+        await _fetchAdvisors();
+      } else {
+        setState(() {
+          _coachingCompaniesEnabled = false;
+          _advisors = [];
+          _loadingAdvisors = false;
+        });
+      }
+    } catch (_) {
+      // Keep the last confirmed value during a temporary connection failure.
     }
   }
 
@@ -452,9 +601,30 @@ class _HomeScreenState extends State<HomeScreen> {
       _advisorError = null;
     });
     try {
+      final visibility = await http
+          .get(
+            Uri.parse('$baseUrl/advisors/visibility'),
+            headers: _headers,
+          )
+          .timeout(const Duration(seconds: 10));
+      if (!mounted) return;
+      if (visibility.statusCode != 200) {
+        throw Exception('Visibility unavailable');
+      }
+      final enabled = jsonDecode(visibility.body)['coachingCompanies'] == true;
+      setState(() {
+        _coachingCompaniesEnabled = enabled;
+        if (!enabled) {
+          _advisors = [];
+          _loadingAdvisors = false;
+        }
+      });
+      if (!enabled) return;
+
       final res = await http
           .get(Uri.parse('$baseUrl/advisors'), headers: _headers)
           .timeout(const Duration(seconds: 10));
+      if (!mounted) return;
       if (res.statusCode == 200) {
         final List data = jsonDecode(res.body);
         setState(() {
@@ -470,6 +640,7 @@ class _HomeScreenState extends State<HomeScreen> {
         });
       }
     } catch (_) {
+      if (!mounted) return;
       setState(() {
         _advisorError = 'Server unreachable';
         _loadingAdvisors = false;
@@ -477,9 +648,9 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  void _selectCategory(int? categoryId) {
-    if (_selectedCategoryId == categoryId) return;
-    setState(() => _selectedCategoryId = categoryId);
+  void _selectSpecialty(String? specialty) {
+    if (_selectedSpecialty == specialty) return;
+    setState(() => _selectedSpecialty = specialty);
     _fetchCoaches();
   }
 
@@ -562,7 +733,7 @@ class _HomeScreenState extends State<HomeScreen> {
       clientID: widget.clientID,
       coachID: coach.id,
       coachName: coach.fullName,
-      coachSpeciality: coach.speciality ?? '',
+      coachSpeciality: coach.displaySpecialties,
       coachImageUrl: coach.avatarUrl ?? '',
       coachRating: coach.rating ?? 0.0,
       sessionStart: DateTime.now(),
@@ -581,7 +752,49 @@ class _HomeScreenState extends State<HomeScreen> {
           clientID: widget.clientID,
         ),
       ),
-    ).then((_) => _fetchFavorites());
+    ).then((_) {
+      _fetchFavorites();
+      _fetchCoaches();
+    });
+  }
+
+  void _onCampaignDestination() {
+    final destination = campaignDestination.value;
+    if (!mounted || destination == null) return;
+    final route = ModalRoute.of(context);
+    if (route != null) Navigator.of(context).popUntil((r) => r == route);
+    if (destination == '/explore' || destination == '/coaches') {
+      setState(() => _navIndex = 1);
+      return;
+    }
+    _openAnnouncementDestination(destination);
+  }
+
+  bool _openAnnouncementDestination(String destination) {
+    if (RegExp(r'^/(coaches|sessions)/[1-9][0-9]*$').hasMatch(destination)) {
+      CampaignService.openDestination(context, destination);
+      return true;
+    }
+    final tab = {'/sessions': 2, '/profile': 3}[destination];
+    if (tab != null) {
+      setState(() => _navIndex = tab);
+      return true;
+    }
+    if (destination == '/scan') {
+      CoachQrNavigation.scanAndOpen(context);
+      return true;
+    }
+    final Widget? page = switch (destination) {
+      '/messages' => ClientConversationsListScreen(
+          clientID: widget.clientID, token: widget.token),
+      '/notifications' => const ClientNotificationsScreen(),
+      _ => null,
+    };
+    if (page == null) return false;
+    Navigator.push(context, _fadeSlide(page)).then((_) {
+      if (mounted && destination == '/messages') _fetchUnreadMessagesCount();
+    });
+    return true;
   }
 
   void _openCompanyDetail(_AdvisorItem advisor) {
@@ -639,9 +852,17 @@ class _HomeScreenState extends State<HomeScreen> {
             index: _navIndex,
             children: [
               _buildHomeBody(),
-              DiscoverScreen(clientID: widget.clientID, token: widget.token),
-              SessionsScreen(clientID: widget.clientID, token: widget.token),
+              DiscoverScreen(
+                  clientID: widget.clientID,
+                  token: widget.token,
+                  onBack: () => setState(() => _navIndex = 0),
+                  onMapChanged: (value) => setState(() => _exploreMap = value)),
+              SessionsScreen(
+                  clientID: widget.clientID,
+                  token: widget.token,
+                  embedded: true),
               ClientProfileScreen(
+                embedded: true,
                 clientID: widget.clientID,
                 token: widget.token,
                 onLogout: widget.onLogout,
@@ -650,7 +871,11 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
-      bottomNavigationBar: _buildNavBar(),
+      bottomNavigationBar: _navIndex == 1 && _exploreMap
+          ? null
+          : ClientNavigationBar(
+              currentIndex: _navIndex,
+              onSelected: (index) => setState(() => _navIndex = index)),
     );
   }
 
@@ -660,6 +885,7 @@ class _HomeScreenState extends State<HomeScreen> {
       backgroundColor: context.fitlek.card,
       onRefresh: () async {
         await Future.wait([
+          _announcementsKey.currentState?.refresh() ?? Future<void>.value(),
           _fetchCoaches(),
           _fetchAdvisors(),
           _fetchCategories(),
@@ -672,6 +898,14 @@ class _HomeScreenState extends State<HomeScreen> {
         slivers: [
           SliverToBoxAdapter(child: _buildHeroBanner()),
           SliverToBoxAdapter(child: _buildQuickActions()),
+          SliverToBoxAdapter(
+              child: AnnouncementCarousel(
+            key: _announcementsKey,
+            clientID: widget.clientID,
+            token: widget.token,
+            onExplore: () => setState(() => _navIndex = 1),
+            onDestination: _openAnnouncementDestination,
+          )),
           if (_favoriteCoaches.isNotEmpty) ...[
             SliverToBoxAdapter(child: _sectionHeader('My Favorites')),
             SliverToBoxAdapter(child: _buildFavoriteList()),
@@ -683,6 +917,17 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ),
           SliverToBoxAdapter(child: _buildCategoryPills()),
+          if (_hasGpsLocation == false)
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: TextButton.icon(
+                  onPressed: _determinePosition,
+                  icon: const Icon(Icons.my_location_rounded, size: 18),
+                  label: const Text('Set location to see distances'),
+                ),
+              ),
+            ),
           SliverToBoxAdapter(child: _buildCoachList()),
           if (_upcomingSessions.isNotEmpty || _loadingSessions) ...[
             SliverToBoxAdapter(
@@ -693,13 +938,15 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
             SliverToBoxAdapter(child: _buildUpcomingSessions()),
           ],
-          SliverToBoxAdapter(
-            child: _sectionHeader(
-              'Coaching companies',
-              onSeeAll: () => setState(() => _navIndex = 1),
+          if (_coachingCompaniesEnabled) ...[
+            SliverToBoxAdapter(
+              child: _sectionHeader(
+                'Coaching companies',
+                onSeeAll: () => setState(() => _navIndex = 1),
+              ),
             ),
-          ),
-          SliverToBoxAdapter(child: _buildAdvisorList()),
+            SliverToBoxAdapter(child: _buildAdvisorList()),
+          ],
           const SliverToBoxAdapter(child: SizedBox(height: 32)),
         ],
       ),
@@ -742,10 +989,7 @@ class _HomeScreenState extends State<HomeScreen> {
           top: 0,
           left: 0,
           right: 0,
-          child: SafeArea(
-            bottom: false,
-            child: _buildHeader(),
-          ),
+          child: SafeArea(bottom: false, child: _buildHeader()),
         ),
         Positioned(
           bottom: 24,
@@ -778,7 +1022,8 @@ class _HomeScreenState extends State<HomeScreen> {
               GestureDetector(
                 onTap: () => setState(() => _navIndex = 1),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
                   decoration: BoxDecoration(
                     color: Theme.of(context).colorScheme.primary,
                     borderRadius: BorderRadius.circular(30),
@@ -811,36 +1056,65 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  Future<void> _determinePosition() async {
+    final city = await Navigator.of(context).push<String>(
+        MaterialPageRoute(builder: (_) => const UserLocationSettings()));
+    if (mounted && city != null) {
+      setState(() => _clientVille = city);
+      await _fetchLocationStatus();
+      if (!mounted) return;
+      _fetchCoaches();
+      _fetchFavorites();
+    }
+  }
+
   Widget _buildHeader() {
+    final overHero = _navIndex == 0;
+    final foreground =
+        overHero ? Colors.white : Theme.of(context).colorScheme.onSurface;
+    final muted = overHero ? Colors.white70 : context.fitlek.textMuted;
+    final controlFill = overHero
+        ? Colors.black.withValues(alpha: 0.3)
+        : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.04);
+    final controlBorder = foreground.withValues(alpha: 0.15);
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SirvyaLogo(variant: SirvyaLogoVariant.wordmark, height: 18),
-              const SizedBox(height: 2),
-              Text(
-                'TRAIN • CONNECT • PROGRESS',
-                style: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.6),
-                  fontSize: 7,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 2.5,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Theme(
+                  data: overHero
+                      ? Theme.of(context).copyWith(brightness: Brightness.dark)
+                      : Theme.of(context),
+                  child: const SirvyaLogo(
+                      variant: SirvyaLogoVariant.wordmark, height: 18),
                 ),
-              ),
-            ],
+                const SizedBox(height: 2),
+                Text(
+                  'TRAIN • CONNECT • PROGRESS',
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: muted,
+                    fontSize: 7,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 2.5,
+                  ),
+                ),
+              ],
+            ),
           ),
-          const Spacer(),
-          if (_clientVille != null && _clientVille!.isNotEmpty)
-            Container(
+          GestureDetector(
+            onTap: _determinePosition,
+            child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               decoration: BoxDecoration(
-                color: Colors.black.withValues(alpha: 0.35),
+                color: controlFill,
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
+                border: Border.all(color: controlBorder),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
@@ -848,20 +1122,27 @@ class _HomeScreenState extends State<HomeScreen> {
                   Icon(Icons.location_on_rounded,
                       color: Theme.of(context).colorScheme.primary, size: 13),
                   const SizedBox(width: 4),
-                  Text(
-                    _clientVille!,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 100),
+                    child: Text(
+                      (_clientVille != null && _clientVille!.isNotEmpty)
+                          ? _clientVille!
+                          : 'Set Location',
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: foreground,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
                   const SizedBox(width: 4),
-                  const Icon(Icons.keyboard_arrow_down_rounded,
-                      color: Colors.white70, size: 14),
+                  Icon(Icons.keyboard_arrow_down_rounded,
+                      color: muted, size: 14),
                 ],
               ),
             ),
+          ),
           const SizedBox(width: 8),
           GestureDetector(
             onTap: () async {
@@ -882,13 +1163,13 @@ class _HomeScreenState extends State<HomeScreen> {
                   width: 40,
                   height: 40,
                   decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.35),
+                    color: controlFill,
                     shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
+                    border: Border.all(color: controlBorder),
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.chat_bubble_outline_rounded,
-                    color: Colors.white,
+                    color: foreground,
                     size: 18,
                   ),
                 ),
@@ -909,9 +1190,11 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                       child: Center(
                         child: Text(
-                          _unreadMessagesCount > 9 ? '9+' : '$_unreadMessagesCount',
-                          style: const TextStyle(
-                            color: Colors.white,
+                          _unreadMessagesCount > 9
+                              ? '9+'
+                              : '$_unreadMessagesCount',
+                          style: TextStyle(
+                            color: foreground,
                             fontSize: 8,
                             fontWeight: FontWeight.w900,
                           ),
@@ -936,18 +1219,17 @@ class _HomeScreenState extends State<HomeScreen> {
                   width: 40,
                   height: 40,
                   decoration: BoxDecoration(
-                    color: Colors.black.withValues(alpha: 0.35),
+                    color: controlFill,
                     shape: BoxShape.circle,
-                    border:
-                        Border.all(color: Colors.white.withValues(alpha: 0.15)),
+                    border: Border.all(color: controlBorder),
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.notifications_outlined,
-                    color: Colors.white,
+                    color: foreground,
                     size: 20,
                   ),
                 ),
-                if (_unreadMessagesCount > 0)
+                if (_unreadNotificationsCount > 0)
                   Positioned(
                     top: 0,
                     right: 0,
@@ -963,11 +1245,11 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                       child: Center(
                         child: Text(
-                          _unreadMessagesCount > 9
+                          _unreadNotificationsCount > 9
                               ? '9+'
-                              : '$_unreadMessagesCount',
-                          style: const TextStyle(
-                            color: Colors.white,
+                              : '$_unreadNotificationsCount',
+                          style: TextStyle(
+                            color: foreground,
                             fontSize: 8,
                             fontWeight: FontWeight.w900,
                           ),
@@ -985,24 +1267,25 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget _buildQuickActions() {
     final actions = [
-      (Icons.calendar_today_rounded, 'Book a\nSession', () {
-        Navigator.push(
-          context,
-          _fadeSlide(
-            DiscoverScreen(clientID: widget.clientID, token: widget.token),
-          ),
-        );
-      }),
-      (Icons.person_search_rounded, 'Find a\nCoach', () {
-        setState(() => _navIndex = 1);
-      }),
-      (Icons.location_on_rounded, 'Gyms\nNear You', () {}),
-      (Icons.qr_code_scanner_rounded, 'Scan\nQR', () {
-        Navigator.push(
-          context,
-          _fadeSlide(ClientQrScannerScreen()),
-        );
-      }),
+      (
+        Icons.calendar_today_rounded,
+        'Book a\nSession',
+        () => setState(() => _navIndex = 1),
+      ),
+      (
+        Icons.person_search_rounded,
+        'Find a\nCoach',
+        () {
+          setState(() => _navIndex = 1);
+        }
+      ),
+      (
+        Icons.qr_code_scanner_rounded,
+        'Scan\nQR',
+        () {
+          CoachQrNavigation.scanAndOpen(context);
+        }
+      ),
     ];
 
     return Padding(
@@ -1097,12 +1380,13 @@ class _HomeScreenState extends State<HomeScreen> {
         itemBuilder: (context, index) {
           final isAll = index == 0;
           final isSelected = isAll
-              ? _selectedCategoryId == null
-              : _selectedCategoryId == _categories[index - 1].id;
+              ? _selectedSpecialty == null
+              : _selectedSpecialty == _categories[index - 1].name;
           final label = isAll ? 'All' : _categories[index - 1].name;
 
           return GestureDetector(
-            onTap: () => _selectCategory(isAll ? null : _categories[index - 1].id),
+            onTap: () =>
+                _selectSpecialty(isAll ? null : _categories[index - 1].name),
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 200),
               margin: const EdgeInsets.only(right: 8),
@@ -1182,9 +1466,17 @@ class _HomeScreenState extends State<HomeScreen> {
       return Container(
         height: 80,
         alignment: Alignment.center,
-        child: Text(
-          _coachError ?? 'No coaches available',
-          style: TextStyle(color: context.fitlek.textMuted, fontSize: 13),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              _coachError ?? 'No coaches available',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: context.fitlek.textMuted, fontSize: 13),
+            ),
+            if (_coachError != null)
+              TextButton(onPressed: _fetchCoaches, child: const Text('Retry')),
+          ],
         ),
       );
     }
@@ -1347,8 +1639,18 @@ class _HomeScreenState extends State<HomeScreen> {
 
   String _fmtDate(DateTime dt) {
     const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec'
     ];
     return '${dt.day} ${months[dt.month - 1]}';
   }
@@ -1393,115 +1695,6 @@ class _HomeScreenState extends State<HomeScreen> {
         itemBuilder: (_, i) => _CompanyCard(
           advisor: _advisors[i],
           onTap: () => _openCompanyDetail(_advisors[i]),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildNavBar() {
-    const items = [
-      (Icons.home_rounded, 'Home'),
-      (Icons.search_rounded, 'Explore'),
-      (Icons.calendar_today_rounded, 'Sessions'),
-      (Icons.person_rounded, 'Profile'),
-    ];
-
-    const leftItems = [0, 1];
-    const rightItems = [2, 3];
-
-    return Stack(
-      clipBehavior: Clip.none,
-      alignment: Alignment.bottomCenter,
-      children: [
-        Container(
-          decoration: BoxDecoration(
-            color: context.fitlek.card,
-            border:
-                Border(top: BorderSide(color: context.fitlek.border, width: 1)),
-            boxShadow: [
-              BoxShadow(
-                color: context.fitlek.shadow,
-                blurRadius: 20,
-                offset: const Offset(0, -4),
-              ),
-            ],
-          ),
-          padding: const EdgeInsets.fromLTRB(8, 10, 8, 14),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              ...leftItems.map((i) => _buildNavItem(i, items[i])),
-              const SizedBox(width: 70),
-              ...rightItems.map((i) => _buildNavItem(i, items[i])),
-            ],
-          ),
-        ),
-        Positioned(
-          top: -8,
-          child: GestureDetector(
-            onTap: () => setState(() => _navIndex = 0),
-            child: Container(
-              width: 54,
-              height: 54,
-              decoration: BoxDecoration(
-                boxShadow: [
-                  BoxShadow(
-                    color: Theme.of(context)
-                        .colorScheme
-                        .primary
-                        .withValues(alpha: 0.15),
-                    blurRadius: 20,
-                    spreadRadius: 2,
-                  ),
-                ],
-              ),
-              child: const Center(
-                child: SirvyaLogo(variant: SirvyaLogoVariant.mark, height: 105),
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildNavItem(int index, (IconData, String) item) {
-    final active = index == _navIndex;
-    return GestureDetector(
-      onTap: () => setState(() => _navIndex = index),
-      behavior: HitTestBehavior.opaque,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-        decoration: BoxDecoration(
-          color: active
-              ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.12)
-              : Colors.transparent,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              item.$1,
-              color: active
-                  ? Theme.of(context).colorScheme.primary
-                  : context.fitlek.navUnselected,
-              size: 22,
-            ),
-            const SizedBox(height: 4),
-            Text(
-              item.$2,
-              style: TextStyle(
-                color: active
-                    ? Theme.of(context).colorScheme.primary
-                    : context.fitlek.navUnselected,
-                fontSize: 10,
-                fontWeight: active ? FontWeight.w700 : FontWeight.w400,
-                letterSpacing: 0.3,
-              ),
-            ),
-          ],
         ),
       ),
     );
@@ -1626,15 +1819,26 @@ class _CoachCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      coach.fullName,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.onSurface,
-                        fontWeight: FontWeight.w800,
-                        fontSize: 13,
-                      ),
+                    Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            coach.fullName,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: Theme.of(context).colorScheme.onSurface,
+                              fontWeight: FontWeight.w800,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ),
+                        if (coach.isApproved) ...[
+                          const SizedBox(width: 4),
+                          const Icon(Icons.verified_rounded,
+                              color: Color(0xFF38BDF8), size: 14),
+                        ],
+                      ],
                     ),
                     const SizedBox(height: 3),
                     Text(
@@ -1684,9 +1888,7 @@ class _CoachCard extends StatelessWidget {
                         const SizedBox(width: 3),
                         Expanded(
                           child: Text(
-                            coach.ville?.isNotEmpty == true
-                                ? coach.ville!
-                                : 'Anywhere',
+                            coach.locationLabel,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
@@ -1752,7 +1954,8 @@ class _CompanyCard extends StatelessWidget {
                 SizedBox(
                   height: 100,
                   width: double.infinity,
-                  child: advisor.avatarUrl != null && advisor.avatarUrl!.isNotEmpty
+                  child: advisor.avatarUrl != null &&
+                          advisor.avatarUrl!.isNotEmpty
                       ? Image.network(
                           advisor.avatarUrl!,
                           fit: BoxFit.cover,
@@ -1768,7 +1971,8 @@ class _CompanyCard extends StatelessWidget {
                     top: 8,
                     left: 8,
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
                         color: Colors.black.withValues(alpha: 0.6),
                         borderRadius: BorderRadius.circular(8),
@@ -1813,7 +2017,9 @@ class _CompanyCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 3),
                     Text(
-                      advisor.specialty.isNotEmpty ? advisor.specialty : 'Coaching',
+                      advisor.specialty.isNotEmpty
+                          ? advisor.specialty
+                          : 'Coaching',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(

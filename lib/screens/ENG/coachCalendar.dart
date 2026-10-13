@@ -1,3 +1,4 @@
+import '../../services/live_updates.dart';
 import 'package:flutter/material.dart';
 import '../../models/coachReservation.dart';
 import '../../models/coachAvailability.dart';
@@ -6,13 +7,18 @@ import '../../services/apiService.dart';
 import '../../theme/fitlek_theme_extension.dart';
 
 class CoachCalendar extends StatefulWidget {
-  const CoachCalendar({super.key});
+  final String? reservationId;
+  const CoachCalendar({super.key, this.reservationId});
   @override
   State<CoachCalendar> createState() => _CoachCalendarState();
 }
 
-class _CoachCalendarState extends State<CoachCalendar>
-    with SingleTickerProviderStateMixin {
+class _CoachCalendarState extends State<CoachCalendar> with SingleTickerProviderStateMixin, LiveUpdates<CoachCalendar> {
+  @override
+  Set<String> get liveDomains => {'calendar','reservations','availability','notifications','packages'};
+  @override
+  Future<void> refreshLiveData() async { await _load(silent:true); }
+
   late TabController _tabController;
   DateTime _selectedDate = DateTime.now();
   DateTime _focusedMonth = DateTime.now();
@@ -36,8 +42,8 @@ class _CoachCalendarState extends State<CoachCalendar>
     super.dispose();
   }
 
-  Future<void> _load() async {
-    setState(() => _loading = true);
+  Future<void> _load({bool silent = false}) async {
+    if (!silent) setState(() => _loading = true);
     final resResult = await ApiService.get('/coach/calendar/reservations');
     final availResult = await ApiService.get('/coach/calendar/availability');
     if (!mounted) return;
@@ -46,6 +52,11 @@ class _CoachCalendarState extends State<CoachCalendar>
         _reservations = (resResult['data'] as List? ?? [])
             .map((r) => CoachReservation(
                   id: r['id'].toString(),
+                  pricingStatus: _pricingStatus(r),
+                  proposedPrice: double.tryParse('${r['proposedPrice']}'),
+                  price: double.tryParse('${r['price']}'),
+                  duration: int.tryParse('${r['duration']}') ?? 60,
+                  packageName: r['packageName']?.toString(),
                   clientName: '${r['firstName']} ${r['lastName']}',
                   clientPhotoUrl: r['avatarUrl'] ?? '',
                   date: DateTime.parse(r['reservedDate']),
@@ -53,7 +64,9 @@ class _CoachCalendarState extends State<CoachCalendar>
                   location: r['location']?.toString(),
                   status: r['status'] == 'confirmed'
                       ? ReservationStatus.confirmed
-                      : ReservationStatus.pending,
+                      : r['status'] == 'cancelled'
+                          ? ReservationStatus.cancelled
+                          : ReservationStatus.pending,
                 ))
             .toList();
       }
@@ -92,6 +105,43 @@ class _CoachCalendarState extends State<CoachCalendar>
   bool _slotIsBlocked(int hour) =>
       _unavailablePeriods.any((a) => a.blocksSlot(_selectedDate, hour));
 
+  Future<void> _proposePrice(CoachReservation r) async {
+    final controller = TextEditingController();
+    final price = await showDialog<String>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+                title: const Text('Propose session price'),
+                content: Column(mainAxisSize: MainAxisSize.min, children: [
+                  const Text(
+                      'The client must accept your price at least 2 hours before the session. Acceptance confirms the booking.'),
+                  const SizedBox(height: 12),
+                  TextField(
+                      controller: controller,
+                      keyboardType:
+                          const TextInputType.numberWithOptions(decimal: true),
+                      decoration: const InputDecoration(
+                          labelText: 'Price per session (MAD)'))
+                ]),
+                actions: [
+                  TextButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      child: const Text('Cancel')),
+                  FilledButton(
+                      onPressed: () => Navigator.pop(ctx, controller.text),
+                      child: const Text('Send offer'))
+                ]));
+    if (price == null || !mounted) return;
+    final result =
+        await ApiService.patch('/reservations/${r.id}/price', {'price': price});
+    if (!mounted) return;
+    if (result['ok'] == true) {
+      await _load();
+    } else {
+      ApiService.showError(context,
+          result['error'] ?? result['message'] ?? 'Could not send price.');
+    }
+  }
+
   Future<void> _acceptReservation(CoachReservation r) async {
     final result =
         await ApiService.patch('/coach/calendar/reservations/${r.id}/accept');
@@ -99,8 +149,25 @@ class _CoachCalendarState extends State<CoachCalendar>
     if (result['ok'] == true) {
       _load();
     } else {
+      if (result['status'] == 409 &&
+          '${result['message']}'.contains('Propose a session price first')) {
+        await _proposePrice(r);
+        return;
+      }
       ApiService.showError(context, result['message'] ?? 'Failed.');
+      await _load();
     }
+  }
+
+  String _pricingStatus(Map<String, dynamic> reservation) {
+    final status = reservation['pricingStatus']?.toString();
+    if (status != null && status != 'fixed') return status;
+    final price = double.tryParse('${reservation['price']}');
+    // Older calendar responses omitted pricingStatus and represented an
+    // on-request price as zero. Keep the offer action available for those rows.
+    if (status == null && (price == null || price <= 0)) return 'awaiting';
+    if (price == null) return 'awaiting';
+    return 'fixed';
   }
 
   Future<void> _rejectReservation(CoachReservation r, String reason) async {
@@ -165,23 +232,82 @@ class _CoachCalendarState extends State<CoachCalendar>
           ? Center(
               child: CircularProgressIndicator(
                   color: Theme.of(context).colorScheme.primary))
-          : Column(children: [
-              _buildHeader(),
-              _buildTabBar(),
-              Expanded(
-                  child: TabBarView(controller: _tabController, children: [
-                _buildCalendarTab(),
-                _buildAvailabilityTab(),
-              ])),
-            ]),
+          : widget.reservationId != null
+              ? _buildReservationDetails()
+              : Column(children: [
+                  _buildHeader(),
+                  _buildTabBar(),
+                  Expanded(
+                      child: TabBarView(controller: _tabController, children: [
+                    _buildCalendarTab(),
+                    _buildAvailabilityTab(),
+                  ])),
+                ]),
     );
+  }
+
+  Widget _buildReservationDetails() {
+    final matches = _reservations.where((r) => r.id == widget.reservationId);
+    final r = matches.isEmpty ? null : matches.first;
+    return SafeArea(
+        child: Column(children: [
+      ListTile(
+        leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () => Navigator.pop(context)),
+        title: const Text('Reservation details'),
+      ),
+      Expanded(
+          child: RefreshIndicator(
+              onRefresh: _load,
+              child: ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.all(20),
+                children: r == null
+                    ? [const Text('This reservation is no longer available.')]
+                    : [
+                        _buildReservationCard(r),
+                        Card(
+                            child: Padding(
+                                padding: const EdgeInsets.all(20),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                        '${_monthName(r.date.month)} ${r.date.day}, ${r.date.year} · ${r.time}'),
+                                    const SizedBox(height: 14),
+                                    Text('${r.duration} minutes'),
+                                    const SizedBox(height: 14),
+                                    Text(r.locationLabel),
+                                    if (r.packageName?.isNotEmpty == true) ...[
+                                      const SizedBox(height: 14),
+                                      Text(r.packageName!)
+                                    ],
+                                    const SizedBox(height: 14),
+                                    Text(r.pricingStatus == 'proposed'
+                                        ? '${r.proposedPrice ?? 0} MAD · awaiting client acceptance'
+                                        : r.pricingStatus == 'awaiting'
+                                            ? 'Awaiting your price offer'
+                                            : '${r.price ?? 0} MAD per session'),
+                                    const SizedBox(height: 14),
+                                    Text('Reservation #${r.id}'),
+                                  ],
+                                ))),
+                      ],
+              ))),
+    ]));
   }
 
   Widget _buildHeader() {
     final cs = Theme.of(context).colorScheme;
     return Padding(
-        padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+        padding: const EdgeInsets.fromLTRB(8, 16, 20, 0),
         child: Row(children: [
+          IconButton(
+            icon: Icon(Icons.arrow_back, color: cs.onSurface),
+            onPressed: () => Navigator.pop(context),
+          ),
+          const SizedBox(width: 4),
           Text('Calendar',
               style: TextStyle(
                   color: cs.onSurface,
@@ -475,8 +601,7 @@ class _CoachCalendarState extends State<CoachCalendar>
                       child: Text(reservation.locationLabel,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style:
-                              TextStyle(color: f.textMuted, fontSize: 13)))
+                          style: TextStyle(color: f.textMuted, fontSize: 13)))
                 ]),
               ])),
           Container(
@@ -486,7 +611,18 @@ class _CoachCalendarState extends State<CoachCalendar>
                       ? f.warning.withValues(alpha: 0.1)
                       : cs.primary.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8)),
-              child: Text(isPending ? 'Pending' : 'Confirmed',
+              child: Text(
+                  reservation.pricingStatus == 'expired'
+                      ? 'Expired'
+                      : reservation.pricingStatus == 'declined'
+                          ? 'Price declined'
+                          : isPending
+                              ? (reservation.pricingStatus == 'proposed'
+                                  ? 'Price offered'
+                                  : 'Pending')
+                              : isConfirmed
+                                  ? 'Confirmed'
+                                  : 'Cancelled',
                   style: TextStyle(
                       color: isPending ? f.warning : cs.primary,
                       fontSize: 11,
@@ -497,14 +633,23 @@ class _CoachCalendarState extends State<CoachCalendar>
           Row(children: [
             Expanded(
                 child: GestureDetector(
-                    onTap: () => _acceptReservation(reservation),
+                    onTap: reservation.pricingStatus == 'proposed'
+                        ? null
+                        : () => reservation.pricingStatus == 'awaiting'
+                            ? _proposePrice(reservation)
+                            : _acceptReservation(reservation),
                     child: Container(
                         padding: const EdgeInsets.symmetric(vertical: 10),
                         decoration: BoxDecoration(
                             color: cs.primary,
                             borderRadius: BorderRadius.circular(10)),
                         child: Center(
-                            child: Text('Accept',
+                            child: Text(
+                                reservation.pricingStatus == 'awaiting'
+                                    ? 'Propose price'
+                                    : reservation.pricingStatus == 'proposed'
+                                        ? 'Awaiting client'
+                                        : 'Accept',
                                 style: TextStyle(
                                     color: cs.onPrimary,
                                     fontWeight: FontWeight.w700,
@@ -992,13 +1137,14 @@ class _CoachCalendarState extends State<CoachCalendar>
               fontWeight: FontWeight.w600)),
       const SizedBox(height: 6),
       Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12),
+          padding: const EdgeInsets.symmetric(horizontal: 8),
           decoration: BoxDecoration(
               color: f.inputFill, borderRadius: BorderRadius.circular(10)),
           child: Row(children: [
             Expanded(
                 child: DropdownButtonHideUnderline(
                     child: DropdownButton<int>(
+                        isExpanded: true,
                         value: selectedHour,
                         dropdownColor: f.inputFill,
                         style: TextStyle(
@@ -1017,6 +1163,7 @@ class _CoachCalendarState extends State<CoachCalendar>
             Expanded(
                 child: DropdownButtonHideUnderline(
                     child: DropdownButton<int>(
+                        isExpanded: true,
                         value: selectedMinute,
                         dropdownColor: f.inputFill,
                         style: TextStyle(

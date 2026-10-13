@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../services/live_updates.dart';
 import '../../services/apiService.dart';
 
 import '../../theme/fitlek_theme_extension.dart';
@@ -8,7 +9,11 @@ class CoachInvitations extends StatefulWidget {
   State<CoachInvitations> createState() => _CoachInvitationsState();
 }
 
-class _CoachInvitationsState extends State<CoachInvitations> {
+class _CoachInvitationsState extends State<CoachInvitations> with LiveUpdates<CoachInvitations> {
+  @override
+  Set<String> get liveDomains => {'notifications','invitations','clients','coach-clients'};
+  @override
+  Future<void> refreshLiveData() async => _load();
   bool _loading = true;
   List<dynamic> _invitations = [];
   int _totalPoints = 0;

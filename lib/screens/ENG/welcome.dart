@@ -4,6 +4,7 @@ import 'login.dart';
 import 'register.dart';
 import '../../constants/app_colors.dart';
 import '../../components/sirvya_logo.dart';
+import '../../services/onboarding_service.dart';
 
 class WelcomeScreen extends StatefulWidget {
   const WelcomeScreen({super.key});
@@ -16,6 +17,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
     with TickerProviderStateMixin {
   final PageController _pageController = PageController();
   int _currentPage = 0;
+  bool _showIntro = false;
 
   late AnimationController _textController;
   late Animation<Offset> _textSlide;
@@ -23,8 +25,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
 
   static const List<_OnboardingData> _pages = [
     _OnboardingData(
-      imageUrl:
-          'assets/branding/sirvya3.jfif',
+      imageUrl: 'assets/branding/sirvya3.jfif',
       tag: 'COACHING',
       title: 'Your Coach,',
       titleAccent: 'On Demand.',
@@ -32,22 +33,18 @@ class _WelcomeScreenState extends State<WelcomeScreen>
           'Find certified coaches near you and book a session in seconds.',
     ),
     _OnboardingData(
-      imageUrl:
-          'assets/branding/sirvya4.jfif',
+      imageUrl: 'assets/branding/sirvya4.jfif',
       tag: 'PROGRESS',
       title: 'Track Every',
       titleAccent: 'Milestone.',
-      subtitle:
-          'Monitor your sessions and measure your growth day after day.',
+      subtitle: 'Monitor your sessions and measure your growth day after day.',
     ),
     _OnboardingData(
-      imageUrl:
-          'assets/branding/sirvya5.jfif',
+      imageUrl: 'assets/branding/sirvya5.jfif',
       tag: 'COMMUNITY',
       title: 'Join',
       titleAccent: 'SIRVYA.',
-      subtitle:
-          'Connect with top coaches and transform your body for good.',
+      subtitle: 'Connect with top coaches and transform your body for good.',
     ),
   ];
 
@@ -62,9 +59,21 @@ class _WelcomeScreenState extends State<WelcomeScreen>
     _textSlide = Tween<Offset>(
       begin: const Offset(0, 0.2),
       end: Offset.zero,
-    ).animate(CurvedAnimation(parent: _textController, curve: Curves.easeOutCubic));
+    ).animate(
+        CurvedAnimation(parent: _textController, curve: Curves.easeOutCubic));
     _textFade = CurvedAnimation(parent: _textController, curve: Curves.easeOut);
     _textController.forward();
+    _checkIntro();
+  }
+
+  Future<void> _checkIntro() async {
+    final show = await OnboardingService.showOnce();
+    if (!mounted) return;
+    if (show) {
+      setState(() => _showIntro = true);
+    } else {
+      _goToLogin();
+    }
   }
 
   void _onPageChanged(int index) {
@@ -111,6 +120,9 @@ class _WelcomeScreenState extends State<WelcomeScreen>
 
   @override
   Widget build(BuildContext context) {
+    if (!_showIntro) {
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
     final data = _pages[_currentPage];
     final isLast = _currentPage == _pages.length - 1;
 
@@ -124,7 +136,6 @@ class _WelcomeScreenState extends State<WelcomeScreen>
             onPageChanged: _onPageChanged,
             itemBuilder: (_, i) => _FullscreenImage(url: _pages[i].imageUrl),
           ),
-
           Positioned.fill(
             child: DecoratedBox(
               decoration: BoxDecoration(
@@ -144,7 +155,6 @@ class _WelcomeScreenState extends State<WelcomeScreen>
               ),
             ),
           ),
-
           SafeArea(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
@@ -176,7 +186,6 @@ class _WelcomeScreenState extends State<WelcomeScreen>
               ),
             ),
           ),
-
           Positioned(
             bottom: 0,
             left: 0,
@@ -214,9 +223,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                             ),
                           ),
                         ),
-
                         const SizedBox(height: 18),
-
                         Text(
                           data.title,
                           style: const TextStyle(
@@ -237,9 +244,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                             letterSpacing: -1.5,
                           ),
                         ),
-
                         const SizedBox(height: 16),
-
                         Text(
                           data.subtitle,
                           style: TextStyle(
@@ -249,9 +254,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                             fontWeight: FontWeight.w400,
                           ),
                         ),
-
                         const SizedBox(height: 40),
-
                         if (isLast) ...[
                           _CTAButton(
                             label: 'LOG IN',

@@ -13,6 +13,7 @@ class SirvyaLogo extends StatelessWidget {
   static const String _lightAsset = 'assets/branding/logo_light.png';
   static const String _darkAsset = 'assets/branding/logo_dark.png';
   static const String _markAsset = 'assets/branding/icon_app.png';
+  static const String _darkMarkAsset = 'assets/branding/icon_app_dark.png';
 
   final SirvyaLogoVariant variant;
 
@@ -57,11 +58,11 @@ class SirvyaLogo extends StatelessWidget {
   /// The "S" symbol only, as a tintable PNG. Width follows the natural
   /// aspect ratio (no forced square) so it never looks squeezed.
   Widget _buildMark(BuildContext context) {
-    final resolved = color ?? Theme.of(context).colorScheme.primary;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Image.asset(
-      _markAsset,
+      isDark ? _markAsset : _darkMarkAsset,
       height: height,
-      color: resolved,
+      color: color,
       fit: BoxFit.contain,
       errorBuilder: (context, error, stackTrace) => _placeholder(context),
     );

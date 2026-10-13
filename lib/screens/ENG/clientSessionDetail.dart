@@ -1,11 +1,12 @@
+import '../../services/live_updates.dart';
 import 'dart:convert';
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:fitlek1/models/anas/reservation.dart';
 import 'clientCoachDetail.dart';
 import 'package:fitlek1/constants/urls.dart';
 import '../../theme/fitlek_theme_extension.dart';
-
 
 class SessionDetailScreen extends StatefulWidget {
   final ReservationModel session;
@@ -24,7 +25,15 @@ class SessionDetailScreen extends StatefulWidget {
 }
 
 class _SessionDetailScreenState extends State<SessionDetailScreen>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, LiveUpdates<SessionDetailScreen> {
+  @override
+  Set<String> get liveDomains =>
+      {'calendar', 'reservations', 'notifications', 'reviews'};
+  @override
+  Future<void> refreshLiveData() async {
+    await _refreshSession();
+  }
+
   late AnimationController _animCtrl;
   late Animation<double> _fadeIn;
   late Animation<Offset> _slideUp;
@@ -38,6 +47,8 @@ class _SessionDetailScreenState extends State<SessionDetailScreen>
   bool _reviewLoading = false;
 
   bool _cancelling = false;
+  bool _priceBusy = false;
+  Timer? _priceTimer;
 
   // Vrai rating depuis la BDD (avg des reviews du coach)
   double? _realCoachRating;
@@ -70,14 +81,102 @@ class _SessionDetailScreenState extends State<SessionDetailScreen>
 
     _animCtrl.forward();
     _fetchRealCoachRating();
+    _refreshSession();
+    _priceTimer =
+        Timer.periodic(const Duration(seconds: 30), (_) => _refreshSession());
   }
 
   @override
   void dispose() {
+    _priceTimer?.cancel();
     _animCtrl.dispose();
     _commentCtrl.dispose();
     super.dispose();
   }
+
+  Future<void> _refreshSession() async {
+    try {
+      final response = await http.get(
+          Uri.parse('$baseUrl/reservations/${_session.id}/details'),
+          headers: _headers);
+      if (mounted && response.statusCode == 200)
+        setState(() =>
+            _session = ReservationModel.fromJson(jsonDecode(response.body)));
+    } catch (_) {}
+  }
+
+  Future<void> _replyPrice(bool accept) async {
+    if (_priceBusy) return;
+    final yes = await _showConfirmDialog(
+        title: accept ? 'Accept proposed price?' : 'Decline proposed price?',
+        message: accept
+            ? 'Accept ${_session.proposedPrice?.toStringAsFixed(2)} MAD and confirm this session?'
+            : 'Declining will cancel this booking request.',
+        confirmLabel: accept ? 'ACCEPT & CONFIRM' : 'DECLINE PRICE',
+        confirmColor: Theme.of(context).colorScheme.primary);
+    if (!yes || !mounted) return;
+    setState(() => _priceBusy = true);
+    try {
+      final response = await http.patch(
+          Uri.parse(
+              '$baseUrl/reservations/${_session.id}/price/${accept ? 'accept' : 'decline'}'),
+          headers: _headers,
+          body: jsonEncode({'quoteVersion': _session.quoteVersion}));
+      if (!mounted) return;
+      if (response.statusCode != 200)
+        _showSnack(
+            jsonDecode(response.body)['error'] ?? 'Could not respond to price.',
+            color: context.fitlek.error);
+      await _refreshSession();
+    } catch (_) {
+      if (!mounted) return;
+      _showSnack('Connection unavailable. Please try again.',
+          color: context.fitlek.error);
+    } finally {
+      if (mounted) setState(() => _priceBusy = false);
+    }
+  }
+
+  Widget _buildPriceApproval() => Container(
+        padding: const EdgeInsets.all(16),
+        margin: const EdgeInsets.only(bottom: 20),
+        decoration: BoxDecoration(
+            color: context.fitlek.card,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Theme.of(context).colorScheme.primary)),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(
+              _session.priceExpired
+                  ? 'Price request expired'
+                  : _session.pricingStatus == 'proposed'
+                      ? 'Approve your session price'
+                      : 'Awaiting coach’s price',
+              style:
+                  const TextStyle(fontSize: 17, fontWeight: FontWeight.w800)),
+          const SizedBox(height: 8),
+          Text(_session.priceExpired
+              ? 'No price was agreed before the deadline. Please make a new booking.'
+              : _session.pricingStatus == 'proposed'
+                  ? '${_session.proposedPrice?.toStringAsFixed(2)} MAD per session. Your acceptance confirms this booking.'
+                  : 'Your coach will send a price offer. You must accept it to confirm the session.'),
+          const SizedBox(height: 8),
+          Text(
+              'Deadline: ${_formatDate(_session.priceDeadline)} · ${_formatTime(_session.priceDeadline)} (2 hours before the session)',
+              style: const TextStyle(fontSize: 12)),
+          if (_session.pricingStatus == 'proposed' &&
+              !_session.priceExpired) ...[
+            const SizedBox(height: 12),
+            Wrap(spacing: 8, runSpacing: 8, children: [
+              FilledButton(
+                  onPressed: _priceBusy ? null : () => _replyPrice(true),
+                  child: const Text('Accept & confirm')),
+              OutlinedButton(
+                  onPressed: _priceBusy ? null : () => _replyPrice(false),
+                  child: const Text('Decline'))
+            ]),
+          ],
+        ]),
+      );
 
   String _formatDate(DateTime dt) {
     const months = [
@@ -112,7 +211,8 @@ class _SessionDetailScreenState extends State<SessionDetailScreen>
   // Une session pending dont l'heure est dépassée est traitée
   // comme "annulée" (expirée) côté affichage : le coach n'a jamais répondu.
   bool get _isExpiredPending =>
-      _session.isPending && _session.sessionStart.isBefore(DateTime.now());
+      _session.isExpired ||
+      (_session.isPending && _session.sessionStart.isBefore(DateTime.now()));
 
   String get _effectiveStatus =>
       _isExpiredPending ? 'cancelled' : _session.status;
@@ -129,6 +229,8 @@ class _SessionDetailScreenState extends State<SessionDetailScreen>
   }
 
   String get _statusLabel {
+    if (_session.isExpired) return 'EXPIRED';
+    if (_session.pricingStatus == 'declined') return 'PRICE DECLINED';
     switch (_effectiveStatus) {
       case 'pending':
         return 'PENDING';
@@ -322,6 +424,12 @@ class _SessionDetailScreenState extends State<SessionDetailScreen>
                             _buildStatusBanner(),
                             const SizedBox(height: 22),
                             _buildInfoCard(),
+                            if (['awaiting', 'proposed', 'expired']
+                                .contains(_session.pricingStatus) &&
+                                !_session.approvalExpired) ...[
+                              const SizedBox(height: 16),
+                              _buildPriceApproval()
+                            ],
                             const SizedBox(height: 20),
                             _buildCoachCard(),
                             const SizedBox(height: 20),
@@ -416,9 +524,13 @@ class _SessionDetailScreenState extends State<SessionDetailScreen>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                 Text(
-                    _session.price > 0
-                        ? '${_session.price.toInt()} MAD'
-                        : 'Awaiting pricing',
+                    _session.pricingStatus == 'proposed'
+                        ? '${_session.proposedPrice?.toStringAsFixed(2)} MAD · proposed'
+                        : _session.price > 0
+                            ? '${_session.price.toInt()} MAD'
+                            : _session.pricingStatus == 'accepted'
+                                ? 'Free session'
+                                : 'Awaiting pricing',
                     style: TextStyle(
                         color: _statusColor,
                         fontSize: 32,
@@ -429,6 +541,17 @@ class _SessionDetailScreenState extends State<SessionDetailScreen>
                     '${_session.durationMin} min · ${_formatTime(_session.sessionStart)} — ${_formatTime(_session.sessionEnd)}',
                     style: TextStyle(
                         color: context.fitlek.textSecondary, fontSize: 12)),
+                if (_session.packageName != null &&
+                    _session.packageName!.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    'Per session · ${_session.packageName}',
+                    style: TextStyle(
+                        color: context.fitlek.textMuted,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600),
+                  ),
+                ],
               ])),
           Container(
             width: 56,
@@ -466,11 +589,18 @@ class _SessionDetailScreenState extends State<SessionDetailScreen>
           _infoRow(Icons.schedule_rounded, 'Duration',
               '${_session.durationMin} minutes'),
           _divider(),
-          _infoRow(Icons.location_on_rounded, 'Location',
-              _session.location.isNotEmpty ? _session.location : '—'),
-          _divider(),
-          _infoRow(Icons.business_rounded, 'Company',
-              _session.companyName.isNotEmpty ? _session.companyName : '—'),
+          _infoRow(
+              Icons.location_on_rounded,
+              'Location',
+              _session.location.isNotEmpty
+                  ? _session.location
+                  : 'Location to be arranged with coach in messages'),
+          if (_session.packageName != null &&
+              _session.packageName!.isNotEmpty) ...[
+            _divider(),
+            _infoRow(Icons.workspace_premium_rounded, 'Package',
+                _session.packageName!),
+          ],
           _divider(),
           _infoRow(Icons.receipt_long_rounded, 'Ref.',
               '#${_session.id.toString().padLeft(5, '0')}',
@@ -699,7 +829,9 @@ class _SessionDetailScreenState extends State<SessionDetailScreen>
     final reason = _session.cancellationReason ??
         _session.rejectionReason ??
         (_isExpiredPending
-            ? 'This request expired without a response from the coach.'
+            ? (_session.approvalExpired
+                ? 'The coach did not approve this booking before the one-hour deadline.'
+                : 'The price was not agreed before the two-hour deadline.')
             : '');
     if (reason.isEmpty) return const SizedBox.shrink();
     return Container(

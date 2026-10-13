@@ -5,6 +5,7 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:http/http.dart' as http;
 import 'package:fitlek1/constants/urls.dart';
 import 'dart:io' show Platform;
+import 'social_auth_errors.dart';
 
 class GoogleAuthResult {
   final String accessToken;
@@ -26,6 +27,12 @@ class GoogleAuthService {
   static Future<GoogleAuthResult> signInWithGoogle({
     String role = 'client',
     String? referralCode,
+    String action = 'login',
+    bool termsAccepted = false,
+    double? height,
+    double? weight,
+    Map<String, dynamic>? location,
+    List<String>? interests,
   }) async {
     try {
       UserCredential userCredential;
@@ -36,28 +43,35 @@ class GoogleAuthService {
         final googleProvider = GoogleAuthProvider();
         googleProvider.addScope('email');
         googleProvider.addScope('profile');
-        
-        userCredential = await FirebaseAuth.instance.signInWithPopup(googleProvider);
+
+        userCredential =
+            await FirebaseAuth.instance.signInWithPopup(googleProvider);
       } else {
         // On Mobile, we use the native google_sign_in package
         final GoogleSignIn googleSignIn = GoogleSignIn(
           scopes: ['email', 'profile'],
-          clientId: !kIsWeb && Platform.isIOS ? '256158398727-01aql5h5hl2db4cepi6stft6cobje8ee.apps.googleusercontent.com' : null,
+          clientId: !kIsWeb && Platform.isIOS
+              ? '256158398727-5r7fq1g8aonlpov8mqe5rshmeu322krn.apps.googleusercontent.com'
+              : null,
+          serverClientId:
+              '256158398727-12phehhv4i9lt5lemdpur3lmte5ob3hf.apps.googleusercontent.com',
         );
         await googleSignIn.signOut(); // force account picker
-        
+
         final GoogleSignInAccount? googleUser = await googleSignIn.signIn();
         if (googleUser == null) {
           throw Exception('cancelled');
         }
 
-        final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+        final GoogleSignInAuthentication googleAuth =
+            await googleUser.authentication;
         final OAuthCredential credential = GoogleAuthProvider.credential(
           accessToken: googleAuth.accessToken,
           idToken: googleAuth.idToken,
         );
 
-        userCredential = await FirebaseAuth.instance.signInWithCredential(credential);
+        userCredential =
+            await FirebaseAuth.instance.signInWithCredential(credential);
       }
 
       final User? firebaseUser = userCredential.user;
@@ -70,12 +84,21 @@ class GoogleAuthService {
         throw Exception('Could not retrieve Firebase ID token.');
       }
 
-      if (kDebugMode) debugPrint('🔐 Firebase ID Token obtained, sending to backend...');
+      if (kDebugMode)
+        debugPrint('🔐 Firebase ID Token obtained, sending to backend...');
 
       final Map<String, dynamic> requestBody = {
         'idToken': firebaseIdToken,
         'role': role,
+        'action': action,
       };
+      if (action == 'signup') {
+        requestBody['termsAccepted'] = termsAccepted;
+        requestBody['height'] = height;
+        requestBody['weight'] = weight;
+        if (interests != null) requestBody['interests'] = interests;
+        if (location != null) requestBody['location'] = location;
+      }
       if (referralCode != null && referralCode.isNotEmpty) {
         requestBody['referralCode'] = referralCode;
       }
@@ -93,7 +116,8 @@ class GoogleAuthService {
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         final String? accessToken = body['accessToken'] as String?;
-        final Map<String, dynamic>? user = body['user'] as Map<String, dynamic>?;
+        final Map<String, dynamic>? user =
+            body['user'] as Map<String, dynamic>?;
 
         if (accessToken == null || accessToken.isEmpty || user == null) {
           throw Exception('Invalid response from server.');
@@ -117,6 +141,8 @@ class GoogleAuthService {
       }
     } catch (e) {
       if (kDebugMode) debugPrint('🔥 GoogleAuthService Error: $e');
+      if (e is FirebaseAuthException)
+        throw Exception(socialAuthError(e, 'Google'));
       rethrow;
     }
   }

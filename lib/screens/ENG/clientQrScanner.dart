@@ -1,3 +1,4 @@
+import '../../services/referral_link_service.dart';
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
@@ -22,7 +23,9 @@ class _ClientQrScannerScreenState extends State<ClientQrScannerScreen> {
 
   void _onDetect(BarcodeCapture capture) {
     if (_handled) return;
-    final code = capture.barcodes.first.rawValue;
+    if (capture.barcodes.isEmpty) return;
+    final raw = capture.barcodes.first.rawValue;
+    final code = raw == null ? null : ReferralLinkService.codeFromQr(raw);
     if (code == null || code.trim().isEmpty) return;
     _handled = true;
     Navigator.pop(context, code.trim());
@@ -61,7 +64,8 @@ class _ClientQrScannerScreenState extends State<ClientQrScannerScreen> {
                     color: Colors.black.withValues(alpha: 0.5),
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: const Icon(Icons.close_rounded, color: Colors.white, size: 20),
+                  child: const Icon(Icons.close_rounded,
+                      color: Colors.white, size: 20),
                 ),
               ),
             ),
@@ -78,7 +82,8 @@ class _ClientQrScannerScreenState extends State<ClientQrScannerScreen> {
                     color: Colors.black.withValues(alpha: 0.5),
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: const Icon(Icons.flash_on_rounded, color: Colors.white, size: 20),
+                  child: const Icon(Icons.flash_on_rounded,
+                      color: Colors.white, size: 20),
                 ),
               ),
             ),
@@ -90,7 +95,10 @@ class _ClientQrScannerScreenState extends State<ClientQrScannerScreen> {
             child: Text(
               'Scan the coach QR code',
               textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.white.withValues(alpha: 0.8), fontSize: 13, fontWeight: FontWeight.w600),
+              style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.8),
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600),
             ),
           ),
         ],

@@ -1,3 +1,4 @@
+import '../../services/live_updates.dart';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -27,13 +28,16 @@ class _ConversationItem {
     this.unreadCount = 0,
   });
 
-  factory _ConversationItem.fromJson(Map<String, dynamic> j) => _ConversationItem(
+  factory _ConversationItem.fromJson(Map<String, dynamic> j) =>
+      _ConversationItem(
         id: j['id'],
         coachID: j['coachID'],
         clientID: j['clientID'],
         otherName: j['otherName'] ?? 'Unknown',
         otherAvatar: j['otherAvatar'],
-        lastMessageAt: j['lastMessageAt'] != null ? DateTime.tryParse(j['lastMessageAt']) : null,
+        lastMessageAt: j['lastMessageAt'] != null
+            ? DateTime.tryParse(j['lastMessageAt'])
+            : null,
         lastMessage: j['lastMessage'] as String?,
         unreadCount: (j['unreadCount'] as num?)?.toInt() ?? 0,
       );
@@ -50,10 +54,16 @@ class ClientConversationsListScreen extends StatefulWidget {
   });
 
   @override
-  State<ClientConversationsListScreen> createState() => _ClientConversationsListScreenState();
+  State<ClientConversationsListScreen> createState() =>
+      _ClientConversationsListScreenState();
 }
 
-class _ClientConversationsListScreenState extends State<ClientConversationsListScreen> {
+class _ClientConversationsListScreenState extends State<ClientConversationsListScreen> with LiveUpdates<ClientConversationsListScreen> {
+  @override
+  Set<String> get liveDomains => {'chat-actions','messages','read_receipts','conversations','bans'};
+  @override
+  Future<void> refreshLiveData() async { await _fetchConversations(silent:true); }
+
   final TextEditingController _searchCtrl = TextEditingController();
 
   List<_ConversationItem> _conversations = [];
@@ -66,10 +76,16 @@ class _ClientConversationsListScreenState extends State<ClientConversationsListS
         'Authorization': 'Bearer ${widget.token}',
       };
 
+  int _selectedFilter = 0;
+
   List<_ConversationItem> get _filtered {
-    if (_query.trim().isEmpty) return _conversations;
+    var list = _conversations;
+    if (_selectedFilter == 1) {
+      list = list.where((c) => c.unreadCount > 0).toList();
+    }
+    if (_query.trim().isEmpty) return list;
     final q = _query.trim().toLowerCase();
-    return _conversations.where((c) => c.otherName.toLowerCase().contains(q)).toList();
+    return list.where((c) => c.otherName.toLowerCase().contains(q)).toList();
   }
 
   @override
@@ -89,18 +105,22 @@ class _ClientConversationsListScreenState extends State<ClientConversationsListS
     return '$baseUrl/conversations?userID=${widget.clientID}&role=client';
   }
 
-  Future<void> _fetchConversations() async {
-    setState(() {
+  Future<void> _fetchConversations({bool silent = false}) async {
+    if (!silent) setState(() {
       _loading = true;
       _error = null;
     });
     try {
       final url = _getConversationsUrl();
-      final res = await http.get(Uri.parse(url), headers: _headers).timeout(const Duration(seconds: 10));
+      final res = await http
+          .get(Uri.parse(url), headers: _headers)
+          .timeout(Duration(seconds: 10));
 
       if (res.statusCode == 200) {
         final List data = jsonDecode(res.body);
-        final list = data.map((e) => _ConversationItem.fromJson(e as Map<String, dynamic>)).toList();
+        final list = data
+            .map((e) => _ConversationItem.fromJson(e as Map<String, dynamic>))
+            .toList();
         list.sort((a, b) {
           if (a.lastMessageAt == null && b.lastMessageAt == null) return 0;
           if (a.lastMessageAt == null) return 1;
@@ -146,74 +166,154 @@ class _ClientConversationsListScreenState extends State<ClientConversationsListS
         transitionsBuilder: (_, anim, __, child) => FadeTransition(
           opacity: anim,
           child: SlideTransition(
-            position: Tween<Offset>(begin: const Offset(0, 0.04), end: Offset.zero)
-                .animate(CurvedAnimation(parent: anim, curve: Curves.easeOutCubic)),
+            position: Tween<Offset>(begin: Offset(0, 0.04), end: Offset.zero)
+                .animate(
+                    CurvedAnimation(parent: anim, curve: Curves.easeOutCubic)),
             child: child,
           ),
         ),
-        transitionDuration: const Duration(milliseconds: 400),
+        transitionDuration: Duration(milliseconds: 400),
       );
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      appBar: _buildAppBar(),
-      body: Stack(
+      body: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildHeader(),
+            _buildSearchBar(),
+            _buildFilters(),
+            Expanded(
+              child: RefreshIndicator(
+                color: context.fitlek.border,
+                backgroundColor: Theme.of(context).colorScheme.primary,
+                onRefresh: _fetchConversations,
+                child: _buildBody(),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeader() {
+    return Padding(
+      padding: EdgeInsets.fromLTRB(16, 20, 16, 16),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Column(
+          Row(
             children: [
-              _buildSearchBar(),
-              Expanded(
-                child: RefreshIndicator(
-                  color: Theme.of(context).colorScheme.primary,
-                  backgroundColor: context.fitlek.card,
-                  onRefresh: _fetchConversations,
-                  child: _buildBody(),
+              GestureDetector(
+                onTap: () => Navigator.of(context).pop(),
+                child: Padding(
+                  padding: EdgeInsets.only(right: 12),
+                  child: Icon(Icons.arrow_back_ios_new_rounded,
+                      color: Theme.of(context).colorScheme.onSurface, size: 24),
                 ),
               ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Messages',
+                    style: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurface,
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold),
+                  ),
+                  SizedBox(height: 4),
+                  Text(
+                    'Échangez avec vos coachs',
+                    style: TextStyle(
+                        color: context.fitlek.textSecondary, fontSize: 14),
+                  ),
+                ],
+              ),
             ],
+          ),
+          Container(
+            padding: EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: context.fitlek.card,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(Icons.edit_square,
+                color: Theme.of(context).colorScheme.primary, size: 22),
           ),
         ],
       ),
     );
   }
 
-  PreferredSizeWidget _buildAppBar() {
-    return AppBar(
-      backgroundColor: context.fitlek.card,
-      elevation: 0,
-      toolbarHeight: 56,
-      leadingWidth: 44,
-      leading: GestureDetector(
-        onTap: () => Navigator.pop(context),
-        child: Padding(
-          padding: const EdgeInsets.only(left: 12),
-          child: Icon(Icons.arrow_back_ios_rounded, color: Theme.of(context).colorScheme.onSurface, size: 20),
-        ),
-      ),
-      title: Text(
-        'Messages',
-        style: TextStyle(
-          color: Theme.of(context).colorScheme.onSurface,
-          fontSize: 17,
-          fontWeight: FontWeight.w800,
-          letterSpacing: -0.3,
-        ),
-      ),
-      actions: const [
-        
-      ],
-      bottom: PreferredSize(
-        preferredSize: const Size.fromHeight(1),
-        child: Container(height: 1, color: context.fitlek.border),
+  Widget _buildFilters() {
+    return Padding(
+      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Row(
+        children: [
+          GestureDetector(
+            onTap: () => setState(() => _selectedFilter = 0),
+            child: Container(
+              padding: EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+              decoration: BoxDecoration(
+                color: _selectedFilter == 0
+                    ? Theme.of(context).colorScheme.primary
+                    : Colors.transparent,
+                borderRadius: BorderRadius.circular(20),
+                border: _selectedFilter == 0
+                    ? null
+                    : Border.all(color: context.fitlek.border),
+              ),
+              child: Text(
+                'Tous',
+                style: TextStyle(
+                  color: _selectedFilter == 0
+                      ? Theme.of(context).colorScheme.onPrimary
+                      : context.fitlek.textSecondary,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 13,
+                ),
+              ),
+            ),
+          ),
+          SizedBox(width: 12),
+          GestureDetector(
+            onTap: () => setState(() => _selectedFilter = 1),
+            child: Container(
+              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              decoration: BoxDecoration(
+                color: _selectedFilter == 1
+                    ? Theme.of(context).colorScheme.primary
+                    : Colors.transparent,
+                borderRadius: BorderRadius.circular(20),
+                border: _selectedFilter == 1
+                    ? null
+                    : Border.all(color: context.fitlek.border),
+              ),
+              child: Text(
+                'Non lus',
+                style: TextStyle(
+                  color: _selectedFilter == 1
+                      ? Theme.of(context).colorScheme.onPrimary
+                      : context.fitlek.textSecondary,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 13,
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
 
   Widget _buildSearchBar() {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
+      padding: EdgeInsets.fromLTRB(16, 4, 16, 12),
       child: Container(
         height: 46,
         decoration: BoxDecoration(
@@ -223,17 +323,24 @@ class _ClientConversationsListScreenState extends State<ClientConversationsListS
         ),
         child: Row(
           children: [
-            const SizedBox(width: 14),
-            Icon(Icons.search_rounded, color: context.fitlek.textMuted, size: 19),
-            const SizedBox(width: 10),
+            SizedBox(width: 14),
+            Icon(Icons.search_rounded,
+                color: context.fitlek.textMuted, size: 20),
+            SizedBox(width: 10),
             Expanded(
               child: TextField(
                 controller: _searchCtrl,
-                style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 13.5),
+                style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurface,
+                    fontSize: 14),
                 decoration: InputDecoration(
-                  hintText: 'Search a conversation…',
-                  hintStyle: TextStyle(color: context.fitlek.textMuted, fontSize: 13.5),
+                  hintText: 'Rechercher une conversation',
+                  hintStyle:
+                      TextStyle(color: context.fitlek.textMuted, fontSize: 14),
                   border: InputBorder.none,
+                  enabledBorder: InputBorder.none,
+                  focusedBorder: InputBorder.none,
+                  filled: false,
                   isCollapsed: true,
                 ),
               ),
@@ -242,8 +349,9 @@ class _ClientConversationsListScreenState extends State<ClientConversationsListS
               GestureDetector(
                 onTap: () => _searchCtrl.clear(),
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  child: Icon(Icons.close_rounded, color: context.fitlek.textMuted, size: 18),
+                  padding: EdgeInsets.symmetric(horizontal: 12),
+                  child: Icon(Icons.close_rounded,
+                      color: context.fitlek.textMuted, size: 18),
                 ),
               ),
           ],
@@ -255,16 +363,16 @@ class _ClientConversationsListScreenState extends State<ClientConversationsListS
   Widget _buildBody() {
     if (_loading) {
       return ListView(
-        padding: const EdgeInsets.only(top: 8),
+        padding: EdgeInsets.only(top: 8),
         children: List.generate(
           5,
           (_) => Container(
-            margin: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-            height: 78,
+            margin: EdgeInsets.fromLTRB(16, 0, 16, 8),
+            height: 70,
             decoration: BoxDecoration(
-              color: context.fitlek.card,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: context.fitlek.border, width: 1),
+              color: Theme.of(context).scaffoldBackgroundColor,
+              border: Border(
+                  bottom: BorderSide(color: context.fitlek.border, width: 1)),
             ),
           ),
         ),
@@ -274,26 +382,40 @@ class _ClientConversationsListScreenState extends State<ClientConversationsListS
     if (_error != null) {
       return ListView(
         children: [
-          const SizedBox(height: 60),
-          Icon(Icons.error_outline_rounded, color: context.fitlek.textMuted, size: 48),
-          const SizedBox(height: 16),
+          SizedBox(height: 60),
+          Icon(Icons.error_outline_rounded,
+              color: context.fitlek.textMuted, size: 48),
+          SizedBox(height: 16),
           Center(
-            child: Text(_error!, style: TextStyle(color: context.fitlek.textMuted, fontSize: 14)),
+            child: Text(_error!,
+                style:
+                    TextStyle(color: context.fitlek.textMuted, fontSize: 14)),
           ),
-          const SizedBox(height: 20),
+          SizedBox(height: 20),
           Center(
             child: GestureDetector(
               onTap: _fetchConversations,
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                 decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+                  color: Theme.of(context)
+                      .colorScheme
+                      .primary
+                      .withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3)),
+                  border: Border.all(
+                      color: Theme.of(context)
+                          .colorScheme
+                          .primary
+                          .withValues(alpha: 0.3)),
                 ),
                 child: Text(
                   'RETRY',
-                  style: TextStyle(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.w800, fontSize: 12, letterSpacing: 1),
+                  style: TextStyle(
+                      color: Theme.of(context).colorScheme.primary,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 12,
+                      letterSpacing: 1),
                 ),
               ),
             ),
@@ -307,23 +429,36 @@ class _ClientConversationsListScreenState extends State<ClientConversationsListS
     if (_conversations.isEmpty) {
       return ListView(
         children: [
-          const SizedBox(height: 80),
+          SizedBox(height: 80),
           Center(
             child: Container(
               width: 72,
               height: 72,
-              decoration: BoxDecoration(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.06), shape: BoxShape.circle),
-              child: Icon(Icons.chat_bubble_outline_rounded, color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3), size: 32),
+              decoration: BoxDecoration(
+                  color: Theme.of(context)
+                      .colorScheme
+                      .primary
+                      .withValues(alpha: 0.06),
+                  shape: BoxShape.circle),
+              child: Icon(Icons.chat_bubble_outline_rounded,
+                  color: Theme.of(context)
+                      .colorScheme
+                      .primary
+                      .withValues(alpha: 0.3),
+                  size: 32),
             ),
           ),
-          const SizedBox(height: 20),
+          SizedBox(height: 20),
           Center(
             child: Text(
               'No conversations',
-              style: TextStyle(color: context.fitlek.textMuted, fontSize: 15, fontWeight: FontWeight.w600),
+              style: TextStyle(
+                  color: context.fitlek.textMuted,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600),
             ),
           ),
-          const SizedBox(height: 8),
+          SizedBox(height: 8),
           Center(
             child: Text(
               'Your conversations will appear here',
@@ -337,15 +472,17 @@ class _ClientConversationsListScreenState extends State<ClientConversationsListS
     if (list.isEmpty) {
       return ListView(
         children: [
-          const SizedBox(height: 80),
+          SizedBox(height: 80),
           Center(
-            child: Icon(Icons.search_off_rounded, color: context.fitlek.textMuted, size: 40),
+            child: Icon(Icons.search_off_rounded,
+                color: context.fitlek.textMuted, size: 40),
           ),
-          const SizedBox(height: 16),
+          SizedBox(height: 16),
           Center(
             child: Text(
               'No results for "$_query"',
-              style: TextStyle(color: context.fitlek.textSecondary, fontSize: 13.5),
+              style: TextStyle(
+                  color: context.fitlek.textSecondary, fontSize: 13.5),
             ),
           ),
         ],
@@ -353,12 +490,25 @@ class _ClientConversationsListScreenState extends State<ClientConversationsListS
     }
 
     return ListView.builder(
-      padding: const EdgeInsets.only(top: 4, bottom: 16),
-      itemCount: list.length,
-      itemBuilder: (_, i) => _ConversationTile(
-        conversation: list[i],
-        onTap: () => _openConversation(list[i]),
-      ),
+      padding: EdgeInsets.only(top: 4, bottom: 16),
+      itemCount: list.length + 1,
+      itemBuilder: (_, i) {
+        if (i == list.length) {
+          return Padding(
+            padding: EdgeInsets.symmetric(vertical: 24),
+            child: Center(
+              child: Text(
+                'Retrouvez ici toutes vos conversations.',
+                style: TextStyle(color: context.fitlek.textMuted, fontSize: 12),
+              ),
+            ),
+          );
+        }
+        return _ConversationTile(
+          conversation: list[i],
+          onTap: () => _openConversation(list[i]),
+        );
+      },
     );
   }
 }
@@ -372,167 +522,157 @@ class _ConversationTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final bool hasUnread = conversation.unreadCount > 0;
-    return Container(
-      margin: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: hasUnread
-              ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.3)
-              : context.fitlek.border,
-          width: 1,
+    return InkWell(
+      onTap: onTap,
+      splashColor: context.fitlek.border.withOpacity(0.3),
+      highlightColor: context.fitlek.border.withOpacity(0.1),
+      child: Container(
+        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          border:
+              Border(bottom: BorderSide(color: context.fitlek.card, width: 1)),
         ),
-      ),
-      clipBehavior: Clip.antiAlias,
-      child: Material(
-        color: hasUnread
-            ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.05)
-            : context.fitlek.card,
-        child: InkWell(
-          onTap: onTap,
-          splashColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.06),
-          highlightColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.03),
-          child: Padding(
-            padding: const EdgeInsets.all(14),
-            child: Row(
-              children: [
-                Stack(
-                  children: [
-                    Container(
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(
-                          color: hasUnread
-                              ? Theme.of(context).colorScheme.primary
-                              : context.fitlek.border,
-                          width: 1.5,
-                        ),
-                      ),
-                      child: GestureDetector(
-                        onTap: () {
-                          if (conversation.otherAvatar != null && conversation.otherAvatar!.isNotEmpty) {
-                            Navigator.push(context, MaterialPageRoute(builder: (_) => ImagePreview(imageUrl: conversation.otherAvatar!, tag: 'list_avatar_${conversation.id}')));
-                          }
-                        },
-                        child: CircleAvatar(
-                          radius: 26,
-                          backgroundColor: context.fitlek.card2,
-                          backgroundImage: conversation.otherAvatar != null && conversation.otherAvatar!.isNotEmpty
-                              ? NetworkImage(conversation.otherAvatar!)
-                              : null,
-                          child: (conversation.otherAvatar == null || conversation.otherAvatar!.isEmpty)
-                              ? Text(
-                                  conversation.otherName.isNotEmpty ? conversation.otherName[0].toUpperCase() : '?',
-                                  style: TextStyle(color: Theme.of(context).colorScheme.primary, fontSize: 18, fontWeight: FontWeight.w900),
-                                )
-                              : null,
-                        ),
-                      ),
-                    ),
-                    if (hasUnread)
-                      Positioned(
-                        right: 0,
-                        top: 0,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: context.fitlek.error,
-                            shape: BoxShape.circle,
-                            border: Border.all(color: context.fitlek.card, width: 1.5),
-                          ),
-                          child: Text(
-                            conversation.unreadCount > 99 ? '99+' : '${conversation.unreadCount}',
-                            style: TextStyle(
-                              color: Theme.of(context).colorScheme.onError,
-                              fontSize: 9,
-                              fontWeight: FontWeight.w900,
-                            ),
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
+        child: Row(
+          children: [
+            GestureDetector(
+              onTap: () {
+                if (conversation.otherAvatar != null &&
+                    conversation.otherAvatar!.isNotEmpty) {
+                  Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => ImagePreview(
+                              imageUrl: conversation.otherAvatar!,
+                              tag: 'list_avatar_${conversation.id}')));
+                }
+              },
+              child: CircleAvatar(
+                radius: 26,
+                backgroundColor: context.fitlek.border,
+                backgroundImage: conversation.otherAvatar != null &&
+                        conversation.otherAvatar!.isNotEmpty
+                    ? NetworkImage(conversation.otherAvatar!)
+                    : null,
+                child: (conversation.otherAvatar == null ||
+                        conversation.otherAvatar!.isEmpty)
+                    ? Text(
+                        conversation.otherName.isNotEmpty
+                            ? conversation.otherName[0].toUpperCase()
+                            : '?',
+                        style: TextStyle(
+                            color: Theme.of(context).colorScheme.onSurface,
+                            fontSize: 18,
+                            fontWeight: FontWeight.w900),
+                      )
+                    : null,
+              ),
+            ),
+            SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Row(
                     children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              conversation.otherName,
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                color: Theme.of(context).colorScheme.onSurface,
-                                fontSize: 14,
-                                fontWeight: hasUnread ? FontWeight.w800 : FontWeight.w700,
-                              ),
-                            ),
+                      Expanded(
+                        child: Text(
+                          conversation.otherName,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.onSurface,
+                            fontSize: 16,
+                            fontWeight:
+                                hasUnread ? FontWeight.bold : FontWeight.w600,
                           ),
-                          if (conversation.lastMessageAt != null)
-                            Text(
-                              _formatTime(conversation.lastMessageAt!),
-                              style: TextStyle(
-                                color: hasUnread ? Theme.of(context).colorScheme.primary : context.fitlek.textMuted,
-                                fontSize: 11,
-                                fontWeight: hasUnread ? FontWeight.w700 : FontWeight.w400,
-                              ),
-                            ),
-                        ],
+                        ),
                       ),
-                      const SizedBox(height: 6),
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.chat_bubble_outline_rounded,
-                            size: 12,
-                            color: hasUnread ? Theme.of(context).colorScheme.primary : context.fitlek.textMuted,
+                      if (conversation.lastMessageAt != null)
+                        Text(
+                          _formatTime(conversation.lastMessageAt!),
+                          style: TextStyle(
+                            color: hasUnread
+                                ? Theme.of(context).colorScheme.primary
+                                : context.fitlek.textMuted,
+                            fontSize: 12,
+                            fontWeight:
+                                hasUnread ? FontWeight.bold : FontWeight.normal,
                           ),
-                          const SizedBox(width: 5),
-                          Expanded(
-                            child: Text(
-                              conversation.lastMessage != null && conversation.lastMessage!.isNotEmpty
-                                  ? conversation.lastMessage!
-                                  : 'Tap to open conversation',
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                color: hasUnread ? Theme.of(context).colorScheme.onSurface : context.fitlek.textSecondary,
-                                fontSize: 12.5,
-                                fontWeight: hasUnread ? FontWeight.w600 : FontWeight.w400,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
+                        ),
                     ],
                   ),
-                ),
-                const SizedBox(width: 8),
-                if (hasUnread)
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: context.fitlek.error,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Text(
-                      '${conversation.unreadCount}',
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.onError,
-                        fontSize: 10,
-                        fontWeight: FontWeight.w900,
+                  SizedBox(height: 4),
+                  Row(
+                    children: [
+                      if (conversation.lastMessage
+                              ?.toLowerCase()
+                              .contains('photo') ==
+                          true) ...[
+                        Icon(Icons.image_outlined,
+                            size: 14, color: context.fitlek.textMuted),
+                        SizedBox(width: 4),
+                      ] else if (conversation.lastMessage
+                              ?.toLowerCase()
+                              .contains('vocal') ==
+                          true) ...[
+                        Icon(Icons.mic,
+                            size: 14, color: context.fitlek.textMuted),
+                        SizedBox(width: 4),
+                      ] else ...[
+                        if (!hasUnread &&
+                            conversation.lastMessage != null &&
+                            conversation.lastMessage!.isNotEmpty) ...[
+                          Icon(Icons.done_all,
+                              size: 14,
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .primary), // Assume read for now
+                          SizedBox(width: 4),
+                        ],
+                      ],
+                      Expanded(
+                        child: Text(
+                          conversation.lastMessage != null &&
+                                  conversation.lastMessage!.isNotEmpty
+                              ? conversation.lastMessage!
+                              : 'Appuyez pour ouvrir',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: hasUnread
+                                ? Theme.of(context).colorScheme.onSurface
+                                : context.fitlek.textMuted,
+                            fontSize: 14,
+                            fontWeight:
+                                hasUnread ? FontWeight.w600 : FontWeight.normal,
+                          ),
+                        ),
                       ),
-                    ),
-                  )
-                else
-                  Icon(Icons.chevron_right_rounded, color: context.fitlek.textMuted, size: 20),
-              ],
+                      if (hasUnread) ...[
+                        SizedBox(width: 8),
+                        Container(
+                          padding: EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).colorScheme.primary,
+                            shape: BoxShape.circle,
+                          ),
+                          child: Text(
+                            '${conversation.unreadCount}',
+                            style: TextStyle(
+                              color: Theme.of(context).colorScheme.onPrimary,
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ],
+              ),
             ),
-          ),
+          ],
         ),
       ),
     );
@@ -545,9 +685,9 @@ class _ConversationTile extends StatelessWidget {
     if (diff.inDays == 0) {
       return '${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}';
     } else if (diff.inDays == 1) {
-      return 'Yesterday';
+      return 'Hier';
     } else if (diff.inDays < 7) {
-      const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+      const days = ['Lun.', 'Mar.', 'Mer.', 'Jeu.', 'Ven.', 'Sam.', 'Dim.'];
       return days[d.weekday - 1];
     } else {
       return '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}';

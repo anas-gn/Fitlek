@@ -1,3 +1,5 @@
+import 'services/referral_link_service.dart';
+import 'services/background_location_service.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -9,25 +11,35 @@ import 'theme/app_theme.dart';
 import 'sessionRouter.dart';
 import 'components/app_version_checker.dart';
 import 'components/video_splash_screen.dart';
+import 'globals.dart';
 
 void main() async {
   try {
     WidgetsFlutterBinding.ensureInitialized();
     try {
+      await BackgroundLocationService.initialize();
+    } catch (e) {
+      debugPrint("Background location unavailable: $e");
+    }
+    try {
       await dotenv.load(fileName: "assets/config.env");
-    } 
-    catch (e) {
+    } catch (e) {
       debugPrint("Failed to load env: $e");
     }
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
-        try {
+    try {
       await NotificationService.instance.init();
     } catch (e) {
       debugPrint("Failed to initialize notifications: $e");
     }
 
+    try {
+      await ReferralLinkService.instance.initialize();
+    } catch (e) {
+      debugPrint('Invitation links unavailable: $e');
+    }
     final themeController = ThemeController();
     await themeController.load();
     runApp(Fitlek(themeController: themeController));
@@ -36,6 +48,7 @@ void main() async {
     debugPrint("$stackTrace");
   }
 }
+
 class Fitlek extends StatelessWidget {
   final ThemeController themeController;
 
@@ -53,9 +66,10 @@ class Fitlek extends StatelessWidget {
             theme: AppTheme.light,
             darkTheme: AppTheme.dark,
             themeMode: themeController.flutterMode,
+            navigatorKey: globalNavigatorKey,
             home: const VideoSplashScreen(
               nextScreen: AppVersionChecker(child: SessionRouter()),
-            ), 
+            ),
           );
         },
       ),

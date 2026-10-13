@@ -1,3 +1,6 @@
+import 'services/referral_link_service.dart';
+import 'screens/ENG/register.dart';
+import 'globals.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'services/apiService.dart';
@@ -45,6 +48,19 @@ class _SessionRouterState extends State<SessionRouter> {
 
     if (!mounted) return;
 
+    ReferralLinkService.instance.onInvitation = () async {
+      if (await ApiService.getToken() != null) {
+        await ReferralLinkService.instance.clear();
+        return;
+      }
+      final navigator = globalNavigatorKey.currentState;
+      if (navigator != null)
+        navigator
+            .push(MaterialPageRoute(builder: (_) => const RegisterScreen()));
+    };
+    if (role == 'coach' || role == 'client')
+      await ReferralLinkService.instance.clear();
+    if (!mounted) return;
     switch (role) {
       case 'coach':
         Navigator.pushReplacement(
@@ -61,7 +77,10 @@ class _SessionRouterState extends State<SessionRouter> {
       default:
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (_) => const WelcomeScreen()),
+          MaterialPageRoute(
+              builder: (_) => ReferralLinkService.instance.code.value.isNotEmpty
+                  ? const RegisterScreen()
+                  : const WelcomeScreen()),
         );
     }
   }

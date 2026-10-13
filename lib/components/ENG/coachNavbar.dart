@@ -4,128 +4,89 @@ import '../../theme/fitlek_theme_extension.dart';
 class CoachNavbar extends StatelessWidget {
   final int currentIndex;
   final ValueChanged<int> onTap;
-
-  const CoachNavbar({
-    super.key,
-    required this.currentIndex,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final cs = theme.colorScheme;
-    final fitlek = context.fitlek;
-
-    return Container(
-      decoration: BoxDecoration(
-        color: cs.surface,
-        border: Border(
-          top: BorderSide(
-            color: cs.primary.withValues(alpha: 0.15),
-            width: 1,
-          ),
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: fitlek.shadow,
-            blurRadius: 20,
-            offset: const Offset(0, -5),
-          ),
-        ],
-      ),
-      child: SafeArea(
-        top: false,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _NavItem(
-                icon: Icons.dashboard_rounded,
-                label: 'Dashboard',
-                isSelected: currentIndex == 0,
-                onTap: () => onTap(0),
-              ),
-              _NavItem(
-                icon: Icons.calendar_month_rounded,
-                label: 'Calendar',
-                isSelected: currentIndex == 1,
-                onTap: () => onTap(1),
-              ),
-              _NavItem(
-                icon: Icons.chat_bubble_rounded,
-                label: 'Chats',
-                isSelected: currentIndex == 2,
-                onTap: () => onTap(2),
-              ),
-              _NavItem(
-                icon: Icons.group_rounded,
-                label: 'Clients',
-                isSelected: currentIndex == 3,
-                onTap: () => onTap(3),
-              ),
-              _NavItem(
-                icon: Icons.person_rounded,
-                label: 'Profile',
-                isSelected: currentIndex == 4,
-                onTap: () => onTap(4),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _NavItem extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final bool isSelected;
-  final VoidCallback onTap;
-
-  const _NavItem({
-    required this.icon,
-    required this.label,
-    required this.isSelected,
-    required this.onTap,
-  });
-
+  const CoachNavbar(
+      {super.key, required this.currentIndex, required this.onTap});
+  static const _items = [
+    (Icons.dashboard_outlined, Icons.dashboard_rounded, 'Dashboard'),
+    (Icons.calendar_month_outlined, Icons.calendar_month_rounded, 'Calendar'),
+    (Icons.chat_bubble_outline_rounded, Icons.chat_bubble_rounded, 'Chats'),
+    (Icons.people_outline_rounded, Icons.people_rounded, 'Clients'),
+    (Icons.person_outline_rounded, Icons.person_rounded, 'Profile'),
+  ];
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    final fitlek = context.fitlek;
-
-    return GestureDetector(
-      onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-        decoration: BoxDecoration(
-          color: isSelected ? cs.primary.withValues(alpha: 0.1) : Colors.transparent,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              icon,
-              size: 22,
-              color: isSelected ? cs.primary : fitlek.navUnselected,
+    final colors = context.fitlek;
+    return SafeArea(
+      top: false,
+      minimum: const EdgeInsets.fromLTRB(12, 6, 12, 8),
+      child: Center(
+        heightFactor: 1,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 560),
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: colors.card,
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: colors.border.withValues(alpha: .65)),
+              boxShadow: [
+                BoxShadow(
+                    color: colors.shadow,
+                    blurRadius: 16,
+                    offset: const Offset(0, 4))
+              ],
             ),
-            const SizedBox(height: 3),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 10,
-                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w400,
-                color: isSelected ? cs.primary : fitlek.navUnselected,
-                letterSpacing: 0.3,
-              ),
+            child: Padding(
+              padding: const EdgeInsets.all(6),
+              child: Row(
+                  children: List.generate(_items.length, (index) {
+                final item = _items[index];
+                final selected = index == currentIndex;
+                final foreground =
+                    selected ? cs.onPrimary : colors.navUnselected;
+                return Expanded(
+                    child: Semantics(
+                  selected: selected,
+                  button: true,
+                  label: item.$3,
+                  child: Tooltip(
+                      message: item.$3,
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 180),
+                        margin: const EdgeInsets.symmetric(horizontal: 2),
+                        decoration: BoxDecoration(
+                            color: selected ? cs.primary : Colors.transparent,
+                            borderRadius: BorderRadius.circular(18)),
+                        child: Material(
+                            color: Colors.transparent,
+                            child: InkWell(
+                              borderRadius: BorderRadius.circular(18),
+                              onTap: () => onTap(index),
+                              child: Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 2, vertical: 9),
+                                  child: Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(selected ? item.$2 : item.$1,
+                                            size: 21, color: foreground),
+                                        const SizedBox(height: 5),
+                                        Text(item.$3,
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                            style: TextStyle(
+                                                color: foreground,
+                                                fontSize: 10,
+                                                fontWeight: selected
+                                                    ? FontWeight.w700
+                                                    : FontWeight.w500)),
+                                      ])),
+                            )),
+                      )),
+                ));
+              })),
             ),
-          ],
+          ),
         ),
       ),
     );

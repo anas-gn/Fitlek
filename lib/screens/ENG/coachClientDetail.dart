@@ -1,3 +1,5 @@
+import '../../services/live_updates.dart';
+import 'coachCalendar.dart';
 import 'package:flutter/material.dart';
 import '../../services/apiService.dart';
 import '../../models/coachConversation.dart';
@@ -24,7 +26,13 @@ class CoachClientDetail extends StatefulWidget {
   State<CoachClientDetail> createState() => _CoachClientDetailState();
 }
 
-class _CoachClientDetailState extends State<CoachClientDetail> {
+class _CoachClientDetailState extends State<CoachClientDetail>
+    with LiveUpdates<CoachClientDetail> {
+  @override
+  Set<String> get liveDomains =>
+      {'clients', 'coach-clients', 'reservations', 'pricing', 'profile'};
+  @override
+  Future<void> refreshLiveData() => _load(silent: true);
   bool _loading = true;
   bool _hasError = false;
   bool _messaging = false;
@@ -37,11 +45,12 @@ class _CoachClientDetailState extends State<CoachClientDetail> {
     _load();
   }
 
-  Future<void> _load() async {
-    setState(() {
-      _loading = true;
-      _hasError = false;
-    });
+  Future<void> _load({bool silent = false}) async {
+    if (!silent)
+      setState(() {
+        _loading = true;
+        _hasError = false;
+      });
     final res = await ApiService.get('/coach/clients/${widget.clientId}');
     if (!mounted) return;
     setState(() {
@@ -61,7 +70,8 @@ class _CoachClientDetailState extends State<CoachClientDetail> {
 
   String get _fullName {
     if (_client == null) return widget.initialName;
-    return '${_client!['firstName'] ?? ''} ${_client!['lastName'] ?? ''}'.trim();
+    return '${_client!['firstName'] ?? ''} ${_client!['lastName'] ?? ''}'
+        .trim();
   }
 
   String? get _avatar {
@@ -88,7 +98,8 @@ class _CoachClientDetailState extends State<CoachClientDetail> {
     if (raw == null) return '';
     final s = raw.toString();
     final parts = s.split(':');
-    if (parts.length >= 2) return '${parts[0].padLeft(2, '0')}:${parts[1].padLeft(2, '0')}';
+    if (parts.length >= 2)
+      return '${parts[0].padLeft(2, '0')}:${parts[1].padLeft(2, '0')}';
     return s;
   }
 
@@ -97,7 +108,10 @@ class _CoachClientDetailState extends State<CoachClientDetail> {
     final cs = Theme.of(context).colorScheme;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(
       content: Text(msg,
-          style: TextStyle(color: isError ? cs.onError : cs.onPrimary, fontWeight: FontWeight.w700, fontSize: 13)),
+          style: TextStyle(
+              color: isError ? cs.onError : cs.onPrimary,
+              fontWeight: FontWeight.w700,
+              fontSize: 13)),
       backgroundColor: isError ? context.fitlek.error : cs.primary,
       behavior: SnackBarBehavior.floating,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
@@ -109,10 +123,13 @@ class _CoachClientDetailState extends State<CoachClientDetail> {
     if (_messaging) return;
     setState(() => _messaging = true);
     try {
-      final res = await ApiService.post('/coach/clients/${widget.clientId}/conversation', {});
+      final res = await ApiService.post(
+          '/coach/clients/${widget.clientId}/conversation', {});
       if (!mounted) return;
       if (res['ok'] != true) {
-        _showSnack(res['message']?.toString() ?? 'Unable to open the conversation', isError: true);
+        _showSnack(
+            res['message']?.toString() ?? 'Unable to open the conversation',
+            isError: true);
         return;
       }
       final conversationId = res['conversationID']?.toString();
@@ -130,7 +147,8 @@ class _CoachClientDetailState extends State<CoachClientDetail> {
         unreadCount: 0,
       );
       await Navigator.of(context).push(
-        MaterialPageRoute(builder: (_) => CoachChat(conversation: conversation)),
+        MaterialPageRoute(
+            builder: (_) => CoachChat(conversation: conversation)),
       );
     } catch (e) {
       if (mounted) _showSnack('Error: $e', isError: true);
@@ -153,16 +171,24 @@ class _CoachClientDetailState extends State<CoachClientDetail> {
             Container(
               width: 56,
               height: 56,
-              decoration: BoxDecoration(color: f.error.withValues(alpha: 0.1), shape: BoxShape.circle),
-              child: Icon(Icons.person_remove_rounded, color: f.error, size: 26),
+              decoration: BoxDecoration(
+                  color: f.error.withValues(alpha: 0.1),
+                  shape: BoxShape.circle),
+              child:
+                  Icon(Icons.person_remove_rounded, color: f.error, size: 26),
             ),
             const SizedBox(height: 16),
-            Text('Remove client', style: TextStyle(color: cs.onSurface, fontSize: 18, fontWeight: FontWeight.w700)),
+            Text('Disconnect invitation',
+                style: TextStyle(
+                    color: cs.onSurface,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700)),
             const SizedBox(height: 8),
             Text(
-              'Remove $_fullName from your clients? This only unlinks them from your list; their account and past sessions are not deleted.',
+              'Disconnect your invitation with $_fullName? Clients with bookings remain visible so you can manage their sessions. Their account and sessions are kept.',
               textAlign: TextAlign.center,
-              style: TextStyle(color: f.textSecondary, fontSize: 13, height: 1.5),
+              style:
+                  TextStyle(color: f.textSecondary, fontSize: 13, height: 1.5),
             ),
             const SizedBox(height: 24),
             Row(children: [
@@ -171,8 +197,14 @@ class _CoachClientDetailState extends State<CoachClientDetail> {
                   onTap: () => Navigator.pop(ctx, false),
                   child: Container(
                     padding: const EdgeInsets.symmetric(vertical: 13),
-                    decoration: BoxDecoration(color: f.card2, borderRadius: BorderRadius.circular(12)),
-                    child: Center(child: Text('Cancel', style: TextStyle(color: cs.onSurface, fontWeight: FontWeight.w600))),
+                    decoration: BoxDecoration(
+                        color: f.card2,
+                        borderRadius: BorderRadius.circular(12)),
+                    child: Center(
+                        child: Text('Cancel',
+                            style: TextStyle(
+                                color: cs.onSurface,
+                                fontWeight: FontWeight.w600))),
                   ),
                 ),
               ),
@@ -182,8 +214,14 @@ class _CoachClientDetailState extends State<CoachClientDetail> {
                   onTap: () => Navigator.pop(ctx, true),
                   child: Container(
                     padding: const EdgeInsets.symmetric(vertical: 13),
-                    decoration: BoxDecoration(color: f.error, borderRadius: BorderRadius.circular(12)),
-                    child: Center(child: Text('Remove', style: TextStyle(color: cs.onError, fontWeight: FontWeight.w700))),
+                    decoration: BoxDecoration(
+                        color: f.error,
+                        borderRadius: BorderRadius.circular(12)),
+                    child: Center(
+                        child: Text('Disconnect',
+                            style: TextStyle(
+                                color: cs.onError,
+                                fontWeight: FontWeight.w700))),
                   ),
                 ),
               ),
@@ -199,10 +237,11 @@ class _CoachClientDetailState extends State<CoachClientDetail> {
     if (!mounted) return;
     setState(() => _unlinking = false);
     if (res['ok'] == true) {
-      _showSnack('Client removed ✓');
+      _showSnack('Invitation disconnected');
       Navigator.of(context).pop(true); // signal the list to refresh
     } else {
-      _showSnack(res['message']?.toString() ?? 'Unable to remove the client', isError: true);
+      _showSnack(res['message']?.toString() ?? 'Unable to remove the client',
+          isError: true);
     }
   }
 
@@ -217,7 +256,11 @@ class _CoachClientDetailState extends State<CoachClientDetail> {
         elevation: 0,
         centerTitle: true,
         iconTheme: IconThemeData(color: cs.onSurface),
-        title: Text('Client', style: TextStyle(color: cs.onSurface, fontSize: 17, fontWeight: FontWeight.w800)),
+        title: Text('Client',
+            style: TextStyle(
+                color: cs.onSurface,
+                fontSize: 17,
+                fontWeight: FontWeight.w800)),
         actions: [
           _buildMoreMenu(),
           const SizedBox(width: 8),
@@ -246,14 +289,20 @@ class _CoachClientDetailState extends State<CoachClientDetail> {
       child: Column(mainAxisSize: MainAxisSize.min, children: [
         Icon(Icons.wifi_off_rounded, color: f.textMuted, size: 48),
         const SizedBox(height: 12),
-        Text('Unable to load client', style: TextStyle(color: f.textMuted, fontSize: 15)),
+        Text('Unable to load client',
+            style: TextStyle(color: f.textMuted, fontSize: 15)),
         const SizedBox(height: 20),
         GestureDetector(
           onTap: _load,
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 26, vertical: 12),
-            decoration: BoxDecoration(color: cs.primary, borderRadius: BorderRadius.circular(14)),
-            child: Text('Retry', style: TextStyle(color: cs.onPrimary, fontWeight: FontWeight.w800, fontSize: 13)),
+            decoration: BoxDecoration(
+                color: cs.primary, borderRadius: BorderRadius.circular(14)),
+            child: Text('Retry',
+                style: TextStyle(
+                    color: cs.onPrimary,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 13)),
           ),
         ),
       ]),
@@ -276,25 +325,37 @@ class _CoachClientDetailState extends State<CoachClientDetail> {
         // ── Identity ──
         Container(
           padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(color: f.card, borderRadius: BorderRadius.circular(22), border: Border.all(color: f.border)),
+          decoration: BoxDecoration(
+              color: f.card,
+              borderRadius: BorderRadius.circular(22),
+              border: Border.all(color: f.border)),
           child: Column(children: [
             Container(
               width: 84,
               height: 84,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                border: Border.all(color: _isPremium ? cs.primary.withValues(alpha: 0.5) : f.border, width: 2),
+                border: Border.all(
+                    color: _isPremium
+                        ? cs.primary.withValues(alpha: 0.5)
+                        : f.border,
+                    width: 2),
               ),
               child: ClipOval(
                 child: _avatar != null
-                    ? Image.network(_avatar!, fit: BoxFit.cover, errorBuilder: (_, __, ___) => _avatarFallback(cs, f))
+                    ? Image.network(_avatar!,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => _avatarFallback(cs, f))
                     : _avatarFallback(cs, f),
               ),
             ),
             const SizedBox(height: 14),
             Text(_fullName,
                 textAlign: TextAlign.center,
-                style: TextStyle(color: cs.onSurface, fontSize: 20, fontWeight: FontWeight.w800)),
+                style: TextStyle(
+                    color: cs.onSurface,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w800)),
             if (email.isNotEmpty) ...[
               const SizedBox(height: 4),
               Text(email,
@@ -309,10 +370,15 @@ class _CoachClientDetailState extends State<CoachClientDetail> {
               spacing: 8,
               runSpacing: 8,
               children: [
-                _chip(_isPremium ? 'Premium' : 'Standard', _isPremium ? Icons.star_rounded : Icons.person_outline_rounded,
+                _chip(
+                    _isPremium ? 'Premium' : 'Standard',
+                    _isPremium
+                        ? Icons.star_rounded
+                        : Icons.person_outline_rounded,
                     _isPremium ? cs.primary : f.textSecondary),
                 if (gender.isNotEmpty) _chip(gender, Icons.wc_rounded, f.info),
-                if (height != null) _chip('$height cm', Icons.height_rounded, f.violet),
+                if (height != null)
+                  _chip('$height cm', Icons.height_rounded, f.violet),
               ],
             ),
           ]),
@@ -324,17 +390,29 @@ class _CoachClientDetailState extends State<CoachClientDetail> {
         const SizedBox(height: 10),
         Container(
           padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(color: f.card, borderRadius: BorderRadius.circular(18), border: Border.all(color: f.border)),
+          decoration: BoxDecoration(
+              color: f.card,
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: f.border)),
           child: Column(children: [
-            _detailRow(Icons.link_rounded, 'Connected since', _formatDate(c['linkedAt'])),
-            if (c['createdAt'] != null) _detailRow(Icons.calendar_today_rounded, 'Client since', _formatDate(c['createdAt'])),
+            _detailRow(Icons.link_rounded, 'Coaching since',
+                _formatDate(c['linkedAt'])),
+            if (c['createdAt'] != null)
+              _detailRow(Icons.calendar_today_rounded, 'Client since',
+                  _formatDate(c['createdAt'])),
             const SizedBox(height: 6),
             Row(children: [
-              Expanded(child: _statBox('${reservations['total'] ?? 0}', 'Sessions', cs.onSurface)),
+              Expanded(
+                  child: _statBox('${reservations['total'] ?? 0}', 'Sessions',
+                      cs.onSurface)),
               const SizedBox(width: 10),
-              Expanded(child: _statBox('${reservations['confirmed'] ?? 0}', 'Confirmed', f.success)),
+              Expanded(
+                  child: _statBox('${reservations['upcoming'] ?? 0}',
+                      'Upcoming', f.success)),
               const SizedBox(width: 10),
-              Expanded(child: _statBox('${reservations['pending'] ?? 0}', 'Pending', f.warning)),
+              Expanded(
+                  child: _statBox(
+                      '${reservations['pending'] ?? 0}', 'Pending', f.warning)),
             ]),
           ]),
         ),
@@ -346,16 +424,32 @@ class _CoachClientDetailState extends State<CoachClientDetail> {
         if (recentSessions.isEmpty)
           Container(
             padding: const EdgeInsets.symmetric(vertical: 22),
-            decoration: BoxDecoration(color: f.card, borderRadius: BorderRadius.circular(18), border: Border.all(color: f.border)),
-            child: Center(child: Text('No sessions yet', style: TextStyle(color: f.textMuted, fontSize: 13))),
+            decoration: BoxDecoration(
+                color: f.card,
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: f.border)),
+            child: Center(
+                child: Text('No sessions yet',
+                    style: TextStyle(color: f.textMuted, fontSize: 13))),
           )
         else
           Container(
-            decoration: BoxDecoration(color: f.card, borderRadius: BorderRadius.circular(18), border: Border.all(color: f.border)),
+            decoration: BoxDecoration(
+                color: f.card,
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: f.border)),
             child: Column(
               children: List.generate(recentSessions.length, (i) {
                 final s = recentSessions[i] as Map<String, dynamic>;
-                return _sessionRow(s, isLast: i == recentSessions.length - 1);
+                return InkWell(
+                    onTap: () async {
+                      await Navigator.of(context).push(MaterialPageRoute(
+                          builder: (_) => CoachCalendar(
+                              reservationId: s['id'].toString())));
+                      if (mounted) await _load(silent: true);
+                    },
+                    child:
+                        _sessionRow(s, isLast: i == recentSessions.length - 1));
               }),
             ),
           ),
@@ -369,21 +463,28 @@ class _CoachClientDetailState extends State<CoachClientDetail> {
           onTap: _openConversation,
         ),
         const SizedBox(height: 12),
-        _dangerButton(
-          icon: Icons.person_remove_rounded,
-          label: 'Remove from my clients',
-          loading: _unlinking,
-          onTap: _confirmUnlink,
-        ),
+        if (c['isLinked'] == true || c['isLinked'] == 1)
+          _dangerButton(
+            icon: Icons.person_remove_rounded,
+            label: 'Disconnect invitation',
+            loading: _unlinking,
+            onTap: _confirmUnlink,
+          ),
       ],
     );
   }
 
-  Widget _avatarFallback(ColorScheme cs, FitlekColors f) =>
-      Center(child: Text(_initials, style: TextStyle(color: cs.primary, fontSize: 26, fontWeight: FontWeight.w800)));
+  Widget _avatarFallback(ColorScheme cs, FitlekColors f) => Center(
+      child: Text(_initials,
+          style: TextStyle(
+              color: cs.primary, fontSize: 26, fontWeight: FontWeight.w800)));
 
   Widget _sectionTitle(String text) => Text(text,
-      style: TextStyle(color: context.fitlek.textMuted, fontSize: 12, fontWeight: FontWeight.w800, letterSpacing: 0.6));
+      style: TextStyle(
+          color: context.fitlek.textMuted,
+          fontSize: 12,
+          fontWeight: FontWeight.w800,
+          letterSpacing: 0.6));
 
   Widget _chip(String label, IconData icon, Color color) {
     return Container(
@@ -396,7 +497,9 @@ class _CoachClientDetailState extends State<CoachClientDetail> {
       child: Row(mainAxisSize: MainAxisSize.min, children: [
         Icon(icon, size: 14, color: color),
         const SizedBox(width: 5),
-        Text(label, style: TextStyle(color: color, fontSize: 11.5, fontWeight: FontWeight.w700)),
+        Text(label,
+            style: TextStyle(
+                color: color, fontSize: 11.5, fontWeight: FontWeight.w700)),
       ]),
     );
   }
@@ -411,7 +514,11 @@ class _CoachClientDetailState extends State<CoachClientDetail> {
         const SizedBox(width: 10),
         Text(label, style: TextStyle(color: f.textSecondary, fontSize: 13)),
         const Spacer(),
-        Text(value, style: TextStyle(color: cs.onSurface, fontSize: 13, fontWeight: FontWeight.w600)),
+        Text(value,
+            style: TextStyle(
+                color: cs.onSurface,
+                fontSize: 13,
+                fontWeight: FontWeight.w600)),
       ]),
     );
   }
@@ -420,11 +527,20 @@ class _CoachClientDetailState extends State<CoachClientDetail> {
     final f = context.fitlek;
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 12),
-      decoration: BoxDecoration(color: f.card2, borderRadius: BorderRadius.circular(14), border: Border.all(color: f.border)),
+      decoration: BoxDecoration(
+          color: f.card2,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: f.border)),
       child: Column(children: [
-        Text(value, style: TextStyle(color: color, fontSize: 20, fontWeight: FontWeight.w800)),
+        Text(value,
+            style: TextStyle(
+                color: color, fontSize: 20, fontWeight: FontWeight.w800)),
         const SizedBox(height: 2),
-        Text(label, style: TextStyle(color: f.textMuted, fontSize: 10.5, fontWeight: FontWeight.w500)),
+        Text(label,
+            style: TextStyle(
+                color: f.textMuted,
+                fontSize: 10.5,
+                fontWeight: FontWeight.w500)),
       ]),
     );
   }
@@ -432,7 +548,13 @@ class _CoachClientDetailState extends State<CoachClientDetail> {
   Widget _sessionRow(Map<String, dynamic> s, {required bool isLast}) {
     final cs = Theme.of(context).colorScheme;
     final f = context.fitlek;
-    final status = (s['status'] ?? '').toString();
+    final status = s['pricingStatus'] == 'expired'
+        ? 'expired'
+        : s['status'] == 'pending' && s['pricingStatus'] == 'awaiting'
+            ? 'Set price'
+            : s['status'] == 'pending' && s['pricingStatus'] == 'proposed'
+                ? 'Price sent'
+                : (s['status'] ?? '').toString();
     Color statusColor;
     switch (status) {
       case 'confirmed':
@@ -447,7 +569,9 @@ class _CoachClientDetailState extends State<CoachClientDetail> {
       default:
         statusColor = f.textMuted;
     }
-    final label = status.isEmpty ? '' : '${status[0].toUpperCase()}${status.substring(1)}';
+    final label = status.isEmpty
+        ? ''
+        : '${status[0].toUpperCase()}${status.substring(1)}';
     final location = (s['location'] ?? '').toString();
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
@@ -458,31 +582,51 @@ class _CoachClientDetailState extends State<CoachClientDetail> {
         Container(
           width: 40,
           height: 40,
-          decoration: BoxDecoration(color: statusColor.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(11)),
+          decoration: BoxDecoration(
+              color: statusColor.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(11)),
           child: Icon(Icons.event_rounded, color: statusColor, size: 18),
         ),
         const SizedBox(width: 12),
         Expanded(
-          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text('${_formatDate(s['reservedDate'])}  •  ${_formatTime(s['reservedTime'])}',
-                style: TextStyle(color: cs.onSurface, fontSize: 13, fontWeight: FontWeight.w600)),
+          child:
+              Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Text(
+                '${_formatDate(s['reservedDate'])}  •  ${_formatTime(s['reservedTime'])}',
+                style: TextStyle(
+                    color: cs.onSurface,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600)),
             if (location.isNotEmpty) ...[
               const SizedBox(height: 2),
-              Text(location, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(color: f.textMuted, fontSize: 11.5)),
+              Text(location,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(color: f.textMuted, fontSize: 11.5)),
             ],
           ]),
         ),
         const SizedBox(width: 10),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-          decoration: BoxDecoration(color: statusColor.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(20)),
-          child: Text(label, style: TextStyle(color: statusColor, fontSize: 10.5, fontWeight: FontWeight.w700)),
+          decoration: BoxDecoration(
+              color: statusColor.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(20)),
+          child: Text(label,
+              style: TextStyle(
+                  color: statusColor,
+                  fontSize: 10.5,
+                  fontWeight: FontWeight.w700)),
         ),
       ]),
     );
   }
 
-  Widget _primaryButton({required IconData icon, required String label, required bool loading, required VoidCallback onTap}) {
+  Widget _primaryButton(
+      {required IconData icon,
+      required String label,
+      required bool loading,
+      required VoidCallback onTap}) {
     final cs = Theme.of(context).colorScheme;
     return GestureDetector(
       onTap: loading ? null : onTap,
@@ -491,22 +635,42 @@ class _CoachClientDetailState extends State<CoachClientDetail> {
         decoration: BoxDecoration(
           color: loading ? cs.primary.withValues(alpha: 0.6) : cs.primary,
           borderRadius: BorderRadius.circular(16),
-          boxShadow: loading ? null : [BoxShadow(color: cs.primary.withValues(alpha: 0.3), blurRadius: 16, offset: const Offset(0, 6))],
+          boxShadow: loading
+              ? null
+              : [
+                  BoxShadow(
+                      color: cs.primary.withValues(alpha: 0.3),
+                      blurRadius: 16,
+                      offset: const Offset(0, 6))
+                ],
         ),
         child: Center(
           child: loading
-              ? SizedBox(width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.4, valueColor: AlwaysStoppedAnimation<Color>(cs.onPrimary)))
+              ? SizedBox(
+                  width: 22,
+                  height: 22,
+                  child: CircularProgressIndicator(
+                      strokeWidth: 2.4,
+                      valueColor: AlwaysStoppedAnimation<Color>(cs.onPrimary)))
               : Row(mainAxisAlignment: MainAxisAlignment.center, children: [
                   Icon(icon, size: 19, color: cs.onPrimary),
                   const SizedBox(width: 8),
-                  Text(label, style: TextStyle(color: cs.onPrimary, fontSize: 15, fontWeight: FontWeight.w800)),
+                  Text(label,
+                      style: TextStyle(
+                          color: cs.onPrimary,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w800)),
                 ]),
         ),
       ),
     );
   }
 
-  Widget _dangerButton({required IconData icon, required String label, required bool loading, required VoidCallback onTap}) {
+  Widget _dangerButton(
+      {required IconData icon,
+      required String label,
+      required bool loading,
+      required VoidCallback onTap}) {
     final f = context.fitlek;
     return GestureDetector(
       onTap: loading ? null : onTap,
@@ -519,11 +683,20 @@ class _CoachClientDetailState extends State<CoachClientDetail> {
         ),
         child: Center(
           child: loading
-              ? SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2.2, valueColor: AlwaysStoppedAnimation<Color>(f.error)))
+              ? SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                      strokeWidth: 2.2,
+                      valueColor: AlwaysStoppedAnimation<Color>(f.error)))
               : Row(mainAxisAlignment: MainAxisAlignment.center, children: [
                   Icon(icon, size: 18, color: f.error),
                   const SizedBox(width: 8),
-                  Text(label, style: TextStyle(color: f.error, fontSize: 14, fontWeight: FontWeight.w700)),
+                  Text(label,
+                      style: TextStyle(
+                          color: f.error,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700)),
                 ]),
         ),
       ),
@@ -532,7 +705,8 @@ class _CoachClientDetailState extends State<CoachClientDetail> {
 
   Widget _buildMoreMenu() {
     return PopupMenuButton<String>(
-      icon: Icon(Icons.more_horiz_rounded, color: Theme.of(context).colorScheme.onSurface),
+      icon: Icon(Icons.more_horiz_rounded,
+          color: Theme.of(context).colorScheme.onSurface),
       color: context.fitlek.card,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       offset: const Offset(0, 40),
@@ -548,9 +722,14 @@ class _CoachClientDetailState extends State<CoachClientDetail> {
           value: 'report',
           child: Row(
             children: [
-              Icon(Icons.flag_rounded, color: context.fitlek.textMuted, size: 18),
+              Icon(Icons.flag_rounded,
+                  color: context.fitlek.textMuted, size: 18),
               const SizedBox(width: 8),
-              Text('Report Client', style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 13, fontWeight: FontWeight.w600)),
+              Text('Report Client',
+                  style: TextStyle(
+                      color: Theme.of(context).colorScheme.onSurface,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600)),
             ],
           ),
         ),
@@ -560,7 +739,11 @@ class _CoachClientDetailState extends State<CoachClientDetail> {
             children: [
               Icon(Icons.block_rounded, color: context.fitlek.error, size: 18),
               const SizedBox(width: 8),
-              Text('Block Client', style: TextStyle(color: context.fitlek.error, fontSize: 13, fontWeight: FontWeight.w600)),
+              Text('Block Client',
+                  style: TextStyle(
+                      color: context.fitlek.error,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600)),
             ],
           ),
         ),
@@ -570,39 +753,67 @@ class _CoachClientDetailState extends State<CoachClientDetail> {
 
   void _showReportDialog() {
     String? selectedReason;
-    final reasons = ['Spam', 'Harassment', 'Inappropriate content', 'Fraud / Scam', 'Other'];
+    final reasons = [
+      'Spam',
+      'Harassment',
+      'Inappropriate content',
+      'Fraud / Scam',
+      'Other'
+    ];
 
     showDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) => AlertDialog(
           backgroundColor: context.fitlek.card,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: Text('Report $_fullName', style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 16)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Text('Report $_fullName',
+              style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurface,
+                  fontSize: 16)),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text('Why are you reporting this user? We take these reports seriously.', style: TextStyle(color: context.fitlek.textMuted, fontSize: 13)),
+              Text(
+                  'Why are you reporting this user? We take these reports seriously.',
+                  style:
+                      TextStyle(color: context.fitlek.textMuted, fontSize: 13)),
               const SizedBox(height: 16),
               ...reasons.map((r) => RadioListTile<String>(
-                title: Text(r, style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 13)),
-                value: r,
-                groupValue: selectedReason,
-                activeColor: Theme.of(context).colorScheme.primary,
-                contentPadding: EdgeInsets.zero,
-                dense: true,
-                onChanged: (val) => setDialogState(() => selectedReason = val),
-              )),
+                    title: Text(r,
+                        style: TextStyle(
+                            color: Theme.of(context).colorScheme.onSurface,
+                            fontSize: 13)),
+                    value: r,
+                    groupValue: selectedReason,
+                    activeColor: Theme.of(context).colorScheme.primary,
+                    contentPadding: EdgeInsets.zero,
+                    dense: true,
+                    onChanged: (val) =>
+                        setDialogState(() => selectedReason = val),
+                  )),
             ],
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Cancel', style: TextStyle(color: context.fitlek.textMuted))),
             TextButton(
-              onPressed: selectedReason == null ? null : () async {
-                Navigator.pop(ctx);
-                _submitReport(int.parse(widget.clientId), selectedReason!);
-              },
-              child: Text('Submit', style: TextStyle(color: selectedReason == null ? context.fitlek.textMuted : Theme.of(context).colorScheme.primary, fontWeight: FontWeight.bold)),
+                onPressed: () => Navigator.pop(ctx),
+                child: Text('Cancel',
+                    style: TextStyle(color: context.fitlek.textMuted))),
+            TextButton(
+              onPressed: selectedReason == null
+                  ? null
+                  : () async {
+                      Navigator.pop(ctx);
+                      _submitReport(
+                          int.parse(widget.clientId), selectedReason!);
+                    },
+              child: Text('Submit',
+                  style: TextStyle(
+                      color: selectedReason == null
+                          ? context.fitlek.textMuted
+                          : Theme.of(context).colorScheme.primary,
+                      fontWeight: FontWeight.bold)),
             ),
           ],
         ),
@@ -633,19 +844,25 @@ class _CoachClientDetailState extends State<CoachClientDetail> {
       builder: (ctx) => AlertDialog(
         backgroundColor: context.fitlek.card,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text('Block $_fullName?', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
+        title: Text('Block $_fullName?',
+            style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
         content: Text(
           'They won\'t be able to find your profile or send you messages. They will not be notified that you blocked them.',
           style: TextStyle(color: context.fitlek.textMuted),
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Cancel', style: TextStyle(color: context.fitlek.textMuted))),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: Text('Cancel',
+                  style: TextStyle(color: context.fitlek.textMuted))),
           TextButton(
             onPressed: () async {
               Navigator.pop(ctx);
               _submitBlock(int.parse(widget.clientId));
             },
-            child: Text('Block', style: TextStyle(color: context.fitlek.error, fontWeight: FontWeight.bold)),
+            child: Text('Block',
+                style: TextStyle(
+                    color: context.fitlek.error, fontWeight: FontWeight.bold)),
           ),
         ],
       ),

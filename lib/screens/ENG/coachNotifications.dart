@@ -1,3 +1,5 @@
+import '../../services/live_updates.dart';
+import '../../services/notification_navigation.dart';
 import 'package:flutter/material.dart';
 import '../../services/apiService.dart';
 import '../../theme/fitlek_theme_extension.dart';
@@ -9,7 +11,12 @@ class CoachNotifications extends StatefulWidget {
   State<CoachNotifications> createState() => _CoachNotificationsState();
 }
 
-class _CoachNotificationsState extends State<CoachNotifications> {
+class _CoachNotificationsState extends State<CoachNotifications> with LiveUpdates<CoachNotifications> {
+  @override
+  Set<String> get liveDomains => {'notifications'};
+  @override
+  Future<void> refreshLiveData() async { await _load(silent:true); }
+
   static const int _pageSize = 30;
 
   final _scrollCtrl = ScrollController();
@@ -34,17 +41,19 @@ class _CoachNotificationsState extends State<CoachNotifications> {
   }
 
   void _onScroll() {
-    if (_scrollCtrl.position.pixels >= _scrollCtrl.position.maxScrollExtent - 240) {
+    if (_scrollCtrl.position.pixels >=
+        _scrollCtrl.position.maxScrollExtent - 240) {
       _loadMore();
     }
   }
 
-  Future<void> _load() async {
-    setState(() {
+  Future<void> _load({bool silent = false}) async {
+    if (!silent) setState(() {
       _loading = true;
       _error = false;
     });
-    final res = await ApiService.get('/coach/notifications?page=1&limit=$_pageSize');
+    final res =
+        await ApiService.get('/coach/notifications?page=1&limit=$_pageSize');
     if (!mounted) return;
     if (res['ok'] == true) {
       final list = List<Map<String, dynamic>>.from(
@@ -69,7 +78,8 @@ class _CoachNotificationsState extends State<CoachNotifications> {
     if (_loadingMore || !_hasMore || _loading) return;
     setState(() => _loadingMore = true);
     final next = _page + 1;
-    final res = await ApiService.get('/coach/notifications?page=$next&limit=$_pageSize');
+    final res = await ApiService.get(
+        '/coach/notifications?page=$next&limit=$_pageSize');
     if (!mounted) return;
     if (res['ok'] == true) {
       final list = List<Map<String, dynamic>>.from(
@@ -85,7 +95,8 @@ class _CoachNotificationsState extends State<CoachNotifications> {
     }
   }
 
-  int get _unreadCount => _items.where((n) => n['isRead'] == 0 || n['isRead'] == false).length;
+  int get _unreadCount =>
+      _items.where((n) => n['isRead'] == 0 || n['isRead'] == false).length;
 
   Future<void> _markAllRead() async {
     final res = await ApiService.patch('/coach/notifications/read-all', {});
@@ -105,12 +116,8 @@ class _CoachNotificationsState extends State<CoachNotifications> {
     // Mark read on the backend (best-effort) before navigating.
     await ApiService.patch('/coach/notifications/${n['id']}/read', {});
     if (!mounted) return;
-    Navigator.of(context).pop({
-      'type': n['type'],
-      'relatedEntityID': n['relatedEntityID'],
-      'actorName': n['actorName'],
-      'actorAvatar': n['actorAvatar'],
-    });
+    await NotificationNavigation.open(context, n);
+    if (mounted) _load();
   }
 
   void _snack(String msg) {
@@ -125,6 +132,8 @@ class _CoachNotificationsState extends State<CoachNotifications> {
     final cs = Theme.of(context).colorScheme;
     final f = context.fitlek;
     switch (type) {
+      case 'app_campaign':
+        return (icon: Icons.campaign_rounded, color: cs.primary);
       case 'new_message':
         return (icon: Icons.chat_bubble_rounded, color: cs.primary);
       case 'new_reservation':
@@ -160,7 +169,10 @@ class _CoachNotificationsState extends State<CoachNotifications> {
         elevation: 0,
         iconTheme: IconThemeData(color: cs.onSurface),
         title: Text('Notifications',
-            style: TextStyle(color: cs.onSurface, fontSize: 18, fontWeight: FontWeight.w800)),
+            style: TextStyle(
+                color: cs.onSurface,
+                fontSize: 18,
+                fontWeight: FontWeight.w800)),
         actions: [
           if (!_loading && !_error && _unreadCount > 0)
             Padding(
@@ -168,7 +180,10 @@ class _CoachNotificationsState extends State<CoachNotifications> {
               child: TextButton(
                 onPressed: _markAllRead,
                 child: Text('Mark all read',
-                    style: TextStyle(color: cs.primary, fontSize: 13, fontWeight: FontWeight.w700)),
+                    style: TextStyle(
+                        color: cs.primary,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700)),
               ),
             ),
         ],
@@ -196,8 +211,12 @@ class _CoachNotificationsState extends State<CoachNotifications> {
                                 if (i >= _items.length) {
                                   return const Padding(
                                     padding: EdgeInsets.all(16),
-                                    child: Center(child: SizedBox(
-                                      width: 22, height: 22, child: CircularProgressIndicator(strokeWidth: 2.2))),
+                                    child: Center(
+                                        child: SizedBox(
+                                            width: 22,
+                                            height: 22,
+                                            child: CircularProgressIndicator(
+                                                strokeWidth: 2.2))),
                                   );
                                 }
                                 return _buildTile(_items[i]);
@@ -223,7 +242,8 @@ class _CoachNotificationsState extends State<CoachNotifications> {
         decoration: BoxDecoration(
           color: isRead ? f.card : cs.primary.withValues(alpha: 0.06),
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: isRead ? f.border : cs.primary.withValues(alpha: 0.25)),
+          border: Border.all(
+              color: isRead ? f.border : cs.primary.withValues(alpha: 0.25)),
         ),
         child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Container(
@@ -237,7 +257,8 @@ class _CoachNotificationsState extends State<CoachNotifications> {
           ),
           const SizedBox(width: 12),
           Expanded(
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            child:
+                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
               Row(children: [
                 Expanded(
                   child: Text((n['title'] ?? '').toString(),
@@ -246,16 +267,22 @@ class _CoachNotificationsState extends State<CoachNotifications> {
                       style: TextStyle(
                           color: cs.onSurface,
                           fontSize: 14,
-                          fontWeight: isRead ? FontWeight.w600 : FontWeight.w800)),
+                          fontWeight:
+                              isRead ? FontWeight.w600 : FontWeight.w800)),
                 ),
                 if (!isRead) ...[
                   const SizedBox(width: 8),
-                  Container(width: 8, height: 8, decoration: BoxDecoration(color: cs.primary, shape: BoxShape.circle)),
+                  Container(
+                      width: 8,
+                      height: 8,
+                      decoration: BoxDecoration(
+                          color: cs.primary, shape: BoxShape.circle)),
                 ],
               ]),
               const SizedBox(height: 3),
               Text((n['body'] ?? '').toString(),
-                  style: TextStyle(color: f.textSecondary, fontSize: 13, height: 1.35)),
+                  style: TextStyle(
+                      color: f.textSecondary, fontSize: 13, height: 1.35)),
               const SizedBox(height: 6),
               Text(_timeAgo(n['createdAt']),
                   style: TextStyle(color: f.textMuted, fontSize: 11.5)),
@@ -281,13 +308,31 @@ class _CoachNotificationsState extends State<CoachNotifications> {
         ),
         child: Row(children: [
           const SizedBox(width: 14),
-          Container(width: 42, height: 42, decoration: BoxDecoration(color: f.card2, borderRadius: BorderRadius.circular(12))),
+          Container(
+              width: 42,
+              height: 42,
+              decoration: BoxDecoration(
+                  color: f.card2, borderRadius: BorderRadius.circular(12))),
           const SizedBox(width: 12),
-          Expanded(child: Column(mainAxisAlignment: MainAxisAlignment.center, crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Container(width: 140, height: 12, decoration: BoxDecoration(color: f.card2, borderRadius: BorderRadius.circular(6))),
-            const SizedBox(height: 8),
-            Container(width: 220, height: 10, decoration: BoxDecoration(color: f.card2, borderRadius: BorderRadius.circular(6))),
-          ])),
+          Expanded(
+              child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                Container(
+                    width: 140,
+                    height: 12,
+                    decoration: BoxDecoration(
+                        color: f.card2,
+                        borderRadius: BorderRadius.circular(6))),
+                const SizedBox(height: 8),
+                Container(
+                    width: 220,
+                    height: 10,
+                    decoration: BoxDecoration(
+                        color: f.card2,
+                        borderRadius: BorderRadius.circular(6))),
+              ])),
           const SizedBox(width: 14),
         ]),
       ),
@@ -301,14 +346,20 @@ class _CoachNotificationsState extends State<CoachNotifications> {
       child: Column(mainAxisSize: MainAxisSize.min, children: [
         Icon(Icons.wifi_off_rounded, color: f.textMuted, size: 52),
         const SizedBox(height: 12),
-        Text('Unable to load notifications', style: TextStyle(color: f.textMuted, fontSize: 15)),
+        Text('Unable to load notifications',
+            style: TextStyle(color: f.textMuted, fontSize: 15)),
         const SizedBox(height: 20),
         GestureDetector(
           onTap: _load,
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 26, vertical: 12),
-            decoration: BoxDecoration(color: cs.primary, borderRadius: BorderRadius.circular(14)),
-            child: Text('Retry', style: TextStyle(color: cs.onPrimary, fontWeight: FontWeight.w800, fontSize: 13)),
+            decoration: BoxDecoration(
+                color: cs.primary, borderRadius: BorderRadius.circular(14)),
+            child: Text('Retry',
+                style: TextStyle(
+                    color: cs.onPrimary,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 13)),
           ),
         ),
       ]),
@@ -327,13 +378,19 @@ class _CoachNotificationsState extends State<CoachNotifications> {
             child: Padding(
               padding: const EdgeInsets.all(32),
               child: Column(mainAxisSize: MainAxisSize.min, children: [
-                Icon(Icons.notifications_none_rounded, color: f.textMuted, size: 60),
+                Icon(Icons.notifications_none_rounded,
+                    color: f.textMuted, size: 60),
                 const SizedBox(height: 14),
                 Text('No notifications yet.',
-                    style: TextStyle(color: cs.onSurface, fontSize: 16, fontWeight: FontWeight.w700)),
+                    style: TextStyle(
+                        color: cs.onSurface,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700)),
                 const SizedBox(height: 6),
-                Text('Messages, reservations and session reminders will appear here.',
-                    textAlign: TextAlign.center, style: TextStyle(color: f.textMuted, fontSize: 13)),
+                Text(
+                    'Messages, reservations and session reminders will appear here.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: f.textMuted, fontSize: 13)),
               ]),
             ),
           ),

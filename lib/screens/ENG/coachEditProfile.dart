@@ -1,3 +1,5 @@
+import '../../services/media_picker_service.dart';
+import 'userLocationSettings.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:convert';
@@ -6,6 +8,7 @@ import 'package:fitlek1/constants/urls.dart';
 import '../../services/apiService.dart';
 import '../../theme/fitlek_theme_extension.dart';
 import 'coachProfile.dart' show CoachProfileData;
+import 'package:fitlek1/models/anas/coachPackage.dart';
 
 class CoachEditProfile extends StatefulWidget {
   final CoachProfileData profile;
@@ -40,8 +43,23 @@ class _CoachEditProfileState extends State<CoachEditProfile> {
   List<Map<String, dynamic>> _galleryImages = [];
   bool _loadingGallery = true;
   bool _uploadingGallery = false;
-  List<Map<String, dynamic>> _categories = [];
-  int? _selectedCategoryId;
+  // Suggested fitness specialties for quick selection
+  static const List<String> _suggestedSpecialties = [
+    'Musculation',
+    'Perte de poids',
+    'Yoga',
+    'CrossFit',
+    'Boxe',
+    'Nutrition',
+    'Pilates',
+    'Cardio',
+    'Stretching',
+    'Functional Training',
+  ];
+
+  // Packages
+  List<CoachPackage> _packages = [];
+  bool _loadingPackages = true;
 
   static const _genders = ['Male', 'Female', 'Other'];
 
@@ -63,24 +81,8 @@ class _CoachEditProfileState extends State<CoachEditProfile> {
     _publicProfile = p.publicProfile;
     _directMessaging = p.directMessaging;
     _gender = _normalizeGender(p.gender);
-    _selectedCategoryId = p.categoryID;
     _loadGallery();
-    _fetchCategories();
-  }
-
-  Future<void> _fetchCategories() async {
-    try {
-      final res = await http.get(Uri.parse('$baseUrl/categories'))
-          .timeout(const Duration(seconds: 8));
-      if (res.statusCode == 200) {
-        final List data = jsonDecode(res.body);
-        if (mounted) {
-          setState(() {
-            _categories = List<Map<String, dynamic>>.from(data);
-          });
-        }
-      }
-    } catch (_) {}
+    _loadPackages();
   }
 
   Future<void> _loadGallery() async {
@@ -97,6 +99,30 @@ class _CoachEditProfileState extends State<CoachEditProfile> {
       }
     } catch (e) {
       if (mounted) setState(() => _loadingGallery = false);
+    }
+  }
+
+  Future<void> _loadPackages() async {
+    try {
+      final coachID = widget.profile.id;
+      final res = await http.get(
+        Uri.parse('$baseUrl/packages/me?coachID=$coachID'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ${widget.token}',
+        },
+      ).timeout(const Duration(seconds: 8));
+      if (res.statusCode == 200 && mounted) {
+        final List data = jsonDecode(res.body);
+        setState(() {
+          _packages = data.map((e) => CoachPackage.fromJson(e)).toList();
+          _loadingPackages = false;
+        });
+      } else {
+        if (mounted) setState(() => _loadingPackages = false);
+      }
+    } catch (e) {
+      if (mounted) setState(() => _loadingPackages = false);
     }
   }
 
@@ -160,7 +186,7 @@ class _CoachEditProfileState extends State<CoachEditProfile> {
 
   Future<void> _pickAndUploadAvatar() async {
     if (_uploadingAvatar || _saving) return;
-    final picker = ImagePicker();
+    final picker = AppMediaPicker(context);
     final XFile? file = await picker.pickImage(
       source: ImageSource.gallery,
       maxWidth: 800,
@@ -213,7 +239,7 @@ class _CoachEditProfileState extends State<CoachEditProfile> {
       return;
     }
 
-    final picker = ImagePicker();
+    final picker = AppMediaPicker(context);
     final List<XFile> files = await picker.pickMultiImage(
       maxWidth: 1024,
       maxHeight: 1024,
@@ -388,10 +414,8 @@ class _CoachEditProfileState extends State<CoachEditProfile> {
         'specialties': _specialties,
         'publicProfile': _publicProfile,
         'directMessaging': _directMessaging,
-        'instagramPage': _instagramCtrl.text.trim(),
+        'instagramPage': _instagramCtrl.text.trim().replaceAll(RegExp(r'^@+'), ''),
         'tel': _telCtrl.text.trim(),
-        'ville': _villeCtrl.text.trim(),
-        if (_selectedCategoryId != null) 'categoryID': _selectedCategoryId,
         // Never send price — coaches do not set a session price in the app.
       };
       if (_avatarUrl != null && _avatarUrl != p.avatarUrl) {
@@ -460,6 +484,8 @@ class _CoachEditProfileState extends State<CoachEditProfile> {
                   _buildCertifications(cs, f),
                   const SizedBox(height: 18),
                   _buildSpecialties(cs, f),
+                  const SizedBox(height: 18),
+                  _buildPackagesSection(cs, f),
                   const SizedBox(height: 18),
                   _buildGallerySection(cs, f),
                   const SizedBox(height: 18),
@@ -617,29 +643,6 @@ class _CoachEditProfileState extends State<CoachEditProfile> {
             decoration: _inputDecoration(f, cs),
           ),
         ),
-        const SizedBox(height: 14),
-        if (_categories.isNotEmpty) ...[
-          _labeledField(
-            label: 'Primary Coaching Category',
-            child: DropdownButtonFormField<int>(
-              value: _selectedCategoryId,
-              hint: Text('Select a category', style: TextStyle(color: f.textMuted)),
-              items: _categories
-                  .map((cat) => DropdownMenuItem<int>(
-                        value: cat['id'] as int,
-                        child: Text(cat['name'] as String),
-                      ))
-                  .toList(),
-              onChanged: (v) {
-                if (v != null) setState(() => _selectedCategoryId = v);
-              },
-              style: TextStyle(color: cs.onSurface, fontSize: 14.5, fontWeight: FontWeight.w600),
-              dropdownColor: f.card,
-              decoration: _inputDecoration(f, cs),
-            ),
-          ),
-          const SizedBox(height: 14),
-        ],
         _labeledField(
           label: 'Professional Title',
           child: TextFormField(
@@ -684,9 +687,15 @@ class _CoachEditProfileState extends State<CoachEditProfile> {
           label: 'City',
           child: TextFormField(
             controller: _villeCtrl,
-            textCapitalization: TextCapitalization.words,
+            readOnly: true,
+            onTap: () async {
+              final city = await Navigator.of(context).push<String>(
+                  MaterialPageRoute(builder: (_) => const UserLocationSettings()));
+              if (mounted && city != null) setState(() => _villeCtrl.text = city);
+            },
             style: TextStyle(color: cs.onSurface, fontSize: 14.5, fontWeight: FontWeight.w600),
-            decoration: _inputDecoration(f, cs, hint: 'e.g. Casablanca'),
+            decoration: _inputDecoration(f, cs, hint: 'Use location').copyWith(
+                suffixIcon: const Icon(Icons.my_location)),
           ),
         ),
         const SizedBox(height: 14),
@@ -758,55 +767,699 @@ class _CoachEditProfileState extends State<CoachEditProfile> {
   Widget _buildSpecialties(ColorScheme cs, FitlekColors f) {
     return _card(
       children: [
-        _sectionHeader('SPECIALTIES', icon: Icons.open_with_rounded),
-        const SizedBox(height: 14),
+        _sectionHeader('SPECIALTIES', icon: Icons.fitness_center_rounded),
+        const SizedBox(height: 6),
+        Text(
+          'Select the specialties you teach (you can select multiple):',
+          style: TextStyle(color: f.textMuted, fontSize: 12.5),
+        ),
+        const SizedBox(height: 12),
         Wrap(
           spacing: 8,
           runSpacing: 8,
-          children: [
-            ..._specialties.asMap().entries.map((entry) {
-              final index = entry.key;
-              final value = entry.value;
-              return Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          children: _suggestedSpecialties.map((spec) {
+            final isSelected = _specialties.any((s) => s.toLowerCase() == spec.toLowerCase());
+            return GestureDetector(
+              onTap: () {
+                setState(() {
+                  if (isSelected) {
+                    _specialties.removeWhere((s) => s.toLowerCase() == spec.toLowerCase());
+                  } else {
+                    if (_specialties.length >= 10) {
+                      _showSnack('Maximum 10 specialties', isError: true);
+                      return;
+                    }
+                    _specialties.add(spec);
+                  }
+                });
+              },
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 180),
+                padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 8),
                 decoration: BoxDecoration(
-                  color: cs.primary.withValues(alpha: 0.12),
+                  color: isSelected
+                      ? cs.primary
+                      : f.card2,
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: cs.primary.withValues(alpha: 0.28)),
+                  border: Border.all(
+                    color: isSelected ? cs.primary : f.border,
+                    width: isSelected ? 1.4 : 1,
+                  ),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(value, style: TextStyle(color: cs.primary, fontSize: 12.5, fontWeight: FontWeight.w700)),
+                    if (isSelected) ...[
+                      const Icon(Icons.check_rounded, size: 14, color: Colors.black),
+                      const SizedBox(width: 4),
+                    ],
+                    Text(
+                      spec,
+                      style: TextStyle(
+                        color: isSelected ? Colors.black : cs.onSurface,
+                        fontSize: 12.5,
+                        fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }).toList(),
+        ),
+        if (_specialties.any((s) => !_suggestedSpecialties.any((opt) => opt.toLowerCase() == s.toLowerCase()))) ...[
+          const SizedBox(height: 14),
+          Text('Custom Specialties:', style: TextStyle(color: f.textMuted, fontSize: 12, fontWeight: FontWeight.w700)),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: _specialties
+                .where((s) => !_suggestedSpecialties.any((opt) => opt.toLowerCase() == s.toLowerCase()))
+                .map((customSpec) {
+              return Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+                decoration: BoxDecoration(
+                  color: cs.primary.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: cs.primary.withValues(alpha: 0.3)),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(customSpec, style: TextStyle(color: cs.primary, fontSize: 12.5, fontWeight: FontWeight.w700)),
                     const SizedBox(width: 6),
                     GestureDetector(
-                      onTap: () => setState(() => _specialties.removeAt(index)),
+                      onTap: () => setState(() => _specialties.remove(customSpec)),
                       child: Icon(Icons.close_rounded, size: 14, color: cs.primary),
                     ),
                   ],
                 ),
               );
-            }),
-            GestureDetector(
-              onTap: _addSpecialty,
-              child: Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  color: f.card2,
-                  shape: BoxShape.circle,
-                  border: Border.all(color: f.border),
-                ),
-                child: Icon(Icons.add_rounded, size: 18, color: cs.primary),
-              ),
+            }).toList(),
+          ),
+        ],
+        const SizedBox(height: 14),
+        GestureDetector(
+          onTap: _addSpecialty,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+            decoration: BoxDecoration(
+              color: f.card2,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: f.border),
             ),
-          ],
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.add_rounded, size: 16, color: cs.primary),
+                const SizedBox(width: 4),
+                Text('Add Other Specialty', style: TextStyle(color: cs.primary, fontSize: 12.5, fontWeight: FontWeight.w700)),
+              ],
+            ),
+          ),
         ),
       ],
     );
   }
 
+
+  // ──────────────────────────────────────────────────────────────
+  //  PACKAGES SECTION
+  // ──────────────────────────────────────────────────────────────
+
+  Future<void> _showPackageDialog({CoachPackage? existing}) async {
+    final nameCtrl = TextEditingController(text: existing?.name ?? '');
+    final descCtrl = TextEditingController(text: existing?.description ?? '');
+    final sessCtrl = TextEditingController(
+        text: existing?.sessions != null ? existing!.sessions.toString() : '');
+    final priceCtrl = TextEditingController(
+        text: existing?.price != null ? existing!.price!.toStringAsFixed(0) : '');
+    bool priceEnabled = existing?.price != null;
+    bool isActive = existing?.isActive ?? true;
+
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) {
+        final cs = Theme.of(ctx).colorScheme;
+        final f = ctx.fitlek;
+        return StatefulBuilder(builder: (ctx, setDialogState) {
+          return AlertDialog(
+            backgroundColor: f.card,
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            title: Text(
+              existing == null ? 'Add Package' : 'Edit Package',
+              style: TextStyle(
+                  color: cs.onSurface,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 17),
+            ),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Name
+                  Text('Package Name *',
+                      style: TextStyle(
+                          color: f.textMuted,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600)),
+                  const SizedBox(height: 6),
+                  TextField(
+                    controller: nameCtrl,
+                    textCapitalization: TextCapitalization.words,
+                    style: TextStyle(
+                        color: cs.onSurface,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600),
+                    decoration: InputDecoration(
+                      hintText: 'e.g. Starter Pack',
+                      hintStyle: TextStyle(color: f.textMuted),
+                      filled: true,
+                      fillColor: f.inputFill,
+                      border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: f.border)),
+                      enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: f.border)),
+                      focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide:
+                              BorderSide(color: cs.primary, width: 1.5)),
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 12),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  // Description
+                  Text('Description (optional)',
+                      style: TextStyle(
+                          color: f.textMuted,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600)),
+                  const SizedBox(height: 6),
+                  TextField(
+                    controller: descCtrl,
+                    maxLines: 3,
+                    textCapitalization: TextCapitalization.sentences,
+                    style: TextStyle(color: cs.onSurface, fontSize: 13.5),
+                    decoration: InputDecoration(
+                      hintText: 'Describe what\'s included…',
+                      hintStyle: TextStyle(color: f.textMuted),
+                      filled: true,
+                      fillColor: f.inputFill,
+                      border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: f.border)),
+                      enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: f.border)),
+                      focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide:
+                              BorderSide(color: cs.primary, width: 1.5)),
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 12),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  // Sessions
+                  Text('Number of sessions (optional)',
+                      style: TextStyle(
+                          color: f.textMuted,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600)),
+                  const SizedBox(height: 6),
+                  TextField(
+                    controller: sessCtrl,
+                    keyboardType: TextInputType.number,
+                    style: TextStyle(
+                        color: cs.onSurface,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600),
+                    decoration: InputDecoration(
+                      hintText: 'e.g. 12',
+                      hintStyle: TextStyle(color: f.textMuted),
+                      filled: true,
+                      fillColor: f.inputFill,
+                      border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: f.border)),
+                      enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: f.border)),
+                      focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide:
+                              BorderSide(color: cs.primary, width: 1.5)),
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 12),
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  // Price toggle
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text('Set a price',
+                              style: TextStyle(
+                                  color: cs.onSurface,
+                                  fontSize: 13.5,
+                                  fontWeight: FontWeight.w700)),
+                          Text('Leave off to discuss price after booking',
+                              style: TextStyle(
+                                  color: f.textMuted, fontSize: 11)),
+                        ],
+                      ),
+                      Switch.adaptive(
+                        value: priceEnabled,
+                        onChanged: (v) =>
+                            setDialogState(() => priceEnabled = v),
+                        activeTrackColor: cs.primary,
+                        activeThumbColor: cs.onPrimary,
+                      ),
+                    ],
+                  ),
+                  if (priceEnabled) ...[
+                    const SizedBox(height: 10),
+                    TextField(
+                      controller: priceCtrl,
+                      keyboardType: TextInputType.number,
+                      style: TextStyle(
+                          color: cs.onSurface,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700),
+                      decoration: InputDecoration(
+                        prefixText: 'MAD  ',
+                        prefixStyle: TextStyle(
+                            color: f.textMuted,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 14),
+                        hintText: '0',
+                        hintStyle: TextStyle(color: f.textMuted),
+                        filled: true,
+                        fillColor: f.inputFill,
+                        border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: f.border)),
+                        enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: f.border)),
+                        focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide:
+                                BorderSide(color: cs.primary, width: 1.5)),
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 12),
+                      ),
+                    ),
+                  ],
+                  if (existing != null) ...[
+                    const SizedBox(height: 14),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text('Visible to clients',
+                            style: TextStyle(
+                                color: cs.onSurface,
+                                fontSize: 13.5,
+                                fontWeight: FontWeight.w700)),
+                        Switch.adaptive(
+                          value: isActive,
+                          onChanged: (v) =>
+                              setDialogState(() => isActive = v),
+                          activeTrackColor: cs.primary,
+                          activeThumbColor: cs.onPrimary,
+                        ),
+                      ],
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: Text('Cancel',
+                    style: TextStyle(
+                        color: f.textMuted, fontWeight: FontWeight.w600)),
+              ),
+              TextButton(
+                onPressed: () async {
+                  final name = nameCtrl.text.trim();
+                  if (name.isEmpty) {
+                    _showSnack('Package name is required', isError: true);
+                    return;
+                  }
+                  Navigator.pop(ctx, {
+                    'name': name,
+                    'description': descCtrl.text.trim().isEmpty
+                        ? null
+                        : descCtrl.text.trim(),
+                    'sessions': sessCtrl.text.trim().isEmpty
+                        ? null
+                        : int.tryParse(sessCtrl.text.trim()),
+                    'price': priceEnabled && priceCtrl.text.trim().isNotEmpty
+                        ? double.tryParse(priceCtrl.text.trim())
+                        : null,
+                    'isActive': isActive,
+                  });
+                },
+                child: Text(existing == null ? 'Add' : 'Update',
+                    style: TextStyle(
+                        color: cs.primary, fontWeight: FontWeight.w800)),
+              ),
+            ],
+          );
+        });
+      },
+    ).then((data) async {
+      nameCtrl.dispose();
+      descCtrl.dispose();
+      sessCtrl.dispose();
+      priceCtrl.dispose();
+      if (data == null) return;
+      final coachID = widget.profile.id;
+      try {
+        http.Response res;
+        if (existing == null) {
+          // Create
+          res = await http
+              .post(
+                Uri.parse('$baseUrl/packages'),
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': 'Bearer ${widget.token}',
+                },
+                body: jsonEncode({
+                  'coachID': coachID,
+                  ...data,
+                }),
+              )
+              .timeout(const Duration(seconds: 10));
+        } else {
+          // Update
+          res = await http
+              .put(
+                Uri.parse('$baseUrl/packages/${existing.id}'),
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': 'Bearer ${widget.token}',
+                },
+                body: jsonEncode({
+                  'coachID': coachID,
+                  ...data,
+                }),
+              )
+              .timeout(const Duration(seconds: 10));
+        }
+        if (res.statusCode == 200 || res.statusCode == 201) {
+          _showSnack(
+              existing == null ? 'Package added!' : 'Package updated!');
+          await _loadPackages();
+        } else {
+          final body = jsonDecode(res.body);
+          _showSnack(body['error'] ?? 'Error', isError: true);
+        }
+      } catch (e) {
+        _showSnack('Network error: $e', isError: true);
+      }
+    });
+  }
+
+  Future<void> _deletePackage(CoachPackage pkg) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) {
+        final cs = Theme.of(ctx).colorScheme;
+        final f = ctx.fitlek;
+        return AlertDialog(
+          backgroundColor: f.card,
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+          title: Text('Delete package?',
+              style: TextStyle(
+                  color: cs.onSurface, fontWeight: FontWeight.w800)),
+          content: Text(
+              'Are you sure you want to delete "${pkg.name}"? This cannot be undone.',
+              style: TextStyle(color: f.textMuted, fontSize: 13)),
+          actions: [
+            TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: Text('Cancel',
+                    style: TextStyle(color: f.textMuted))),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: Text('Delete',
+                  style: TextStyle(
+                      color: f.error, fontWeight: FontWeight.w800)),
+            ),
+          ],
+        );
+      },
+    );
+    if (confirmed != true) return;
+    try {
+      final res = await http
+          .delete(
+            Uri.parse('$baseUrl/packages/${pkg.id}'),
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer ${widget.token}',
+            },
+            body: jsonEncode({'coachID': widget.profile.id}),
+          )
+          .timeout(const Duration(seconds: 10));
+      if (res.statusCode == 200) {
+        _showSnack('Package deleted');
+        await _loadPackages();
+      } else {
+        final body = jsonDecode(res.body);
+        _showSnack(body['error'] ?? 'Error', isError: true);
+      }
+    } catch (e) {
+      _showSnack('Network error: $e', isError: true);
+    }
+  }
+
+  Widget _buildPackagesSection(ColorScheme cs, FitlekColors f) {
+    return _card(children: [
+      Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          _sectionHeader('COACHING PACKAGES',
+              icon: Icons.workspace_premium_rounded),
+          Text('${_packages.length}/3',
+              style: TextStyle(
+                  color: f.textMuted,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w700)),
+        ],
+      ),
+      const SizedBox(height: 6),
+      Text(
+        'Offer up to 3 packages. Price is optional — leave it off to discuss after booking.',
+        style: TextStyle(color: f.textMuted, fontSize: 12, height: 1.5),
+      ),
+      const SizedBox(height: 14),
+      if (_loadingPackages)
+        Center(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 16),
+            child: SizedBox(
+                width: 22,
+                height: 22,
+                child: CircularProgressIndicator(
+                    strokeWidth: 2, color: cs.primary)),
+          ),
+        )
+      else ...[
+        ..._packages.map((pkg) => _buildPackageCard(pkg, cs, f)),
+        if (_packages.isNotEmpty) const SizedBox(height: 10),
+        if (_packages.length < 3)
+          GestureDetector(
+            onTap: () => _showPackageDialog(),
+            child: CustomPaint(
+              painter: _DashedBorderPainter(
+                  color: cs.primary.withValues(alpha: 0.45), radius: 14),
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                child: Center(
+                  child: Text('+ Add Package',
+                      style: TextStyle(
+                          color: cs.primary,
+                          fontSize: 13.5,
+                          fontWeight: FontWeight.w700)),
+                ),
+              ),
+            ),
+          )
+        else
+          Container(
+            padding:
+                const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            decoration: BoxDecoration(
+              color: cs.primary.withValues(alpha: 0.07),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Row(children: [
+              Icon(Icons.info_outline_rounded,
+                  size: 14, color: cs.primary),
+              const SizedBox(width: 8),
+              Text('Maximum 3 packages reached',
+                  style: TextStyle(
+                      color: cs.primary,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600)),
+            ]),
+          ),
+      ],
+    ]);
+  }
+
+  Widget _buildPackageCard(
+      CoachPackage pkg, ColorScheme cs, FitlekColors f) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: f.card2,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+            color: pkg.isActive ? f.border : f.border.withValues(alpha: 0.4)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: cs.primary.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(Icons.workspace_premium_rounded,
+                color: cs.primary, size: 20),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(children: [
+                  Expanded(
+                    child: Text(pkg.name,
+                        style: TextStyle(
+                            color: pkg.isActive
+                                ? cs.onSurface
+                                : f.textMuted,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w800),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis),
+                  ),
+                  if (!pkg.isActive)
+                    Container(
+                      margin: const EdgeInsets.only(left: 6),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: f.textMuted.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text('Hidden',
+                          style: TextStyle(
+                              color: f.textMuted,
+                              fontSize: 9,
+                              fontWeight: FontWeight.w700)),
+                    ),
+                ]),
+                if (pkg.description != null &&
+                    pkg.description!.isNotEmpty) ...[
+                  const SizedBox(height: 2),
+                  Text(pkg.description!,
+                      style: TextStyle(color: f.textMuted, fontSize: 11.5),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis),
+                ],
+                const SizedBox(height: 5),
+                Wrap(spacing: 8, children: [
+                  if (pkg.sessions != null)
+                    _pkgChip('${pkg.sessions} sessions', cs),
+                  pkg.price != null
+                      ? _pkgChip(
+                          '${pkg.price!.toInt()} MAD', cs,
+                          colored: true)
+                      : _pkgChip('Price on request', cs),
+                ]),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          Column(
+            children: [
+              GestureDetector(
+                onTap: () => _showPackageDialog(existing: pkg),
+                child: Container(
+                  padding: const EdgeInsets.all(7),
+                  decoration: BoxDecoration(
+                    color: cs.primary.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child:
+                      Icon(Icons.edit_rounded, size: 15, color: cs.primary),
+                ),
+              ),
+              const SizedBox(height: 6),
+              GestureDetector(
+                onTap: () => _deletePackage(pkg),
+                child: Container(
+                  padding: const EdgeInsets.all(7),
+                  decoration: BoxDecoration(
+                    color: f.error.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child:
+                      Icon(Icons.delete_rounded, size: 15, color: f.error),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _pkgChip(String label, ColorScheme cs, {bool colored = false}) =>
+      Container(
+        padding:
+            const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+        decoration: BoxDecoration(
+          color: colored
+              ? cs.primary.withValues(alpha: 0.12)
+              : context.fitlek.card,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+              color: colored
+                  ? cs.primary.withValues(alpha: 0.3)
+                  : context.fitlek.border),
+        ),
+        child: Text(label,
+            style: TextStyle(
+                color: colored ? cs.primary : context.fitlek.textMuted,
+                fontSize: 10.5,
+                fontWeight: FontWeight.w700)),
+      );
+
   Widget _buildGallerySection(ColorScheme cs, FitlekColors f) {
+
     return _card(
       children: [
         Row(

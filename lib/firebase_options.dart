@@ -60,11 +60,11 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions ios = FirebaseOptions(
     apiKey: 'AIzaSyBTMIBkN-Oz05Lnj9LN9dNzngxXg-vLRtI',
-    appId: '1:256158398727:ios:0eee5788d9d99bacd32da2',
+    appId: '1:256158398727:ios:2fc9f915f40e0da3d32da2',
     messagingSenderId: '256158398727',
     projectId: 'sirvya-app',
     storageBucket: 'sirvya-app.firebasestorage.app',
-    iosBundleId: 'com.example.fitlek1',
+    iosBundleId: 'com.sirvya.app',
   );
 
   static const FirebaseOptions macos = FirebaseOptions(

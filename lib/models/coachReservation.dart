@@ -1,7 +1,12 @@
-enum ReservationStatus { pending, confirmed }
+enum ReservationStatus { pending, confirmed, cancelled }
 
 class CoachReservation {
   final String id;
+  final String pricingStatus;
+  final double? proposedPrice;
+  final double? price;
+  final int duration;
+  final String? packageName;
   final String clientName;
   final String clientPhotoUrl;
   final DateTime date;
@@ -13,6 +18,11 @@ class CoachReservation {
 
   CoachReservation({
     required this.id,
+    this.pricingStatus = 'fixed',
+    this.proposedPrice,
+    this.price,
+    this.duration = 60,
+    this.packageName,
     required this.clientName,
     required this.clientPhotoUrl,
     required this.date,

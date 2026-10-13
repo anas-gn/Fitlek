@@ -1,3 +1,8 @@
+import 'campaign_service.dart';
+import 'image_upload_service.dart';
+import 'socketService.dart';
+import 'notification_service.dart';
+import 'background_location_service.dart';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -5,6 +10,9 @@ import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:fitlek1/constants/urls.dart' as urls;
+import 'package:fitlek1/globals.dart';
+import 'package:fitlek1/screens/ENG/login.dart';
+import 'onboarding_service.dart';
 
 class ApiService {
   static const String baseUrl = urls.baseUrl;
@@ -17,16 +25,33 @@ class ApiService {
   static Future<void> saveToken(String token) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('token', token);
+    await prefs.setBool(OnboardingService.seenKey, true);
     if (kDebugMode) debugPrint('TOKEN SAVED');
   }
 
   static Future<void> clearToken() async {
+    SocketService().disconnect();
+    NotificationService.instance.resetSession();
+    CampaignService.stop();
+    if (await getToken() != null) {
+      try {
+        await post('/auth/fcm-token', {'token': null});
+      } catch (_) {}
+    }
     final prefs = await SharedPreferences.getInstance();
+    if (prefs.getString('role') != null) {
+      await prefs.setBool(OnboardingService.seenKey, true);
+    }
     await prefs.remove('token');
+    try { await BackgroundLocationService.synchronize(false); } catch (_) {}
     await prefs.remove('role');
     await prefs.remove('userId');
     await prefs.remove('firstName');
-    await prefs.clear();
+    for (final key in prefs.getKeys()) {
+      if (key != OnboardingService.seenKey && key != 'app_theme_mode') {
+        await prefs.remove(key);
+      }
+    }
     if (kDebugMode) debugPrint('TOKEN CLEARED FULLY');
   }
 
@@ -74,11 +99,13 @@ class ApiService {
     if (token == null || role == null) return null;
 
     try {
+      final prefs = await SharedPreferences.getInstance();
+      final userId = prefs.getInt('userId');
       final path = role == 'coach'
           ? '/coach/profile'
           : role == 'manager'
               ? '/manager/profile'
-              : '/client/profile';
+              : '/clients/me?userID=$userId';
 
       final result = await get(path);
       if (kDebugMode) debugPrint('SESSION RESULT: $result');
@@ -93,6 +120,12 @@ class ApiService {
           debugPrint('SESSION INVALID (status=$status) - clearing token');
         }
         await clearToken();
+        if (globalNavigatorKey.currentState != null) {
+          globalNavigatorKey.currentState!.pushAndRemoveUntil(
+            MaterialPageRoute(builder: (_) => const LoginScreen()),
+            (route) => false,
+          );
+        }
         return null;
       }
 
@@ -146,7 +179,8 @@ class ApiService {
 
       if (kDebugMode) {
         debugPrint('GET $path -> ${response.statusCode}');
-        debugPrint('BODY: ${response.body.substring(0, response.body.length > 200 ? 200 : response.body.length)}');
+        debugPrint(
+            'BODY: ${response.body.substring(0, response.body.length > 200 ? 200 : response.body.length)}');
       }
 
       return _handle(response);
@@ -180,7 +214,8 @@ class ApiService {
 
       if (kDebugMode) {
         debugPrint('POST $path -> ${response.statusCode}');
-        debugPrint('BODY: ${response.body.substring(0, response.body.length > 200 ? 200 : response.body.length)}');
+        debugPrint(
+            'BODY: ${response.body.substring(0, response.body.length > 200 ? 200 : response.body.length)}');
       }
 
       return _handle(response);
@@ -204,7 +239,8 @@ class ApiService {
     try {
       final headers = await _headers();
       final response = await http
-          .put(Uri.parse('$baseUrl$path'), headers: headers, body: jsonEncode(body))
+          .put(Uri.parse('$baseUrl$path'),
+              headers: headers, body: jsonEncode(body))
           .timeout(const Duration(seconds: 15));
       return _handle(response);
     } catch (e) {
@@ -263,17 +299,27 @@ class ApiService {
 
       fields.forEach((k, v) => request.fields[k] = v);
 
-      final parts = mimeType.split('/');
+      var uploadBytes=fileBytes;
+      var uploadName=fileName;
+      var uploadMime=mimeType;
+      if (mimeType.startsWith('image/')) {
+        final image=await ImageUploadService.prepare(fileBytes,fileName);
+        uploadBytes=image.bytes;uploadName=image.filename;uploadMime=image.mimeType;
+      }
+      final parts = uploadMime.split('/');
       request.files.add(http.MultipartFile.fromBytes(
         fileField,
-        fileBytes,
-        filename: fileName,
+        uploadBytes,
+        filename: uploadName,
         contentType: MediaType(parts[0], parts.length > 1 ? parts[1] : '*'),
       ));
 
-      final streamed = await request.send().timeout(const Duration(seconds: 30));
+      final streamed =
+          await request.send().timeout(const Duration(seconds: 30));
       final response = await http.Response.fromStream(streamed);
       return _handle(response);
+    } on FormatException catch (e) {
+      return {'ok':false,'message':e.message,'status':0};
     } catch (e) {
       return {'ok': false, 'message': 'Upload error: $e', 'status': 0};
     }
@@ -303,10 +349,13 @@ class ApiService {
         'status': response.statusCode,
       };
     } on FormatException {
-      if (kDebugMode) debugPrint('API returned non-JSON response (HTML): ${response.statusCode}');
+      if (kDebugMode)
+        debugPrint(
+            'API returned non-JSON response (HTML): ${response.statusCode}');
       return {
         'ok': false,
-        'message': 'Server error (${response.statusCode}). Please verify backend server is running.',
+        'message':
+            'Server error (${response.statusCode}). Please verify backend server is running.',
         'status': response.statusCode,
       };
     } catch (e) {
@@ -318,7 +367,8 @@ class ApiService {
     }
   }
 
-  static Future<Map<String, dynamic>> saveFcmTokenToServer(String fcmToken) async {
+  static Future<Map<String, dynamic>> saveFcmTokenToServer(
+      String fcmToken) async {
     return await post('/auth/fcm-token', {'token': fcmToken});
   }
 

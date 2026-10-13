@@ -1,17 +1,21 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import '../../theme/fitlek_theme_extension.dart';
 import '../../services/audioManager.dart';
+import 'package:flutter/foundation.dart';
 
 class AudioPlayerWidget extends StatefulWidget {
   final String? url;
+  final String? localPath;
   final bool isMe;
   final bool isExpired;
 
   const AudioPlayerWidget({
     super.key,
     required this.url,
+    this.localPath,
     required this.isMe,
     required this.isExpired,
   });
@@ -68,19 +72,47 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
     if (widget.url == null || widget.url!.isEmpty) return;
     setState(() => _isLoading = true);
     try {
-      final fileInfo = await DefaultCacheManager().getFileFromCache(widget.url!);
-      if (fileInfo != null) {
-        _localFilePath = fileInfo.file.path;
-        await _player.setSourceDeviceFile(_localFilePath!);
-        _isLoaded = true;
-      } else {
+      if (widget.localPath != null) {
+        final file = File(widget.localPath!);
+        if (await file.exists()) {
+          _localFilePath = file.path;
+          await _player.setSourceDeviceFile(file.path);
+          _isLoaded = true;
+        } else {
+          _localCacheExpired = true;
+        }
+      } else if (kIsWeb) {
         if (widget.isExpired) {
           _localCacheExpired = true;
         } else {
-          final file = await DefaultCacheManager().downloadFile(widget.url!);
-          _localFilePath = file.file.path;
-          await _player.setSourceDeviceFile(_localFilePath!);
+          _localFilePath = widget.url;
+          try {
+            await _player.setSourceUrl(widget.url!);
+            _isLoaded = true;
+          } catch (_) {
+            _localCacheExpired = true;
+          }
+        }
+      } else {
+        final fileInfo =
+            await DefaultCacheManager().getFileFromCache(widget.url!);
+        if (fileInfo != null) {
+          _localFilePath = fileInfo.file.path;
+          try {
+            await _player.setSourceDeviceFile(_localFilePath!);
+          } catch (_) {}
           _isLoaded = true;
+        } else {
+          if (widget.isExpired) {
+            _localCacheExpired = true;
+          } else {
+            final file = await DefaultCacheManager().downloadFile(widget.url!);
+            _localFilePath = file.file.path;
+            try {
+              await _player.setSourceDeviceFile(_localFilePath!);
+            } catch (_) {}
+            _isLoaded = true;
+          }
         }
       }
     } catch (e) {
@@ -120,16 +152,20 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
     if (_duration == Duration.zero) return;
     final dx = localPosition.dx.clamp(0.0, 100.0);
     final ratio = dx / 100.0;
-    final targetPosition = Duration(milliseconds: (_duration.inMilliseconds * ratio).round());
+    final targetPosition =
+        Duration(milliseconds: (_duration.inMilliseconds * ratio).round());
     _player.seek(targetPosition);
     if (mounted) setState(() => _position = targetPosition);
   }
 
   void _toggleSpeed() {
     setState(() {
-      if (_playbackRate == 1.0) _playbackRate = 1.5;
-      else if (_playbackRate == 1.5) _playbackRate = 2.0;
-      else _playbackRate = 1.0;
+      if (_playbackRate == 1.0)
+        _playbackRate = 1.5;
+      else if (_playbackRate == 1.5)
+        _playbackRate = 2.0;
+      else
+        _playbackRate = 1.0;
     });
     _player.setPlaybackRate(_playbackRate);
   }
@@ -151,9 +187,14 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
       return Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.mic_off_rounded, color: fgColor.withValues(alpha: 0.7), size: 20),
+          Icon(Icons.mic_off_rounded,
+              color: fgColor.withValues(alpha: 0.7), size: 20),
           const SizedBox(width: 8),
-          Text('Audio Expired', style: TextStyle(color: fgColor.withValues(alpha: 0.8), fontSize: 13, fontStyle: FontStyle.italic)),
+          Text('Audio Expired',
+              style: TextStyle(
+                  color: fgColor.withValues(alpha: 0.8),
+                  fontSize: 13,
+                  fontStyle: FontStyle.italic)),
         ],
       );
     }
@@ -167,12 +208,20 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
             width: 36,
             height: 36,
             decoration: BoxDecoration(
-              color: widget.isMe ? cs.onPrimary.withValues(alpha: 0.2) : cs.primary.withValues(alpha: 0.1),
+              color: widget.isMe
+                  ? cs.onPrimary.withValues(alpha: 0.2)
+                  : cs.primary.withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
-            child: _isLoading 
-                ? Padding(padding: const EdgeInsets.all(10), child: CircularProgressIndicator(color: fgColor, strokeWidth: 2))
-                : Icon(_isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded, color: widget.isMe ? cs.onPrimary : cs.primary, size: 20),
+            child: _isLoading
+                ? Padding(
+                    padding: const EdgeInsets.all(10),
+                    child: CircularProgressIndicator(
+                        color: fgColor, strokeWidth: 2))
+                : Icon(
+                    _isPlaying ? Icons.pause_rounded : Icons.play_arrow_rounded,
+                    color: widget.isMe ? cs.onPrimary : cs.primary,
+                    size: 20),
           ),
         ),
         const SizedBox(width: 10),
@@ -181,12 +230,15 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
           mainAxisSize: MainAxisSize.min,
           children: [
             GestureDetector(
-              onTapDown: (details) => _seekToRelativePosition(details.localPosition),
-              onHorizontalDragUpdate: (details) => _seekToRelativePosition(details.localPosition),
+              onTapDown: (details) =>
+                  _seekToRelativePosition(details.localPosition),
+              onHorizontalDragUpdate: (details) =>
+                  _seekToRelativePosition(details.localPosition),
               child: Container(
                 width: 100,
                 height: 20, // Increased hit area
-                color: Colors.transparent, // required to catch gestures in empty space
+                color: Colors
+                    .transparent, // required to catch gestures in empty space
                 alignment: Alignment.centerLeft,
                 child: Container(
                   width: 100,
@@ -197,7 +249,10 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
                   ),
                   alignment: Alignment.centerLeft,
                   child: FractionallySizedBox(
-                    widthFactor: _duration.inMilliseconds > 0 ? (_position.inMilliseconds / _duration.inMilliseconds).clamp(0.0, 1.0) : 0.0,
+                    widthFactor: _duration.inMilliseconds > 0
+                        ? (_position.inMilliseconds / _duration.inMilliseconds)
+                            .clamp(0.0, 1.0)
+                        : 0.0,
                     child: Container(
                       height: 4,
                       decoration: BoxDecoration(
@@ -213,21 +268,29 @@ class _AudioPlayerWidgetState extends State<AudioPlayerWidget> {
             Row(
               children: [
                 Text(
-                  _formatDuration(_position.inMilliseconds > 0 ? _position : _duration),
-                  style: TextStyle(color: fgColor.withValues(alpha: 0.8), fontSize: 10, fontWeight: FontWeight.w600),
+                  _formatDuration(
+                      _position.inMilliseconds > 0 ? _position : _duration),
+                  style: TextStyle(
+                      color: fgColor.withValues(alpha: 0.8),
+                      fontSize: 10,
+                      fontWeight: FontWeight.w600),
                 ),
                 const SizedBox(width: 8),
                 GestureDetector(
                   onTap: _toggleSpeed,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
                     decoration: BoxDecoration(
                       color: fgColor.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(4),
                     ),
                     child: Text(
                       '${_playbackRate}x',
-                      style: TextStyle(color: fgColor, fontSize: 9, fontWeight: FontWeight.w700),
+                      style: TextStyle(
+                          color: fgColor,
+                          fontSize: 9,
+                          fontWeight: FontWeight.w700),
                     ),
                   ),
                 ),

@@ -16,7 +16,7 @@ class AppColors {
   static const Color lightBorder = Color(0xFFD4D0C8);
   static const Color lightTextPrimary = Color(0xFF0A1F1E);
   static const Color lightTextSecondary = Color(0xFF5C6B69);
-  static const Color lightTextMuted = Color(0xFF7A8785);
+  static const Color lightTextMuted = Color(0xFF596865);
 
   // Dark-mode surfaces
   static const Color darkBackground = Color(0xFF0A1817);

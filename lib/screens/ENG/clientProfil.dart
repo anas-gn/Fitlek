@@ -1,3 +1,6 @@
+import '../../services/media_picker_service.dart';
+import '../../services/image_upload_service.dart';
+import '../../services/live_updates.dart';
 import 'dart:convert';
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
@@ -8,6 +11,8 @@ import 'package:fitlek1/services/apiService.dart';
 import 'welcome.dart';
 import 'blockedUsersList.dart';
 import 'clientCoachFavorites.dart';
+import 'clientChangeEmail.dart';
+import 'userLocationSettings.dart';
 import '../../components/theme_selector.dart';
 import '../../theme/fitlek_theme_extension.dart';
 import '../../components/sirvya_logo.dart';
@@ -39,11 +44,13 @@ class _WeightStats {
 
 class ClientProfileScreen extends StatefulWidget {
   final int clientID;
+  final bool embedded;
   final String token;
   final VoidCallback? onLogout;
 
   const ClientProfileScreen({
     super.key,
+    this.embedded = false,
     required this.clientID,
     required this.token,
     this.onLogout,
@@ -53,8 +60,12 @@ class ClientProfileScreen extends StatefulWidget {
   State<ClientProfileScreen> createState() => _ClientProfileScreenState();
 }
 
-class _ClientProfileScreenState extends State<ClientProfileScreen>
-    with SingleTickerProviderStateMixin {
+class _ClientProfileScreenState extends State<ClientProfileScreen> with SingleTickerProviderStateMixin, LiveUpdates<ClientProfileScreen> {
+  @override
+  Set<String> get liveDomains => {'clients','profile','edit','weight-history','reservations'};
+  @override
+  Future<void> refreshLiveData() async { if (!_isEditing && !_saving) { await Future.wait([_fetchProfile(silent:true),_fetchWeightData()]); } }
+
   late TabController _tabController;
 
   bool _loadingProfile = true;
@@ -69,7 +80,7 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
   final _firstNameCtrl = TextEditingController();
   final _lastNameCtrl = TextEditingController();
   final _emailCtrl = TextEditingController();
-  final _heightCtrl = TextEditingController(text: '165');
+  final _heightCtrl = TextEditingController();
   final _goalCtrl = TextEditingController(
     text: 'Weight loss and toning',
   );
@@ -120,8 +131,8 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
     super.dispose();
   }
 
-  Future<void> _fetchProfile() async {
-    setState(() {
+  Future<void> _fetchProfile({bool silent = false}) async {
+    if (!silent) setState(() {
       _loadingProfile = true;
       _loadError = null;
     });
@@ -135,7 +146,8 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
 
       if (res.statusCode == 200) {
         final data = jsonDecode(res.body) as Map<String, dynamic>;
-        _populateForm(data);
+        if (!mounted) return;
+        if (!silent || (!_isEditing && !_saving)) _populateForm(data);
         await _fetchSessionsCount();
         if (mounted) setState(() => _loadingProfile = false);
       } else {
@@ -165,7 +177,7 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
     _isPremium = data['isPremium'] == 1 || data['isPremium'] == true;
     _selectedGender = data['gender'] as String? ?? 'Other';
     final h = _parseDouble(data['height']);
-    _heightCtrl.text = h != null ? h.toStringAsFixed(1) : '165.0';
+    _heightCtrl.text = h != null ? h.toStringAsFixed(1) : '';
   }
 
   Future<void> _fetchSessionsCount() async {
@@ -274,7 +286,7 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
 
   Future<void> _pickAndUploadAvatar() async {
     final errorColor = context.fitlek.error;
-    final picker = ImagePicker();
+    final picker = AppMediaPicker(context);
     final XFile? file = await picker.pickImage(
       source: ImageSource.gallery,
       maxWidth: 800,
@@ -291,28 +303,9 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
       );
       request.headers['Authorization'] = 'Bearer ${widget.token}';
 
-      if (kIsWeb) {
-        final bytes = await file.readAsBytes();
-        final ext = file.name.split('.').last.toLowerCase();
-        final mime = ext == 'png'
-            ? 'image/png'
-            : ext == 'webp'
-                ? 'image/webp'
-                : 'image/jpeg';
-
-        request.files.add(
-          http.MultipartFile.fromBytes(
-            'avatar',
-            bytes,
-            filename: file.name,
-            contentType: MediaType.parse(mime),
-          ),
-        );
-      } else {
-        request.files.add(
-          await http.MultipartFile.fromPath('avatar', file.path),
-        );
-      }
+      final image = await ImageUploadService.prepare(await file.readAsBytes(),file.name);
+      request.files.add(http.MultipartFile.fromBytes('avatar',image.bytes,
+        filename:image.filename,contentType:MediaType.parse(image.mimeType)));
 
       final streamedRes = await request.send().timeout(
             const Duration(seconds: 30),
@@ -441,18 +434,24 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
           }
 
           Future<void> requestOtp() async {
-            setSheet(() { loading = true; errorMsg = null; });
+            setSheet(() {
+              loading = true;
+              errorMsg = null;
+            });
             try {
-              final res = await http.post(
-                Uri.parse('$baseUrl/auth/request-delete-otp'),
-                headers: _headers,
-              ).timeout(const Duration(seconds: 15));
+              final res = await http
+                  .post(
+                    Uri.parse('$baseUrl/auth/request-delete-otp'),
+                    headers: _headers,
+                  )
+                  .timeout(const Duration(seconds: 15));
 
               final body = jsonDecode(res.body) as Map<String, dynamic>;
               if (res.statusCode == 409 && body['blocked'] == true) {
                 setSheet(() {
                   loading = false;
-                  errorMsg = body['reason'] as String? ?? 'Cannot delete account right now.';
+                  errorMsg = body['reason'] as String? ??
+                      'Cannot delete account right now.';
                 });
                 return;
               }
@@ -463,10 +462,18 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                 });
                 return;
               }
-              setSheet(() { loading = false; step = 2; otpValue = ''; errorMsg = null; });
+              setSheet(() {
+                loading = false;
+                step = 2;
+                otpValue = '';
+                errorMsg = null;
+              });
               startCountdown();
             } catch (_) {
-              setSheet(() { loading = false; errorMsg = 'Unable to reach the server.'; });
+              setSheet(() {
+                loading = false;
+                errorMsg = 'Unable to reach the server.';
+              });
             }
           }
 
@@ -475,13 +482,18 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
               setSheet(() => errorMsg = 'Please enter the full 6-digit code.');
               return;
             }
-            setSheet(() { loading = true; errorMsg = null; });
+            setSheet(() {
+              loading = true;
+              errorMsg = null;
+            });
             try {
-              final res = await http.post(
-                Uri.parse('$baseUrl/auth/confirm-delete-account'),
-                headers: _headers,
-                body: jsonEncode({'otp': otpValue}),
-              ).timeout(const Duration(seconds: 15));
+              final res = await http
+                  .post(
+                    Uri.parse('$baseUrl/auth/confirm-delete-account'),
+                    headers: _headers,
+                    body: jsonEncode({'otp': otpValue}),
+                  )
+                  .timeout(const Duration(seconds: 15));
 
               final body = jsonDecode(res.body) as Map<String, dynamic>;
               if (res.statusCode == 200 && body['deleted'] == true) {
@@ -494,177 +506,214 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                 errorMsg = body['error'] as String? ?? 'Verification failed.';
               });
             } catch (_) {
-              setSheet(() { loading = false; errorMsg = 'Unable to reach the server.'; });
+              setSheet(() {
+                loading = false;
+                errorMsg = 'Unable to reach the server.';
+              });
             }
           }
 
           final errorColor = context.fitlek.error;
-          final cardColor  = context.fitlek.card;
+          final cardColor = context.fitlek.card;
           final borderColor = context.fitlek.border;
-          final textMuted  = context.fitlek.textMuted;
+          final textMuted = context.fitlek.textMuted;
           final cs = Theme.of(context).colorScheme;
 
           Widget buildStep1() => Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 40, height: 4,
-                  decoration: BoxDecoration(color: borderColor, borderRadius: BorderRadius.circular(2)),
-                ),
-              ),
-              const SizedBox(height: 20),
-              Row(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Container(
-                    width: 44, height: 44,
-                    decoration: BoxDecoration(
-                      color: errorColor.withValues(alpha: 0.12),
-                      shape: BoxShape.circle,
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                          color: borderColor,
+                          borderRadius: BorderRadius.circular(2)),
                     ),
-                    child: Icon(Icons.delete_forever_rounded, color: errorColor, size: 22),
                   ),
-                  const SizedBox(width: 14),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  const SizedBox(height: 20),
+                  Row(
                     children: [
-                      Text('Delete Account',
-                        style: TextStyle(color: cs.onSurface, fontSize: 17, fontWeight: FontWeight.w800)),
-                      Text('This action is permanent',
-                        style: TextStyle(color: textMuted, fontSize: 12)),
-                    ],
-                  ),
-                ],
-              ),
-              const SizedBox(height: 20),
-              Container(
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: errorColor.withValues(alpha: 0.07),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: errorColor.withValues(alpha: 0.2)),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('What will be deleted:', style: TextStyle(color: errorColor, fontSize: 12, fontWeight: FontWeight.w700)),
-                    const SizedBox(height: 8),
-                    ...[
-                      'Your profile and personal information',
-                      'All sessions and booking history',
-                      'Messages and conversations',
-                      'Weight progress and fitness data',
-                    ].map((item) => Padding(
-                      padding: const EdgeInsets.only(bottom: 5),
-                      child: Row(
+                      Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          color: errorColor.withValues(alpha: 0.12),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(Icons.delete_forever_rounded,
+                            color: errorColor, size: 22),
+                      ),
+                      const SizedBox(width: 14),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Icon(Icons.remove_circle_outline, color: errorColor, size: 13),
-                          const SizedBox(width: 8),
-                          Expanded(child: Text(item, style: TextStyle(color: textMuted, fontSize: 12))),
+                          Text('Delete Account',
+                              style: TextStyle(
+                                  color: cs.onSurface,
+                                  fontSize: 17,
+                                  fontWeight: FontWeight.w800)),
+                          Text('This action is permanent',
+                              style: TextStyle(color: textMuted, fontSize: 12)),
                         ],
                       ),
-                    )),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 16),
-              GestureDetector(
-                onTap: () => setSheet(() => understood = !understood),
-                child: Row(
-                  children: [
-                    AnimatedContainer(
-                      duration: const Duration(milliseconds: 150),
-                      width: 22, height: 22,
-                      decoration: BoxDecoration(
-                        color: understood ? errorColor : Colors.transparent,
-                        borderRadius: BorderRadius.circular(6),
-                        border: Border.all(
-                          color: understood ? errorColor : borderColor,
-                          width: 1.5,
-                        ),
-                      ),
-                      child: understood
-                          ? const Icon(Icons.check_rounded, color: Colors.white, size: 14)
-                          : null,
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        'I understand this action is irreversible and all my data will be permanently deleted.',
-                        style: TextStyle(color: cs.onSurface, fontSize: 12.5, height: 1.4),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              if (errorMsg != null) ...[
-                const SizedBox(height: 12),
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: errorColor.withValues(alpha: 0.07),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(Icons.warning_rounded, color: errorColor, size: 14),
-                      const SizedBox(width: 8),
-                      Expanded(child: Text(errorMsg!, style: TextStyle(color: errorColor, fontSize: 12))),
                     ],
                   ),
-                ),
-              ],
-              const SizedBox(height: 20),
-              Row(
-                children: [
-                  Expanded(
-                    child: GestureDetector(
-                      onTap: () => Navigator.pop(ctx),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).scaffoldBackgroundColor,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: borderColor),
-                        ),
-                        child: Center(
-                          child: Text('Cancel',
-                            style: TextStyle(color: cs.onSurface, fontWeight: FontWeight.w700, fontSize: 14)),
-                        ),
-                      ),
+                  const SizedBox(height: 20),
+                  Container(
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: errorColor.withValues(alpha: 0.07),
+                      borderRadius: BorderRadius.circular(12),
+                      border:
+                          Border.all(color: errorColor.withValues(alpha: 0.2)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('What will be deleted:',
+                            style: TextStyle(
+                                color: errorColor,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700)),
+                        const SizedBox(height: 8),
+                        ...[
+                          'Your profile and personal information',
+                          'All sessions and booking history',
+                          'Messages and conversations',
+                          'Weight progress and fitness data',
+                        ].map((item) => Padding(
+                              padding: const EdgeInsets.only(bottom: 5),
+                              child: Row(
+                                children: [
+                                  Icon(Icons.remove_circle_outline,
+                                      color: errorColor, size: 13),
+                                  const SizedBox(width: 8),
+                                  Expanded(
+                                      child: Text(item,
+                                          style: TextStyle(
+                                              color: textMuted, fontSize: 12))),
+                                ],
+                              ),
+                            )),
+                      ],
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: GestureDetector(
-                      onTap: (understood && !loading) ? requestOtp : null,
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 200),
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        decoration: BoxDecoration(
-                          color: understood
-                              ? errorColor
-                              : errorColor.withValues(alpha: 0.3),
-                          borderRadius: BorderRadius.circular(12),
+                  const SizedBox(height: 16),
+                  GestureDetector(
+                    onTap: () => setSheet(() => understood = !understood),
+                    child: Row(
+                      children: [
+                        AnimatedContainer(
+                          duration: const Duration(milliseconds: 150),
+                          width: 22,
+                          height: 22,
+                          decoration: BoxDecoration(
+                            color: understood ? errorColor : Colors.transparent,
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(
+                              color: understood ? errorColor : borderColor,
+                              width: 1.5,
+                            ),
+                          ),
+                          child: understood
+                              ? const Icon(Icons.check_rounded,
+                                  color: Colors.white, size: 14)
+                              : null,
                         ),
-                        child: Center(
-                          child: loading
-                              ? SizedBox(
-                                  width: 18, height: 18,
-                                  child: CircularProgressIndicator(
-                                    color: Colors.white, strokeWidth: 2),
-                                )
-                              : const Text('SEND CODE',
-                                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 13, letterSpacing: 0.8)),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            'I understand this action is irreversible and all my data will be permanently deleted.',
+                            style: TextStyle(
+                                color: cs.onSurface,
+                                fontSize: 12.5,
+                                height: 1.4),
+                          ),
                         ),
+                      ],
+                    ),
+                  ),
+                  if (errorMsg != null) ...[
+                    const SizedBox(height: 12),
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: errorColor.withValues(alpha: 0.07),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.warning_rounded,
+                              color: errorColor, size: 14),
+                          const SizedBox(width: 8),
+                          Expanded(
+                              child: Text(errorMsg!,
+                                  style: TextStyle(
+                                      color: errorColor, fontSize: 12))),
+                        ],
                       ),
                     ),
+                  ],
+                  const SizedBox(height: 20),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () => Navigator.pop(ctx),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            decoration: BoxDecoration(
+                              color: Theme.of(context).scaffoldBackgroundColor,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: borderColor),
+                            ),
+                            child: Center(
+                              child: Text('Cancel',
+                                  style: TextStyle(
+                                      color: cs.onSurface,
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 14)),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: (understood && !loading) ? requestOtp : null,
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 200),
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            decoration: BoxDecoration(
+                              color: understood
+                                  ? errorColor
+                                  : errorColor.withValues(alpha: 0.3),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Center(
+                              child: loading
+                                  ? SizedBox(
+                                      width: 18,
+                                      height: 18,
+                                      child: CircularProgressIndicator(
+                                          color: Colors.white, strokeWidth: 2),
+                                    )
+                                  : const Text('SEND CODE',
+                                      style: TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.w800,
+                                          fontSize: 13,
+                                          letterSpacing: 0.8)),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
-              ),
-            ],
-          );
+              );
 
           Widget buildStep2() {
             final mins = (secondsLeft ~/ 60).toString().padLeft(2, '0');
@@ -675,29 +724,37 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
               children: [
                 Center(
                   child: Container(
-                    width: 40, height: 4,
-                    decoration: BoxDecoration(color: borderColor, borderRadius: BorderRadius.circular(2)),
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                        color: borderColor,
+                        borderRadius: BorderRadius.circular(2)),
                   ),
                 ),
                 const SizedBox(height: 20),
                 Row(
                   children: [
                     Container(
-                      width: 44, height: 44,
+                      width: 44,
+                      height: 44,
                       decoration: BoxDecoration(
                         color: errorColor.withValues(alpha: 0.12),
                         shape: BoxShape.circle,
                       ),
-                      child: Icon(Icons.mark_email_read_rounded, color: errorColor, size: 20),
+                      child: Icon(Icons.mark_email_read_rounded,
+                          color: errorColor, size: 20),
                     ),
                     const SizedBox(width: 14),
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text('Verify your identity',
-                          style: TextStyle(color: cs.onSurface, fontSize: 17, fontWeight: FontWeight.w800)),
+                            style: TextStyle(
+                                color: cs.onSurface,
+                                fontSize: 17,
+                                fontWeight: FontWeight.w800)),
                         Text('Check your email for the code',
-                          style: TextStyle(color: textMuted, fontSize: 12)),
+                            style: TextStyle(color: textMuted, fontSize: 12)),
                       ],
                     ),
                   ],
@@ -709,7 +766,8 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                 ),
                 const SizedBox(height: 16),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                   decoration: BoxDecoration(
                     color: Theme.of(context).scaffoldBackgroundColor,
                     borderRadius: BorderRadius.circular(12),
@@ -733,7 +791,8 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                       counterText: '',
                       border: InputBorder.none,
                       hintText: '● ● ● ● ● ●',
-                      hintStyle: TextStyle(color: borderColor, fontSize: 22, letterSpacing: 8),
+                      hintStyle: TextStyle(
+                          color: borderColor, fontSize: 22, letterSpacing: 8),
                     ),
                     onChanged: (v) => setSheet(() => otpValue = v.trim()),
                   ),
@@ -744,9 +803,13 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                   children: [
                     if (!canResend)
                       Text('Code expires in $mins:$secs',
-                        style: TextStyle(color: textMuted, fontSize: 12))
+                          style: TextStyle(color: textMuted, fontSize: 12))
                     else
-                      Text('Code expired', style: TextStyle(color: errorColor, fontSize: 12, fontWeight: FontWeight.w600)),
+                      Text('Code expired',
+                          style: TextStyle(
+                              color: errorColor,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600)),
                     GestureDetector(
                       onTap: canResend && !loading ? requestOtp : null,
                       child: Text(
@@ -755,7 +818,8 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                           color: canResend ? errorColor : textMuted,
                           fontSize: 12,
                           fontWeight: FontWeight.w700,
-                          decoration: canResend ? TextDecoration.underline : null,
+                          decoration:
+                              canResend ? TextDecoration.underline : null,
                         ),
                       ),
                     ),
@@ -771,9 +835,13 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                     ),
                     child: Row(
                       children: [
-                        Icon(Icons.error_outline_rounded, color: errorColor, size: 14),
+                        Icon(Icons.error_outline_rounded,
+                            color: errorColor, size: 14),
                         const SizedBox(width: 8),
-                        Expanded(child: Text(errorMsg!, style: TextStyle(color: errorColor, fontSize: 12))),
+                        Expanded(
+                            child: Text(errorMsg!,
+                                style: TextStyle(
+                                    color: errorColor, fontSize: 12))),
                       ],
                     ),
                   ),
@@ -783,7 +851,12 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                   children: [
                     Expanded(
                       child: GestureDetector(
-                        onTap: loading ? null : () => setSheet(() { step = 1; errorMsg = null; }),
+                        onTap: loading
+                            ? null
+                            : () => setSheet(() {
+                                  step = 1;
+                                  errorMsg = null;
+                                }),
                         child: Container(
                           padding: const EdgeInsets.symmetric(vertical: 14),
                           decoration: BoxDecoration(
@@ -793,7 +866,10 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                           ),
                           child: Center(
                             child: Text('Back',
-                              style: TextStyle(color: cs.onSurface, fontWeight: FontWeight.w700, fontSize: 14)),
+                                style: TextStyle(
+                                    color: cs.onSurface,
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 14)),
                           ),
                         ),
                       ),
@@ -801,7 +877,9 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                     const SizedBox(width: 12),
                     Expanded(
                       child: GestureDetector(
-                        onTap: (otpValue.length == 6 && !loading) ? confirmDelete : null,
+                        onTap: (otpValue.length == 6 && !loading)
+                            ? confirmDelete
+                            : null,
                         child: AnimatedContainer(
                           duration: const Duration(milliseconds: 200),
                           padding: const EdgeInsets.symmetric(vertical: 14),
@@ -814,12 +892,17 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                           child: Center(
                             child: loading
                                 ? SizedBox(
-                                    width: 18, height: 18,
+                                    width: 18,
+                                    height: 18,
                                     child: CircularProgressIndicator(
-                                      color: Colors.white, strokeWidth: 2),
+                                        color: Colors.white, strokeWidth: 2),
                                   )
                                 : const Text('DELETE ACCOUNT',
-                                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 12, letterSpacing: 0.5)),
+                                    style: TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.w800,
+                                        fontSize: 12,
+                                        letterSpacing: 0.5)),
                           ),
                         ),
                       ),
@@ -831,18 +914,22 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
           }
 
           return Padding(
-            padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
+            padding:
+                EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
             child: Container(
               padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
               decoration: BoxDecoration(
                 color: cardColor,
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+                borderRadius:
+                    const BorderRadius.vertical(top: Radius.circular(24)),
               ),
               child: AnimatedSwitcher(
                 duration: const Duration(milliseconds: 200),
                 child: step == 1
-                    ? KeyedSubtree(key: const ValueKey('step1'), child: buildStep1())
-                    : KeyedSubtree(key: const ValueKey('step2'), child: buildStep2()),
+                    ? KeyedSubtree(
+                        key: const ValueKey('step1'), child: buildStep1())
+                    : KeyedSubtree(
+                        key: const ValueKey('step2'), child: buildStep2()),
               ),
             ),
           );
@@ -892,8 +979,10 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
   }
 
   String _calcBMI() {
-    final w = _weightStats.current ?? 68.0;
-    final h = (double.tryParse(_heightCtrl.text) ?? 165.0) / 100;
+    final w = _weightStats.current;
+    final height = double.tryParse(_heightCtrl.text);
+    if (w == null || w <= 0 || height == null || height <= 0) return '—';
+    final h = height / 100;
     return (w / (h * h)).toStringAsFixed(1);
   }
 
@@ -1255,7 +1344,7 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            const SirvyaLogo(variant: SirvyaLogoVariant.wordmark, height: 18),
+            if (!widget.embedded) const SirvyaLogo(variant: SirvyaLogoVariant.wordmark, height: 18),
             const SizedBox(width: 10),
             const Spacer(),
             if (_isPremium)
@@ -1522,8 +1611,7 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
   }
 
   Widget _buildStatsRow() {
-    final currentW =
-        _weightStats.current ?? double.tryParse(_heightCtrl.text) ?? 68.0;
+    final currentW = _weightStats.current;
     final stats = [
       {
         'label': 'Sessions',
@@ -1532,7 +1620,7 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
       },
       {
         'label': 'Weight',
-        'value': '${currentW.toStringAsFixed(1)} kg',
+        'value': currentW == null ? '—' : '${currentW.toStringAsFixed(1)} kg',
         'icon': Icons.monitor_weight_rounded,
       },
       {'label': 'BMI', 'value': _calcBMI(), 'icon': Icons.favorite_rounded},
@@ -1637,8 +1725,23 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
           readOnly: true,
           keyboardType: TextInputType.emailAddress,
         ),
+        _actionTile(Icons.mark_email_read_outlined, 'Change email securely',
+            onTap: () async {
+          final email =
+              await Navigator.of(context).push<String>(MaterialPageRoute(
+            builder: (_) =>
+                ClientChangeEmailScreen(currentEmail: _emailCtrl.text),
+          ));
+          if (!mounted || email == null) return;
+          setState(() => _emailCtrl.text = email);
+          _showSnack('Email updated successfully');
+        }),
         const SizedBox(height: 20),
         _sectionLabel('FITNESS DATA'),
+        _actionTile(Icons.location_on_outlined, 'My location', onTap: () async {
+          await Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const UserLocationSettings()));
+        }),
         const SizedBox(height: 12),
         _buildGenderSelector(),
         _formRow(
@@ -1677,7 +1780,8 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
           onTap: () {
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (_) => BlockedUsersList(token: widget.token)),
+              MaterialPageRoute(
+                  builder: (_) => BlockedUsersList(token: widget.token)),
             );
           },
         ),
@@ -1888,6 +1992,12 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                         ),
                         decoration: const InputDecoration(
                           border: InputBorder.none,
+                          enabledBorder: InputBorder.none,
+                          focusedBorder: InputBorder.none,
+                          disabledBorder: InputBorder.none,
+                          errorBorder: InputBorder.none,
+                          focusedErrorBorder: InputBorder.none,
+                          filled: false,
                           isDense: true,
                           contentPadding: EdgeInsets.zero,
                         ),
@@ -1967,7 +2077,8 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
       );
     }
 
-    final current = _weightStats.current ?? 68.0;
+    final hasWeight = _weightStats.current != null;
+    final current = _weightStats.current ?? 0.0;
     final start = _weightStats.start ?? current;
     final lost = start - current;
 
@@ -1991,14 +2102,16 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
             children: [
               _progressStat(
                 'Current weight',
-                '${current.toStringAsFixed(1)} kg',
+                hasWeight ? '${current.toStringAsFixed(1)} kg' : '—',
                 Icons.monitor_weight_rounded,
                 Theme.of(context).colorScheme.primary,
               ),
               const SizedBox(width: 10),
               _progressStat(
                 lost >= 0 ? 'Lost' : 'Gained',
-                '${lost >= 0 ? '-' : '+'}${lost.abs().toStringAsFixed(1)} kg',
+                hasWeight
+                    ? '${lost >= 0 ? '-' : '+'}${lost.abs().toStringAsFixed(1)} kg'
+                    : '—',
                 Icons.trending_down_rounded,
                 context.fitlek.success,
               ),
