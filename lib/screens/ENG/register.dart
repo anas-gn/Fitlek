@@ -1,3 +1,5 @@
+import 'package:fitlek1/screens/ENG/coachOnboarding.dart';
+
 import '../../services/referral_link_service.dart';
 import 'userLocationSettings.dart';
 import '../../components/location_picker.dart';
@@ -518,7 +520,7 @@ class _RegisterScreenState extends State<RegisterScreen>
           );
           break;
         case 'coach':
-          dest = const MainLayoutCoach();
+          dest = const CoachOnboarding();
           break;
         default:
           setState(() {

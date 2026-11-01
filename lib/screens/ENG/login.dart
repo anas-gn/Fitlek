@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:ui';
 import 'package:fitlek1/screens/ENG/clientForgot.dart';
+import 'package:fitlek1/screens/ENG/coachOnboarding.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -216,7 +217,7 @@ class _LoginScreenState extends State<LoginScreen>
         );
         break;
       case 'coach':
-        dest = const MainLayoutCoach();
+        dest = const CoachOnboarding();
         break;
       default:
         setState(() {

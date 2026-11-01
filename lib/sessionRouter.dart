@@ -1,3 +1,5 @@
+import 'package:fitlek1/screens/ENG/coachOnboarding.dart';
+
 import 'services/referral_link_service.dart';
 import 'screens/ENG/register.dart';
 import 'globals.dart';
@@ -62,12 +64,12 @@ class _SessionRouterState extends State<SessionRouter> {
       await ReferralLinkService.instance.clear();
     if (!mounted) return;
     switch (role) {
-      case 'coach':
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const MainLayoutCoach()),
-        );
-        break;
+    case 'coach':
+  Navigator.pushReplacement(
+    context,
+    MaterialPageRoute(builder: (_) => const CoachOnboarding()),
+  );
+  break;
       case 'client':
         Navigator.pushReplacement(
           context,
