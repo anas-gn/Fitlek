@@ -1,109 +1,107 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 
 class VideoSplashScreen extends StatefulWidget {
   final Widget nextScreen;
-
-  const VideoSplashScreen({super.key, required this.nextScreen});
-
+  final VoidCallback? onFinished;
+  const VideoSplashScreen(
+      {super.key, required this.nextScreen, this.onFinished});
   @override
   State<VideoSplashScreen> createState() => _VideoSplashScreenState();
 }
 
 class _VideoSplashScreenState extends State<VideoSplashScreen> {
-  late VideoPlayerController _controller;
-  bool _isVideoInitialized = false;
-  bool _hasNavigated = false;
-  bool _showVideo = true;
+  VideoPlayerController? _controller;
+  Timer? _deadline;
+  bool _finished = false;
   static const _endBuffer = Duration(milliseconds: 250);
 
   @override
   void initState() {
     super.initState();
-    _initVideo();
+    // Native completion events can be missing after interruptions or stalls.
+    _deadline = Timer(const Duration(seconds: 25), _finish);
+    unawaited(_initVideo());
   }
 
   Future<void> _initVideo() async {
     try {
-      if (kIsWeb) {
-        _controller = VideoPlayerController.networkUrl(
-          Uri.parse('assets/branding/sirvya_intro.mp4'),
-        );
-      } else {
-        _controller = VideoPlayerController.asset('assets/branding/sirvya_intro.mp4');
-      }
-
-      await _controller.initialize().timeout(const Duration(seconds: 15));
-
-      if (mounted) {
-        setState(() => _isVideoInitialized = true);
-        _controller.play();
-      }
-
-      _controller.addListener(_onVideoTick);
-    } catch (e) {
-      debugPrint('Error initializing intro video: $e');
-      if (mounted) _navigateToNextScreen();
+      final controller = kIsWeb
+          ? VideoPlayerController.networkUrl(
+              Uri.base.resolve('assets/branding/sirvya_intro.mp4'))
+          : VideoPlayerController.asset('assets/branding/sirvya_intro.mp4');
+      _controller = controller;
+      controller.addListener(_onVideoTick);
+      await controller.initialize();
+      if (!mounted || _finished) return;
+      setState(() {});
+      await controller.play();
+    } catch (error) {
+      debugPrint('Intro unavailable: $error');
+      _finish();
     }
   }
 
   void _onVideoTick() {
-    if (_hasNavigated || !_controller.value.isInitialized) return;
-
-    final position = _controller.value.position;
-    final duration = _controller.value.duration;
-
-    if (position >= duration - _endBuffer) {
-      if (mounted) setState(() => _showVideo = false);
-      _navigateToNextScreen();
+    final value = _controller?.value;
+    if (value == null || !mounted || _finished) return;
+    if (value.hasError ||
+        value.isCompleted ||
+        (value.isInitialized &&
+            value.duration > Duration.zero &&
+            value.position >= value.duration - _endBuffer)) {
+      _finish();
     }
   }
 
-  void _navigateToNextScreen() {
-    if (_hasNavigated) return;
-    _hasNavigated = true;
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        Navigator.of(context).pushReplacement(
-          PageRouteBuilder(
-            pageBuilder: (context, animation, secondaryAnimation) => widget.nextScreen,
-            transitionsBuilder: (context, animation, secondaryAnimation, child) {
-              return FadeTransition(opacity: animation, child: child);
-            },
-            transitionDuration: const Duration(milliseconds: 500),
-          ),
-        );
-      }
-    });
+  void _finish() {
+    if (!mounted || _finished) return;
+    _deadline?.cancel();
+    // Render the next screen directly. A post-frame navigation callback can
+    // remain pending when the native player stops requesting Flutter frames.
+    setState(() => _finished = true);
+    widget.onFinished?.call();
+    final controller = _controller;
+    if (controller != null && controller.value.isInitialized) {
+      unawaited(controller.pause().catchError((Object _) {}));
+    }
   }
 
   @override
   void dispose() {
-    _controller.removeListener(_onVideoTick);
-    _controller.dispose();
+    _deadline?.cancel();
+    final controller = _controller;
+    controller?.removeListener(_onVideoTick);
+    if (controller != null) {
+      unawaited(controller.dispose().catchError((Object _) {}));
+    }
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: _navigateToNextScreen,
-      child: Scaffold(
-        backgroundColor: Colors.black,
-        body: _isVideoInitialized && _showVideo
-            ? SizedBox.expand(
-                child: FittedBox(
-                  fit: BoxFit.cover,
-                  child: SizedBox(
-                    width: _controller.value.size.width,
-                    height: _controller.value.size.height,
-                    child: VideoPlayer(_controller),
-                  ),
-                ),
-              )
-            : const SizedBox.expand(),
+    if (_finished) return widget.nextScreen;
+    final controller = _controller;
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: _finish,
+        child: Stack(fit: StackFit.expand, children: [
+          if (controller != null && controller.value.isInitialized)
+            FittedBox(
+              fit: BoxFit.cover,
+              clipBehavior: Clip.hardEdge,
+              child: SizedBox(
+                  width: controller.value.size.width,
+                  height: controller.value.size.height,
+                  child: VideoPlayer(controller)),
+            )
+          else
+            const Center(child: CircularProgressIndicator(color: Colors.white)),
+        ]),
       ),
     );
   }

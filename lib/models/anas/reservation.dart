@@ -4,6 +4,7 @@
 // ─────────────────────────────────────────────
 
 import '../../services/booking_policy.dart';
+import '../../services/session_location.dart';
 
 class ReservationModel {
   final int id;
@@ -138,10 +139,9 @@ class ReservationModel {
       proposedPrice:
           j['proposedPrice'] == null ? null : _toDouble(j['proposedPrice']),
       quoteVersion: _toInt(j['quoteVersion']),
-      location: (j['companyName']?.toString().trim().isNotEmpty ?? false)
-          ? 'Location to be arranged with coach in messages'
-          : j['location'] as String? ??
-              'Location to be arranged with coach in messages',
+      location: sessionLocationLabel(
+          location: j['location']?.toString(),
+          companyName: j['companyName']?.toString()),
       status: status,
       price: _toDouble(j['price']), // ← fix "50.00" String
       companyName: j['companyName'] as String? ?? '',

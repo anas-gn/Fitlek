@@ -1,0 +1,10 @@
+import {claimCampaignPopup} from '../../services/appCampaigns.js';
+import {Router} from 'express';
+import db from '../../config/db.js';
+import {requireRole} from '../../middleware/auth.js';
+const router=Router();router.use(requireRole('client','coach'));
+const eligible="c.status='active' AND c.startsAt<=UTC_TIMESTAMP() AND (c.expiresAt IS NULL OR c.expiresAt>UTC_TIMESTAMP()) AND (c.audience='all' OR c.audience=?)";
+router.get('/active',async(req,res)=>{try{const [items]=await db.query(`SELECT c.id,c.title,c.body,c.imageUrl,c.destination,c.buttonLabel FROM app_campaigns c WHERE ${eligible} AND c.popupEnabled=1 AND c.dispatchedAt IS NOT NULL AND NOT EXISTS (SELECT 1 FROM app_campaign_receipts r WHERE r.campaignID=c.id AND r.userID=?) ORDER BY c.id DESC LIMIT 1`,[req.user.role,req.user.id]);res.json({items})}catch(e){res.status(500).json({error:'Could not load campaigns.'})}});
+router.get('/:id',async(req,res)=>{if(!/^[1-9][0-9]*$/.test(req.params.id))return res.sendStatus(400);try{const [[c]]=await db.query(`SELECT c.id,c.title,c.body,c.imageUrl,c.destination,c.buttonLabel FROM app_campaigns c WHERE c.id=? AND ${eligible}`,[req.params.id,req.user.role]);if(!c)return res.status(404).json({error:'This announcement has expired or is unavailable.'});res.json(c)}catch(e){res.status(500).json({error:'Could not load announcement.'})}});
+router.post('/:id/seen',async(req,res)=>{if(!/^[1-9][0-9]*$/.test(req.params.id))return res.sendStatus(400);try{const shouldShow=await claimCampaignPopup(db,req.params.id,req.user);res.json({ok:true,shouldShow})}catch(e){res.status(500).json({error:'Could not record announcement.'})}});
+export default router;

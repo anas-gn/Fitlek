@@ -1,10 +1,20 @@
+import '../../components/nutrition_goal_card.dart';
+import 'nutritionTracker.dart';
 import '../../services/media_picker_service.dart';
 import '../../services/image_upload_service.dart';
 import '../../services/live_updates.dart';
+import '../../components/account_password_sheet.dart';
+import '../../components/client_profile_overview.dart';
+import '../../components/category_icon.dart';
+import '../../models/client_profile_completion.dart';
+import 'coachChangePhone.dart' show CoachChangePhone;
 import 'dart:convert';
-import 'dart:math' as math;
+import 'dart:async';
+import '../../components/weight_progress_view.dart';
+import '../../models/weight_entry.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import '../../services/connection_recovery.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:fitlek1/constants/urls.dart';
 import 'package:fitlek1/services/apiService.dart';
@@ -13,19 +23,11 @@ import 'blockedUsersList.dart';
 import 'clientCoachFavorites.dart';
 import 'clientChangeEmail.dart';
 import 'userLocationSettings.dart';
+import 'clientNotifications.dart';
 import '../../components/theme_selector.dart';
 import '../../theme/fitlek_theme_extension.dart';
-import '../../components/sirvya_logo.dart';
-import 'package:flutter/foundation.dart';
 import 'package:http_parser/http_parser.dart';
 import '../../components/ENG/imagePreview.dart';
-
-class _WeightEntry {
-  final String label;
-  final double weight;
-  final String date;
-  const _WeightEntry(this.label, this.weight) : date = '';
-}
 
 class _WeightStats {
   final double? current;
@@ -47,6 +49,7 @@ class ClientProfileScreen extends StatefulWidget {
   final bool embedded;
   final String token;
   final VoidCallback? onLogout;
+  final http.Client? apiClient;
 
   const ClientProfileScreen({
     super.key,
@@ -54,24 +57,33 @@ class ClientProfileScreen extends StatefulWidget {
     required this.clientID,
     required this.token,
     this.onLogout,
+    this.apiClient,
   });
 
   @override
   State<ClientProfileScreen> createState() => _ClientProfileScreenState();
 }
 
-class _ClientProfileScreenState extends State<ClientProfileScreen> with SingleTickerProviderStateMixin, LiveUpdates<ClientProfileScreen> {
+class _ClientProfileScreenState extends State<ClientProfileScreen>
+    with SingleTickerProviderStateMixin, LiveUpdates<ClientProfileScreen> {
   @override
-  Set<String> get liveDomains => {'clients','profile','edit','weight-history','reservations'};
+  Set<String> get liveDomains =>
+      {'clients', 'profile', 'edit', 'weight-history', 'reservations'};
   @override
-  Future<void> refreshLiveData() async { if (!_isEditing && !_saving) { await Future.wait([_fetchProfile(silent:true),_fetchWeightData()]); } }
+  Future<void> refreshLiveData() async {
+    if (!_isEditing && !_saving) {
+      await Future.wait([_fetchProfile(silent: true), _fetchWeightData()]);
+    }
+  }
 
   late TabController _tabController;
+  late final http.Client _api;
 
   bool _loadingProfile = true;
   String? _loadError;
   bool _saving = false;
   bool _saveSuccess = false;
+  Timer? _savedIndicatorTimer;
   bool _isEditing = false;
 
   String? _avatarUrl;
@@ -81,14 +93,16 @@ class _ClientProfileScreenState extends State<ClientProfileScreen> with SingleTi
   final _lastNameCtrl = TextEditingController();
   final _emailCtrl = TextEditingController();
   final _heightCtrl = TextEditingController();
-  final _goalCtrl = TextEditingController(
-    text: 'Weight loss and toning',
-  );
+  Map<String, dynamic> _savedProfile = {};
+  String _phone = '', _city = '';
+  List<String> _interests = [];
+  List<Map<String, dynamic>> _categories = [];
+  final _profileScroll = ScrollController();
 
   String _selectedGender = 'Female';
-  bool _isPremium = false;
 
-  List<_WeightEntry> _weightData = [];
+  List<WeightEntry> _weightData = [];
+  String? _weightError;
   _WeightStats _weightStats = const _WeightStats();
   bool _loadingWeight = false;
 
@@ -109,35 +123,48 @@ class _ClientProfileScreenState extends State<ClientProfileScreen> with SingleTi
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _api = widget.apiClient ?? http.Client();
+    _tabController = TabController(length: 3, vsync: this);
     _tabController.addListener(() {
       if (_tabController.indexIsChanging) return;
+      if (_tabController.index > 0 && _profileScroll.hasClients) {
+        _profileScroll.animateTo(_profileScroll.position.maxScrollExtent,
+            duration: Duration(
+                milliseconds:
+                    MediaQuery.disableAnimationsOf(context) ? 0 : 300),
+            curve: Curves.easeOutCubic);
+      }
       if (_tabController.index == 1 && _weightData.isEmpty && !_loadingWeight) {
         _fetchWeightData();
       }
     });
     _fetchProfile();
     _fetchWeightData();
+    _fetchCategories();
   }
 
   @override
   void dispose() {
+    _savedIndicatorTimer?.cancel();
+    if (widget.apiClient == null) _api.close();
     _tabController.dispose();
     _firstNameCtrl.dispose();
     _lastNameCtrl.dispose();
     _emailCtrl.dispose();
     _heightCtrl.dispose();
-    _goalCtrl.dispose();
+    _profileScroll.dispose();
     super.dispose();
   }
 
   Future<void> _fetchProfile({bool silent = false}) async {
-    if (!silent) setState(() {
-      _loadingProfile = true;
-      _loadError = null;
-    });
+    if (!silent) {
+      setState(() {
+        _loadingProfile = true;
+        _loadError = null;
+      });
+    }
     try {
-      final res = await http
+      final res = await _api
           .get(
             Uri.parse('$baseUrl/clients/me?userID=${widget.clientID}'),
             headers: _headers,
@@ -148,8 +175,13 @@ class _ClientProfileScreenState extends State<ClientProfileScreen> with SingleTi
         final data = jsonDecode(res.body) as Map<String, dynamic>;
         if (!mounted) return;
         if (!silent || (!_isEditing && !_saving)) _populateForm(data);
-        await _fetchSessionsCount();
-        if (mounted) setState(() => _loadingProfile = false);
+        if (mounted) {
+          setState(() {
+            _loadingProfile = false;
+            _loadError = null;
+          });
+        }
+        _fetchSessionsCount();
       } else {
         final body = jsonDecode(res.body);
         if (mounted) {
@@ -161,8 +193,11 @@ class _ClientProfileScreenState extends State<ClientProfileScreen> with SingleTi
       }
     } catch (e) {
       if (mounted) {
+        final connectionFailed = ConnectionRecovery.report(e);
         setState(() {
-          _loadError = 'Unable to reach the server.';
+          _loadError = connectionFailed
+              ? 'Check your connection and try again.'
+              : 'Unable to load your profile. Please try again.';
           _loadingProfile = false;
         });
       }
@@ -170,19 +205,105 @@ class _ClientProfileScreenState extends State<ClientProfileScreen> with SingleTi
   }
 
   void _populateForm(Map<String, dynamic> data) {
+    _savedProfile = Map<String, dynamic>.from(data);
     _firstNameCtrl.text = data['firstName'] ?? '';
     _lastNameCtrl.text = data['lastName'] ?? '';
     _emailCtrl.text = data['email'] ?? '';
     _avatarUrl = data['avatarUrl'] as String?;
-    _isPremium = data['isPremium'] == 1 || data['isPremium'] == true;
     _selectedGender = data['gender'] as String? ?? 'Other';
     final h = _parseDouble(data['height']);
     _heightCtrl.text = h != null ? h.toStringAsFixed(1) : '';
+    _phone = '${data['phoneNumber'] ?? ''}';
+    _city = '${data['ville'] ?? ''}';
+    _interests = clientInterests(data['interests']);
+  }
+
+  Future<void> _fetchCategories() async {
+    try {
+      final response = await _api
+          .get(Uri.parse('$baseUrl/categories'), headers: _headers)
+          .timeout(const Duration(seconds: 10));
+      if (mounted && response.statusCode == 200) {
+        setState(() => _categories = (jsonDecode(response.body) as List)
+            .map((e) => Map<String, dynamic>.from(e))
+            .toList());
+      }
+    } catch (_) {/* Existing interests remain available while offline. */}
+  }
+
+  Future<void> _changePhone() async {
+    final phone = await Navigator.push<String>(
+        context,
+        MaterialPageRoute(
+            builder: (_) =>
+                CoachChangePhone(token: widget.token, currentPhone: _phone)));
+    if (!mounted || phone == null) return;
+    setState(() {
+      _phone = phone;
+      _savedProfile['phoneNumber'] = phone;
+    });
+    if (!_isEditing) await _fetchProfile(silent: true);
+  }
+
+  Future<void> _changeLocation() async {
+    final city = await Navigator.push<String>(context,
+        MaterialPageRoute(builder: (_) => const UserLocationSettings()));
+    if (!mounted || city == null) return;
+    setState(() {
+      _city = city;
+      _savedProfile['ville'] = city;
+    });
+    if (!_isEditing) await _fetchProfile(silent: true);
+  }
+
+  void _cancelEditing() => setState(() {
+        _populateForm(_savedProfile);
+        _isEditing = false;
+      });
+
+  void _completeProfile(String section) {
+    switch (section) {
+      case 'photo':
+        _pickAndUploadAvatar();
+        return;
+      case 'phone':
+        _changePhone();
+        return;
+      case 'location':
+        _changeLocation();
+        return;
+      case 'email':
+        _changeEmail();
+        return;
+      default:
+        setState(() => _isEditing = true);
+        _tabController.animateTo(0);
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted && _profileScroll.hasClients) {
+            _profileScroll.animateTo(_profileScroll.position.maxScrollExtent,
+                duration: const Duration(milliseconds: 350),
+                curve: Curves.easeOutCubic);
+          }
+        });
+    }
+  }
+
+  Future<void> _changeEmail() async {
+    final email = await Navigator.push<String>(
+        context,
+        MaterialPageRoute(
+            builder: (_) =>
+                ClientChangeEmailScreen(currentEmail: _emailCtrl.text)));
+    if (!mounted || email == null) return;
+    setState(() {
+      _emailCtrl.text = email;
+      _savedProfile['email'] = email;
+    });
   }
 
   Future<void> _fetchSessionsCount() async {
     try {
-      final res = await http
+      final res = await _api
           .get(
             Uri.parse(
               '$baseUrl/reservations?userID=${widget.clientID}&role=client',
@@ -199,89 +320,72 @@ class _ClientProfileScreenState extends State<ClientProfileScreen> with SingleTi
   }
 
   Future<void> _fetchWeightData() async {
-    if (_loadingWeight) return;
+    if (_loadingWeight || !mounted) return;
     setState(() => _loadingWeight = true);
     try {
-      final chartRes = await http
-          .get(
-            Uri.parse(
-              '$baseUrl/weight-history/me/chart?clientID=${widget.clientID}',
-            ),
-            headers: _headers,
-          )
-          .timeout(const Duration(seconds: 10));
-
-      final statsRes = await http
-          .get(
-            Uri.parse(
-              '$baseUrl/weight-history/me/stats?clientID=${widget.clientID}',
-            ),
-            headers: _headers,
-          )
-          .timeout(const Duration(seconds: 10));
-
-      if (chartRes.statusCode == 200) {
-        final List<dynamic> rows = jsonDecode(chartRes.body);
-        final entries = rows
-            .map(
-              (r) => _WeightEntry(
-                r['label'] as String,
-                _parseDouble(r['weight']) ?? 0.0,
-              ),
-            )
-            .toList();
-        if (mounted) setState(() => _weightData = entries);
-      } else {
-        debugPrint(
-          '❌ Weight chart status: ${chartRes.statusCode} body: ${chartRes.body}',
-        );
+      final responses = await Future.wait([
+        _api
+            .get(
+                Uri.parse(
+                    '$baseUrl/weight-history/me?clientID=${widget.clientID}&limit=90'),
+                headers: _headers)
+            .timeout(const Duration(seconds: 10)),
+        _api
+            .get(
+                Uri.parse(
+                    '$baseUrl/weight-history/me/stats?clientID=${widget.clientID}'),
+                headers: _headers)
+            .timeout(const Duration(seconds: 10)),
+      ]);
+      if (responses.any((response) => response.statusCode != 200)) {
+        throw Exception('History unavailable');
+      }
+      final rows = jsonDecode(responses[0].body) as List;
+      final entries = rows
+          .whereType<Map>()
+          .map((row) => WeightEntry.fromJson(Map<String, dynamic>.from(row)))
+          .whereType<WeightEntry>()
+          .toList();
+      final stats = jsonDecode(responses[1].body) as Map<String, dynamic>;
+      double? weight(dynamic raw) {
+        final value = _parseDouble(raw);
+        return value != null && value.isFinite && value > 0 && value <= 500
+            ? value
+            : null;
       }
 
-      if (statsRes.statusCode == 200) {
-        final s = jsonDecode(statsRes.body) as Map<String, dynamic>;
-        if (mounted) {
-          setState(
-            () => _weightStats = _WeightStats(
-              current: _parseDouble(s['currentWeight']),
-              start: _parseDouble(s['startWeight']),
-              max: _parseDouble(s['maxWeight']),
-              min: _parseDouble(s['minWeight']),
-              total: (s['totalEntries'] as num?)?.toInt() ?? 0,
-            ),
-          );
-        }
-      } else {
-        debugPrint(
-          '❌ Weight stats status: ${statsRes.statusCode} body: ${statsRes.body}',
-        );
+      if (mounted) {
+        setState(() {
+          _weightData = weightPeriod(entries, null, DateTime.now());
+          _weightStats = _WeightStats(
+              current: weight(stats['currentWeight']),
+              start: weight(stats['startWeight']),
+              max: weight(stats['maxWeight']),
+              min: weight(stats['minWeight']),
+              total: int.tryParse('${stats['totalEntries']}') ?? 0);
+          _weightError = null;
+        });
       }
-    } catch (e) {
-      debugPrint('❌ Weight fetch error: $e');
+    } catch (_) {
+      if (mounted) {
+        setState(() => _weightError =
+            'Could not load your latest records. Tap Refresh history to try again.');
+      }
     } finally {
       if (mounted) setState(() => _loadingWeight = false);
     }
   }
 
   Future<void> _addWeight(double weight) async {
-    final errorColor = context.fitlek.error;
-    try {
-      final res = await http
-          .post(
-            Uri.parse('$baseUrl/weight-history'),
+    final response = await _api
+        .post(Uri.parse('$baseUrl/weight-history'),
             headers: _headers,
-            body: jsonEncode({'clientID': widget.clientID, 'weight': weight}),
-          )
-          .timeout(const Duration(seconds: 10));
-
-      if (res.statusCode == 201) {
-        _showSnack('Weight saved ✓');
-        await _fetchWeightData();
-      } else {
-        _showSnack('Error while saving', color: errorColor);
-      }
-    } catch (_) {
-      _showSnack('Unable to reach the server.', color: errorColor);
-    }
+            body: jsonEncode({'clientID': widget.clientID, 'weight': weight}))
+        .timeout(const Duration(seconds: 10));
+    if (response.statusCode != 201) throw Exception('Could not save weight.');
+    if (!mounted) return;
+    _showSnack('Weight saved ✓');
+    await _fetchWeightData();
   }
 
   Future<void> _pickAndUploadAvatar() async {
@@ -303,9 +407,11 @@ class _ClientProfileScreenState extends State<ClientProfileScreen> with SingleTi
       );
       request.headers['Authorization'] = 'Bearer ${widget.token}';
 
-      final image = await ImageUploadService.prepare(await file.readAsBytes(),file.name);
-      request.files.add(http.MultipartFile.fromBytes('avatar',image.bytes,
-        filename:image.filename,contentType:MediaType.parse(image.mimeType)));
+      final image =
+          await ImageUploadService.prepare(await file.readAsBytes(), file.name);
+      request.files.add(http.MultipartFile.fromBytes('avatar', image.bytes,
+          filename: image.filename,
+          contentType: MediaType.parse(image.mimeType)));
 
       final streamedRes = await request.send().timeout(
             const Duration(seconds: 30),
@@ -316,28 +422,33 @@ class _ClientProfileScreenState extends State<ClientProfileScreen> with SingleTi
         final data = jsonDecode(res.body) as Map<String, dynamic>;
         final newUrl = data['url'] as String;
 
-        await http
+        final update = await _api
             .put(
               Uri.parse('$baseUrl/clients/me'),
               headers: _headers,
               body: jsonEncode({
                 'userID': widget.clientID,
-                'firstName': _firstNameCtrl.text.trim(),
-                'lastName': _lastNameCtrl.text.trim(),
-                'gender': _selectedGender,
                 'avatarUrl': newUrl,
-                'height': _parseDouble(_heightCtrl.text),
               }),
             )
             .timeout(const Duration(seconds: 10));
 
-        if (mounted) setState(() => _avatarUrl = newUrl);
+        if (update.statusCode != 200) {
+          throw Exception('Could not save your photo. Please try again.');
+        }
+        if (mounted) {
+          setState(() {
+            _avatarUrl = newUrl;
+            _savedProfile['avatarUrl'] = newUrl;
+          });
+        }
         _showSnack('Profile photo updated ✓');
       } else {
         final body = jsonDecode(res.body);
         _showSnack(body['error'] ?? 'Upload error', color: errorColor);
       }
     } catch (e) {
+      ConnectionRecovery.report(e);
       _showSnack('Error: $e', color: errorColor);
     } finally {
       if (mounted) setState(() => _uploadingAvatar = false);
@@ -346,9 +457,22 @@ class _ClientProfileScreenState extends State<ClientProfileScreen> with SingleTi
 
   Future<void> _saveProfile() async {
     final errorColor = context.fitlek.error;
+    if (_saving) return;
+    if (_firstNameCtrl.text.trim().isEmpty ||
+        _lastNameCtrl.text.trim().isEmpty) {
+      _showSnack('Please add your first and last name.', color: errorColor);
+      return;
+    }
+    final heightText = _heightCtrl.text.trim().replaceAll(',', '.');
+    final height = heightText.isEmpty ? null : double.tryParse(heightText);
+    if (heightText.isNotEmpty &&
+        (height == null || !height.isFinite || height <= 0 || height > 300)) {
+      _showSnack('Enter a valid height in centimetres.', color: errorColor);
+      return;
+    }
     setState(() => _saving = true);
     try {
-      final res = await http
+      final res = await _api
           .put(
             Uri.parse('$baseUrl/clients/me'),
             headers: _headers,
@@ -357,21 +481,27 @@ class _ClientProfileScreenState extends State<ClientProfileScreen> with SingleTi
               'firstName': _firstNameCtrl.text.trim(),
               'lastName': _lastNameCtrl.text.trim(),
               'gender': _selectedGender,
-              'avatarUrl': _avatarUrl,
-              'height': _parseDouble(_heightCtrl.text),
+              'height': height,
+              'interests': _interests,
             }),
           )
           .timeout(const Duration(seconds: 10));
 
       if (res.statusCode == 200) {
+        final data = jsonDecode(res.body) as Map<String, dynamic>;
+        if (data['profile'] is! Map) {
+          throw Exception('Could not confirm saved profile.');
+        }
         if (mounted) {
           setState(() {
+            _populateForm(Map<String, dynamic>.from(data['profile']));
             _isEditing = false;
             _saveSuccess = true;
             _saving = false;
           });
         }
-        Future.delayed(const Duration(seconds: 2), () {
+        _savedIndicatorTimer?.cancel();
+        _savedIndicatorTimer = Timer(const Duration(seconds: 2), () {
           if (mounted) setState(() => _saveSuccess = false);
         });
       } else {
@@ -383,6 +513,7 @@ class _ClientProfileScreenState extends State<ClientProfileScreen> with SingleTi
         );
       }
     } catch (e) {
+      ConnectionRecovery.report(e);
       if (mounted) setState(() => _saving = false);
       _showSnack('Unable to reach the server.', color: errorColor);
     }
@@ -439,7 +570,7 @@ class _ClientProfileScreenState extends State<ClientProfileScreen> with SingleTi
               errorMsg = null;
             });
             try {
-              final res = await http
+              final res = await _api
                   .post(
                     Uri.parse('$baseUrl/auth/request-delete-otp'),
                     headers: _headers,
@@ -487,7 +618,7 @@ class _ClientProfileScreenState extends State<ClientProfileScreen> with SingleTi
               errorMsg = null;
             });
             try {
-              final res = await http
+              final res = await _api
                   .post(
                     Uri.parse('$baseUrl/auth/confirm-delete-account'),
                     headers: _headers,
@@ -694,7 +825,7 @@ class _ClientProfileScreenState extends State<ClientProfileScreen> with SingleTi
                             ),
                             child: Center(
                               child: loading
-                                  ? SizedBox(
+                                  ? const SizedBox(
                                       width: 18,
                                       height: 18,
                                       child: CircularProgressIndicator(
@@ -891,7 +1022,7 @@ class _ClientProfileScreenState extends State<ClientProfileScreen> with SingleTi
                           ),
                           child: Center(
                             child: loading
-                                ? SizedBox(
+                                ? const SizedBox(
                                     width: 18,
                                     height: 18,
                                     child: CircularProgressIndicator(
@@ -980,267 +1111,20 @@ class _ClientProfileScreenState extends State<ClientProfileScreen> with SingleTi
 
   String _calcBMI() {
     final w = _weightStats.current;
-    final height = double.tryParse(_heightCtrl.text);
+    final height = _parseDouble(_savedProfile['height']);
     if (w == null || w <= 0 || height == null || height <= 0) return '—';
     final h = height / 100;
     return (w / (h * h)).toStringAsFixed(1);
   }
 
-  void _showChangePasswordSheet() {
-    final oldCtrl = TextEditingController();
-    final newCtrl = TextEditingController();
-    final confirmCtrl = TextEditingController();
-    bool obscureOld = true, obscureNew = true, obscureConfirm = true;
-    bool saving = false;
-    String? errorMsg;
-
-    showModalBottomSheet(
+  Future<void> _showChangePasswordSheet() async {
+    final updated = await showModalBottomSheet<bool>(
       context: context,
-      backgroundColor: Colors.transparent,
       isScrollControlled: true,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setSheetState) {
-          Future<void> submit() async {
-            final oldPass = oldCtrl.text.trim();
-            final newPass = newCtrl.text.trim();
-            final confirm = confirmCtrl.text.trim();
-
-            if (oldPass.isEmpty || newPass.isEmpty || confirm.isEmpty) {
-              setSheetState(() => errorMsg = 'All fields are required.');
-              return;
-            }
-            if (newPass.length < 6) {
-              setSheetState(
-                () => errorMsg =
-                    'The new password must be at least 6 characters.',
-              );
-              return;
-            }
-            if (newPass != confirm) {
-              setSheetState(
-                () => errorMsg = 'Passwords do not match.',
-              );
-              return;
-            }
-
-            setSheetState(() {
-              saving = true;
-              errorMsg = null;
-            });
-
-            try {
-              final res = await http
-                  .put(
-                    Uri.parse('$baseUrl/clients/me/password'),
-                    headers: _headers,
-                    body: jsonEncode({
-                      'userID': widget.clientID,
-                      'oldPassword': oldPass,
-                      'newPassword': newPass,
-                    }),
-                  )
-                  .timeout(const Duration(seconds: 10));
-
-              if (res.statusCode == 200) {
-                if (ctx.mounted) Navigator.pop(ctx);
-                _showSnack('Password updated ✓');
-              } else {
-                final data = jsonDecode(res.body);
-                setSheetState(() {
-                  saving = false;
-                  errorMsg = data['error'] ?? 'Error while updating.';
-                });
-              }
-            } catch (e) {
-              setSheetState(() {
-                saving = false;
-                errorMsg = 'Unable to reach the server.';
-              });
-            }
-          }
-
-          Widget passwordField(
-            String label,
-            TextEditingController c,
-            bool obscure,
-            VoidCallback toggle,
-          ) {
-            return Container(
-              margin: const EdgeInsets.only(bottom: 12),
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
-              decoration: BoxDecoration(
-                color: Theme.of(context).scaffoldBackgroundColor,
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: context.fitlek.border),
-              ),
-              child: TextField(
-                controller: c,
-                obscureText: obscure,
-                style: TextStyle(
-                    color: Theme.of(context).colorScheme.onSurface,
-                    fontSize: 13),
-                decoration: InputDecoration(
-                  labelText: label,
-                  labelStyle: TextStyle(
-                    color: context.fitlek.textMuted,
-                    fontSize: 12,
-                  ),
-                  border: InputBorder.none,
-                  suffixIcon: IconButton(
-                    icon: Icon(
-                      obscure
-                          ? Icons.visibility_off_rounded
-                          : Icons.visibility_rounded,
-                      color: context.fitlek.textMuted,
-                      size: 18,
-                    ),
-                    onPressed: toggle,
-                  ),
-                ),
-              ),
-            );
-          }
-
-          return Padding(
-            padding: EdgeInsets.only(
-              bottom: MediaQuery.of(ctx).viewInsets.bottom,
-            ),
-            child: Container(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
-              decoration: BoxDecoration(
-                color: context.fitlek.card,
-                borderRadius:
-                    const BorderRadius.vertical(top: Radius.circular(20)),
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    width: 40,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: context.fitlek.border,
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      Container(
-                        width: 36,
-                        height: 36,
-                        decoration: BoxDecoration(
-                          color: Theme.of(context)
-                              .colorScheme
-                              .primary
-                              .withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Icon(
-                          Icons.lock_rounded,
-                          color: Theme.of(context).colorScheme.primary,
-                          size: 18,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Text(
-                        'Change password',
-                        style: TextStyle(
-                          color: Theme.of(context).colorScheme.onSurface,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 20),
-                  passwordField(
-                    'Current password',
-                    oldCtrl,
-                    obscureOld,
-                    () => setSheetState(() => obscureOld = !obscureOld),
-                  ),
-                  passwordField(
-                    'New password',
-                    newCtrl,
-                    obscureNew,
-                    () => setSheetState(() => obscureNew = !obscureNew),
-                  ),
-                  passwordField(
-                    'Confirm password',
-                    confirmCtrl,
-                    obscureConfirm,
-                    () => setSheetState(() => obscureConfirm = !obscureConfirm),
-                  ),
-                  if (errorMsg != null) ...[
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.error_outline_rounded,
-                          color: context.fitlek.error,
-                          size: 14,
-                        ),
-                        const SizedBox(width: 6),
-                        Expanded(
-                          child: Text(
-                            errorMsg!,
-                            style: TextStyle(
-                              color: context.fitlek.error,
-                              fontSize: 12,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                  const SizedBox(height: 20),
-                  GestureDetector(
-                    onTap: saving ? null : submit,
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 150),
-                      width: double.infinity,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      decoration: BoxDecoration(
-                        color: saving
-                            ? Theme.of(context)
-                                .colorScheme
-                                .primary
-                                .withValues(alpha: 0.4)
-                            : Theme.of(context).colorScheme.primary,
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Center(
-                        child: saving
-                            ? SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(
-                                  color:
-                                      Theme.of(context).colorScheme.onPrimary,
-                                  strokeWidth: 2,
-                                ),
-                              )
-                            : Text(
-                                'UPDATE',
-                                style: TextStyle(
-                                  color:
-                                      Theme.of(context).colorScheme.onPrimary,
-                                  fontWeight: FontWeight.w900,
-                                  fontSize: 13,
-                                  letterSpacing: 1.2,
-                                ),
-                              ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          );
-        },
-      ),
+      useSafeArea: true,
+      builder: (_) => AccountPasswordSheet(token: widget.token),
     );
+    if (mounted && updated == true) _showSnack('Password updated ✓');
   }
 
   @override
@@ -1321,363 +1205,177 @@ class _ClientProfileScreenState extends State<ClientProfileScreen> with SingleTi
 
   Widget _buildContent() => Scaffold(
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        bottomNavigationBar: !_isEditing
+            ? null
+            : SafeArea(
+                top: false,
+                child: Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 10, 20, 12),
+                    child: Row(children: [
+                      OutlinedButton(
+                          onPressed: _saving ? null : _cancelEditing,
+                          child: const Text('Cancel')),
+                      const SizedBox(width: 12),
+                      Expanded(
+                          child: FilledButton.icon(
+                              onPressed: _saving ? null : _saveProfile,
+                              icon: _saving
+                                  ? const SizedBox(
+                                      width: 16,
+                                      height: 16,
+                                      child: CircularProgressIndicator(
+                                          strokeWidth: 2))
+                                  : const Icon(Icons.check_rounded, size: 18),
+                              label:
+                                  Text(_saving ? 'Saving…' : 'Save changes'))),
+                    ]))),
         body: SafeArea(
-          child: Column(
-            children: [
-              _buildHeader(),
-              _buildProfileHero(),
-              _buildStatsRow(),
-              _buildTabBar(),
-              Expanded(
-                child: TabBarView(
-                  controller: _tabController,
-                  children: [_buildProfileTab(), _buildProgressTab()],
-                ),
-              ),
-            ],
-          ),
-        ),
+            child: NestedScrollView(
+          controller: _profileScroll,
+          headerSliverBuilder: (_, __) => [
+            SliverToBoxAdapter(child: _buildHeader()),
+            SliverPadding(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+                sliver: SliverToBoxAdapter(
+                    child: ClientProfileIdentityCard(
+                        profile: _savedProfile,
+                        uploading: _uploadingAvatar,
+                        onAvatar: () {
+                          if (_avatarUrl == null || _avatarUrl!.isEmpty) {
+                            _pickAndUploadAvatar();
+                            return;
+                          }
+                          Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (_) => ImagePreview(
+                                      imageUrl: _avatarUrl!,
+                                      tag:
+                                          'client_avatar_${widget.clientID}')));
+                        },
+                        onChangePhoto: _pickAndUploadAvatar))),
+            SliverPadding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                sliver: SliverToBoxAdapter(
+                    child: ClientProfileCompletionCard(
+                        completion: ClientProfileCompletion(_savedProfile),
+                        onComplete: _completeProfile))),
+            SliverToBoxAdapter(child: _buildStatsRow()),
+            SliverPersistentHeader(
+                pinned: true,
+                delegate: _ClientProfileTabs(
+                    background: Theme.of(context).scaffoldBackgroundColor,
+                    child: _buildTabBar())),
+          ],
+          body: TabBarView(controller: _tabController, children: [
+            _buildProfileTab(),
+            _buildProgressTab(),
+            NutritionTrackerScreen(
+                clientID: widget.clientID, token: widget.token, embedded: true)
+          ]),
+        )),
       );
 
   Widget _buildHeader() => Padding(
-        padding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            if (!widget.embedded) const SirvyaLogo(variant: SirvyaLogoVariant.wordmark, height: 18),
-            const SizedBox(width: 10),
-            const Spacer(),
-            if (_isPremium)
-              Container(
-                margin: const EdgeInsets.only(right: 10),
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                decoration: BoxDecoration(
-                  color: context.fitlek.premium.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(
-                    color: context.fitlek.premium.withValues(alpha: 0.4),
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    Icon(
-                      Icons.workspace_premium_rounded,
-                      color: context.fitlek.premium,
-                      size: 12,
-                    ),
-                    const SizedBox(width: 5),
-                    Text(
-                      'PREMIUM',
-                      style: TextStyle(
-                        color: context.fitlek.premium,
-                        fontSize: 9,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: 1.2,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            if (_saveSuccess)
-              Container(
-                margin: const EdgeInsets.only(right: 8),
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: context.fitlek.success.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(
-                      color: context.fitlek.success.withValues(alpha: 0.4)),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.check_circle_rounded,
-                        color: context.fitlek.success, size: 13),
-                    const SizedBox(width: 6),
-                    Text(
-                      'Saved',
-                      style: TextStyle(
-                        color: context.fitlek.success,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            GestureDetector(
-              onTap: _saving ? null : _toggleEdit,
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                decoration: BoxDecoration(
-                  color: _isEditing
-                      ? Theme.of(context).colorScheme.primary
-                      : context.fitlek.card,
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(
-                      color: _isEditing
-                          ? Theme.of(context).colorScheme.primary
-                          : context.fitlek.border),
-                ),
-                child: _saving
-                    ? SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(
-                          color: Theme.of(context).colorScheme.onPrimary,
-                          strokeWidth: 2,
-                        ),
-                      )
-                    : Row(
-                        children: [
-                          Icon(
-                            _isEditing
-                                ? Icons.save_rounded
-                                : Icons.edit_rounded,
-                            color: _isEditing
-                                ? Theme.of(context).colorScheme.onPrimary
-                                : context.fitlek.textSecondary,
-                            size: 14,
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            _isEditing ? 'Save' : 'Edit',
-                            style: TextStyle(
-                              color: _isEditing
-                                  ? Theme.of(context).colorScheme.onPrimary
-                                  : context.fitlek.textSecondary,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ],
-                      ),
-              ),
-            ),
-          ],
-        ),
-      );
-
-  Widget _buildProfileHero() {
-    final hasAvatar = _avatarUrl != null && _avatarUrl!.isNotEmpty;
-
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 20, 24, 0),
-      child: Row(
-        children: [
-          GestureDetector(
-            onTap: _uploadingAvatar
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
+      child: Row(children: [
+        Expanded(
+            child:
+                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text('My profile',
+              style: TextStyle(
+                  fontSize: 32,
+                  height: 1.15,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -1,
+                  color: Theme.of(context).colorScheme.onSurface)),
+          const SizedBox(height: 6),
+          Text(
+              _saveSuccess
+                  ? 'Your changes are saved.'
+                  : 'A little more you. A stronger journey.',
+              style: TextStyle(
+                  fontSize: 12,
+                  height: 1.4,
+                  color: _saveSuccess
+                      ? context.fitlek.success
+                      : context.fitlek.textMuted)),
+        ])),
+        const SizedBox(width: 12),
+        IconButton.outlined(
+            tooltip: _isEditing ? 'Cancel editing' : 'Edit profile',
+            onPressed: _saving
                 ? null
-                : (_isEditing
-                    ? _pickAndUploadAvatar
-                    : () {
-                        if (hasAvatar) {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => ImagePreview(
-                                imageUrl: _avatarUrl!,
-                                tag: 'client_avatar_${widget.clientID}',
-                              ),
-                            ),
-                          );
-                        }
-                      }),
-            child: Stack(
-              children: [
-                Container(
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                        color: Theme.of(context).colorScheme.primary,
-                        width: 2.5),
-                  ),
-                  child: Hero(
-                    tag: 'client_avatar_${widget.clientID}',
-                    child: _uploadingAvatar
-                        ? CircleAvatar(
-                            radius: 36,
-                            backgroundColor: context.fitlek.card2,
-                            child: SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(
-                                color: Theme.of(context).colorScheme.primary,
-                                strokeWidth: 2,
-                              ),
-                            ),
-                          )
-                        : CircleAvatar(
-                            radius: 36,
-                            backgroundColor: context.fitlek.card2,
-                            backgroundImage:
-                                hasAvatar ? NetworkImage(_avatarUrl!) : null,
-                            child: !hasAvatar
-                                ? Text(
-                                    _firstNameCtrl.text.isNotEmpty
-                                        ? _firstNameCtrl.text[0].toUpperCase()
-                                        : '?',
-                                    style: TextStyle(
-                                      color:
-                                          Theme.of(context).colorScheme.primary,
-                                      fontSize: 28,
-                                      fontWeight: FontWeight.w900,
-                                    ),
-                                  )
-                                : null,
-                          ),
-                  ),
-                ),
-                Positioned(
-                  bottom: 0,
-                  right: 0,
-                  child: Container(
-                    width: 26,
-                    height: 26,
-                    decoration: BoxDecoration(
-                      color: _uploadingAvatar
-                          ? Colors.grey
-                          : Theme.of(context).colorScheme.primary,
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                          color: Theme.of(context).scaffoldBackgroundColor,
-                          width: 2),
-                    ),
-                    child: Icon(
-                      Icons.camera_alt_rounded,
-                      color: Theme.of(context).colorScheme.onPrimary,
-                      size: 12,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 18),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '${_firstNameCtrl.text} ${_lastNameCtrl.text}'.trim(),
-                  style: TextStyle(
-                    color: Theme.of(context).colorScheme.onSurface,
-                    fontSize: 20,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: -0.5,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  _emailCtrl.text,
-                  style:
-                      TextStyle(color: context.fitlek.textMuted, fontSize: 12),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 6),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context)
-                        .colorScheme
-                        .primary
-                        .withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Text(
-                    _goalCtrl.text.isNotEmpty ? _goalCtrl.text : 'No goal set',
-                    style: TextStyle(
-                      color: Theme.of(context).colorScheme.primary,
-                      fontSize: 10,
-                      fontWeight: FontWeight.w700,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+                : _isEditing
+                    ? _cancelEditing
+                    : _toggleEdit,
+            icon: Icon(_isEditing ? Icons.close_rounded : Icons.edit_outlined,
+                size: 20)),
+      ]));
 
   Widget _buildStatsRow() {
-    final currentW = _weightStats.current;
-    final stats = [
-      {
-        'label': 'Sessions',
-        'value': '$_sessionsCount',
-        'icon': Icons.bolt_rounded,
-      },
-      {
-        'label': 'Weight',
-        'value': currentW == null ? '—' : '${currentW.toStringAsFixed(1)} kg',
-        'icon': Icons.monitor_weight_rounded,
-      },
-      {'label': 'BMI', 'value': _calcBMI(), 'icon': Icons.favorite_rounded},
+    final height = _parseDouble(_savedProfile['height']);
+    final values = [
+      (Icons.calendar_today_outlined, 'Sessions', '$_sessionsCount'),
+      (
+        Icons.monitor_weight_outlined,
+        'Current weight',
+        _weightStats.current == null
+            ? '—'
+            : '${_weightStats.current!.toStringAsFixed(1)} kg'
+      ),
+      (
+        Icons.height_rounded,
+        'Height',
+        height == null
+            ? '—'
+            : '${height.toStringAsFixed(height % 1 == 0 ? 0 : 1)} cm'
+      ),
     ];
     return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
-      child: Row(
-        children: stats
-            .asMap()
-            .entries
-            .map(
-              (e) => Expanded(
-                child: Container(
-                  margin: EdgeInsets.only(
-                    right: e.key < stats.length - 1 ? 10 : 0,
-                  ),
-                  padding: const EdgeInsets.symmetric(vertical: 10),
-                  decoration: BoxDecoration(
-                    color: context.fitlek.card,
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: context.fitlek.border),
-                  ),
-                  child: Column(
-                    children: [
-                      Icon(e.value['icon'] as IconData,
-                          color: Theme.of(context).colorScheme.primary,
-                          size: 16),
-                      const SizedBox(height: 4),
-                      Text(
-                        e.value['value'] as String,
-                        style: TextStyle(
-                          color: Theme.of(context).colorScheme.onSurface,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w900,
-                        ),
-                      ),
-                      Text(
-                        e.value['label'] as String,
-                        style: TextStyle(
-                          color: context.fitlek.textMuted,
-                          fontSize: 9,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            )
-            .toList(),
-      ),
-    );
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
+        child: Row(
+            children: values.indexed
+                .map((entry) => Expanded(
+                        child: Container(
+                      margin: EdgeInsets.only(right: entry.$1 < 2 ? 10 : 0),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 16),
+                      decoration: BoxDecoration(
+                          color: context.fitlek.card,
+                          borderRadius: BorderRadius.circular(18),
+                          border: Border.all(color: context.fitlek.border)),
+                      child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Icon(entry.$2.$1,
+                                size: 18,
+                                color: Theme.of(context).colorScheme.primary),
+                            const SizedBox(height: 12),
+                            FittedBox(
+                                fit: BoxFit.scaleDown,
+                                alignment: Alignment.centerLeft,
+                                child: Text(entry.$2.$3,
+                                    style: TextStyle(
+                                        fontSize: 20,
+                                        fontWeight: FontWeight.w800,
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .onSurface))),
+                            const SizedBox(height: 5),
+                            Text(entry.$2.$2,
+                                style: TextStyle(
+                                    fontSize: 10,
+                                    color: context.fitlek.textMuted)),
+                          ]),
+                    )))
+                .toList()));
   }
 
   Widget _buildTabBar() => Padding(
-        padding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
         child: Container(
-          height: 42,
+          height: 44,
           decoration: BoxDecoration(
             color: context.fitlek.card,
             borderRadius: BorderRadius.circular(10),
@@ -1703,235 +1401,267 @@ class _ClientProfileScreenState extends State<ClientProfileScreen> with SingleTi
               fontSize: 10,
             ),
             tabs: const [
-              Tab(text: 'PROFILE'),
-              Tab(text: 'PROGRESS'),
+              Tab(text: 'My details'),
+              Tab(text: 'My progress'),
+              Tab(text: 'Nutrition'),
             ],
           ),
         ),
       );
 
-  Widget _buildProfileTab() {
-    return ListView(
-      padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
-      children: [
-        _sectionLabel('PERSONAL INFORMATION'),
-        const SizedBox(height: 12),
-        _formRow('First name', _firstNameCtrl, Icons.person_rounded),
-        _formRow('Last name', _lastNameCtrl, Icons.person_outline_rounded),
-        _formRow(
-          'Email',
-          _emailCtrl,
-          Icons.email_rounded,
-          readOnly: true,
-          keyboardType: TextInputType.emailAddress,
-        ),
-        _actionTile(Icons.mark_email_read_outlined, 'Change email securely',
-            onTap: () async {
-          final email =
-              await Navigator.of(context).push<String>(MaterialPageRoute(
-            builder: (_) =>
-                ClientChangeEmailScreen(currentEmail: _emailCtrl.text),
-          ));
-          if (!mounted || email == null) return;
-          setState(() => _emailCtrl.text = email);
-          _showSnack('Email updated successfully');
-        }),
-        const SizedBox(height: 20),
-        _sectionLabel('FITNESS DATA'),
-        _actionTile(Icons.location_on_outlined, 'My location', onTap: () async {
-          await Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const UserLocationSettings()));
-        }),
-        const SizedBox(height: 12),
-        _buildGenderSelector(),
-        _formRow(
-          'Height (cm)',
-          _heightCtrl,
-          Icons.height_rounded,
-          keyboardType: TextInputType.number,
-        ),
-        _formRow(
-          'Fitness goal',
-          _goalCtrl,
-          Icons.flag_rounded,
-          maxLines: 2,
-        ),
-        const SizedBox(height: 20),
-        _sectionLabel('SECURITY'),
-        const SizedBox(height: 12),
-        _actionTile(
-          Icons.lock_rounded,
-          'Change password',
-          onTap: _showChangePasswordSheet,
-        ),
-        _actionTile(
-          Icons.notifications_rounded,
-          'Notification preferences',
-          onTap: () {},
-        ),
-        _actionTile(
-          Icons.favorite_rounded,
-          'My Favorite Coaches',
-          onTap: _openFavorites,
-        ),
-        _actionTile(
-          Icons.block_rounded,
-          'Blocked Users',
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                  builder: (_) => BlockedUsersList(token: widget.token)),
+  Widget _buildProfileTab() => RefreshIndicator(
+        onRefresh: () async {
+          if (!_isEditing) {
+            await Future.wait(
+                [_fetchProfile(silent: true), _fetchWeightData()]);
+          }
+        },
+        child: ListView(
+            padding: const EdgeInsets.fromLTRB(20, 10, 20, 28),
+            children: [
+              NutritionGoalCard(clientID: widget.clientID, token: widget.token),
+              if (_isEditing)
+                Padding(
+                    padding: const EdgeInsets.only(bottom: 14),
+                    child: Text(
+                        'Make your changes below, then tap Save changes.',
+                        style: TextStyle(
+                            color: context.fitlek.textSecondary,
+                            fontSize: 12))),
+              _profileGroup(
+                  'About you', 'The details that make this space yours.', [
+                _formRow(
+                    'First name', _firstNameCtrl, Icons.person_outline_rounded),
+                _formRow(
+                    'Last name', _lastNameCtrl, Icons.person_outline_rounded),
+                _buildGenderSelector(),
+                _formRow('Height (cm)', _heightCtrl, Icons.height_rounded,
+                    keyboardType:
+                        const TextInputType.numberWithOptions(decimal: true)),
+              ]),
+              const SizedBox(height: 16),
+              _profileGroup(
+                  'Your fitness interests',
+                  'Choose up to 5 things you enjoy. We’ll use them to help you discover coaches.',
+                  [_buildInterests()]),
+              const SizedBox(height: 16),
+              _profileGroup('Account & location',
+                  'Keep your contact details up to date.', [
+                _settingsRow(
+                    Icons.mail_outline_rounded,
+                    'Email address',
+                    _emailCtrl.text.isEmpty
+                        ? 'Add your email'
+                        : _emailCtrl.text,
+                    _changeEmail),
+                _settingsRow(
+                    Icons.phone_outlined,
+                    'Phone number',
+                    _phone.isEmpty ? 'Add your phone number' : _phone,
+                    _changePhone),
+                _settingsRow(Icons.location_on_outlined, 'My location',
+                    _city.isEmpty ? 'Set your city' : _city, _changeLocation),
+              ]),
+              const SizedBox(height: 16),
+              _profileGroup('Your Sirvya',
+                  'Your people, your preferences, your peace of mind.', [
+                _settingsRow(Icons.favorite_border_rounded, 'Favorite coaches',
+                    'Keep your favorites close', _openFavorites),
+                _settingsRow(
+                    Icons.notifications_none_rounded,
+                    'Notifications',
+                    'Updates about your activity',
+                    () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) =>
+                                const ClientNotificationsScreen()))),
+                _settingsRow(Icons.lock_outline_rounded, 'Password & security',
+                    'Manage your password', _showChangePasswordSheet),
+                _settingsRow(
+                    Icons.block_outlined,
+                    'Blocked accounts',
+                    'Manage who can contact you',
+                    () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) =>
+                                BlockedUsersList(token: widget.token)))),
+                const SizedBox(height: 10),
+                ThemeSelectorTile(controller: ThemeControllerScope.of(context)),
+              ]),
+              const SizedBox(height: 22),
+              OutlinedButton.icon(
+                  onPressed: _goToLogin,
+                  icon: Icon(Icons.logout_rounded,
+                      color: context.fitlek.error, size: 18),
+                  label: Text('Log out',
+                      style: TextStyle(color: context.fitlek.error)),
+                  style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      side: BorderSide(
+                          color: context.fitlek.error.withValues(alpha: .3)),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16)))),
+              TextButton(
+                  onPressed: _showDeleteAccountSheet,
+                  child: Text('Delete my account',
+                      style: TextStyle(
+                          color: context.fitlek.textMuted, fontSize: 12))),
+            ]),
+      );
+
+  Widget _profileGroup(String title, String subtitle, List<Widget> children) =>
+      Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+            color: context.fitlek.card,
+            borderRadius: BorderRadius.circular(22),
+            border: Border.all(color: context.fitlek.border)),
+        child: Material(
+            type: MaterialType.transparency,
+            child:
+                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(title,
+                  style: TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w800,
+                      color: Theme.of(context).colorScheme.onSurface)),
+              const SizedBox(height: 5),
+              Text(subtitle,
+                  style: TextStyle(
+                      fontSize: 12,
+                      height: 1.5,
+                      color: context.fitlek.textMuted)),
+              const SizedBox(height: 14),
+              ...children,
+            ])),
+      );
+
+  Widget _settingsRow(
+          IconData icon, String title, String subtitle, VoidCallback? onTap) =>
+      ListTile(
+        onTap: onTap,
+        contentPadding: EdgeInsets.zero,
+        minLeadingWidth: 30,
+        leading: Container(
+            padding: const EdgeInsets.all(9),
+            decoration: BoxDecoration(
+                color: Theme.of(context)
+                    .colorScheme
+                    .primary
+                    .withValues(alpha: .07),
+                borderRadius: BorderRadius.circular(12)),
+            child: Icon(icon,
+                size: 19, color: Theme.of(context).colorScheme.primary)),
+        title: Text(title,
+            style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: Theme.of(context).colorScheme.onSurface)),
+        subtitle: Text(subtitle,
+            style: TextStyle(
+                fontSize: 11, height: 1.5, color: context.fitlek.textMuted)),
+        trailing: onTap == null
+            ? null
+            : Icon(Icons.chevron_right_rounded,
+                size: 20, color: context.fitlek.textMuted),
+      );
+
+  Widget _buildInterests() {
+    final catalog = <String, String>{
+      for (final category in _categories)
+        '${category['name']}': '${category['icon'] ?? 'fitness_center'}'
+    };
+    for (final interest in _interests) {
+      catalog.putIfAbsent(interest, () => 'fitness_center');
+    }
+    if (!_isEditing && _interests.isEmpty) {
+      return TextButton.icon(
+          onPressed: () => _completeProfile('interests'),
+          icon: const Icon(Icons.add_rounded, size: 18),
+          label: const Text('Choose your interests'));
+    }
+    if (_isEditing && catalog.isEmpty) {
+      return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text(
+            'Interests could not be loaded. Try again to choose from the catalog.',
+            style: TextStyle(color: context.fitlek.textMuted, fontSize: 12)),
+        TextButton(onPressed: _fetchCategories, child: const Text('Try again'))
+      ]);
+    }
+    return Wrap(
+        spacing: 8,
+        runSpacing: 6,
+        children: (_isEditing ? catalog.keys : _interests).map((name) {
+          final selected = _interests.contains(name);
+          if (!_isEditing) {
+            return Chip(
+              label: Text(name,
+                  style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: Theme.of(context).colorScheme.onSurface)),
+              backgroundColor:
+                  Theme.of(context).colorScheme.primary.withValues(alpha: .08),
+              side: BorderSide(color: context.fitlek.border),
+              avatar: CategoryIcon(
+                  name: catalog[name]!,
+                  size: 17,
+                  color: Theme.of(context).colorScheme.primary),
             );
-          },
-        ),
-        _actionTile(Icons.language_rounded, 'Language — English', onTap: () {}),
-        const SizedBox(height: 12),
-        ThemeSelectorTile(controller: ThemeControllerScope.of(context)),
-        const SizedBox(height: 20),
-        GestureDetector(
-          onTap: _goToLogin,
-          child: Container(
-            padding: const EdgeInsets.symmetric(vertical: 14),
-            decoration: BoxDecoration(
-              color: context.fitlek.error.withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                  color: context.fitlek.error.withValues(alpha: 0.25)),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.logout_rounded,
-                    color: context.fitlek.error, size: 16),
-                const SizedBox(width: 8),
-                Text(
-                  'LOG OUT',
-                  style: TextStyle(
-                    color: context.fitlek.error,
-                    fontWeight: FontWeight.w800,
-                    fontSize: 12,
-                    letterSpacing: 1.5,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(height: 10),
-        GestureDetector(
-          onTap: _showDeleteAccountSheet,
-          child: Container(
-            padding: const EdgeInsets.symmetric(vertical: 13),
-            decoration: BoxDecoration(
-              color: Colors.transparent,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.delete_forever_rounded,
-                    color: context.fitlek.textMuted, size: 15),
-                const SizedBox(width: 7),
-                Text(
-                  'Delete Account',
-                  style: TextStyle(
-                    color: context.fitlek.textMuted,
-                    fontWeight: FontWeight.w500,
-                    fontSize: 12,
-                    decoration: TextDecoration.underline,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(height: 4),
-      ],
-    );
+          }
+          return FilterChip(
+              selectedColor:
+                  Theme.of(context).colorScheme.primary.withValues(alpha: .14),
+              labelStyle:
+                  TextStyle(color: Theme.of(context).colorScheme.onSurface),
+              label: Text(name, style: const TextStyle(fontSize: 12)),
+              selected: selected,
+              showCheckmark: false,
+              avatar: CategoryIcon(
+                  name: catalog[name]!,
+                  size: 17,
+                  color: Theme.of(context).colorScheme.primary),
+              onSelected: !_isEditing
+                  ? null
+                  : (value) {
+                      if (value && _interests.length >= 5) {
+                        _showSnack('Choose up to 5 interests.');
+                        return;
+                      }
+                      setState(() {
+                        if (value) {
+                          _interests.add(name);
+                        } else {
+                          _interests.remove(name);
+                        }
+                      });
+                    });
+        }).toList());
   }
 
   Widget _buildGenderSelector() {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      decoration: BoxDecoration(
-        color: context.fitlek.card,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: _isEditing
-              ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.3)
-              : context.fitlek.border,
-        ),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 32,
-            height: 32,
-            decoration: BoxDecoration(
-              color:
-                  Theme.of(context).colorScheme.primary.withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Icon(Icons.wc_rounded,
-                color: Theme.of(context).colorScheme.primary, size: 15),
-          ),
-          const SizedBox(width: 14),
-          Text(
-            'Gender',
-            style: TextStyle(color: context.fitlek.textSecondary, fontSize: 13),
-          ),
-          const Spacer(),
-          if (_isEditing)
-            Row(
-              children: ['Male', 'Female', 'Other'].map((g) {
-                final sel = g == _selectedGender;
-                return GestureDetector(
-                  onTap: () => setState(() => _selectedGender = g),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 150),
-                    margin: const EdgeInsets.only(left: 6),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: sel
-                          ? Theme.of(context).colorScheme.primary
-                          : Colors.transparent,
-                      borderRadius: BorderRadius.circular(6),
-                      border: Border.all(
-                          color: sel
-                              ? Theme.of(context).colorScheme.primary
-                              : context.fitlek.border),
-                    ),
-                    child: Text(
-                      _genderDisplay(g),
-                      style: TextStyle(
-                        color: sel
-                            ? Theme.of(context).colorScheme.onPrimary
-                            : context.fitlek.textMuted,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                  ),
-                );
-              }).toList(),
-            )
-          else
-            Text(
-              _genderDisplay(_selectedGender),
-              style: TextStyle(
-                color: Theme.of(context).colorScheme.onSurface,
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-        ],
-      ),
-    );
+    if (!_isEditing) {
+      return _settingsRow(
+          Icons.wc_outlined, 'Gender', _genderDisplay(_selectedGender), null);
+    }
+    return Padding(
+        padding: const EdgeInsets.only(bottom: 10),
+        child: DropdownButtonFormField<String>(
+          initialValue: ['Male', 'Female', 'Other'].contains(_selectedGender)
+              ? _selectedGender
+              : 'Other',
+          decoration: InputDecoration(
+              labelText: 'Gender', prefixIcon: Icon(Icons.wc_outlined)),
+          items: ['Male', 'Female', 'Other']
+              .map((gender) =>
+                  DropdownMenuItem(value: gender, child: Text(gender)))
+              .toList(),
+          onChanged: (value) {
+            if (value != null) setState(() => _selectedGender = value);
+          },
+        ));
   }
 
   Widget _formRow(
@@ -1942,6 +1672,10 @@ class _ClientProfileScreenState extends State<ClientProfileScreen> with SingleTi
     int maxLines = 1,
     bool readOnly = false,
   }) {
+    if (!_isEditing) {
+      return _settingsRow(
+          icon, label, ctrl.text.isEmpty ? 'Not added yet' : ctrl.text, null);
+    }
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -1981,6 +1715,7 @@ class _ClientProfileScreenState extends State<ClientProfileScreen> with SingleTi
                 const SizedBox(height: 2),
                 _isEditing
                     ? TextField(
+                        key: ValueKey('client-profile-$label'),
                         controller: ctrl,
                         keyboardType: keyboardType,
                         maxLines: maxLines,
@@ -1990,7 +1725,7 @@ class _ClientProfileScreenState extends State<ClientProfileScreen> with SingleTi
                           fontSize: 13,
                           fontWeight: FontWeight.w600,
                         ),
-                        decoration: const InputDecoration(
+                        decoration: InputDecoration(
                           border: InputBorder.none,
                           enabledBorder: InputBorder.none,
                           focusedBorder: InputBorder.none,
@@ -2003,7 +1738,7 @@ class _ClientProfileScreenState extends State<ClientProfileScreen> with SingleTi
                         ),
                       )
                     : Text(
-                        ctrl.text,
+                        ctrl.text.isEmpty ? 'Not added yet' : ctrl.text,
                         style: TextStyle(
                           color: Theme.of(context).colorScheme.onSurface,
                           fontSize: 13,
@@ -2020,600 +1755,32 @@ class _ClientProfileScreenState extends State<ClientProfileScreen> with SingleTi
     );
   }
 
-  Widget _actionTile(IconData icon, String label, {VoidCallback? onTap}) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 10),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        decoration: BoxDecoration(
-          color: context.fitlek.card,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: context.fitlek.border),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 32,
-              height: 32,
-              decoration: BoxDecoration(
-                color: Theme.of(context)
-                    .colorScheme
-                    .primary
-                    .withValues(alpha: 0.08),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Icon(icon,
-                  color: Theme.of(context).colorScheme.primary, size: 15),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Text(
-                label,
-                style: TextStyle(
-                    color: context.fitlek.textSecondary, fontSize: 13),
-              ),
-            ),
-            Icon(
-              Icons.chevron_right_rounded,
-              color: context.fitlek.textMuted,
-              size: 18,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildProgressTab() {
-    if (_loadingWeight && _weightData.isEmpty) {
-      return Center(
-        child: SizedBox(
-          width: 24,
-          height: 24,
-          child: CircularProgressIndicator(
-              color: Theme.of(context).colorScheme.primary, strokeWidth: 2),
-        ),
-      );
-    }
-
-    final hasWeight = _weightStats.current != null;
-    final current = _weightStats.current ?? 0.0;
-    final start = _weightStats.start ?? current;
-    final lost = start - current;
-
-    final hasSeries = _weightData.isNotEmpty;
-    final minW = hasSeries
-        ? _weightData.map((e) => e.weight).reduce(math.min)
-        : current - 2;
-    final maxW = hasSeries
-        ? _weightData.map((e) => e.weight).reduce(math.max)
-        : current + 2;
-    final range = (maxW - minW).abs() + 4;
-
-    return RefreshIndicator(
-      color: Theme.of(context).colorScheme.primary,
-      backgroundColor: context.fitlek.card,
-      onRefresh: _fetchWeightData,
-      child: ListView(
-        padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
-        children: [
-          Row(
-            children: [
-              _progressStat(
-                'Current weight',
-                hasWeight ? '${current.toStringAsFixed(1)} kg' : '—',
-                Icons.monitor_weight_rounded,
-                Theme.of(context).colorScheme.primary,
-              ),
-              const SizedBox(width: 10),
-              _progressStat(
-                lost >= 0 ? 'Lost' : 'Gained',
-                hasWeight
-                    ? '${lost >= 0 ? '-' : '+'}${lost.abs().toStringAsFixed(1)} kg'
-                    : '—',
-                Icons.trending_down_rounded,
-                context.fitlek.success,
-              ),
-              const SizedBox(width: 10),
-              _progressStat(
-                'BMI',
-                _calcBMI(),
-                Icons.favorite_rounded,
-                context.fitlek.info,
-              ),
-            ],
-          ),
-          const SizedBox(height: 20),
-          _sectionLabel('WEIGHT TREND'),
-          const SizedBox(height: 14),
-          if (hasSeries)
-            Container(
-              height: 200,
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: context.fitlek.card,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: context.fitlek.border),
-              ),
-              child: CustomPaint(
-                painter: _WeightChartPainter(
-                  data: _weightData,
-                  minValue: minW - 2,
-                  range: range,
-                  lineColor: Theme.of(context).colorScheme.primary,
-                  gridColor: context.fitlek.border,
-                  labelColor: context.fitlek.textMuted,
-                  dotBgColor: context.fitlek.card,
-                ),
-                size: Size.infinite,
-              ),
-            )
-          else
-            Container(
-              height: 80,
-              decoration: BoxDecoration(
-                color: context.fitlek.card,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: context.fitlek.border),
-              ),
-              child: Center(
-                child: Text(
-                  'Add at least 2 entries to see the chart',
-                  style:
-                      TextStyle(color: context.fitlek.textMuted, fontSize: 12),
-                ),
-              ),
-            ),
-          const SizedBox(height: 20),
-          if (_weightData.isNotEmpty) ...[
-            _sectionLabel('HISTORY — TABLE'),
-            const SizedBox(height: 12),
-            Container(
-              decoration: BoxDecoration(
-                color: context.fitlek.card,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: context.fitlek.border),
-              ),
-              child: Column(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 10,
-                    ),
-                    decoration: BoxDecoration(
-                      border: Border(
-                          bottom: BorderSide(color: context.fitlek.border)),
-                    ),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          flex: 2,
-                          child: Text(
-                            'PERIOD',
-                            style: TextStyle(
-                              color: context.fitlek.textMuted,
-                              fontSize: 10,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: 1,
-                            ),
-                          ),
-                        ),
-                        Expanded(
-                          flex: 2,
-                          child: Text(
-                            'WEIGHT',
-                            style: TextStyle(
-                              color: context.fitlek.textMuted,
-                              fontSize: 10,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: 1,
-                            ),
-                          ),
-                        ),
-                        Expanded(
-                          flex: 2,
-                          child: Text(
-                            'CHANGE',
-                            textAlign: TextAlign.right,
-                            style: TextStyle(
-                              color: context.fitlek.textMuted,
-                              fontSize: 10,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: 1,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  ..._weightData.asMap().entries.map((e) {
-                    final prev = e.key > 0
-                        ? _weightData[e.key - 1].weight
-                        : e.value.weight;
-                    final diff = e.value.weight - prev;
-                    final isLoss = diff <= 0;
-                    final isLast = e.key == _weightData.length - 1;
-                    return Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 12,
-                      ),
-                      decoration: BoxDecoration(
-                        border: isLast
-                            ? null
-                            : Border(
-                                bottom:
-                                    BorderSide(color: context.fitlek.border),
-                              ),
-                      ),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            flex: 2,
-                            child: Text(
-                              e.value.label,
-                              style: TextStyle(
-                                color: Theme.of(context).colorScheme.onSurface,
-                                fontSize: 13,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ),
-                          Expanded(
-                            flex: 2,
-                            child: Text(
-                              '${e.value.weight.toStringAsFixed(1)} kg',
-                              style: TextStyle(
-                                color: Theme.of(context).colorScheme.onSurface,
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                          Expanded(
-                            flex: 2,
-                            child: Align(
-                              alignment: Alignment.centerRight,
-                              child: e.key == 0
-                                  ? Text(
-                                      '—',
-                                      style: TextStyle(
-                                        color: context.fitlek.textMuted,
-                                        fontSize: 12,
-                                      ),
-                                    )
-                                  : Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 8,
-                                        vertical: 3,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: (isLoss
-                                                ? context.fitlek.success
-                                                : context.fitlek.error)
-                                            .withValues(alpha: 0.12),
-                                        borderRadius: BorderRadius.circular(6),
-                                      ),
-                                      child: Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Icon(
-                                            isLoss
-                                                ? Icons.arrow_downward_rounded
-                                                : Icons.arrow_upward_rounded,
-                                            color: isLoss
-                                                ? context.fitlek.success
-                                                : context.fitlek.error,
-                                            size: 11,
-                                          ),
-                                          const SizedBox(width: 3),
-                                          Text(
-                                            '${diff.abs().toStringAsFixed(1)} kg',
-                                            style: TextStyle(
-                                              color: isLoss
-                                                  ? context.fitlek.success
-                                                  : context.fitlek.error,
-                                              fontSize: 11,
-                                              fontWeight: FontWeight.w700,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  }),
-                ],
-              ),
-            ),
-            const SizedBox(height: 20),
-          ],
-          _sectionLabel('ADD AN ENTRY'),
-          const SizedBox(height: 12),
-          _AddWeightWidget(onAdd: _addWeight),
-        ],
-      ),
-    );
-  }
-
-  Widget _progressStat(String label, String value, IconData icon, Color color) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: context.fitlek.card,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: context.fitlek.border),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Icon(icon, color: color, size: 16),
-            const SizedBox(height: 8),
-            Text(
-              value,
-              style: TextStyle(
-                color: color,
-                fontSize: 14,
-                fontWeight: FontWeight.w900,
-              ),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              label,
-              style: TextStyle(color: context.fitlek.textMuted, fontSize: 10),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _sectionLabel(String label) => Row(
-        children: [
-          Container(
-              width: 3,
-              height: 14,
-              color: Theme.of(context).colorScheme.primary),
-          const SizedBox(width: 8),
-          Text(
-            label,
-            style: TextStyle(
-              color: context.fitlek.textMuted,
-              fontSize: 10,
-              fontWeight: FontWeight.w800,
-              letterSpacing: 2,
-            ),
-          ),
-        ],
+  Widget _buildProgressTab() => WeightProgressView(
+        entries: _weightData,
+        current: _weightStats.current,
+        start: _weightStats.start,
+        total: _weightStats.total,
+        bmi: _calcBMI(),
+        loading: _loadingWeight,
+        error: _weightError,
+        onRefresh: _fetchWeightData,
+        onAdd: _addWeight,
       );
 }
 
-class _AddWeightWidget extends StatefulWidget {
-  final Future<void> Function(double) onAdd;
-  const _AddWeightWidget({required this.onAdd});
-
+class _ClientProfileTabs extends SliverPersistentHeaderDelegate {
+  final Widget child;
+  final Color background;
+  _ClientProfileTabs({required this.child, required this.background});
   @override
-  State<_AddWeightWidget> createState() => _AddWeightWidgetState();
-}
-
-class _AddWeightWidgetState extends State<_AddWeightWidget> {
-  final _ctrl = TextEditingController();
-  bool _saving = false;
-
+  double get minExtent => 68;
   @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: context.fitlek.card,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: context.fitlek.border),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              decoration: BoxDecoration(
-                color: Theme.of(context).scaffoldBackgroundColor,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: context.fitlek.border),
-              ),
-              child: TextField(
-                controller: _ctrl,
-                keyboardType: const TextInputType.numberWithOptions(
-                  decimal: true,
-                ),
-                style: TextStyle(
-                    color: Theme.of(context).colorScheme.onSurface,
-                    fontSize: 14),
-                decoration: InputDecoration(
-                  hintText: 'Weight today (kg)',
-                  hintStyle:
-                      TextStyle(color: context.fitlek.textMuted, fontSize: 13),
-                  border: InputBorder.none,
-                  isDense: true,
-                  contentPadding: EdgeInsets.zero,
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(width: 10),
-          GestureDetector(
-            onTap: _saving
-                ? null
-                : () async {
-                    final v = double.tryParse(_ctrl.text);
-                    if (v == null) return;
-                    setState(() => _saving = true);
-                    await widget.onAdd(v);
-                    _ctrl.clear();
-                    if (mounted) setState(() => _saving = false);
-                  },
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 150),
-              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
-              decoration: BoxDecoration(
-                color: _saving
-                    ? Theme.of(context)
-                        .colorScheme
-                        .primary
-                        .withValues(alpha: 0.4)
-                    : Theme.of(context).colorScheme.primary,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: _saving
-                  ? SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        color: Theme.of(context).colorScheme.onPrimary,
-                        strokeWidth: 2,
-                      ),
-                    )
-                  : Text(
-                      'ADD',
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.onPrimary,
-                        fontWeight: FontWeight.w900,
-                        fontSize: 11,
-                        letterSpacing: 1.2,
-                      ),
-                    ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _WeightChartPainter extends CustomPainter {
-  final List<_WeightEntry> data;
-  final double minValue;
-  final double range;
-  final Color lineColor;
-  final Color gridColor;
-  final Color labelColor;
-  final Color dotBgColor;
-
-  const _WeightChartPainter({
-    required this.data,
-    required this.minValue,
-    required this.range,
-    required this.lineColor,
-    required this.gridColor,
-    required this.labelColor,
-    required this.dotBgColor,
-  });
-
+  double get maxExtent => 68;
   @override
-  void paint(Canvas canvas, Size size) {
-    if (data.length < 2) return;
-    final stepX = size.width / (data.length - 1);
-
-    final gridPaint = Paint()
-      ..color = gridColor.withValues(alpha: 0.4)
-      ..strokeWidth = 1;
-    for (int i = 0; i <= 4; i++) {
-      final y = size.height * i / 4;
-      canvas.drawLine(Offset(0, y), Offset(size.width, y), gridPaint);
-    }
-
-    final points = data.asMap().entries.map((e) {
-      final x = e.key * stepX;
-      final normalized = range > 0 ? (e.value.weight - minValue) / range : 0.5;
-      final y =
-          size.height - (normalized * size.height * 0.85) - size.height * 0.05;
-      return Offset(x, y);
-    }).toList();
-
-    final path = Path()..moveTo(points.first.dx, size.height);
-    for (final p in points) {
-      path.lineTo(p.dx, p.dy);
-    }
-    path
-      ..lineTo(points.last.dx, size.height)
-      ..close();
-
-    canvas.drawPath(
-      path,
-      Paint()
-        ..shader = LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            lineColor.withValues(alpha: 0.22),
-            lineColor.withValues(alpha: 0.0)
-          ],
-        ).createShader(Rect.fromLTWH(0, 0, size.width, size.height)),
-    );
-
-    final linePath = Path()..moveTo(points.first.dx, points.first.dy);
-    for (int i = 1; i < points.length; i++) {
-      final cp1 = Offset(
-        (points[i - 1].dx + points[i].dx) / 2,
-        points[i - 1].dy,
-      );
-      final cp2 = Offset((points[i - 1].dx + points[i].dx) / 2, points[i].dy);
-      linePath.cubicTo(
-        cp1.dx,
-        cp1.dy,
-        cp2.dx,
-        cp2.dy,
-        points[i].dx,
-        points[i].dy,
-      );
-    }
-    canvas.drawPath(
-      linePath,
-      Paint()
-        ..color = lineColor
-        ..strokeWidth = 2.5
-        ..style = PaintingStyle.stroke
-        ..strokeCap = StrokeCap.round
-        ..strokeJoin = StrokeJoin.round,
-    );
-
-    final dotFill = Paint()..color = lineColor;
-    final dotBg = Paint()..color = dotBgColor;
-    final labelStyle = TextStyle(
-      color: labelColor,
-      fontSize: 9,
-      fontWeight: FontWeight.w600,
-    );
-
-    for (int i = 0; i < points.length; i++) {
-      canvas.drawCircle(points[i], 5, dotBg);
-      canvas.drawCircle(points[i], 4, dotFill);
-
-      final tp = TextPainter(
-        text: TextSpan(text: data[i].label, style: labelStyle),
-        textDirection: TextDirection.ltr,
-      )..layout();
-      tp.paint(canvas, Offset(points[i].dx - tp.width / 2, size.height - 14));
-
-      final vp = TextPainter(
-        text: TextSpan(
-          text: data[i].weight.toStringAsFixed(1),
-          style: TextStyle(
-            color: lineColor,
-            fontSize: 9,
-            fontWeight: FontWeight.w800,
-          ),
-        ),
-        textDirection: TextDirection.ltr,
-      )..layout();
-      vp.paint(canvas, Offset(points[i].dx - vp.width / 2, points[i].dy - 18));
-    }
-  }
-
+  Widget build(
+          BuildContext context, double shrinkOffset, bool overlapsContent) =>
+      ColoredBox(color: background, child: child);
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
+  bool shouldRebuild(covariant _ClientProfileTabs oldDelegate) =>
+      oldDelegate.child != child || oldDelegate.background != background;
 }

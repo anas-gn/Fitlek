@@ -43,6 +43,14 @@ class ChatMediaStore {
       this.receiptProvider,
       this.cacheDeleteProvider});
   final changes = ValueNotifier<int>(0);
+  // Media cells should refresh only when their own file changes. A global
+  // refresh per download recreated every visible image/audio while scrolling.
+  final mediaChanges = StreamController<int>.broadcast();
+  void _changed(int id) {
+    changes.value++;
+    mediaChanges.add(id);
+  }
+
   final Map<String, Future<SavedChatMedia>> _pending = {};
   final Map<int, Future<Database>> _databases = {};
   bool _syncing = false;
@@ -60,13 +68,25 @@ class ChatMediaStore {
               'CREATE TABLE media (id INTEGER PRIMARY KEY, path TEXT, thumbnail TEXT, url TEXT, checksum TEXT, deleted INTEGER NOT NULL DEFAULT 0, acknowledged INTEGER NOT NULL DEFAULT 0)');
         });
       });
+  // iOS may relocate an app container during restore/update. Persist filenames,
+  // then resolve against the current account folder instead of an old UUID.
+  String? _localPath(Database db, String? stored) {
+    if (stored == null || stored.isEmpty) return null;
+    final filename = paths.basename(stored);
+    if (filename == '.' || filename == '..' || filename.isEmpty) return null;
+    final folder = paths.dirname(db.path);
+    final resolved = paths.normalize(paths.join(folder, filename));
+    return paths.isWithin(folder, resolved) ? resolved : null;
+  }
+
   Future<int?> _userID() async => userProvider != null
       ? await userProvider!()
       : int.tryParse('${(await ApiService.getUserData())?['id']}');
   Future<SavedChatMedia> resolve(
       int id, String? url, String type, bool expired) async {
-    if (kIsWeb)
+    if (kIsWeb) {
       return SavedChatMedia(filePath: expired ? null : url, remote: true);
+    }
     final userID = await _userID();
     if (userID == null || id <= 0) return const SavedChatMedia();
     final key = '$userID:$id';
@@ -87,19 +107,27 @@ class ChatMediaStore {
     final rows = await db.query('media', where: 'id=?', whereArgs: [id]);
     if (rows.isNotEmpty) {
       final row = rows.first;
-      final file = row['path'] as String?;
+      final file = _localPath(db, row['path'] as String?);
+      final thumbnail = _localPath(db, row['thumbnail'] as String?);
       if (row['deleted'] == 1 || file == null || !await File(file).exists()) {
         await db.update('media', {'deleted': 1},
             where: 'id=?', whereArgs: [id]);
-        return SavedChatMedia(thumbnailPath: row['thumbnail'] as String?);
+        return SavedChatMedia(thumbnailPath: thumbnail);
       }
-      if (row['acknowledged'] != 1)
+      final filename = paths.basename(file);
+      final previewName = thumbnail == null ? null : paths.basename(thumbnail);
+      if (row['path'] != filename || row['thumbnail'] != previewName) {
+        await db.update('media', {'path': filename, 'thumbnail': previewName},
+            where: 'id=?', whereArgs: [id]);
+      }
+      if (row['acknowledged'] != 1) {
         await _ack(db, userID, id, row['checksum'] as String);
-      return SavedChatMedia(
-          filePath: file, thumbnailPath: row['thumbnail'] as String?);
+      }
+      return SavedChatMedia(filePath: file, thumbnailPath: thumbnail);
     }
-    if (url == null || !['image', 'audio'].contains(type))
+    if (url == null || !['image', 'audio'].contains(type)) {
       return const SavedChatMedia();
+    }
     Uint8List bytes;
     final cached = downloadProvider == null
         ? await DefaultCacheManager().getFileFromCache(url)
@@ -112,6 +140,9 @@ class ChatMediaStore {
       if (expired) return const SavedChatMedia();
       final response =
           await http.get(Uri.parse(url)).timeout(const Duration(seconds: 30));
+      if ([404, 410].contains(response.statusCode)) {
+        return const SavedChatMedia();
+      }
       final contentType = response.headers['content-type'] ?? '';
       if (response.statusCode != 200 ||
           response.bodyBytes.isEmpty ||
@@ -123,8 +154,9 @@ class ChatMediaStore {
       }
       bytes = response.bodyBytes;
     }
-    if (bytes.isEmpty || bytes.length > 25 * 1024 * 1024)
+    if (bytes.isEmpty || bytes.length > 25 * 1024 * 1024) {
       throw StateError('Invalid downloaded media');
+    }
     if (await _userID() != userID) throw StateError('Account changed');
     final folder = paths.dirname(db.path);
     final file =
@@ -146,14 +178,14 @@ class ChatMediaStore {
         'media',
         {
           'id': id,
-          'path': file.path,
-          'thumbnail': thumb,
+          'path': paths.basename(file.path),
+          'thumbnail': thumb == null ? null : paths.basename(thumb),
           'url': url,
           'checksum': checksum
         },
         conflictAlgorithm: ConflictAlgorithm.abort);
     await _ack(db, userID, id, checksum);
-    changes.value++;
+    _changed(id);
     return SavedChatMedia(filePath: file.path, thumbnailPath: thumb);
   }
 
@@ -161,9 +193,10 @@ class ChatMediaStore {
     if (await _userID() != userID) return;
     final result = await (receiptProvider ?? ApiService.post)(
         '/chat-media/$id/saved', {'sha256': checksum});
-    if (result['ok'] == true)
+    if (result['ok'] == true) {
       await db.update('media', {'acknowledged': 1},
           where: 'id=?', whereArgs: [id]);
+    }
   }
 
   Future<void> deleteLocal(int id, {bool removeThumbnail = false}) async {
@@ -181,7 +214,7 @@ class ChatMediaStore {
     final rows = await db.query('media', where: 'id=?', whereArgs: [id]);
     if (rows.isEmpty) {
       await db.insert('media', {'id': id, 'deleted': 1});
-      changes.value++;
+      _changed(id);
       return;
     }
     final changed = rows.first['deleted'] != 1 ||
@@ -189,20 +222,21 @@ class ChatMediaStore {
     await db.update(
         'media', {'deleted': 1, if (removeThumbnail) 'thumbnail': null},
         where: 'id=?', whereArgs: [id]);
-    final filePath = rows.first['path'] as String?;
+    final filePath = _localPath(db, rows.first['path'] as String?);
     if (filePath != null) {
       final file = File(filePath);
       if (await file.exists()) await file.delete();
     }
-    final thumbnailPath = rows.first['thumbnail'] as String?;
+    final thumbnailPath = _localPath(db, rows.first['thumbnail'] as String?);
     if (removeThumbnail && thumbnailPath != null) {
       final thumbnail = File(thumbnailPath);
       if (await thumbnail.exists()) await thumbnail.delete();
     }
     final url = rows.first['url'] as String?;
-    if (url != null)
+    if (url != null) {
       await (cacheDeleteProvider ?? DefaultCacheManager().removeFile)(url);
-    if (changed) changes.value++;
+    }
+    if (changed) _changed(id);
   }
 
   // Sync all undelivered media on connect/resume, even when no chat is open.

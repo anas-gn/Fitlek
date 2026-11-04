@@ -1,37 +1,55 @@
-name: Deploy Backend to VPS
+name: Deploy to VPS
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-backend
+  cancel-in-progress: false
 
 jobs:
   deploy:
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
-    
+    timeout-minutes: 15
     steps:
-    - name: Checkout Code
-      uses: actions/checkout@v3
-
-    - name: Copy files to VPS via SCP
-      uses: appleboy/scp-action@master
-      with:
-        host: ${{ secrets.VPS_HOST }}
-        username: ${{ secrets.VPS_USERNAME }}
-        key: ${{ secrets.VPS_SSH_KEY }}
-        port: 22
-        source: "./*"
-        target: "/var/www/sirvya-backend"
-        rm: false
-
-    - name: Install Dependencies and Restart PM2
-      uses: appleboy/ssh-action@master
-      with:
-        host: ${{ secrets.VPS_HOST }}
-        username: ${{ secrets.VPS_USERNAME }}
-        key: ${{ secrets.VPS_SSH_KEY }}
-        port: 22
-        script: |
-          cd /var/www/sirvya-backend
-          npm install --production
-          pm2 restart sirvya-backend
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Verify backend
+        run: |
+          npm ci --no-audit --no-fund
+          npm test
+      - name: Package tracked source only
+        run: git archive --format=tar.gz --output=backend-${{ github.sha }}.tar.gz HEAD
+      - name: Upload isolated release
+        uses: appleboy/scp-action@v1.0.0
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          source: backend-${{ github.sha }}.tar.gz
+          target: /var/www/sirvya-artifacts
+      - name: Health check and activate with rollback
+        uses: appleboy/ssh-action@v1.2.5
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          command_timeout: 10m
+          script: |
+            set -eu
+            RELEASE=/var/www/releases/backend-${{ github.sha }}/backend
+            sudo -n install -d -o "$(id -un)" -g "$(id -gn)" "$RELEASE"
+            if [ ! -f "$RELEASE/.release-ready" ]; then
+              tar -xzf /var/www/sirvya-artifacts/backend-${{ github.sha }}.tar.gz -C "$RELEASE"
+            fi
+            cd "$RELEASE"
+            bash scripts/deploy-production.sh

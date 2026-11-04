@@ -18,6 +18,23 @@ function normalizeStringList(value, maxItems, maxLength) {
   return [...unique.values()];
 }
 
+function normalizeCertificationList(value) {
+  if (!Array.isArray(value)) return null;
+  const certs = [];
+  for (const item of value) {
+    if (typeof item === 'object' && item !== null) {
+      certs.push({
+        name: item.name ? String(item.name).trim().substring(0, 120) : '',
+        provider: item.provider ? String(item.provider).trim().substring(0, 120) : '',
+        year: item.year ? String(item.year).trim().substring(0, 20) : '',
+        fileUrl: item.fileUrl ? String(item.fileUrl).trim() : null,
+        status: item.status ? String(item.status).trim() : 'pending'
+      });
+    }
+  }
+  return certs;
+}
+
 function normalizeOptionalString(value, { maxLength = 255, allowEmpty = true } = {}) {
   if (value === undefined) return undefined;
   if (value === null) return allowEmpty ? '' : null;
@@ -32,7 +49,8 @@ router.put('/', requireAuth, requireRole('coach'), async (req, res) => {
   const {
     firstName, lastName, email, gender, bio, specialty, experience, professionalTitle,
     certifications, specialties, publicProfile, directMessaging,
-    instagramPage, avatarUrl, tel, ville,
+    instagramPage, avatarUrl, tel, ville, languages, showGender,
+    categoryID, clientLevels
   } = req.body;
 
   if (!firstName || !lastName || !gender || !bio) {
@@ -77,7 +95,7 @@ router.put('/', requireAuth, requireRole('coach'), async (req, res) => {
 
   const certificationList = certifications === undefined
     ? null
-    : normalizeStringList(certifications, 10, 120);
+    : normalizeCertificationList(certifications);
   const specialtyList = specialties === undefined
     ? null
     : normalizeStringList(specialties, 10, 60);
@@ -95,6 +113,34 @@ router.put('/', requireAuth, requireRole('coach'), async (req, res) => {
   const directMessagingValue = directMessaging === undefined
     ? null
     : (directMessaging === true || directMessaging === 1 ? 1 : 0);
+
+  const showGenderValue = showGender === undefined
+    ? null
+    : (showGender === true || showGender === 1 || showGender === 'true' || showGender === '1' ? 1 : 0);
+
+  const languageList = languages === undefined
+    ? null
+    : normalizeStringList(languages, 15, 60);
+
+  if (languages !== undefined && languageList === null) {
+    return res.status(400).json({ message: 'Languages must be a list.' });
+  }
+
+  const clientLevelsList = clientLevels === undefined
+    ? null
+    : normalizeStringList(clientLevels, 5, 40);
+
+  if (clientLevels !== undefined && clientLevelsList === null) {
+    return res.status(400).json({ message: 'clientLevels must be a list.' });
+  }
+
+  let categoryIDValue = undefined;
+  if (categoryID !== undefined) {
+    categoryIDValue = categoryID === null ? null : parseInt(categoryID, 10);
+    if (categoryID !== null && isNaN(categoryIDValue)) {
+      return res.status(400).json({ message: 'categoryID must be a number.' });
+    }
+  }
 
   // Price is intentionally ignored: coaches do not set a price in the app.
   // Never touch coachprofiles.price from this endpoint.
@@ -142,6 +188,9 @@ router.put('/', requireAuth, requireRole('coach'), async (req, res) => {
       'specialties = COALESCE(?, specialties)',
       'publicProfile = COALESCE(?, publicProfile)',
       'directMessaging = COALESCE(?, directMessaging)',
+      'languages = COALESCE(?, languages)',
+      'showGender = COALESCE(?, showGender)',
+      'clientLevels = COALESCE(?, clientLevels)',
     ];
     const profileParams = [
       bioValue,
@@ -152,8 +201,15 @@ router.put('/', requireAuth, requireRole('coach'), async (req, res) => {
       specialtyList === null ? null : JSON.stringify(specialtyList),
       publicProfileValue,
       directMessagingValue,
+      languageList === null ? null : JSON.stringify(languageList),
+      showGenderValue,
+      clientLevelsList === null ? null : JSON.stringify(clientLevelsList),
     ];
 
+    if (categoryIDValue !== undefined) {
+      profileSets.push('categoryID = ?');
+      profileParams.push(categoryIDValue);
+    }
     if (instagramValue !== undefined) {
       profileSets.push('instagramPage = ?');
       profileParams.push(instagramValue);

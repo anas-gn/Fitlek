@@ -1,9 +1,16 @@
+import {CHAT_MEDIA_RECEIPTS_SCHEMA} from '../services/chatMediaDelivery.js';
+import {ensureChatDeletionSchema} from '../services/chatDeletion.js';
+import {CLIENT_REFERRAL_SCHEMA} from '../services/clientReferral.js';
+import {USER_LOCATION_SCHEMA} from '../services/userLocation.js';
+import {EMAIL_CHANGE_SCHEMA} from '../services/emailChange.js';
 import pool from './db.js';
 
 // Idempotently ensures the Coach-to-Coach referral table exists.
 // Additive only — never drops or alters existing tables/columns.
 // See backend/migrations/2026_coach_referrals.sql for rationale.
 export async function ensureReferralSchema() {
+  await ensureChatDeletionSchema(pool);
+  await pool.query(CLIENT_REFERRAL_SCHEMA);
   await pool.query(`
     CREATE TABLE IF NOT EXISTS coachreferrals (
       id INT AUTO_INCREMENT PRIMARY KEY,
@@ -39,6 +46,7 @@ export async function ensureReferralSchema() {
 // Client-to-Coach invitations start at 0 while pending and award 20 only when
 // accepted. Coach-to-Coach code referrals are separate and award 40.
 export async function ensureClientInvitationSchema() {
+  await pool.query(CHAT_MEDIA_RECEIPTS_SCHEMA);
   const [columns] = await pool.query(
     `SELECT COLUMN_DEFAULT, COLUMN_TYPE
      FROM information_schema.COLUMNS
@@ -71,7 +79,7 @@ export async function ensureCoachProfileColumns() {
         AND TABLE_NAME = 'coachprofiles'
         AND COLUMN_NAME IN (
           'specialty', 'experience', 'professionalTitle', 'certifications',
-          'specialties', 'publicProfile', 'directMessaging'
+          'specialties', 'clientLevels', 'publicProfile', 'directMessaging'
         )`
   );
   const existing = new Set(cols.map((c) => c.COLUMN_NAME));
@@ -98,6 +106,11 @@ export async function ensureCoachProfileColumns() {
   if (!existing.has('specialties')) {
     await pool.query(
       `ALTER TABLE coachprofiles ADD COLUMN specialties TEXT NULL AFTER certifications`
+    );
+  }
+  if (!existing.has('clientLevels')) {
+    await pool.query(
+      `ALTER TABLE coachprofiles ADD COLUMN clientLevels TEXT NULL AFTER specialties`
     );
   }
   if (!existing.has('publicProfile')) {
@@ -134,6 +147,42 @@ export async function ensureCoachProfileColumns() {
   }
 }
 
+export async function ensureCoachLocationsSchema() {
+  const [cols] = await pool.query(
+    `SELECT COLUMN_NAME FROM information_schema.COLUMNS
+      WHERE TABLE_SCHEMA = DATABASE()
+        AND TABLE_NAME = 'coachprofiles'`
+  );
+  
+  const existing = new Set(cols.map((c) => c.COLUMN_NAME));
+  
+  if (!existing.has('coachingFormats')) {
+    await pool.query(
+      `ALTER TABLE coachprofiles ADD COLUMN coachingFormats JSON NULL AFTER directMessaging`
+    );
+  }
+  if (!existing.has('gymName')) {
+    await pool.query(
+      `ALTER TABLE coachprofiles ADD COLUMN gymName VARCHAR(120) NULL AFTER coachingFormats`
+    );
+  }
+  if (!existing.has('gymAddress')) {
+    await pool.query(
+      `ALTER TABLE coachprofiles ADD COLUMN gymAddress VARCHAR(255) NULL AFTER gymName`
+    );
+  }
+  if (!existing.has('gymImage')) {
+    await pool.query(
+      `ALTER TABLE coachprofiles ADD COLUMN gymImage VARCHAR(500) NULL AFTER gymAddress`
+    );
+  }
+  if (!existing.has('serviceArea')) {
+    await pool.query(
+      `ALTER TABLE coachprofiles ADD COLUMN serviceArea VARCHAR(255) NULL AFTER gymImage`
+    );
+  }
+}
+
 // Idempotently ensures termsAccepted and termsAcceptedAt columns exist on users table.
 export async function ensureTermsAcceptedColumn() {
   const [cols] = await pool.query(
@@ -157,6 +206,10 @@ export async function ensureTermsAcceptedColumn() {
 
 // Idempotently ensures the OTP verifications table exists.
 export async function ensureOTPSchema() {
+  const [interestColumns] = await pool.query("SHOW COLUMNS FROM users LIKE 'interests'");
+  if (!interestColumns.length) await pool.query('ALTER TABLE users ADD COLUMN interests JSON NULL');
+  await pool.query(EMAIL_CHANGE_SCHEMA);
+  await pool.query(USER_LOCATION_SCHEMA);
   await pool.query(`
     CREATE TABLE IF NOT EXISTS otp_verifications (
       id INT AUTO_INCREMENT PRIMARY KEY,
@@ -188,6 +241,7 @@ export async function ensureNotificationSchema() {
       actorName VARCHAR(120) NULL,
       actorAvatar TEXT NULL,
       isRead TINYINT(1) NOT NULL DEFAULT 0,
+      pushDelivered TINYINT(1) NOT NULL DEFAULT 0,
       uniqueKey VARCHAR(160) NOT NULL,
       createdAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
       UNIQUE KEY uniq_notif_key (uniqueKey),
@@ -196,6 +250,11 @@ export async function ensureNotificationSchema() {
       CONSTRAINT fk_notif_recipient FOREIGN KEY (recipientUserID) REFERENCES users(id) ON DELETE CASCADE
     )
   `);
+  const [deliveryColumns] = await pool.query("SHOW COLUMNS FROM notifications LIKE 'pushDelivered'");
+  if (!deliveryColumns.length) {
+    await pool.query('ALTER TABLE notifications ADD COLUMN pushDelivered TINYINT(1) NOT NULL DEFAULT 1');
+    await pool.query('ALTER TABLE notifications ALTER COLUMN pushDelivered SET DEFAULT 0');
+  }
 }
 
 // Idempotently ensures the fcmToken column exists on the users table.
@@ -296,9 +355,93 @@ export async function ensureCoachImagesSchema() {
       id INT AUTO_INCREMENT PRIMARY KEY,
       coachID BIGINT UNSIGNED NOT NULL,
       urlImage VARCHAR(600) NOT NULL,
+      caption VARCHAR(255) NULL,
       createdAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
       KEY idx_coachimages_coachID (coachID),
       CONSTRAINT fk_coachimages_coachID FOREIGN KEY (coachID) REFERENCES users(id) ON DELETE CASCADE
     )
   `);
+  
+  const [cols] = await pool.query(
+    `SELECT COLUMN_NAME FROM information_schema.COLUMNS
+     WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'coachimages'`
+  );
+  const existingCols = cols.map((c) => c.COLUMN_NAME);
+
+  if (!existingCols.includes('caption')) {
+    await pool.query('ALTER TABLE coachimages ADD COLUMN caption VARCHAR(255) NULL AFTER urlImage');
+  }
+}
+
+// Idempotently ensures the coach_packages table and reservations.packageID column exist.
+export async function ensureCoachPackagesSchema() {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS coach_packages (
+      id INT AUTO_INCREMENT PRIMARY KEY,
+      coachID BIGINT UNSIGNED NOT NULL,
+      name VARCHAR(120) NOT NULL,
+      description TEXT NULL,
+      sessions INT UNSIGNED NULL COMMENT 'Number of sessions included, NULL = custom',
+      duration INT UNSIGNED NULL DEFAULT 60 COMMENT 'Duration in minutes',
+      price DECIMAL(10,2) NULL COMMENT 'NULL means price to be discussed',
+      isPriceOnRequest TINYINT(1) NOT NULL DEFAULT 0,
+      locations JSON NULL COMMENT '["Gym", "Online", etc]',
+      imageUrl VARCHAR(500) NULL,
+      isActive TINYINT(1) NOT NULL DEFAULT 1,
+      sortOrder TINYINT UNSIGNED NOT NULL DEFAULT 1,
+      createdAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updatedAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+      KEY idx_pkg_coachID (coachID),
+      CONSTRAINT fk_pkg_coachID FOREIGN KEY (coachID) REFERENCES users(id) ON DELETE CASCADE
+    )
+  `);
+
+  const [cols] = await pool.query(
+    `SELECT COLUMN_NAME FROM information_schema.COLUMNS
+     WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'coach_packages'`
+  );
+  const existingCols = cols.map((c) => c.COLUMN_NAME);
+
+  if (!existingCols.includes('duration')) {
+    await pool.query('ALTER TABLE coach_packages ADD COLUMN duration INT UNSIGNED NULL DEFAULT 60 AFTER sessions');
+  }
+  if (!existingCols.includes('isPriceOnRequest')) {
+    await pool.query('ALTER TABLE coach_packages ADD COLUMN isPriceOnRequest TINYINT(1) NOT NULL DEFAULT 0 AFTER price');
+  }
+  if (!existingCols.includes('locations')) {
+    await pool.query('ALTER TABLE coach_packages ADD COLUMN locations JSON NULL AFTER isPriceOnRequest');
+  }
+  if (!existingCols.includes('imageUrl')) {
+    await pool.query('ALTER TABLE coach_packages ADD COLUMN imageUrl VARCHAR(500) NULL AFTER locations');
+  }
+
+  // Add packageID column to reservations if not present
+  const [resvCols] = await pool.query(
+    `SELECT COLUMN_NAME FROM information_schema.COLUMNS
+     WHERE TABLE_SCHEMA = DATABASE()
+       AND TABLE_NAME = 'reservations'
+       AND COLUMN_NAME = 'packageID'
+     LIMIT 1`
+  );
+  if (!resvCols.length) {
+    await pool.query(
+      `ALTER TABLE reservations
+       ADD COLUMN packageID INT NULL DEFAULT NULL AFTER price`
+    );
+  }
+
+  // Add packageName snapshot column to reservations if not present
+  const [resvNameCols] = await pool.query(
+    `SELECT COLUMN_NAME FROM information_schema.COLUMNS
+     WHERE TABLE_SCHEMA = DATABASE()
+       AND TABLE_NAME = 'reservations'
+       AND COLUMN_NAME = 'packageName'
+     LIMIT 1`
+  );
+  if (!resvNameCols.length) {
+    await pool.query(
+      `ALTER TABLE reservations
+       ADD COLUMN packageName VARCHAR(120) NULL DEFAULT NULL AFTER packageID`
+    );
+  }
 }

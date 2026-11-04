@@ -1,3 +1,4 @@
+import '../../components/app_dialog.dart';
 import '../../services/live_updates.dart';
 import 'dart:convert';
 import 'package:flutter/material.dart';
@@ -507,6 +508,7 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> with SingleTicker
           pageBuilder: (_, __, ___) => ClientConversationScreen(
             conversationID: _conversationID!,
             clientID: widget.clientID!,
+            coachID: _coach?.id ?? widget.session.coachID,
             token: widget.token,
             coachName: _coach?.fullName ?? widget.session.coachName,
             coachAvatar: _coach?.avatarUrl ?? widget.session.coachImageUrl,
@@ -557,7 +559,7 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> with SingleTicker
     showDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setDialogState) => AlertDialog(
+        builder: (ctx, setDialogState) => AppDialog(
           backgroundColor: context.fitlek.card,
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
@@ -642,7 +644,7 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> with SingleTicker
   void _showBlockDialog(String name, int coachID) {
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
+      builder: (ctx) => AppDialog(
         backgroundColor: context.fitlek.card,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: Text('Block $name?',

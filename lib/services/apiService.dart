@@ -13,6 +13,7 @@ import 'package:fitlek1/constants/urls.dart' as urls;
 import 'package:fitlek1/globals.dart';
 import 'package:fitlek1/screens/ENG/login.dart';
 import 'onboarding_service.dart';
+import 'connection_recovery.dart';
 
 class ApiService {
   static const String baseUrl = urls.baseUrl;
@@ -43,12 +44,20 @@ class ApiService {
       await prefs.setBool(OnboardingService.seenKey, true);
     }
     await prefs.remove('token');
-    try { await BackgroundLocationService.synchronize(false); } catch (_) {}
+    try {
+      await BackgroundLocationService.synchronize(false);
+    } catch (_) {}
     await prefs.remove('role');
     await prefs.remove('userId');
     await prefs.remove('firstName');
     for (final key in prefs.getKeys()) {
-      if (key != OnboardingService.seenKey && key != 'app_theme_mode') {
+      if (key != OnboardingService.seenKey &&
+          key != 'app_theme_mode' &&
+          !key.startsWith('app_version_policy_') &&
+          // Device-owned meal history contains the links to local photos.
+          // Keep each account's records, as we do for local chat media.
+          !RegExp(r'^(meal_history_v1_|nutrition_synced_v1_)\d+$')
+              .hasMatch(key)) {
         await prefs.remove(key);
       }
     }
@@ -185,6 +194,7 @@ class ApiService {
 
       return _handle(response);
     } on http.ClientException catch (e) {
+      ConnectionRecovery.report(e);
       if (kDebugMode) debugPrint('NETWORK ERROR GET $path: $e');
       return {
         'ok': false,
@@ -193,6 +203,13 @@ class ApiService {
       };
     } catch (e) {
       if (kDebugMode) debugPrint('ERROR GET $path: $e');
+      if (ConnectionRecovery.report(e)) {
+        return {
+          'ok': false,
+          'message': ConnectionRecovery.message,
+          'status': 0
+        };
+      }
       return {'ok': false, 'message': 'Error: $e', 'status': 0};
     }
   }
@@ -221,6 +238,7 @@ class ApiService {
       return _handle(response);
     } on http.ClientException catch (e) {
       if (kDebugMode) debugPrint('NETWORK ERROR POST $path: $e');
+      ConnectionRecovery.report(e);
       return {
         'ok': false,
         'message': 'Network error. Check your connection.',
@@ -228,6 +246,13 @@ class ApiService {
       };
     } catch (e) {
       if (kDebugMode) debugPrint('ERROR POST $path: $e');
+      if (ConnectionRecovery.report(e)) {
+        return {
+          'ok': false,
+          'message': ConnectionRecovery.message,
+          'status': 0
+        };
+      }
       return {'ok': false, 'message': 'Error: $e', 'status': 0};
     }
   }
@@ -244,6 +269,13 @@ class ApiService {
           .timeout(const Duration(seconds: 15));
       return _handle(response);
     } catch (e) {
+      if (ConnectionRecovery.report(e)) {
+        return {
+          'ok': false,
+          'message': ConnectionRecovery.message,
+          'status': 0
+        };
+      }
       return {'ok': false, 'message': 'Error: $e', 'status': 0};
     }
   }
@@ -263,6 +295,13 @@ class ApiService {
           .timeout(const Duration(seconds: 15));
       return _handle(response);
     } catch (e) {
+      if (ConnectionRecovery.report(e)) {
+        return {
+          'ok': false,
+          'message': ConnectionRecovery.message,
+          'status': 0
+        };
+      }
       return {'ok': false, 'message': 'Error: $e', 'status': 0};
     }
   }
@@ -275,6 +314,13 @@ class ApiService {
           .timeout(const Duration(seconds: 15));
       return _handle(response);
     } catch (e) {
+      if (ConnectionRecovery.report(e)) {
+        return {
+          'ok': false,
+          'message': ConnectionRecovery.message,
+          'status': 0
+        };
+      }
       return {'ok': false, 'message': 'Error: $e', 'status': 0};
     }
   }
@@ -299,12 +345,14 @@ class ApiService {
 
       fields.forEach((k, v) => request.fields[k] = v);
 
-      var uploadBytes=fileBytes;
-      var uploadName=fileName;
-      var uploadMime=mimeType;
+      var uploadBytes = fileBytes;
+      var uploadName = fileName;
+      var uploadMime = mimeType;
       if (mimeType.startsWith('image/')) {
-        final image=await ImageUploadService.prepare(fileBytes,fileName);
-        uploadBytes=image.bytes;uploadName=image.filename;uploadMime=image.mimeType;
+        final image = await ImageUploadService.prepare(fileBytes, fileName);
+        uploadBytes = image.bytes;
+        uploadName = image.filename;
+        uploadMime = image.mimeType;
       }
       final parts = uploadMime.split('/');
       request.files.add(http.MultipartFile.fromBytes(
@@ -319,8 +367,15 @@ class ApiService {
       final response = await http.Response.fromStream(streamed);
       return _handle(response);
     } on FormatException catch (e) {
-      return {'ok':false,'message':e.message,'status':0};
+      return {'ok': false, 'message': e.message, 'status': 0};
     } catch (e) {
+      if (ConnectionRecovery.report(e)) {
+        return {
+          'ok': false,
+          'message': ConnectionRecovery.message,
+          'status': 0
+        };
+      }
       return {'ok': false, 'message': 'Upload error: $e', 'status': 0};
     }
   }

@@ -1,3 +1,5 @@
+import '../app_dialog.dart';
+import 'dart:async';
 import 'dart:io';
 import 'dart:ui';
 import 'package:flutter/material.dart';
@@ -11,6 +13,7 @@ class LocalChatMedia extends StatefulWidget {
   final String? url, caption;
   final String type;
   final bool expired, isMe;
+  final ChatMediaStore? store;
   const LocalChatMedia(
       {super.key,
       required this.messageID,
@@ -18,17 +21,25 @@ class LocalChatMedia extends StatefulWidget {
       required this.type,
       required this.expired,
       required this.isMe,
+      this.store,
       this.caption});
   @override
   State<LocalChatMedia> createState() => _LocalChatMediaState();
 }
 
 class _LocalChatMediaState extends State<LocalChatMedia> {
+  Color get _ink => widget.isMe
+      ? const Color(0xFF123E37)
+      : Theme.of(context).colorScheme.onSurface;
   Future<SavedChatMedia>? _loading;
+  StreamSubscription<int>? _changes;
+  ChatMediaStore get _store => widget.store ?? ChatMediaStore.instance;
   @override
   void initState() {
     super.initState();
-    ChatMediaStore.instance.changes.addListener(_refresh);
+    _changes = _store.mediaChanges.stream.listen((id) {
+      if (id == widget.messageID) _refresh();
+    });
   }
 
   @override
@@ -36,12 +47,14 @@ class _LocalChatMediaState extends State<LocalChatMedia> {
     super.didUpdateWidget(old);
     if (old.messageID != widget.messageID ||
         old.url != widget.url ||
-        old.expired != widget.expired) _loading = null;
+        old.expired != widget.expired) {
+      _loading = null;
+    }
   }
 
   @override
   void dispose() {
-    ChatMediaStore.instance.changes.removeListener(_refresh);
+    _changes?.cancel();
     super.dispose();
   }
 
@@ -52,7 +65,7 @@ class _LocalChatMediaState extends State<LocalChatMedia> {
   Future<void> _delete() async {
     final confirmed = await showDialog<bool>(
         context: context,
-        builder: (ctx) => AlertDialog(
+        builder: (ctx) => AppDialog(
                 title: const Text('Delete from this phone?'),
                 content: const Text(
                     'The message stays in your history. Once the server copy is removed, this file cannot be downloaded again.'),
@@ -64,14 +77,13 @@ class _LocalChatMediaState extends State<LocalChatMedia> {
                       onPressed: () => Navigator.pop(ctx, true),
                       child: const Text('Delete file'))
                 ]));
-    if (confirmed == true)
-      await ChatMediaStore.instance.deleteLocal(widget.messageID);
+    if (confirmed == true) await _store.deleteLocal(widget.messageID);
   }
 
   Widget _missing(String? thumbnail) {
     return GestureDetector(
       onTap: () => ApiService.showError(context,
-          "Can't download. This file is no longer available on this phone."),
+          "This file was stored on the original device. Deleting the app removes local photos and voice notes. Ask the sender to resend it."),
       child: Container(
           width: 190,
           height: widget.type == 'image' ? 140 : 64,
@@ -96,11 +108,14 @@ class _LocalChatMediaState extends State<LocalChatMedia> {
                       widget.type == 'image'
                           ? Icons.image_not_supported_outlined
                           : Icons.volume_off_outlined,
-                      size: 24),
+                      size: 24,
+                      color: _ink),
                   const SizedBox(height: 6),
-                  const Text("Can't download",
-                      style:
-                          TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+                  Text("Not on this device",
+                      style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: _ink)),
                 ])),
               ]))),
     );
@@ -109,32 +124,23 @@ class _LocalChatMediaState extends State<LocalChatMedia> {
   @override
   Widget build(BuildContext context) {
     // Temporary optimistic bubbles wait for the server's real message ID.
-    if (widget.messageID <= 0)
-      return const Padding(
-          padding: EdgeInsets.all(20),
-          child: SizedBox(
-              width: 20,
-              height: 20,
-              child: CircularProgressIndicator(strokeWidth: 2)));
-    _loading ??= ChatMediaStore.instance
-        .resolve(widget.messageID, widget.url, widget.type, widget.expired);
+    if (widget.messageID <= 0) return _frame(_waiting('Sending…'));
+    _loading ??= _store.resolve(
+        widget.messageID, widget.url, widget.type, widget.expired);
     return FutureBuilder<SavedChatMedia>(
         future: _loading,
         builder: (context, snapshot) {
           Widget media;
           final saved = snapshot.data;
           if (snapshot.hasError) {
-            media = TextButton.icon(
-                onPressed: _refresh,
-                icon: const Icon(Icons.download_rounded),
-                label: const Text('Retry download'));
+            media = Center(
+                child: TextButton.icon(
+                    onPressed: _refresh,
+                    style: TextButton.styleFrom(foregroundColor: _ink),
+                    icon: const Icon(Icons.download_rounded),
+                    label: const Text('Retry download')));
           } else if (saved == null) {
-            media = const Padding(
-                padding: EdgeInsets.all(30),
-                child: SizedBox(
-                    width: 22,
-                    height: 22,
-                    child: CircularProgressIndicator(strokeWidth: 2)));
+            media = _waiting('Downloading…');
           } else if (saved.filePath == null) {
             media = _missing(saved.thumbnailPath);
           } else {
@@ -160,10 +166,22 @@ class _LocalChatMediaState extends State<LocalChatMedia> {
                           child: saved.remote
                               ? Image.network(file,
                                   fit: BoxFit.cover,
+                                  cacheWidth: 900,
+                                  frameBuilder:
+                                      (_, child, frame, synchronous) =>
+                                          synchronous || frame != null
+                                              ? child
+                                              : _waiting('Loading photo…'),
                                   errorBuilder: (_, __, ___) =>
                                       _missing(saved.thumbnailPath))
                               : Image.file(File(file),
                                   fit: BoxFit.cover,
+                                  cacheWidth: 900,
+                                  frameBuilder:
+                                      (_, child, frame, synchronous) =>
+                                          synchronous || frame != null
+                                              ? child
+                                              : _waiting('Loading photo…'),
                                   errorBuilder: (_, __, ___) =>
                                       _missing(saved.thumbnailPath))),
                     ),
@@ -173,12 +191,33 @@ class _LocalChatMediaState extends State<LocalChatMedia> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                media,
+                _frame(media),
                 if (widget.caption?.isNotEmpty == true) ...[
                   const SizedBox(height: 6),
-                  Text(widget.caption!)
+                  Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 5),
+                      child: Text(widget.caption!))
                 ]
               ]);
         });
   }
+
+  Widget _frame(Widget child) => widget.type == 'image'
+      ? SizedBox(
+          width: double.infinity,
+          child: AspectRatio(
+              aspectRatio: 4 / 3,
+              child: ClipRRect(
+                  borderRadius: BorderRadius.circular(17), child: child)))
+      : SizedBox(width: 280, height: 53, child: child);
+
+  Widget _waiting(String label) => Center(
+          child: Column(mainAxisSize: MainAxisSize.min, children: [
+        SizedBox(
+            width: 21,
+            height: 21,
+            child: CircularProgressIndicator(strokeWidth: 2, color: _ink)),
+        const SizedBox(height: 6),
+        Text(label, style: TextStyle(fontSize: 10, color: _ink)),
+      ]));
 }

@@ -1,19 +1,25 @@
 import 'dart:async';
 import 'package:flutter/widgets.dart';
 import 'socketService.dart';
+import 'connection_recovery.dart';
 
 /// Read screens refresh authoritative data without discarding form input or routes.
 mixin LiveUpdates<T extends StatefulWidget> on State<T> {
   StreamSubscription<Map<String, dynamic>>? _liveSubscription;
+  StreamSubscription<void>? _recoverySubscription;
   Timer? _liveDebounce;
   bool _liveBusy = false;
   bool _liveAgain = false;
   Set<String> get liveDomains;
+  bool get enableLiveUpdates => true;
   Future<void> refreshLiveData();
 
   @override
   void initState() {
     super.initState();
+    if (!enableLiveUpdates) return;
+    _recoverySubscription =
+        ConnectionRecovery.refreshes.listen((_) => _refreshLive());
     SocketService().connect();
     _liveSubscription = SocketService().updates.listen((event) {
       final domain = event['domain'];
@@ -48,6 +54,7 @@ mixin LiveUpdates<T extends StatefulWidget> on State<T> {
   void dispose() {
     _liveDebounce?.cancel();
     _liveSubscription?.cancel();
+    _recoverySubscription?.cancel();
     super.dispose();
   }
 }

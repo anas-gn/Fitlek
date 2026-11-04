@@ -1,3 +1,4 @@
+import '../../components/app_dialog.dart';
 import '../../services/image_upload_service.dart';
 import 'package:http_parser/http_parser.dart';
 import '../../services/media_picker_service.dart';
@@ -489,7 +490,7 @@ final bytes = image.bytes;
     showDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setDialogState) => AlertDialog(
+        builder: (ctx, setDialogState) => AppDialog(
           backgroundColor: const Color(0xFF1E3A32),
           title: const Text('Edit Gym Location', style: TextStyle(color: Colors.white)),
           content: SingleChildScrollView(
@@ -499,7 +500,7 @@ final bytes = image.bytes;
                 TextField(
                   controller: TextEditingController(text: tempName)..selection = TextSelection.fromPosition(TextPosition(offset: tempName.length)),
                   style: const TextStyle(color: Colors.white),
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     labelText: 'Gym Name',
                     labelStyle: TextStyle(color: Colors.white70),
                     hintText: 'e.g., Atlas Gym',
@@ -511,7 +512,7 @@ final bytes = image.bytes;
                 TextField(
                   controller: TextEditingController(text: tempAddress)..selection = TextSelection.fromPosition(TextPosition(offset: tempAddress.length)),
                   style: const TextStyle(color: Colors.white),
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     labelText: 'Neighborhood/Address',
                     labelStyle: TextStyle(color: Colors.white70),
                     hintText: 'e.g., Maarif - Casablanca',

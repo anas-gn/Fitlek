@@ -81,6 +81,8 @@ jobs:
         run: python scripts/ios_ci.py prepare
       - name: Resolve Flutter dependencies
         run: flutter pub get
+      - name: Verify startup and local chat storage
+        run: flutter test test/video_splash_screen_test.dart test/app_version_checker_test.dart test/app_version_policy_test.dart test/connection_recovery_test.dart test/session_review_edit_test.dart test/live_updates_test.dart test/chat_media_store_test.dart test/conversation_ui_test.dart --timeout 60s
       - name: Configure App Store signing
         run: |
           keychain initialize

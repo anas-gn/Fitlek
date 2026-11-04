@@ -45,6 +45,13 @@ void main() {
     ));
     await tester.pumpAndSettle();
     expect(find.text('VIEW PROFILE'), findsNWidgets(2));
+    final photo =
+        tester.getRect(find.byKey(const ValueKey('favorite-photo-1')));
+    final card = tester.getRect(find.byKey(const ValueKey('favorite-card-1')));
+    expect(photo.top - card.top, closeTo(1, .1));
+    expect(
+        card.bottom - photo.bottom, closeTo(15, .1)); // Border + list spacing.
+    expect(photo.height, greaterThan(124));
     expect(tester.takeException(), isNull);
     final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
     await mouse.addPointer(location: const Offset(180, 220));

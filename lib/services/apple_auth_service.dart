@@ -36,6 +36,7 @@ class AppleAuthService {
     double? weight,
     Map<String, dynamic>? location,
     List<String>? interests,
+    Map<String, dynamic>? nutritionPlan,
   }) async {
     try {
       if (kIsWeb || defaultTargetPlatform != TargetPlatform.iOS) {
@@ -76,8 +77,9 @@ class AppleAuthService {
         throw Exception('Could not retrieve Firebase ID token.');
       }
 
-      if (kDebugMode)
+      if (kDebugMode) {
         debugPrint('🔐 Firebase ID Token obtained, sending to backend...');
+      }
 
       final Map<String, dynamic> requestBody = {
         'idToken': firebaseIdToken,
@@ -90,6 +92,7 @@ class AppleAuthService {
         requestBody['height'] = height;
         requestBody['weight'] = weight;
         if (interests != null) requestBody['interests'] = interests;
+        if (nutritionPlan != null) requestBody['nutritionPlan'] = nutritionPlan;
         if (location != null) requestBody['location'] = location;
       }
 
@@ -142,11 +145,13 @@ class AppleAuthService {
       }
     } catch (e) {
       if (kDebugMode) debugPrint('🔥 AppleAuthService Error: $e');
-      if (e is FirebaseAuthException)
+      if (e is FirebaseAuthException) {
         throw Exception(socialAuthError(e, 'Apple'));
+      }
       if (e is SignInWithAppleAuthorizationException &&
-          e.code == AuthorizationErrorCode.canceled)
+          e.code == AuthorizationErrorCode.canceled) {
         throw Exception('cancelled');
+      }
       rethrow;
     }
   }

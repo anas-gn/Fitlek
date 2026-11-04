@@ -77,14 +77,14 @@ class _LocationPickerState extends State<LocationPicker> {
         const SizedBox(height: 10),
         TextField(
             controller: _city,
-            decoration: const InputDecoration(labelText: 'City'),
+            decoration: InputDecoration(labelText: 'City'),
             readOnly: true,
             enableInteractiveSelection: false),
         const SizedBox(height: 10),
         TextField(
             controller: _address,
             decoration:
-                const InputDecoration(labelText: 'Detected address (private)'),
+                InputDecoration(labelText: 'Detected address (private)'),
             readOnly: true,
             enableInteractiveSelection: false),
         const SizedBox(height: 8),

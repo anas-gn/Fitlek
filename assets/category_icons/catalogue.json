@@ -1,0 +1,306 @@
+[
+  {
+    "key": "svgrepo:28674",
+    "slug": "dumbbell-outline",
+    "label": "Haltère",
+    "tags": "musculation strength poids weight training",
+    "license": "CC0",
+    "group": "Musculation"
+  },
+  {
+    "key": "svgrepo:62507",
+    "slug": "dumbbells-outline",
+    "label": "Haltères",
+    "tags": "musculation crossfit strength weights",
+    "license": "CC0",
+    "group": "Musculation"
+  },
+  {
+    "key": "svgrepo:287251",
+    "slug": "dumbbell-gym",
+    "label": "Musculation",
+    "tags": "gym strength bodybuilding fitness",
+    "license": "CC0",
+    "group": "Musculation"
+  },
+  {
+    "key": "svgrepo:256487",
+    "slug": "gym-fitness",
+    "label": "Salle de sport",
+    "tags": "gym fitness exercise training",
+    "license": "CC0",
+    "group": "Musculation"
+  },
+  {
+    "key": "svgrepo:134094",
+    "slug": "fitness-ball",
+    "label": "Ballon de fitness",
+    "tags": "pilates équilibre stability balance gym yoga",
+    "license": "CC0",
+    "group": "Bien-être"
+  },
+  {
+    "key": "svgrepo:43736",
+    "slug": "fitness-nutrition",
+    "label": "Nutrition",
+    "tags": "nutrition diet alimentation régime santé health",
+    "license": "CC0",
+    "group": "Bien-être"
+  },
+  {
+    "key": "svgrepo:58256",
+    "slug": "fitness-tracker",
+    "label": "Suivi fitness",
+    "tags": "tracker cardio activité activity health montre watch",
+    "license": "CC0",
+    "group": "Cardio"
+  },
+  {
+    "key": "svgrepo:146702",
+    "slug": "fitness-shoes",
+    "label": "Chaussures de sport",
+    "tags": "running course marche walk cardio footwear",
+    "license": "CC0",
+    "group": "Cardio"
+  },
+  {
+    "key": "svgrepo:194845",
+    "slug": "yoga",
+    "label": "Yoga",
+    "tags": "yoga souplesse relaxation stretching méditation",
+    "license": "CC0",
+    "group": "Bien-être"
+  },
+  {
+    "key": "svgrepo:390355",
+    "slug": "training-running-run",
+    "label": "Course à pied",
+    "tags": "running course cardio endurance entraînement",
+    "license": "CC0",
+    "group": "Cardio"
+  },
+  {
+    "key": "svgrepo:486339",
+    "slug": "boxing-gloves",
+    "label": "Boxe",
+    "tags": "boxing boxe combat mma arts martiaux",
+    "license": "CC0",
+    "group": "Combat"
+  },
+  {
+    "key": "svgrepo:256526",
+    "slug": "dumbbell",
+    "label": "Entraînement",
+    "tags": "training gym fitness weightlifting crossfit sport",
+    "license": "CC0",
+    "group": "Musculation"
+  },
+  {
+    "key": "svgrepo:72668",
+    "slug": "jump-rope",
+    "label": "Corde à sauter",
+    "group": "Cardio",
+    "tags": "jump rope saut hiit endurance boxe",
+    "license": "CC0"
+  },
+  {
+    "key": "svgrepo:119268",
+    "slug": "treadmill",
+    "label": "Course en salle",
+    "group": "Cardio",
+    "tags": "treadmill running gym endurance",
+    "license": "CC0"
+  },
+  {
+    "key": "svgrepo:521869",
+    "slug": "swimming",
+    "label": "Natation",
+    "group": "Sports",
+    "tags": "swim piscine aquatique endurance",
+    "license": "CC0"
+  },
+  {
+    "key": "svgrepo:453249",
+    "slug": "swimming",
+    "label": "Nage",
+    "group": "Sports",
+    "tags": "swim natation piscine aquatique",
+    "license": "CC0"
+  },
+  {
+    "key": "svgrepo:414960",
+    "slug": "swimming-pool-swim",
+    "label": "Piscine",
+    "group": "Sports",
+    "tags": "swim natation aquagym piscine",
+    "license": "CC0"
+  },
+  {
+    "key": "svgrepo:168726",
+    "slug": "tennis",
+    "label": "Tennis",
+    "group": "Sports",
+    "tags": "racket raquette balle tennis",
+    "license": "CC0"
+  },
+  {
+    "key": "svgrepo:76841",
+    "slug": "soccer",
+    "label": "Football",
+    "group": "Sports",
+    "tags": "soccer ballon foot football",
+    "license": "CC0"
+  },
+  {
+    "key": "svgrepo:61052",
+    "slug": "basketball",
+    "label": "Basketball",
+    "group": "Sports",
+    "tags": "basket ballon basketball collectif",
+    "license": "CC0"
+  },
+  {
+    "key": "svgrepo:54794",
+    "slug": "basketball-ball",
+    "label": "Ballon de basket",
+    "group": "Sports",
+    "tags": "basketball ballon basket collectif",
+    "license": "CC0"
+  },
+  {
+    "key": "svgrepo:128097",
+    "slug": "basketball-court",
+    "label": "Terrain de basket",
+    "group": "Sports",
+    "tags": "basketball terrain basket collectif",
+    "license": "CC0"
+  },
+  {
+    "key": "svgrepo:414963",
+    "slug": "cycling-bicycle-bike",
+    "label": "Vélo",
+    "group": "Cardio",
+    "tags": "cycling bicycle cyclisme bike triathlon",
+    "license": "CC0"
+  },
+  {
+    "key": "svgrepo:414962",
+    "slug": "martial-arts-karate",
+    "label": "Arts martiaux",
+    "group": "Combat",
+    "tags": "karate karaté judo martial mma combat",
+    "license": "CC0"
+  },
+  {
+    "key": "svgrepo:444087",
+    "slug": "map-hiking",
+    "label": "Randonnée",
+    "group": "Sports",
+    "tags": "hiking marche outdoor randonnée montagne",
+    "license": "CC0"
+  },
+  {
+    "key": "svgrepo:71882",
+    "slug": "volleyball",
+    "label": "Volleyball",
+    "group": "Sports",
+    "tags": "volley ballon collectif volleyball",
+    "license": "CC0"
+  },
+  {
+    "key": "svgrepo:425109",
+    "slug": "volley-volleyball-sport",
+    "label": "Volley",
+    "group": "Sports",
+    "tags": "volley ballon volleyball beach",
+    "license": "CC0"
+  },
+  {
+    "key": "svgrepo:334287",
+    "slug": "stopwatch",
+    "label": "Chronomètre",
+    "group": "Cardio",
+    "tags": "timer stopwatch hiit intervalles circuit",
+    "license": "CC0"
+  },
+  {
+    "key": "svgrepo:62317",
+    "slug": "stopwatch-tool",
+    "label": "Entraînement chronométré",
+    "group": "Cardio",
+    "tags": "timer stopwatch hiit intervalles",
+    "license": "CC0"
+  },
+  {
+    "key": "svgrepo:58821",
+    "slug": "weighing-scale",
+    "label": "Balance",
+    "group": "Bien-être",
+    "tags": "weight scale poids perte régime nutrition",
+    "license": "CC0"
+  },
+  {
+    "key": "svgrepo:189870",
+    "slug": "weight-scale-weight",
+    "label": "Suivi du poids",
+    "group": "Bien-être",
+    "tags": "weight scale balance perte poids régime",
+    "license": "CC0"
+  },
+  {
+    "key": "svgrepo:472666",
+    "slug": "heart-pulse",
+    "label": "Santé cardiaque",
+    "group": "Bien-être",
+    "tags": "heart pulse coeur santé cardio santé",
+    "license": "CC0"
+  },
+  {
+    "key": "svgrepo:524631",
+    "slug": "heart-pulse",
+    "label": "Fréquence cardiaque",
+    "group": "Cardio",
+    "tags": "heart pulse coeur cardio endurance",
+    "license": "CC0"
+  },
+  {
+    "key": "svgrepo:19832",
+    "slug": "climbing-wall",
+    "label": "Mur d’escalade",
+    "group": "Sports",
+    "tags": "climbing escalade bloc grip force",
+    "license": "CC0"
+  },
+  {
+    "key": "svgrepo:170188",
+    "slug": "climbing",
+    "label": "Escalade",
+    "group": "Sports",
+    "tags": "climbing escalade montagne outdoor",
+    "license": "CC0"
+  },
+  {
+    "key": "svgrepo:68406",
+    "slug": "weighing-scale",
+    "label": "Balance fitness",
+    "group": "Bien-être",
+    "tags": "weight scale suivi régime nutrition poids",
+    "license": "CC0"
+  },
+  {
+    "key": "svgrepo:40273",
+    "slug": "stopwatch",
+    "label": "Temps de séance",
+    "group": "Cardio",
+    "tags": "timer stopwatch séance intervalles",
+    "license": "CC0"
+  },
+  {
+    "key": "svgrepo:528710",
+    "slug": "swimming",
+    "label": "Entraînement aquatique",
+    "group": "Sports",
+    "tags": "swim aquatique piscine natation",
+    "license": "CC0"
+  }
+]

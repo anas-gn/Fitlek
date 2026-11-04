@@ -13,13 +13,15 @@ const pool = mysql.createPool({
   connectionLimit: 10,
   queueLimit: 0,
   enableKeepAlive: true,
-  keepAliveInitialDelay: 0,
+  keepAliveInitialDelay: 10000,
 });
 
 // Test connection non-blockingly
 pool.query('SELECT 1').then(() => {
   console.log("✅ Database connected (51.170.143.251)");
   console.log("______________________");
+  // Auto-migrate ville column
+  pool.query('ALTER TABLE users ADD COLUMN ville VARCHAR(255) DEFAULT NULL').catch(() => {});
 }).catch((error) => {
   console.error("❌ Database connection failed:", error.message);
 });

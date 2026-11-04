@@ -1,3 +1,4 @@
+import '../components/app_dialog.dart';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'apiService.dart';
@@ -33,7 +34,7 @@ class LocationReminderDialog extends StatelessWidget {
   final String role;
   const LocationReminderDialog({super.key, required this.role});
   @override
-  Widget build(BuildContext context) => AlertDialog(
+  Widget build(BuildContext context) => AppDialog(
     icon: const Icon(Icons.near_me_rounded, size: 36),
     title: Text(role == 'coach' ? 'Help nearby clients find you' : 'Find coaches closer to you'),
     content: SingleChildScrollView(child: Text(role == 'coach'

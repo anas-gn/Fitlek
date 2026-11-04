@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:fitlek1/services/live_updates.dart';
+import 'package:fitlek1/services/connection_recovery.dart';
 import 'package:fitlek1/services/socketService.dart';
 import 'package:fitlek1/services/notification_delivery_gate.dart';
 
@@ -51,10 +52,13 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 300));
     expect(calls, 2);
+    ConnectionRecovery.refreshApp();
+    await tester.pump();
+    expect(calls, 3);
     await tester.pumpWidget(const SizedBox());
     SocketService().invalidate('reservations');
     await tester.pump(const Duration(milliseconds: 300));
-    expect(calls, 2);
+    expect(calls, 3);
     SocketService().disconnect();
   });
 }

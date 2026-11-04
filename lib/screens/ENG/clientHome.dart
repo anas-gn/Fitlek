@@ -1,3 +1,6 @@
+import '../../components/category_icon.dart';
+import 'mealScanner.dart';
+import 'nutritionTracker.dart';
 import '../../services/coach_qr_navigation.dart';
 import '../../services/live_updates.dart';
 import '../../services/campaign_service.dart';
@@ -120,33 +123,6 @@ class _CategoryItem {
       );
 }
 
-IconData _mapCategoryIcon(String iconName) {
-  switch (iconName) {
-    case 'fitness_center':
-      return Icons.fitness_center_rounded;
-    case 'monitor_weight':
-      return Icons.monitor_weight_rounded;
-    case 'self_improvement':
-      return Icons.self_improvement_rounded;
-    case 'sports_gymnastics':
-      return Icons.sports_gymnastics_rounded;
-    case 'sports_mma':
-      return Icons.sports_martial_arts_rounded;
-    case 'restaurant':
-      return Icons.apple;
-    case 'accessibility_new':
-      return Icons.sports_gymnastics_rounded;
-    case 'directions_run':
-      return Icons.directions_run_rounded;
-    case 'straighten':
-      return Icons.straighten_rounded;
-    case 'sports_kabaddi':
-      return Icons.sports_kabaddi_rounded;
-    default:
-      return Icons.fitness_center_rounded;
-  }
-}
-
 class HomeScreen extends StatefulWidget {
   final int clientID;
   final String token;
@@ -193,6 +169,7 @@ class _HomeScreenState extends State<HomeScreen> with LiveUpdates<HomeScreen> {
       _fetchUnreadMessagesCount(),
       _fetchUpcomingSessions(),
       _fetchCoaches(silent: true),
+      _fetchCategories(),
       _fetchFavorites(),
       _fetchClientProfile(),
       _fetchLocationStatus(),
@@ -684,6 +661,7 @@ class _HomeScreenState extends State<HomeScreen> with LiveUpdates<HomeScreen> {
               ClientConversationScreen(
                 conversationID: match['id'],
                 clientID: widget.clientID,
+                coachID: coachID,
                 token: widget.token,
                 coachName: coachName,
                 coachAvatar: coachAvatar,
@@ -713,6 +691,7 @@ class _HomeScreenState extends State<HomeScreen> with LiveUpdates<HomeScreen> {
                 ClientConversationScreen(
                   conversationID: newConv['id'],
                   clientID: widget.clientID,
+                  coachID: coachID,
                   token: widget.token,
                   coachName: coachName,
                   coachAvatar: coachAvatar,
@@ -875,6 +854,7 @@ class _HomeScreenState extends State<HomeScreen> with LiveUpdates<HomeScreen> {
           ? null
           : ClientNavigationBar(
               currentIndex: _navIndex,
+              onScanMeal: _openMealScanner,
               onSelected: (index) => setState(() => _navIndex = index)),
     );
   }
@@ -898,6 +878,24 @@ class _HomeScreenState extends State<HomeScreen> with LiveUpdates<HomeScreen> {
         slivers: [
           SliverToBoxAdapter(child: _buildHeroBanner()),
           SliverToBoxAdapter(child: _buildQuickActions()),
+          SliverToBoxAdapter(
+              child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                  child: Card(
+                      child: ListTile(
+                          contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 18, vertical: 8),
+                          leading: const Icon(Icons.restaurant_rounded),
+                          title: const Text('Your nutrition diary',
+                              style: TextStyle(fontWeight: FontWeight.w800)),
+                          subtitle: const Text('Calories, macros & every meal'),
+                          trailing: const Icon(Icons.arrow_forward_rounded),
+                          onTap: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (_) => NutritionTrackerScreen(
+                                      clientID: widget.clientID,
+                                      token: widget.token))))))),
           SliverToBoxAdapter(
               child: AnnouncementCarousel(
             key: _announcementsKey,
@@ -1265,6 +1263,12 @@ class _HomeScreenState extends State<HomeScreen> with LiveUpdates<HomeScreen> {
     );
   }
 
+  void _openMealScanner() => Navigator.push(
+      context,
+      MaterialPageRoute(
+          builder: (_) => MealScannerScreen(
+              clientID: widget.clientID, token: widget.token)));
+
   Widget _buildQuickActions() {
     final actions = [
       (
@@ -1286,6 +1290,11 @@ class _HomeScreenState extends State<HomeScreen> with LiveUpdates<HomeScreen> {
           CoachQrNavigation.scanAndOpen(context);
         }
       ),
+      (
+        null,
+        'Sirvya AI\nScan meal',
+        _openMealScanner,
+      ),
     ];
 
     return Padding(
@@ -1298,8 +1307,8 @@ class _HomeScreenState extends State<HomeScreen> with LiveUpdates<HomeScreen> {
             child: GestureDetector(
               onTap: a.$3,
               child: Container(
-                margin: EdgeInsets.only(right: i < actions.length - 1 ? 10 : 0),
-                padding: const EdgeInsets.symmetric(vertical: 14),
+                margin: EdgeInsets.only(right: i < actions.length - 1 ? 8 : 0),
+                padding: const EdgeInsets.symmetric(vertical: 12),
                 decoration: BoxDecoration(
                   color: context.fitlek.card,
                   borderRadius: BorderRadius.circular(14),
@@ -1308,10 +1317,21 @@ class _HomeScreenState extends State<HomeScreen> with LiveUpdates<HomeScreen> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(
-                      a.$1,
-                      color: Theme.of(context).colorScheme.onSurface,
-                      size: 24,
+                    SizedBox(
+                      height: 40,
+                      child: a.$1 == null
+                          ? Image.asset(
+                              'assets/branding/sirvya_ai_robot.png',
+                              width: 44,
+                              height: 40,
+                              fit: BoxFit.contain,
+                              excludeFromSemantics: true,
+                            )
+                          : Icon(
+                              a.$1,
+                              color: Theme.of(context).colorScheme.onSurface,
+                              size: 24,
+                            ),
                     ),
                     const SizedBox(height: 7),
                     Text(
@@ -1403,16 +1423,25 @@ class _HomeScreenState extends State<HomeScreen> with LiveUpdates<HomeScreen> {
                   width: 1,
                 ),
               ),
-              child: Text(
-                label,
-                style: TextStyle(
-                  color: isSelected
-                      ? Theme.of(context).colorScheme.onPrimary
-                      : context.fitlek.textMuted,
-                  fontSize: 12,
-                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                ),
-              ),
+              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                if (!isAll) ...[
+                  CategoryIcon(
+                      name: _categories[index - 1].icon,
+                      size: 18,
+                      color: isSelected
+                          ? Theme.of(context).colorScheme.onPrimary
+                          : context.fitlek.textMuted),
+                  const SizedBox(width: 7),
+                ],
+                Text(label,
+                    style: TextStyle(
+                        color: isSelected
+                            ? Theme.of(context).colorScheme.onPrimary
+                            : context.fitlek.textMuted,
+                        fontSize: 12,
+                        fontWeight:
+                            isSelected ? FontWeight.w700 : FontWeight.w500)),
+              ]),
             ),
           );
         },

@@ -1,3 +1,7 @@
+import {saveNutritionPlan} from '../../services/nutritionGoals.js';
+import {recordClientReferral,notifyReferralSignup} from '../../services/clientReferral.js';
+import {saveUserLocation,normalizeLocation} from '../../services/userLocation.js';
+import {emailChangeRouter} from '../../services/emailChange.js';
 import express from 'express';
 const router = express.Router();
 import db from '../../config/db.js';
@@ -62,7 +66,10 @@ router.get('/validate-referral', async (req, res) => {
 // `referralCode`, the inviting coach earns REFERRAL_REWARD_POINTS exactly once.
 // The whole operation is atomic.
 // â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+import {signupDetails} from '../../services/signupDetails.js';
 router.post('/register', async (req, res) => {
+  let details;
+  try { details = signupDetails(req.body); if(req.body.location) normalizeLocation(req.body.location); } catch (error) { return res.status(400).json({error:error.message}); }
   const { firstName, lastName, email, password, gender, role = 'client', advisorID, acceptedTerms, termsAccepted } = req.body;
 
   // Validation des champs obligatoires
@@ -76,7 +83,7 @@ router.post('/register', async (req, res) => {
   }
 
   // Referral code only applies to coach registrations.
-  const referralCode = role === 'coach' ? normalizeReferralCode(req.body.referralCode) : '';
+  const referralCode = ['coach','client'].includes(role) ? normalizeReferralCode(req.body.referralCode) : '';
 
   const conn = await db.getConnection();
   try {
@@ -122,16 +129,21 @@ router.post('/register', async (req, res) => {
 
     // CrÃ©er l'utilisateur avec validation des conditions d'utilisation
     const [result] = await conn.query(
-      'INSERT INTO users (firstName, lastName, email, passwordHash, gender, role, termsAccepted, termsAcceptedAt) VALUES (?,?,?,?,?,?,1,NOW())',
-      [firstName, lastName, email, passwordHash, gender, role]
+      'INSERT INTO users (firstName, lastName, email, passwordHash, gender, role, height, termsAccepted, termsAcceptedAt) VALUES (?,?,?,?,?,?,?,1,NOW())',
+      [firstName, lastName, email, passwordHash, gender, role, details.height]
     );
     const userID = result.insertId;
+    if (role === 'client') await conn.query('UPDATE users SET interests=? WHERE id=?',[JSON.stringify(details.interests),userID]);
+    if (role === 'client' && details.weight !== null) {
+      await conn.query('INSERT INTO weighthistory (clientID, weight, recordedAt, note) VALUES (?,?,CURDATE(),?)',
+        [userID, details.weight, 'Registration weight']);
+    }
 
     // Auto-crÃ©er le profil Advisor avec profil vide
     if (role === 'advisor') {
       await conn.query(
         'INSERT INTO advisorprofiles (userID, specialty) VALUES (?,?)',
-        [userID, 'Ã€ complÃ©ter']
+        [userID, details.specialties.join(', ') || 'À compléter']
       );
     }
 
@@ -140,8 +152,8 @@ router.post('/register', async (req, res) => {
       const invCode = await generateUniqueInvitationCode(conn);
       const coach_advisorID = advisorID || null;
       await conn.query(
-        'INSERT INTO coachprofiles (userID, bio, instagramPage, certificateUrl, invitationCode, advisorID) VALUES (?,?,?,?,?,?)',
-        [userID, '', '', '', invCode, coach_advisorID]
+        'INSERT INTO coachprofiles (userID, bio, instagramPage, certificateUrl, invitationCode, advisorID, specialties) VALUES (?,?,?,?,?,?,?)',
+        [userID, '', '', '', invCode, coach_advisorID, JSON.stringify(details.specialties)]
       );
 
       if (inviterCoachID) {
@@ -158,7 +170,11 @@ router.post('/register', async (req, res) => {
       }
     }
 
+    if (role === 'client' && details.nutritionPlan) await saveNutritionPlan(conn,userID,details.nutritionPlan);
+    if (role === 'client') await recordClientReferral(conn, inviterCoachID, userID, referralCode);
+    if(req.body.location && ['client','coach'].includes(role)) await saveUserLocation(conn,userID,role,req.body.location);
     await conn.commit();
+    if (['client','coach'].includes(role) && inviterCoachID) await notifyReferralSignup(db,userID,role);
     res.status(201).json({ message: 'User created', userID });
   } catch (err) {
     await conn.rollback();
@@ -550,7 +566,8 @@ router.post('/reset-password-otp', async (req, res) => {
 router.post('/fcm-token', requireAuth, async (req, res) => {
   try {
     const { token } = req.body;
-    if (!token) return res.status(400).json({ error: 'Token is required' });
+    if (token !== null && (typeof token !== 'string' || !token.trim() || token.length > 500)) return res.status(400).json({ error: 'Valid token is required' });
+    if (token) await db.query('UPDATE users SET fcmToken=NULL WHERE fcmToken=? AND id<>?', [token,req.user.id]);
 
     await db.query(
       'UPDATE users SET fcmToken = ? WHERE id = ?',
@@ -562,12 +579,14 @@ router.post('/fcm-token', requireAuth, async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ————————————————————————————————————————————————————————————————————————————————————————
 // POST /auth/google - Google Sign-In / Sign-Up (unified)
 // Accepts idTokens from all registered OAuth clients (Android, Web, Server).
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-router.post('/google', async (req, res) => {
-  const { idToken, role: requestedRole = 'client', referralCode, firstName: reqFirstName, lastName: reqLastName } = req.body;
+// ————————————————————————————————————————————————————————————————————————————————————————
+router.post(['/google', '/apple'], async (req, res) => {
+  let details;
+  try { details = signupDetails(req.body); if(req.body.location) normalizeLocation(req.body.location); } catch (error) { return res.status(400).json({error:error.message}); }
+  const { idToken, role: requestedRole = 'client', referralCode, firstName: reqFirstName, lastName: reqLastName, action = 'login', termsAccepted } = req.body;
 
   if (!idToken) {
     return res.status(400).json({ error: 'idToken is required' });
@@ -584,7 +603,11 @@ router.post('/google', async (req, res) => {
   }
 
   if (!decodedToken.email_verified) {
-    return res.status(401).json({ error: 'Your Google account email is not verified.' });
+    return res.status(401).json({ error: 'Your sign-in email is not verified.' });
+  }
+  const expectedProvider = req.path === '/apple' ? 'apple.com' : 'google.com';
+  if (decodedToken.firebase?.sign_in_provider !== expectedProvider) {
+    return res.status(401).json({error:'Please sign in using the selected provider.'});
   }
 
   const email = (decodedToken.email || '').toLowerCase();
@@ -593,201 +616,9 @@ router.post('/google', async (req, res) => {
   const lastName = decodedToken.name ? decodedToken.name.split(' ').slice(1).join(' ') : (reqLastName || '');
   const avatarUrl = decodedToken.picture || null;
 
-  const conn = await db.getConnection();
-  try {
-    await conn.beginTransaction();
-
-    // â”€â”€ 1. Look up existing user by googleId OR email â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    let [rows] = await conn.query(
-      'SELECT * FROM users WHERE googleId = ? OR LOWER(email) = ? LIMIT 1',
-      [googleId, email]
-    );
-    let user = rows[0];
-    let isNewUser = false;
-
-    if (user) {
-      // â”€â”€ 2a. Existing user: check ban â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-      const [bans] = await conn.query(
-        `SELECT id FROM bans WHERE userID=? AND isActive=1
-         AND (banType='permanent' OR expiresAt > NOW()) LIMIT 1`,
-        [user.id]
-      );
-      if (bans.length) {
-        await conn.rollback();
-        return res.status(403).json({ error: 'This account has been suspended.' });
-      }
-
-      // â”€â”€ 2b. Link Google ID to existing email+password account â”€â”€â”€â”€â”€â”€â”€â”€â”€
-      const updates = [];
-      const params = [];
-      if (!user.googleId) { updates.push('googleId = ?'); params.push(googleId); }
-      // Update avatar if they didn't set one manually
-      if (!user.avatarUrl && avatarUrl) { updates.push('avatarUrl = ?'); params.push(avatarUrl); }
-      // Mark authProvider as 'both' if they had a password already
-      if (user.passwordHash && user.authProvider !== 'both') {
-        updates.push("authProvider = 'both'");
-      } else if (!user.passwordHash && user.authProvider !== 'google') {
-        updates.push("authProvider = 'google'");
-      }
-      if (updates.length) {
-        params.push(user.id);
-        await conn.query(`UPDATE users SET ${updates.join(', ')} WHERE id = ?`, params);
-        // Re-fetch updated user
-        [[user]] = await conn.query('SELECT * FROM users WHERE id = ?', [user.id]);
-      }
-    } else {
-      // â”€â”€ 3. New user: create account â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-      isNewUser = true;
-      const safeRole = ['client', 'coach'].includes(requestedRole) ? requestedRole : 'client';
-
-      // For coaches, validate referral code if provided
-      let inviterCoachID = null;
-      const normalizedReferral = normalizeReferralCode(referralCode);
-      if (safeRole === 'coach' && normalizedReferral) {
-        const [inviterRows] = await conn.query(
-          `SELECT cp.userID AS inviterID FROM coachprofiles cp
-           JOIN users u ON u.id = cp.userID
-           WHERE cp.invitationCode = ? AND u.role = 'coach' LIMIT 1`,
-          [normalizedReferral]
-        );
-        if (!inviterRows.length) {
-          await conn.rollback();
-          return res.status(400).json({ error: 'This invitation code is invalid.' });
-        }
-        inviterCoachID = inviterRows[0].inviterID;
-      }
-
-      const [result] = await conn.query(
-        `INSERT INTO users (firstName, lastName, email, passwordHash, googleId, authProvider, role, avatarUrl, isApproved, termsAccepted, termsAcceptedAt)
-         VALUES (?, ?, ?, NULL, ?, 'google', ?, ?, 1, 1, NOW())`,
-        [firstName, lastName, email, googleId, safeRole, avatarUrl]
-      );
-      const userID = result.insertId;
-
-      // Create role-specific profile
-      if (safeRole === 'coach') {
-        const invCode = await generateUniqueInvitationCode(conn);
-        await conn.query(
-          'INSERT INTO coachprofiles (userID, bio, instagramPage, certificateUrl, invitationCode) VALUES (?,?,?,?,?)',
-          [userID, '', '', '', invCode]
-        );
-        if (inviterCoachID) {
-          await conn.query(
-            'INSERT INTO coachreferrals (inviterCoachID, invitedCoachID, invitationCode, pointsAwarded) VALUES (?,?,?,?)',
-            [inviterCoachID, userID, normalizedReferral, REFERRAL_REWARD_POINTS]
-          );
-          await conn.query(
-            'UPDATE coachprofiles SET earnedPoints = earnedPoints + ?, totalInvitations = totalInvitations + 1 WHERE userID = ?',
-            [REFERRAL_REWARD_POINTS, inviterCoachID]
-          );
-        }
-      }
-
-      [[user]] = await conn.query('SELECT * FROM users WHERE id = ?', [userID]);
-    }
-
-    await conn.commit();
-
-    // â”€â”€ 4. Generate JWT â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-    const accessToken = jwt.sign(
-      { id: user.id, role: user.role },
-      process.env.JWT_SECRET,
-      { expiresIn: '7d' }
-    );
-
-    return res.status(200).json({
-      accessToken,
-      isNewUser,
-      hasPassword: !!user.passwordHash,
-      user: {
-        id: user.id,
-        role: user.role,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        email: user.email,
-        avatarUrl: user.avatarUrl,
-        isApproved: user.isApproved,
-        isPremium: user.isPremium,
-      },
-    });
-  } catch (err) {
-    await conn.rollback();
-    console.error('Google auth error:', err);
-    if (err.code === 'ER_DUP_ENTRY') {
-      return res.status(409).json({ error: 'An account with this email already exists.' });
-    }
-    return res.status(500).json({ error: 'Authentication failed: ' + err.message });
-  } finally {
-    conn.release();
-  }
-});
-
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-// POST /auth/set-password
-// Allows a Google-authenticated user to set a password for email login.
-// Requires a valid JWT (the user must be logged in via Google first).
-// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-router.post('/set-password', requireAuth, async (req, res) => {
-  try {
-    const { password } = req.body;
-    if (!password || password.length < 6) {
-      return res.status(400).json({ error: 'Password must be at least 6 characters.' });
-    }
-
-    const [rows] = await db.query('SELECT id, passwordHash, authProvider FROM users WHERE id = ?', [req.user.id]);
-    if (!rows.length) {
-      return res.status(404).json({ error: 'User not found.' });
-    }
-
-    const passwordHash = await bcrypt.hash(password, 12);
-    await db.query(
-      "UPDATE users SET passwordHash = ?, authProvider = 'both' WHERE id = ?",
-      [passwordHash, req.user.id]
-    );
-    const { token } = req.body;
-    if (!token) return res.status(400).json({ error: 'Token is required' });
-
-    await db.query(
-      'UPDATE users SET fcmToken = ? WHERE id = ?',
-      [token, req.user.id]
-    );
-
-    res.json({ success: true, message: 'FCM Token updated successfully.' });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-// ————————————————————————————————————————————————————————————————————————————————————————
-// POST /auth/google - Google Sign-In / Sign-Up (unified)
-// Accepts idTokens from all registered OAuth clients (Android, Web, Server).
-// ————————————————————————————————————————————————————————————————————————————————————————
-router.post('/google', async (req, res) => {
-  const { idToken, role: requestedRole = 'client', referralCode, firstName: reqFirstName, lastName: reqLastName } = req.body;
-
-  if (!idToken) {
-    return res.status(400).json({ error: 'idToken is required' });
-  }
-
-  // Verify the Firebase ID Token using Firebase Admin SDK
-  // Works natively on Web (firebase_auth) and Mobile (firebase_auth + google_sign_in)
-  let decodedToken;
-  try {
-    decodedToken = await admin.auth().verifyIdToken(idToken);
-  } catch (err) {
-    console.error('Firebase token verification failed:', err.message);
-    return res.status(401).json({ error: 'Invalid or expired Google token. Please try again.' });
-  }
-
-  if (!decodedToken.email_verified) {
-    return res.status(401).json({ error: 'Your Google account email is not verified.' });
-  }
-
-  const email = (decodedToken.email || '').toLowerCase();
-  const googleId = decodedToken.uid;
-  const firstName = decodedToken.name ? decodedToken.name.split(' ')[0] : (reqFirstName || '');
-  const lastName = decodedToken.name ? decodedToken.name.split(' ').slice(1).join(' ') : (reqLastName || '');
-  const avatarUrl = decodedToken.picture || null;
-
+  console.log(`\n\n--- GOOGLE AUTH DEBUG ---`);
+  console.log(`Action: ${action}, Role: ${requestedRole}, Email: ${email}`);
+  
   const conn = await db.getConnection();
   try {
     await conn.beginTransaction();
@@ -799,6 +630,8 @@ router.post('/google', async (req, res) => {
     );
     let user = rows[0];
     let isNewUser = false;
+    
+    console.log(`User found in DB? ${!!user}`);
 
     if (user) {
       // ——— 2a. Existing user: check ban ———————————————————————————————————————————
@@ -832,13 +665,25 @@ router.post('/google', async (req, res) => {
       }
     } else {
       // ——— 3. New user: create account ————————————————————————————————————————————————
+      console.log(`New user detected! action = ${action}`);
+      if (action === 'login') {
+        console.log(`Rejecting because action is login!`);
+        await conn.rollback();
+        return res.status(404).json({ error: 'Account not found. Please sign up first.' });
+      }
+      
+      if (action === 'signup' && !termsAccepted) {
+        await conn.rollback();
+        return res.status(400).json({ error: 'You must approve the terms and conditions to sign up.' });
+      }
+
       isNewUser = true;
       const safeRole = ['client', 'coach'].includes(requestedRole) ? requestedRole : 'client';
 
       // For coaches, validate referral code if provided
       let inviterCoachID = null;
       const normalizedReferral = normalizeReferralCode(referralCode);
-      if (safeRole === 'coach' && normalizedReferral) {
+      if (normalizedReferral) {
         const [inviterRows] = await conn.query(
           `SELECT cp.userID AS inviterID FROM coachprofiles cp
            JOIN users u ON u.id = cp.userID
@@ -853,11 +698,16 @@ router.post('/google', async (req, res) => {
       }
 
       const [result] = await conn.query(
-        `INSERT INTO users (firstName, lastName, email, passwordHash, googleId, authProvider, role, avatarUrl, isApproved, termsAccepted, termsAcceptedAt)
-         VALUES (?, ?, ?, NULL, ?, 'google', ?, ?, 1, 1, NOW())`,
-        [firstName, lastName, email, googleId, safeRole, avatarUrl]
+        `INSERT INTO users (firstName, lastName, email, passwordHash, googleId, authProvider, role, avatarUrl, height, isApproved, termsAccepted, termsAcceptedAt)
+         VALUES (?, ?, ?, NULL, ?, 'google', ?, ?, ?, 1, 1, NOW())`,
+        [firstName, lastName, email, googleId, safeRole, avatarUrl, details.height]
       );
       const userID = result.insertId;
+      if (safeRole === 'client') await conn.query('UPDATE users SET interests=? WHERE id=?',[JSON.stringify(details.interests),userID]);
+      if (safeRole === 'client' && details.weight !== null) {
+        await conn.query('INSERT INTO weighthistory (clientID, weight, recordedAt, note) VALUES (?,?,CURDATE(),?)',
+          [userID, details.weight, 'Registration weight']);
+      }
 
       // Create role-specific profile
       if (safeRole === 'coach') {
@@ -878,10 +728,14 @@ router.post('/google', async (req, res) => {
         }
       }
 
+      if (safeRole === 'client' && details.nutritionPlan) await saveNutritionPlan(conn,userID,details.nutritionPlan);
+      if (safeRole === 'client') await recordClientReferral(conn, inviterCoachID, userID, normalizedReferral);
       [[user]] = await conn.query('SELECT * FROM users WHERE id = ?', [userID]);
     }
 
+    if(isNewUser && req.body.location && ['client','coach'].includes(user.role)) await saveUserLocation(conn,user.id,user.role,req.body.location);
     await conn.commit();
+    if (isNewUser && referralCode) await notifyReferralSignup(db,user.id,user.role);
 
     // ——— 4. Generate JWT —————————————————————————————————————————————————————————
     const accessToken = jwt.sign(
@@ -946,12 +800,6 @@ router.post('/set-password', requireAuth, async (req, res) => {
   }
 });
 
-// Alias for Apple Sign-In
-router.post('/apple', (req, res) => {
-  // We reuse the /google logic because Apple tokens are also verified via Firebase Auth,
-  // and they share the same schema (googleId maps to Firebase UID, authProvider maps to 'google' or 'both').
-  return router.handle({ ...req, url: '/google', originalUrl: req.originalUrl.replace('/apple', '/google') }, res);
-});
 
 // ─────────────────────────────────────────────────────────────────────────────
 // ACCOUNT DELETION FLOW
@@ -1169,5 +1017,62 @@ router.post('/confirm-delete-account', requireAuth, async (req, res) => {
   }
 });
 
-export default router;
+// ─── ACCOUNT SETTINGS ENDPOINTS ───────────────────────────────────────
 
+// PUT /auth/account/phone
+router.put('/account/phone', requireAuth, async (req, res) => {
+  try {
+    const { phoneNumber } = req.body;
+    const userID = req.user.id;
+    if (phoneNumber === undefined) {
+      return res.status(400).json({ error: 'Phone number is required' });
+    }
+    
+    // Check if phone already in use by someone else
+    if (phoneNumber) {
+      const [existing] = await db.query('SELECT id FROM users WHERE phoneNumber = ? AND id != ? LIMIT 1', [phoneNumber, userID]);
+      if (existing.length) {
+        return res.status(409).json({ error: 'This phone number is already registered.' });
+      }
+    }
+    
+    await db.query('UPDATE users SET phoneNumber = ? WHERE id = ?', [phoneNumber || null, userID]);
+    res.json({ message: 'Phone number updated successfully.', phoneNumber });
+  } catch (err) {
+    console.error('change phone error:', err);
+    res.status(500).json({ error: 'Failed to update phone number.' });
+  }
+});
+
+// PUT /auth/account/password
+router.put('/account/password', requireAuth, async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    const userID = req.user.id;
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ error: 'Current and new password are required' });
+    }
+
+    const [rows] = await db.query('SELECT passwordHash, authProvider FROM users WHERE id = ?', [userID]);
+    if (!rows.length) return res.status(404).json({ error: 'User not found' });
+    
+    const user = rows[0];
+    if (user.passwordHash) {
+      const valid = await bcrypt.compare(currentPassword, user.passwordHash);
+      if (!valid) return res.status(401).json({ error: 'Incorrect current password' });
+    } else if (user.authProvider === 'google') {
+      return res.status(400).json({ error: 'Account uses Google Sign-In. Set a password first.' });
+    }
+
+    const newHash = await bcrypt.hash(newPassword, 12);
+    await db.query('UPDATE users SET passwordHash = ? WHERE id = ?', [newHash, userID]);
+    res.json({ message: 'Password updated successfully.' });
+  } catch (err) {
+    console.error('change password error:', err);
+    res.status(500).json({ error: 'Failed to update password.' });
+  }
+});
+
+router.use('/account/email-change', requireAuth, emailChangeRouter(db,sendOTPEmail));
+
+export default router;

@@ -11,6 +11,7 @@ import 'theme/app_theme.dart';
 import 'sessionRouter.dart';
 import 'components/app_version_checker.dart';
 import 'components/video_splash_screen.dart';
+import 'components/connection_recovery_prompt.dart';
 import 'globals.dart';
 
 void main() async {
@@ -49,26 +50,41 @@ void main() async {
   }
 }
 
-class Fitlek extends StatelessWidget {
+class Fitlek extends StatefulWidget {
   final ThemeController themeController;
 
   const Fitlek({super.key, required this.themeController});
 
   @override
+  State<Fitlek> createState() => _FitlekState();
+}
+
+class _FitlekState extends State<Fitlek> {
+  bool _introFinished = false;
+
+  @override
   Widget build(BuildContext context) {
     return ThemeControllerScope(
-      controller: themeController,
+      controller: widget.themeController,
       child: ListenableBuilder(
-        listenable: themeController,
+        listenable: widget.themeController,
         builder: (context, _) {
           return MaterialApp(
             debugShowCheckedModeBanner: false,
             theme: AppTheme.light,
             darkTheme: AppTheme.dark,
-            themeMode: themeController.flutterMode,
+            themeMode: widget.themeController.flutterMode,
             navigatorKey: globalNavigatorKey,
-            home: const VideoSplashScreen(
-              nextScreen: AppVersionChecker(child: SessionRouter()),
+            builder: (context, child) => ConnectionRecoveryPrompt(
+                enabled: _introFinished,
+                navigatorKey: globalNavigatorKey,
+                child: AppVersionChecker(
+                    showPrompts: _introFinished,
+                    navigatorKey: globalNavigatorKey,
+                    child: child ?? const SizedBox())),
+            home: VideoSplashScreen(
+              onFinished: () => setState(() => _introFinished = true),
+              nextScreen: const SessionRouter(),
             ),
           );
         },

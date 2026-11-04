@@ -46,10 +46,11 @@ router.post('/avatar', (req, res) => {
         fs.mkdirSync(uploadDir, { recursive: true });
       }
 
-      const filename = `avatar_${req.query.userID || Date.now()}.webp`;
+      const filename = `avatar_${req.user.id}_${Date.now()}_${Math.round(Math.random()*1e9)}.webp`;
       const filepath = path.join(uploadDir, filename);
       
       await sharp(req.file.buffer)
+        .rotate()
         .resize(400, 400, { fit: 'cover', position: 'attention' })
         .webp({ quality: 80 })
         .toFile(filepath);
@@ -60,6 +61,39 @@ router.post('/avatar', (req, res) => {
     } catch (e) {
       console.error('❌ Handler error:', e.message);
       res.status(500).json({ error: e.message });
+    }
+  });
+});
+
+router.post('/certification', (req, res) => {
+  uploadImage.single('certificate')(req, res, async (err) => {
+    if (err) {
+      console.error('❌ Multer error:', err.message);
+      return res.status(500).json({ error: err.message });
+    }
+    try {
+      if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+      
+      const uploadDir = path.join(process.cwd(), 'uploads', 'certifications');
+      if (!fs.existsSync(uploadDir)) {
+        fs.mkdirSync(uploadDir, { recursive: true });
+      }
+
+      const filename = `cert_${Date.now()}_${Math.round(Math.random() * 1e9)}.webp`;
+      const filepath = path.join(uploadDir, filename);
+
+      await sharp(req.file.buffer)
+        .resize({ width: 1200, withoutEnlargement: true })
+        .webp({ quality: 80 })
+        .toFile(filepath);
+
+      const url = `${req.protocol}://${req.get('host')}/uploads/certifications/${filename}`;
+      console.log('✅ Uploaded local certification:', url);
+      
+      return res.json({ url });
+    } catch (error) {
+      console.error('❌ Error processing certification:', error);
+      res.status(500).json({ error: 'Error processing image' });
     }
   });
 });
@@ -90,6 +124,7 @@ router.post('/coach-gallery', (req, res) => {
       const filepath = path.join(uploadDir, filename);
       
       await sharp(req.file.buffer)
+        .rotate()
         .resize(1000, 1000, { fit: 'inside', withoutEnlargement: true })
         .webp({ quality: 85 })
         .toFile(filepath);
@@ -170,6 +205,66 @@ router.post('/chat-audio', (req, res) => {
     } catch (e) {
       console.error('❌ Handler error:', e.message);
       res.status(500).json({ error: e.message });
+    }
+  });
+});
+router.post('/package-image', (req, res) => {
+  uploadImage.single('file')(req, res, async (err) => {
+    if (err) {
+      console.error('❌ Multer error:', err.message);
+      return res.status(500).json({ error: err.message });
+    }
+    try {
+      if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+      
+      const uploadDir = path.join(process.cwd(), 'uploads', 'packages');
+      if (!fs.existsSync(uploadDir)) {
+        fs.mkdirSync(uploadDir, { recursive: true });
+      }
+
+      const filename = `pkg_${Date.now()}_${Math.round(Math.random() * 1e9)}.webp`;
+      const filepath = path.join(uploadDir, filename);
+
+      await sharp(req.file.buffer)
+        .resize({ width: 1200, withoutEnlargement: true })
+        .webp({ quality: 80 })
+        .toFile(filepath);
+
+      const url = `${req.protocol}://${req.get('host')}/uploads/packages/${filename}`;
+      console.log('✅ Uploaded package image:', url);
+      
+      return res.json({ fileUrl: url });
+    } catch (error) {
+      console.error('❌ Error processing package image:', error);
+      res.status(500).json({ error: 'Error processing image' });
+    }
+  });
+});
+router.post('/gym-image', (req, res) => {
+  uploadImage.single('file')(req, res, async (err) => {
+    if (err) {
+      return res.status(500).json({ error: err.message });
+    }
+    try {
+      if (!req.file) return res.status(400).json({ error: 'No file uploaded' });
+      
+      const uploadDir = path.join(process.cwd(), 'uploads', 'gyms');
+      if (!fs.existsSync(uploadDir)) {
+        fs.mkdirSync(uploadDir, { recursive: true });
+      }
+
+      const filename = `gym_${Date.now()}_${Math.round(Math.random() * 1e9)}.webp`;
+      const filepath = path.join(uploadDir, filename);
+
+      await sharp(req.file.buffer)
+        .resize({ width: 1200, withoutEnlargement: true })
+        .webp({ quality: 80 })
+        .toFile(filepath);
+
+      const url = `${req.protocol}://${req.get('host')}/uploads/gyms/${filename}`;
+      return res.json({ fileUrl: url });
+    } catch (error) {
+      res.status(500).json({ error: 'Error processing image' });
     }
   });
 });

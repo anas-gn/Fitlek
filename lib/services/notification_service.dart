@@ -1,4 +1,5 @@
 import 'campaign_service.dart';
+import '../components/notification_card.dart';
 import 'socketService.dart';
 import 'notification_delivery_gate.dart';
 import 'package:audioplayers/audioplayers.dart';
@@ -268,11 +269,20 @@ class NotificationService {
       } catch (_) {}
       final context = globalNavigatorKey.currentContext;
       if (context != null && context.mounted) {
-        ScaffoldMessenger.maybeOf(context)?.showSnackBar(SnackBar(
-            content: Text('$title: $body'),
-            action: SnackBarAction(
-                label: 'Open',
-                onPressed: () => _handleNotificationClick(jsonEncode(item)))));
+        final messenger = ScaffoldMessenger.maybeOf(context);
+        messenger?.showSnackBar(SnackBar(
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+            padding: EdgeInsets.zero,
+            margin: const EdgeInsets.fromLTRB(12, 0, 12, 18),
+            content: NotificationCard(
+                item: item,
+                compact: true,
+                onTap: () {
+                  messenger.hideCurrentSnackBar();
+                  _handleNotificationClick(jsonEncode(item));
+                })));
       }
       return;
     }

@@ -1,3 +1,4 @@
+import '../../components/category_icon.dart';
 import '../../services/coach_qr_navigation.dart';
 import '../../services/live_updates.dart';
 import '../../components/ENG/exploreCoachMap.dart';
@@ -100,31 +101,6 @@ class _CategoryItem {
       );
 }
 
-IconData _mapCategoryIcon(String iconName) {
-  switch (iconName) {
-    case 'fitness_center':
-      return Icons.fitness_center_rounded;
-    case 'monitor_weight':
-      return Icons.monitor_weight_rounded;
-    case 'self_improvement':
-      return Icons.self_improvement_rounded;
-    case 'sports_gymnastics':
-      return Icons.sports_gymnastics_rounded;
-    case 'sports_mma':
-      return Icons.sports_martial_arts_rounded;
-    case 'restaurant':
-      return Icons.apple;
-    case 'accessibility_new':
-      return Icons.sports_gymnastics_rounded;
-    case 'directions_run':
-      return Icons.directions_run_rounded;
-    case 'straighten':
-      return Icons.straighten_rounded;
-    default:
-      return Icons.fitness_center_rounded;
-  }
-}
-
 class DiscoverScreen extends StatefulWidget {
   final int clientID;
   final VoidCallback? onBack;
@@ -164,7 +140,7 @@ class _DiscoverScreenState extends State<DiscoverScreen>
   @override
   Future<void> refreshLiveData() async {
     await Future.wait(
-        [_fetchCoaches(silent: true), _fetchFavorites(), _fetchClientVille()]);
+        [_fetchCoaches(silent: true), _fetchFavorites(), _fetchClientVille(), _fetchCategories()]);
   }
 
   late TabController _tabController;
@@ -891,7 +867,7 @@ class _DiscoverScreenState extends State<DiscoverScreen>
                   child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(_mapCategoryIcon(cat.icon),
+                        CategoryIcon(name: cat.icon,
                             size: 20,
                             color: active
                                 ? Theme.of(context).colorScheme.primary
@@ -2548,3 +2524,4 @@ class _AdvisorCardState extends State<_AdvisorCard> {
                 color: Theme.of(context).colorScheme.primary, size: 56)),
       );
 }
+

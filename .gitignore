@@ -1,128 +1,81 @@
 # Miscellaneous
-
 *.class
-
 *.log
-
 *.pyc
-
 *.swp
-
 .DS_Store
-
 .atom/
-
 .build/
-
 .buildlog/
-
 .history
-
 .svn/
-
 .swiftpm/
-
 migrate_working_dir/
 
-
-
 # IntelliJ related
-
 *.iml
-
 *.ipr
-
 *.iws
-
 .idea/
 
-
-
-# The .vscode folder contains launch configuration and tasks you configure in
-
-# VS Code which you may wish to be included in version control, so this line
-
-# is commented out by default.
-
-#.vscode/
-
-
-
 # Flutter/Dart/Pub related
-
 **/doc/api/
-
 **/ios/Flutter/.last_build_id
-
 .dart_tool/
-
 .flutter-plugins-dependencies
-
 .pub-cache/
-
 .pub/
-
 /build/
-
 /coverage/
 
-
-
 # Symbolication related
-
 app.*.symbols
 
-
-
 # Obfuscation related
-
 app.*.map.json
 
-
-
 # Android Studio will place build artifacts here
-
 /android/app/debug
-
 /android/app/profile
-
 /android/app/release
 
-
-
-# Backend
-
-backend/node_modules
-
-backend/.env
-
-backend/package-lock.json
-
-
-
-# Root NodeJS / general ignores
-
-node_modules/
-
-.env
-
-backend/config/*.json
-
+# Keystores & sensitive keys
 upload-keystore.jks
-
-
-# This repository contains the mobile frontend only.
-/backend/
-/node_modules/
 *.p8
 *.pem
 *.key
 *.jks
 *.keystore
 **/key.properties
+**/local.properties
+
+# Backend secrets & dependencies
+backend/node_modules/
+backend/.env
+backend/.env.*
+!backend/.env.example
+backend/.git*/
+backend/uploads/
+backend/config/*firebase-adminsdk*.json
+
+# SQL dumps & archives
 *.sql
+!backend/migrations/*.sql
 *.tar.gz
+!backend.tar.gz
+
+# Local scratch / test files
+check_av.js
+update_categories.js
+test.dart
+generate_expertise.py
+flutter_*.png
+
+# Root NodeJS / general ignores
+node_modules/
+.env
 /release/
 .kotlin/
 *.salive
 *.bak
+temp_fitlek/

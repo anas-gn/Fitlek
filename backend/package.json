@@ -4,7 +4,7 @@
   "type": "module",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "node --test test/*.test.mjs",
     "dev": "nodemon index.js",
     "start": "node index.js"
   },
@@ -25,7 +25,8 @@
     "mysql2": "^3.22.5",
     "node-cron": "^4.6.0",
     "resend": "^6.18.0",
-    "sharp": "^0.35.4"
+    "sharp": "^0.35.4",
+    "socket.io": "^4.8.4"
   },
   "devDependencies": {
     "nodemon": "^3.1.4"

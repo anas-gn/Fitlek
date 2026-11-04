@@ -1,3 +1,4 @@
+import coachInvitations from '../pahae/coachInvitations.js';
 import express from 'express';
 import db from '../../config/db.js';
 import { createAndSendNotification } from '../../services/pushNotificationService.js';
@@ -11,7 +12,8 @@ const router = express.Router();
 // ─────────────────────────────────────────────
 router.get('/me', async (req, res) => {
   try {
-    const { coachID } = req.query;
+    const coachID = req.user.id;
+    if (req.user.role !== 'coach') return res.status(403).json({error:'Coach access required'});
     if (!coachID) return res.status(400).json({ error: 'coachID required' });
 
     const [rows] = await db.query(
@@ -44,7 +46,9 @@ router.get('/me', async (req, res) => {
 // ─────────────────────────────────────────────
 router.post('/use', async (req, res) => {
   try {
-    const { invitationCode, invitedUserID } = req.body;
+    const invitationCode = String(req.body.invitationCode ?? '').trim().toUpperCase();
+    const invitedUserID = req.user.id;
+    if (req.user.role !== 'client') return res.status(403).json({error:'Client access required'});
     if (!invitationCode || !invitedUserID)
       return res.status(400).json({ error: 'invitationCode and invitedUserID required' });
 
@@ -86,7 +90,9 @@ router.post('/use', async (req, res) => {
 // ─────────────────────────────────────────────
 router.post('/send', async (req, res) => {
   try {
-    const { senderID, coachID } = req.body;
+    const { coachID } = req.body;
+    const senderID = req.user.id;
+    if (req.user.role !== 'client') return res.status(403).json({error:'Client access required'});
     if (!senderID || !coachID)
       return res.status(400).json({ error: 'senderID and coachID required' });
 
@@ -143,6 +149,7 @@ router.post('/send', async (req, res) => {
 router.get('/received/:coachID', async (req, res) => {
   try {
     const { coachID } = req.params;
+    if (req.user.role !== 'coach' || String(req.user.id) !== String(coachID)) return res.status(403).json({error:'Access denied'});
     const [rows] = await db.query(
       'SELECT * FROM invitations WHERE coachID = ?',
       [coachID]
@@ -157,47 +164,12 @@ router.get('/received/:coachID', async (req, res) => {
 //  PATCH /invitations/:id/accept
 //  Le coach ACCEPTE l'invitation
 // ─────────────────────────────────────────────
-router.patch('/:id/accept', async (req, res) => {
-  try {
-    // Vérifie que l'invitation existe et est en "pending" ou "refused"
-    const [rows] = await db.query(
-      'SELECT * FROM invitations WHERE id = ? AND status IN ("pending", "refused")', 
-      [req.params.id]
-    );
-    if (!rows.length) 
-      return res.status(404).json({ error: 'Invitation introuvable ou déjà acceptée' });
-
-    const inv = rows[0];
-
-    // Client invitation reward (+20), separate from Coach-to-Coach referrals.
-    await db.query(
-      'UPDATE invitations SET status = "accepted", respondedAt = NOW(), pointsEarned = 20 WHERE id = ?',
-      [req.params.id]
-    );
-
-    await db.query(
-      'UPDATE coachprofiles SET earnedPoints = earnedPoints + 20 WHERE userID = ?',
-      [inv.coachID]
-    );
-
-    // Crée le lien coach-client
-    await db.query(
-      'INSERT IGNORE INTO coachclients (coachID, clientID) VALUES (?, ?)',
-      [inv.coachID, inv.invitedUserID]
-    );
-
-    res.json({
-      message: 'Invitation acceptée',
-      pointsAwarded: 20
-    });
-  } catch (err) { 
-    res.status(500).json({ error: err.message }); 
-  }
-});
+router.patch('/:id/accept', (req,res,next) => coachInvitations.handle(req,res,next));
 // GET /invitations/status/:coachID/:clientID
 router.get('/status/:coachID/:clientID', async (req, res) => {
   try {
     const { coachID, clientID } = req.params;
+    if (String(req.user.id) !== String(req.user.role === 'coach' ? coachID : clientID)) return res.status(403).json({error:'Access denied'});
     const [rows] = await db.query(
       'SELECT status FROM invitations WHERE coachID = ? AND invitedUserID = ? LIMIT 1',
       [coachID, clientID]
@@ -212,28 +184,6 @@ router.get('/status/:coachID/:clientID', async (req, res) => {
 //  PATCH /invitations/:id/refuse
 //  Le coach REFUSE l'invitation
 // ─────────────────────────────────────────────
-router.patch('/:id/refuse', async (req, res) => {
-  try {
-    // Vérifie que l'invitation existe et est en "pending"
-    const [rows] = await db.query(
-      'SELECT * FROM invitations WHERE id = ? AND status = "pending"', 
-      [req.params.id]
-    );
-    if (!rows.length) 
-      return res.status(404).json({ error: 'Invitation introuvable ou déjà traitée' });
-
-    // Met à jour l'invitation
-    await db.query(
-      'UPDATE invitations SET status = "refused", respondedAt = NOW() WHERE id = ?', 
-      [req.params.id]
-    );
-
-    res.json({ 
-      message: 'Invitation refusée' 
-    });
-  } catch (err) { 
-    res.status(500).json({ error: err.message }); 
-  }
-});
+router.patch('/:id/refuse', (req,res,next) => coachInvitations.handle(req,res,next));
 
 export default router;

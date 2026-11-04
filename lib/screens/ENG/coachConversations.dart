@@ -228,7 +228,7 @@ class _CoachConversationsState extends State<CoachConversations> with LiveUpdate
                 controller: _searchCtrl,
                 onChanged: (v) => setState(() => _query = v),
                 style: const TextStyle(color: Colors.white, fontSize: 14),
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   hintText: 'Rechercher une conversation',
                   hintStyle: TextStyle(color: Colors.white54, fontSize: 14),
                   border: InputBorder.none,

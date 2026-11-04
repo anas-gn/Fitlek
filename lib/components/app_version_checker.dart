@@ -1,120 +1,163 @@
-import 'dart:convert';
-import 'dart:io';
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:http/http.dart' as http;
-import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
-import '../constants/urls.dart';
+import '../services/app_version_policy.dart';
+import 'app_update_prompt.dart';
 
-/// Wraps [child] and silently checks for app updates in the background.
-/// No loading spinner is shown — the check runs after the UI is already
-/// displayed. Only if an update is required/available is a dialog shown.
+/// An application-wide gate. Place above the Navigator in MaterialApp.builder.
 class AppVersionChecker extends StatefulWidget {
   final Widget child;
-
-  const AppVersionChecker({super.key, required this.child});
-
+  final GlobalKey<NavigatorState>? navigatorKey;
+  final Future<AppVersionCheck?> Function()? load;
+  final Future<bool> Function(Uri)? openStore;
+  final bool showPrompts;
+  const AppVersionChecker(
+      {super.key,
+      required this.child,
+      this.navigatorKey,
+      this.load,
+      this.showPrompts = true,
+      this.openStore});
   @override
   State<AppVersionChecker> createState() => _AppVersionCheckerState();
 }
 
-class _AppVersionCheckerState extends State<AppVersionChecker> {
+class _AppVersionCheckerState extends State<AppVersionChecker>
+    with WidgetsBindingObserver {
+  AppVersionCheck? _check;
+  Timer? _timer;
+  bool _busy = false, _dialogShowing = false;
+  String? _dismissedVersion;
+  bool get _enabled =>
+      widget.load != null ||
+      (!kIsWeb &&
+          [TargetPlatform.android, TargetPlatform.iOS]
+              .contains(defaultTargetPlatform));
+  bool get _blocked => _check?.required == true;
+
   @override
   void initState() {
     super.initState();
-    // Delay slightly so the first frame is rendered before we hit the network.
-    Future.delayed(const Duration(seconds: 2), _checkVersionInBackground);
-  }
-
-  Future<void> _checkVersionInBackground() async {
-    // Version checking is only applicable to mobile (Android/iOS).
-    if (kIsWeb || !mounted) return;
-
-    try {
-      final PackageInfo packageInfo = await PackageInfo.fromPlatform();
-      final String currentVersion = packageInfo.version;
-      final String platform = Platform.isIOS ? 'ios' : 'android';
-
-      final response = await http
-          .get(Uri.parse('$baseUrl/app-version?platform=$platform'))
-          .timeout(const Duration(seconds: 10));
-
-      if (!mounted) return;
-
-      if (response.statusCode == 200) {
-        final data = json.decode(response.body);
-        if (data['success'] == true) {
-          final versionInfo = data['data'];
-          final String latestVersion = versionInfo['latest_version'];
-          final String minRequiredVersion = versionInfo['min_required_version'];
-          final String storeUrl = versionInfo['store_url'];
-
-          if (_isUpdateRequired(currentVersion, minRequiredVersion)) {
-            _showUpdateDialog(storeUrl, force: true);
-          } else if (_isUpdateRequired(currentVersion, latestVersion)) {
-            _showUpdateDialog(storeUrl, force: false);
-          }
+    WidgetsBinding.instance.addObserver(this);
+    if (_enabled) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _refresh());
+      _timer = Timer.periodic(const Duration(minutes: 5), (_) {
+        if (WidgetsBinding.instance.lifecycleState ==
+            AppLifecycleState.resumed) {
+          _refresh();
         }
+      });
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant AppVersionChecker oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.showPrompts && !oldWidget.showPrompts) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _offerUpdate());
+    }
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (_enabled && state == AppLifecycleState.resumed) _refresh();
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  Future<void> _refresh() async {
+    if (_busy || !mounted) return;
+    _busy = true;
+    try {
+      final result =
+          await (widget.load?.call() ?? AppVersionRepository.check());
+      if (!mounted) return;
+      // A failed check cannot dismiss an already-known required update.
+      setState(() {
+        if (result != null) _check = result;
+      });
+      if (!_blocked && _check?.available == true) {
+        WidgetsBinding.instance.addPostFrameCallback((_) => _offerUpdate());
       }
-    } catch (e) {
-      // Silently ignore — network errors should never affect the user experience.
-      debugPrint('Background version check failed (non-critical): $e');
+    } catch (error) {
+      debugPrint('App version check failed: $error');
+    } finally {
+      _busy = false;
     }
   }
 
-  bool _isUpdateRequired(String currentVersion, String requiredVersion) {
-    final currentParts = currentVersion.split('.').map(int.parse).toList();
-    final requiredParts = requiredVersion.split('.').map(int.parse).toList();
+  Future<bool> _openStore(Uri uri) =>
+      widget.openStore?.call(uri) ??
+      launchUrl(uri, mode: LaunchMode.externalApplication);
 
-    for (int i = 0; i < requiredParts.length; i++) {
-      if (i >= currentParts.length) return true;
-      if (requiredParts[i] > currentParts[i]) return true;
-      if (requiredParts[i] < currentParts[i]) return false;
+  Future<void> _offerUpdate() async {
+    if (!mounted ||
+        !widget.showPrompts ||
+        _blocked ||
+        _dialogShowing ||
+        _check == null ||
+        !_check!.available ||
+        _dismissedVersion == _check!.policy.latestVersion) {
+      return;
     }
-    return false;
-  }
-
-  void _showUpdateDialog(String storeUrl, {required bool force}) {
-    if (!mounted) return;
-    showDialog(
-      context: context,
-      barrierDismissible: !force,
-      builder: (BuildContext dialogContext) {
-        return PopScope(
-          canPop: !force,
-          child: AlertDialog(
-            title: Text(force ? 'Update Required' : 'Update Available'),
-            content: Text(
-              force
-                  ? 'A new version of the app is required to continue. Please update to the latest version.'
-                  : 'A new version of the app is available. Would you like to update now?',
-            ),
-            actions: [
-              if (!force)
-                TextButton(
-                  onPressed: () => Navigator.of(dialogContext).pop(),
-                  child: const Text('Later'),
-                ),
-              ElevatedButton(
-                onPressed: () async {
-                  final uri = Uri.parse(storeUrl);
-                  if (await canLaunchUrl(uri)) {
-                    await launchUrl(uri, mode: LaunchMode.externalApplication);
-                  }
-                },
-                child: const Text('Update Now'),
-              ),
-            ],
-          ),
-        );
-      },
-    );
+    final navigator =
+        widget.navigatorKey?.currentState ?? Navigator.maybeOf(context);
+    final overlay = navigator?.overlay;
+    if (overlay == null) return;
+    final offer = _check!;
+    _dialogShowing = true;
+    try {
+      await showDialog<void>(
+          context: overlay.context,
+          builder: (dialogContext) => Dialog(
+                backgroundColor: Colors.transparent,
+                elevation: 0,
+                insetPadding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+                child: AppUpdatePrompt(
+                    check: offer,
+                    mandatory: false,
+                    openStore: _openStore,
+                    dismiss: () => Navigator.of(dialogContext).pop()),
+              ));
+      _dismissedVersion = offer.policy.latestVersion;
+    } finally {
+      _dialogShowing = false;
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    // Always show the child immediately — no blocking spinner.
-    return widget.child;
+    final locked = widget.showPrompts && _blocked;
+    return Stack(fit: StackFit.expand, children: [
+      ExcludeSemantics(
+          excluding: locked,
+          child: ExcludeFocus(
+              excluding: locked,
+              child: AbsorbPointer(
+                  absorbing: locked,
+                  child: TickerMode(enabled: !locked, child: widget.child)))),
+      if (locked)
+        Positioned.fill(
+            child: Material(
+          color: Theme.of(context).scaffoldBackgroundColor,
+          child: SafeArea(
+              child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Center(
+                child: AppUpdatePrompt(
+                    check: _check!,
+                    mandatory: true,
+                    openStore: _openStore,
+                    recheck: _refresh)),
+          )),
+        )),
+    ]);
   }
 }

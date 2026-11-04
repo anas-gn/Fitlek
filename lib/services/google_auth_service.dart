@@ -33,6 +33,7 @@ class GoogleAuthService {
     double? weight,
     Map<String, dynamic>? location,
     List<String>? interests,
+    Map<String, dynamic>? nutritionPlan,
   }) async {
     try {
       UserCredential userCredential;
@@ -84,8 +85,9 @@ class GoogleAuthService {
         throw Exception('Could not retrieve Firebase ID token.');
       }
 
-      if (kDebugMode)
+      if (kDebugMode) {
         debugPrint('🔐 Firebase ID Token obtained, sending to backend...');
+      }
 
       final Map<String, dynamic> requestBody = {
         'idToken': firebaseIdToken,
@@ -97,6 +99,7 @@ class GoogleAuthService {
         requestBody['height'] = height;
         requestBody['weight'] = weight;
         if (interests != null) requestBody['interests'] = interests;
+        if (nutritionPlan != null) requestBody['nutritionPlan'] = nutritionPlan;
         if (location != null) requestBody['location'] = location;
       }
       if (referralCode != null && referralCode.isNotEmpty) {
@@ -141,8 +144,9 @@ class GoogleAuthService {
       }
     } catch (e) {
       if (kDebugMode) debugPrint('🔥 GoogleAuthService Error: $e');
-      if (e is FirebaseAuthException)
+      if (e is FirebaseAuthException) {
         throw Exception(socialAuthError(e, 'Google'));
+      }
       rethrow;
     }
   }

@@ -622,6 +622,7 @@ class _FavoriteCoachTileState extends State<_FavoriteCoachTile> {
         duration: const Duration(milliseconds: 120),
         curve: Curves.easeOutCubic,
         child: Container(
+          key: ValueKey('favorite-card-${coach.id}'),
           margin: const EdgeInsets.only(bottom: 14),
           decoration: BoxDecoration(
             color: f.card,
@@ -636,38 +637,43 @@ class _FavoriteCoachTileState extends State<_FavoriteCoachTile> {
             ],
           ),
           clipBehavior: Clip.antiAlias,
-          child: Row(
+          child: IntrinsicHeight(
+              child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Stack(
-                children: [
-                  SizedBox(
-                    width: 104,
-                    height: 124,
-                    child: coach.avatarUrl?.isNotEmpty == true
-                        ? Image.network(
-                            coach.avatarUrl!,
-                            fit: BoxFit.cover,
-                            loadingBuilder: (_, child, p) =>
-                                p == null ? child : Container(color: f.card2),
-                            errorBuilder: (_, __, ___) => _placeholder(cs, f),
-                          )
-                        : _placeholder(cs, f),
-                  ),
-                  if (coach.isPremium)
-                    Positioned(
-                      top: 8,
-                      left: 8,
-                      child: Container(
-                        padding: const EdgeInsets.all(4),
-                        decoration: BoxDecoration(
-                          color: f.premium,
-                          shape: BoxShape.circle,
+              SizedBox(
+                key: ValueKey('favorite-photo-${coach.id}'),
+                width: 104,
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    Positioned.fill(
+                        child: coach.avatarUrl?.isNotEmpty == true
+                            ? Image.network(
+                                coach.avatarUrl!,
+                                fit: BoxFit.cover,
+                                alignment: Alignment.center,
+                                loadingBuilder: (_, child, p) => p == null
+                                    ? child
+                                    : Container(color: f.card2),
+                                errorBuilder: (_, __, ___) =>
+                                    _placeholder(cs, f),
+                              )
+                            : _placeholder(cs, f)),
+                    if (coach.isPremium)
+                      Positioned(
+                        top: 8,
+                        left: 8,
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: BoxDecoration(
+                              color: f.premium, shape: BoxShape.circle),
+                          child: const Icon(Icons.workspace_premium_rounded,
+                              color: Colors.black, size: 11),
                         ),
-                        child: const Icon(Icons.workspace_premium_rounded,
-                            color: Colors.black, size: 11),
                       ),
-                    ),
-                ],
+                  ],
+                ),
               ),
               Expanded(
                 child: Padding(
@@ -785,7 +791,7 @@ class _FavoriteCoachTileState extends State<_FavoriteCoachTile> {
                 ),
               ),
             ],
-          ),
+          )),
         ),
       ),
     );

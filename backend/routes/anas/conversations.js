@@ -4,14 +4,14 @@ import db from '../../config/db.js';
 // GET /conversations/unread-total
 router.get('/unread-total', async (req, res) => {
   try {
-    const { userID } = req.query;
+    const userID = req.user.id;
     if (!userID) return res.status(400).json({ error: 'userID required' });
     const [rows] = await db.query(
       `SELECT COUNT(*) AS totalUnread
        FROM messages m
        JOIN conversations c ON c.id = m.conversationID
-       WHERE (c.clientID = ? OR c.coachID = ?) AND m.senderID != ? AND m.isRead = 0`,
-      [userID, userID, userID]
+       WHERE (c.clientID = ? OR c.coachID = ?) AND m.senderID != ? AND m.isRead = 0 AND m.deletedAt IS NULL AND NOT EXISTS(SELECT 1 FROM chat_hidden_messages h WHERE h.messageID=m.id AND h.userID=?)`,
+      [userID, userID, userID, userID]
     );
     res.json({ totalUnread: rows[0]?.totalUnread || 0 });
   } catch (err) {
@@ -22,13 +22,13 @@ router.get('/unread-total', async (req, res) => {
 // GET /conversations
 router.get('/', async (req, res) => {
   try {
-    const { userID, role } = req.query;
+    const userID = req.user.id; const role = req.user.role;
     const requesterID = req.user.id;
     let sql, params;
     if (role === 'client') {
       sql = `SELECT cv.*, CONCAT(co.firstName,' ',co.lastName) AS otherName, co.avatarUrl AS otherAvatar,
-               (SELECT body FROM messages m WHERE m.conversationID = cv.id ORDER BY m.createdAt DESC LIMIT 1) AS lastMessage,
-               (SELECT COUNT(*) FROM messages m WHERE m.conversationID = cv.id AND m.senderID != cv.clientID AND m.isRead = 0) AS unreadCount
+               (SELECT body FROM messages m WHERE m.conversationID = cv.id AND NOT EXISTS(SELECT 1 FROM chat_hidden_messages h WHERE h.messageID=m.id AND h.userID=cv.clientID) ORDER BY m.createdAt DESC LIMIT 1) AS lastMessage,
+               (SELECT COUNT(*) FROM messages m WHERE m.conversationID = cv.id AND m.senderID != cv.clientID AND m.isRead = 0 AND m.deletedAt IS NULL AND NOT EXISTS(SELECT 1 FROM chat_hidden_messages h WHERE h.messageID=m.id AND h.userID=cv.clientID)) AS unreadCount
              FROM conversations cv JOIN users co ON co.id = cv.coachID
              WHERE cv.clientID=? 
                AND co.id NOT IN (SELECT blockedID FROM user_blocks WHERE blockerID = ?)
@@ -37,8 +37,8 @@ router.get('/', async (req, res) => {
       params = [userID, requesterID, requesterID];
     } else if (role === 'coach') {
       sql = `SELECT cv.*, CONCAT(c.firstName,' ',c.lastName) AS otherName, c.avatarUrl AS otherAvatar,
-               (SELECT body FROM messages m WHERE m.conversationID = cv.id ORDER BY m.createdAt DESC LIMIT 1) AS lastMessage,
-               (SELECT COUNT(*) FROM messages m WHERE m.conversationID = cv.id AND m.senderID != cv.coachID AND m.isRead = 0) AS unreadCount
+               (SELECT body FROM messages m WHERE m.conversationID = cv.id AND NOT EXISTS(SELECT 1 FROM chat_hidden_messages h WHERE h.messageID=m.id AND h.userID=cv.coachID) ORDER BY m.createdAt DESC LIMIT 1) AS lastMessage,
+               (SELECT COUNT(*) FROM messages m WHERE m.conversationID = cv.id AND m.senderID != cv.coachID AND m.isRead = 0 AND m.deletedAt IS NULL AND NOT EXISTS(SELECT 1 FROM chat_hidden_messages h WHERE h.messageID=m.id AND h.userID=cv.coachID)) AS unreadCount
              FROM conversations cv JOIN users c ON c.id = cv.clientID
              WHERE cv.coachID=? 
                AND c.id NOT IN (SELECT blockedID FROM user_blocks WHERE blockerID = ?)

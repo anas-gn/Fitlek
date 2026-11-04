@@ -100,7 +100,7 @@ class _ClientChangeEmailScreenState extends State<ClientChangeEmailScreen> {
                 keyboardType: TextInputType.emailAddress,
                 autofillHints: const [AutofillHints.email],
                 decoration:
-                    const InputDecoration(labelText: 'New email address'))
+                    InputDecoration(labelText: 'New email address'))
           else
             TextField(
                 controller: _code,
@@ -112,7 +112,7 @@ class _ClientChangeEmailScreenState extends State<ClientChangeEmailScreen> {
                   LengthLimitingTextInputFormatter(6)
                 ],
                 decoration:
-                    const InputDecoration(labelText: 'Verification code')),
+                    InputDecoration(labelText: 'Verification code')),
           if (_error != null) ...[
             const SizedBox(height: 12),
             Text(_error!,

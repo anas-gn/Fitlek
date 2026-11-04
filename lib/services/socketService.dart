@@ -18,9 +18,13 @@ class SocketService with WidgetsBindingObserver {
   final _updates = StreamController<Map<String, dynamic>>.broadcast();
   final _notifications = StreamController<Map<String, dynamic>>.broadcast();
   final _messages = StreamController<Map<String, dynamic>>.broadcast();
+  final _activities = StreamController<Map<String, dynamic>>.broadcast();
+  final _localActivities = <String, String>{};
+  final connected = ValueNotifier<bool>(false);
   Stream<Map<String, dynamic>> get updates => _updates.stream;
   Stream<Map<String, dynamic>> get notifications => _notifications.stream;
   Stream<Map<String, dynamic>> get messages => _messages.stream;
+  Stream<Map<String, dynamic>> get activities => _activities.stream;
   StreamSubscription<Map<String, dynamic>>? _legacyMessageSubscription;
 
   Future<void> connect() async {
@@ -47,16 +51,24 @@ class SocketService with WidgetsBindingObserver {
             .build());
     _socket = socket;
     socket.onConnect((_) {
+      connected.value = true;
       unawaited(ChatMediaStore.instance.syncPending());
       _mediaSyncTimer?.cancel();
       _mediaSyncTimer = Timer.periodic(const Duration(minutes: 5), (_) {
         if (socket.connected) unawaited(ChatMediaStore.instance.syncPending());
       });
       for (final room in _rooms) {
-        socket.emit('join_room', {'conversationId': room});
+        _join(socket, room);
       }
       invalidate(
           'all'); // Catch up after offline periods, server restarts and resume.
+    });
+    socket.onDisconnect((_) {
+      connected.value = false;
+      _activities.add({'reset': true});
+    });
+    socket.on('conversation_activity', (data) {
+      if (data is Map) _activities.add(Map<String, dynamic>.from(data));
     });
     socket.on('data_changed', (data) {
       if (data is Map && data['domain'] == 'chat-actions')
@@ -78,10 +90,35 @@ class SocketService with WidgetsBindingObserver {
   void invalidate(String domain) => _updates.add({'domain': domain});
   void joinRoom(String id) {
     _rooms.add(id);
-    _socket?.emit('join_room', {'conversationId': id});
+    final socket = _socket;
+    if (socket != null && socket.connected) _join(socket, id);
+  }
+
+  void _join(IO.Socket socket, String id) {
+    socket.emitWithAck('join_room', {'conversationId': id}, ack: (data) {
+      if (data is Map && data['ok'] == true && _rooms.contains(id)) {
+        final activity = _localActivities[id];
+        if (activity != null && socket.connected)
+          socket.emit('conversation_activity',
+              {'conversationID': id, 'activity': activity});
+      }
+    });
+  }
+
+  void sendChatActivity(String id, String activity) {
+    if (activity == 'idle') {
+      _localActivities.remove(id);
+    } else {
+      _localActivities[id] = activity;
+    }
+    // Ephemeral presence must never queue and replay an old "typing" state.
+    if (_socket?.connected == true && _rooms.contains(id))
+      _socket!.emit('conversation_activity',
+          {'conversationID': id, 'activity': activity});
   }
 
   void leaveRoom(String id) {
+    sendChatActivity(id, 'idle');
     _rooms.remove(id);
     _socket?.emit('leave_room', {'conversationId': id});
   }
@@ -115,6 +152,9 @@ class SocketService with WidgetsBindingObserver {
     _socket = null;
     _token = null;
     _rooms.clear();
+    _localActivities.clear();
+    connected.value = false;
+    _activities.add({'reset': true});
     offNewMessage();
     if (_observing) WidgetsBinding.instance.removeObserver(this);
     _observing = false;

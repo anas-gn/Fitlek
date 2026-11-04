@@ -1,7 +1,9 @@
+import '../../services/conversation_activity.dart';
+import '../../components/ENG/conversationUi.dart';
+import '../../components/app_dialog.dart';
 import '../../components/ENG/chatImageBatchPreview.dart';
 import '../../components/ENG/chatSelection.dart';
 import '../../services/chat_media_store.dart';
-import '../../components/ENG/localChatMedia.dart';
 import '../../services/media_picker_service.dart';
 import '../../services/live_updates.dart';
 import 'dart:async';
@@ -80,18 +82,24 @@ class ClientConversationScreen extends StatefulWidget {
   final int conversationID;
   final int clientID;
   final String token;
+  final int? coachID;
   final String? coachName;
   final String? coachAvatar;
   final String? coachSpeciality;
+  final http.Client? httpClient;
+  final bool connectRealtime;
 
   const ClientConversationScreen({
     super.key,
     required this.conversationID,
     required this.clientID,
     required this.token,
+    this.coachID,
     this.coachName,
     this.coachAvatar,
     this.coachSpeciality,
+    this.httpClient,
+    this.connectRealtime = true,
   });
 
   @override
@@ -101,6 +109,41 @@ class ClientConversationScreen extends StatefulWidget {
 
 class _ClientConversationScreenState extends State<ClientConversationScreen>
     with LiveUpdates<ClientConversationScreen> {
+  @override
+  bool get enableLiveUpdates => widget.connectRealtime;
+  late final http.Client _http = widget.httpClient ?? http.Client();
+  int? _resolvedCoachID;
+
+  Future<int?> _getCoachID() async {
+    if (_resolvedCoachID != null && _resolvedCoachID! > 0) {
+      return _resolvedCoachID;
+    }
+    for (final m in _messages) {
+      if (m.senderID != widget.clientID && m.senderID > 0) {
+        _resolvedCoachID = m.senderID;
+        return _resolvedCoachID;
+      }
+    }
+    try {
+      final res = await _http.get(
+        Uri.parse('$baseUrl/conversations'),
+        headers: _headers,
+      );
+      if (res.statusCode == 200) {
+        final list = jsonDecode(res.body) as List;
+        for (final item in list) {
+          if (item['id'] == widget.conversationID) {
+            final cid = item['coachID'];
+            if (cid != null) {
+              _resolvedCoachID = int.tryParse('$cid');
+              return _resolvedCoachID;
+            }
+          }
+        }
+      }
+    } catch (_) {}
+    return _resolvedCoachID;
+  }
   @override
   Set<String> get liveDomains => {'read_receipts', 'chat-actions', 'all'};
   @override
@@ -169,7 +212,7 @@ class _ClientConversationScreenState extends State<ClientConversationScreen>
             now.difference(m.createdAt).inSeconds < 1800);
     final scope = await showDialog<String>(
         context: context,
-        builder: (ctx) => AlertDialog(
+        builder: (ctx) => AppDialog(
                 title: Text('Delete ${_selected.length} messages?'),
                 content: const Text(
                     'Delete for everyone is available for your own messages during the first 30 minutes.'),
@@ -219,7 +262,7 @@ class _ClientConversationScreenState extends State<ClientConversationScreen>
   bool _loading = true;
   bool _sending = false;
   String? _error;
-  Timer? _refreshTimer;
+
   StreamSubscription<Map<String, dynamic>>? _socketMessages;
 
   int _page = 1;
@@ -227,6 +270,14 @@ class _ClientConversationScreenState extends State<ClientConversationScreen>
   bool _loadingMore = false;
 
   final AudioRecorder _audioRecorder = AudioRecorder();
+  bool _showStorageNotice = true,
+      _fetching = false,
+      _fetchAgain = false,
+      _olderFailed = false;
+  int _unreadNew = 0;
+  bool _recordBusy = false;
+  late final ConversationActivity _activity;
+  void _draftChanged() => _activity.textChanged(_msgCtrl.text);
   bool _isRecording = false;
   bool _isUploadingMedia = false;
 
@@ -238,28 +289,46 @@ class _ClientConversationScreenState extends State<ClientConversationScreen>
   @override
   void initState() {
     super.initState();
+    _resolvedCoachID = widget.coachID;
+    _activity = ConversationActivity(
+        conversationID: widget.conversationID.toString(),
+        userID: widget.clientID,
+        enabled: widget.connectRealtime);
+    _msgCtrl.addListener(_draftChanged);
     _fetchMessages();
-    _initSocket();
+    if (widget.connectRealtime) _initSocket();
     _scrollCtrl.addListener(_onScroll);
   }
 
   @override
   void dispose() {
+    _msgCtrl.removeListener(_draftChanged);
+    _activity.dispose();
     _socketMessages?.cancel();
-    SocketService().leaveRoom(widget.conversationID.toString());
+    if (widget.connectRealtime) {
+      SocketService().leaveRoom(widget.conversationID.toString());
+    }
+    if (widget.httpClient == null) _http.close();
     _msgCtrl.dispose();
     _scrollCtrl.dispose();
     _focusNode.dispose();
-    _refreshTimer?.cancel();
+
     _audioRecorder.dispose();
     super.dispose();
   }
 
+  bool get _nearLatest => !_scrollCtrl.hasClients || _scrollCtrl.offset < 80;
   void _onScroll() {
-    if (_scrollCtrl.position.pixels >=
-            _scrollCtrl.position.maxScrollExtent - 100 &&
+    if (!_scrollCtrl.hasClients) return;
+    if (_scrollCtrl.offset < 80 && _unreadNew > 0) {
+      setState(() => _unreadNew = 0);
+    }
+    if (_scrollCtrl.position.maxScrollExtent > 0 &&
+        _scrollCtrl.offset >= _scrollCtrl.position.maxScrollExtent - 160 &&
         !_loadingMore &&
-        _hasMore) {
+        !_olderFailed &&
+        _hasMore &&
+        !_loading) {
       _loadMore();
     }
   }
@@ -284,106 +353,115 @@ class _ClientConversationScreenState extends State<ClientConversationScreen>
               widget.conversationID.toString() &&
           data['senderID'].toString() != widget.clientID.toString() &&
           !_messages.any((m) => m.id.toString() == data['id'].toString())) {
+        _activity.messageReceived(int.tryParse('${data['senderID']}') ?? -1);
+        final follow = _nearLatest;
         setState(() {
+          if (!follow) _unreadNew++;
           _messages.add(_Message.fromJson(data));
         });
-        _scrollToBottom();
+        if (follow) _scrollToBottom();
         _fetchMessages(silent: true);
       }
     });
   }
 
   Future<void> _fetchMessages({bool silent = false}) async {
-    if (!silent) setState(() => _loading = true);
+    if (_fetching) {
+      _fetchAgain = true;
+      return;
+    }
+    _fetching = true;
+    final initial = _messages.isEmpty;
+    final follow = _nearLatest;
+    if (mounted)
+      setState(() {
+        if (!silent && initial) _loading = true;
+      });
     try {
-      final url = _getMessagesUrl(1);
-      final res = await http
-          .get(Uri.parse(url), headers: _headers)
-          .timeout(Duration(seconds: 10));
-
-      if (res.statusCode == 200) {
-        final List data = jsonDecode(res.body);
-        final msgs = data
-            .map((e) => _Message.fromJson(e as Map<String, dynamic>))
-            .toList();
-
-        if (mounted) {
-          setState(() {
-            if (silent) {
-              final merged = <int, _Message>{
-                for (final m in _messages) m.id: m
-              };
-              for (final m in msgs) {
-                merged[m.id] = m;
-              }
-              _messages = merged.values.toList()
-                ..sort((a, b) => a.id.compareTo(b.id));
-            } else {
-              _messages = msgs;
-              _page = 1;
-            }
-            _loading = false;
-            _error = null;
-          });
-          _scrollToBottom();
+      final res = await _http
+          .get(Uri.parse(_getMessagesUrl(1)), headers: _headers)
+          .timeout(const Duration(seconds: 15));
+      if (res.statusCode != 200) throw Exception('Could not load messages');
+      final rows = (jsonDecode(res.body) as List)
+          .map((m) => _Message.fromJson(Map<String, dynamic>.from(m)))
+          .toList();
+      if (!mounted) return;
+      final last = _messages.isEmpty ? 0 : _messages.last.id;
+      setState(() {
+        final merged = {for (final m in _messages) m.id: m};
+        for (final m in rows) {
+          merged[m.id] = m;
         }
-      } else {
-        if (mounted) {
-          setState(() {
-            _error = 'Error (${res.statusCode})';
-            _loading = false;
-          });
+        _messages = merged.values.toList()
+          ..sort((a, b) => a.id.compareTo(b.id));
+        if (initial) {
+          _page = 1;
+          _hasMore = rows.length >= 50;
         }
+        _loading = false;
+        _error = null;
+      });
+      if (!initial &&
+          follow &&
+          _nearLatest &&
+          rows.isNotEmpty &&
+          rows.last.id != last) {
+        _scrollToBottom();
       }
     } catch (_) {
       if (mounted) {
         setState(() {
-          _error = 'Server unreachable';
           _loading = false;
+          _error = 'Could not refresh messages. Check your connection.';
         });
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _fetching = false);
+      } else {
+        _fetching = false;
+      }
+      if (_fetchAgain && mounted) {
+        _fetchAgain = false;
+        unawaited(_fetchMessages(silent: true));
       }
     }
   }
 
   Future<void> _loadMore() async {
     if (_loadingMore || !_hasMore) return;
-    setState(() => _loadingMore = true);
+    setState(() {
+      _loadingMore = true;
+      _olderFailed = false;
+    });
     try {
-      final nextPage = _page + 1;
-      final url = _getMessagesUrl(nextPage);
-      final res = await http
-          .get(Uri.parse(url), headers: _headers)
-          .timeout(Duration(seconds: 10));
-
-      if (res.statusCode == 200) {
-        final List data = jsonDecode(res.body);
-        final newMsgs = data
-            .map((e) => _Message.fromJson(e as Map<String, dynamic>))
-            .toList();
-
-        if (mounted) {
-          setState(() {
-            if (newMsgs.isEmpty) {
-              _hasMore = false;
-            } else {
-              final existing = _messages.map((m) => m.id).toSet();
-              _messages.insertAll(
-                  0, newMsgs.where((m) => !existing.contains(m.id)));
-              _page = nextPage;
-            }
-            _loadingMore = false;
-          });
+      final res = await _http
+          .get(Uri.parse(_getMessagesUrl(_page + 1)), headers: _headers)
+          .timeout(const Duration(seconds: 15));
+      if (res.statusCode != 200) throw Exception('Could not load messages');
+      final rows = (jsonDecode(res.body) as List)
+          .map((m) => _Message.fromJson(Map<String, dynamic>.from(m)))
+          .toList();
+      if (!mounted) return;
+      setState(() {
+        final merged = {for (final m in _messages) m.id: m};
+        for (final m in rows) {
+          merged.putIfAbsent(m.id, () => m);
         }
-      } else {
-        setState(() => _loadingMore = false);
-      }
+        _messages = merged.values.toList()
+          ..sort((a, b) => a.id.compareTo(b.id));
+        _page++;
+        _hasMore = rows.length >= 50;
+      });
     } catch (_) {
-      setState(() => _loadingMore = false);
+      if (mounted) setState(() => _olderFailed = true);
+    } finally {
+      if (mounted) setState(() => _loadingMore = false);
     }
   }
 
   Future<void> _sendMessage() async {
-    if (_batchSending) return;
+    if (_batchSending || _sending || _isUploadingMedia) return;
     final text = _msgCtrl.text.trim();
     if (text.isEmpty) return;
 
@@ -392,7 +470,7 @@ class _ClientConversationScreenState extends State<ClientConversationScreen>
 
     try {
       final url = _getSendUrl();
-      final res = await http
+      final res = await _http
           .post(
             Uri.parse(url),
             headers: _headers,
@@ -402,15 +480,24 @@ class _ClientConversationScreenState extends State<ClientConversationScreen>
               'mediaType': 'text',
             }),
           )
-          .timeout(Duration(seconds: 10));
+          .timeout(const Duration(seconds: 10));
 
       if (res.statusCode == 201) {
         await _fetchMessages(silent: true);
+        if (mounted) _scrollToBottom();
       } else {
-        _msgCtrl.text = text;
+        if (mounted) {
+          _msgCtrl.text = text;
+          _showSnack('Could not send. Your message is ready to retry.',
+              isError: true);
+        }
       }
     } catch (_) {
-      _msgCtrl.text = text;
+      if (mounted) {
+        _msgCtrl.text = text;
+        _showSnack('Could not send. Your message is ready to retry.',
+            isError: true);
+      }
     } finally {
       if (mounted) setState(() => _sending = false);
     }
@@ -422,12 +509,12 @@ class _ClientConversationScreenState extends State<ClientConversationScreen>
     showModalBottomSheet(
       context: context,
       backgroundColor: context.fitlek.card,
-      shape: RoundedRectangleBorder(
+      shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (_) => SafeArea(
         child: Padding(
-          padding: EdgeInsets.symmetric(vertical: 20),
+          padding: const EdgeInsets.symmetric(vertical: 20),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
@@ -461,7 +548,7 @@ class _ClientConversationScreenState extends State<ClientConversationScreen>
                 color: color.withValues(alpha: 0.1), shape: BoxShape.circle),
             child: Icon(icon, color: color, size: 28),
           ),
-          SizedBox(height: 8),
+          const SizedBox(height: 8),
           Text(label,
               style: TextStyle(
                   color: Theme.of(context).colorScheme.onSurface,
@@ -476,10 +563,10 @@ class _ClientConversationScreenState extends State<ClientConversationScreen>
     final ctrl = TextEditingController();
     return showDialog<String>(
       context: context,
-      builder: (ctx) => AlertDialog(
+      builder: (ctx) => AppDialog(
         backgroundColor: context.fitlek.card,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        contentPadding: EdgeInsets.all(16),
+        contentPadding: const EdgeInsets.all(16),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -489,7 +576,7 @@ class _ClientConversationScreenState extends State<ClientConversationScreen>
                   ? Image.network(file.path, height: 200, fit: BoxFit.cover)
                   : Image.file(File(file.path), height: 200, fit: BoxFit.cover),
             ),
-            SizedBox(height: 16),
+            const SizedBox(height: 16),
             TextField(
               controller: ctrl,
               style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
@@ -522,26 +609,35 @@ class _ClientConversationScreenState extends State<ClientConversationScreen>
     if (xFile == null) return;
 
     final caption = await _showCaptionDialog(xFile);
-    if (caption == null) return; // User cancelled
+    if (!mounted || caption == null) return; // User cancelled
 
     setState(() => _isUploadingMedia = true);
-    final bytes = await xFile.readAsBytes();
-    final result = await ApiService.uploadMultipart(
-      '/upload/chat-image',
-      fields: {},
-      fileBytes: bytes,
-      fileField: 'image',
-      fileName: xFile.name,
-      mimeType: 'image/webp',
-    );
+    try {
+      final bytes = await xFile.readAsBytes();
+      final result = await ApiService.uploadMultipart(
+        '/upload/chat-image',
+        fields: {},
+        fileBytes: bytes,
+        fileField: 'image',
+        fileName: xFile.name,
+        mimeType: 'image/webp',
+      );
 
-    if (!mounted) return;
-    if (result['ok'] == true && result['url'] != null) {
-      await _sendMediaMessage(result['url'], 'image', caption: caption);
-    } else {
-      setState(() => _isUploadingMedia = false);
-      _showSnack(result['message']?.toString() ?? 'Image upload failed',
-          isError: true);
+      if (!mounted) return;
+      if (result['ok'] == true && result['url'] != null) {
+        await _sendMediaMessage(result['url'], 'image', caption: caption);
+      } else {
+        setState(() => _isUploadingMedia = false);
+        _showSnack(result['message']?.toString() ?? 'Image upload failed',
+            isError: true);
+      }
+    } catch (_) {
+      if (mounted) {
+        ApiService.showError(
+            context, 'Could not send the photo. Please try again.');
+      }
+    } finally {
+      if (mounted) setState(() => _isUploadingMedia = false);
     }
   }
 
@@ -581,7 +677,9 @@ class _ClientConversationScreenState extends State<ClientConversationScreen>
           if (!mounted) return;
           if (result['ok'] == true && result['url'] != null) {
             if (!await _sendMediaMessage(result['url'], 'image',
-                caption: i == 0 ? caption : null)) failed++;
+                caption: i == 0 ? caption : null)) {
+              failed++;
+            }
           } else {
             failed++;
           }
@@ -589,68 +687,94 @@ class _ClientConversationScreenState extends State<ClientConversationScreen>
           failed++;
         }
       }
-      if (mounted && failed > 0)
+      if (mounted && failed > 0) {
         ApiService.showError(
             context, '$failed photos could not be sent. The others were sent.');
+      }
     } finally {
-      if (mounted)
+      if (mounted) {
         setState(() {
           _batchSending = false;
           _isUploadingMedia = false;
         });
+      }
     }
   }
 
   Future<void> _toggleRecording() async {
-    if (_batchSending) return;
-    if (_isRecording) {
-      final path = await _audioRecorder.stop();
-      setState(() => _isRecording = false);
-      if (path != null) {
-        setState(() => _isUploadingMedia = true);
-        Uint8List bytes;
-        if (kIsWeb) {
-          final res = await http.get(Uri.parse(path));
-          bytes = res.bodyBytes;
-        } else {
-          final file = File(path);
-          bytes = await file.readAsBytes();
-        }
-
-        final result = await ApiService.uploadMultipart(
-          '/upload/chat-audio',
-          fields: {},
-          fileBytes: bytes,
-          fileField: 'audio',
-          fileName: 'audio.m4a',
-          mimeType: 'audio/mp4',
-        );
-
+    if (_batchSending || _recordBusy || _isUploadingMedia || _sending) return;
+    setState(() => _recordBusy = true);
+    try {
+      if (_isRecording) {
+        final path = await _audioRecorder.stop();
         if (!mounted) return;
-        if (result['ok'] == true && result['url'] != null) {
-          await _sendMediaMessage(result['url'], 'audio');
-        } else {
-          setState(() => _isUploadingMedia = false);
-          _showSnack('Audio upload failed', isError: true);
+        setState(() => _isRecording = false);
+        _activity.recording(false);
+        if (path != null) {
+          setState(() => _isUploadingMedia = true);
+          Uint8List bytes;
+          if (kIsWeb) {
+            final res = await _http.get(Uri.parse(path));
+            bytes = res.bodyBytes;
+          } else {
+            final file = File(path);
+            bytes = await file.readAsBytes();
+          }
+
+          final result = await ApiService.uploadMultipart(
+            '/upload/chat-audio',
+            fields: {},
+            fileBytes: bytes,
+            fileField: 'audio',
+            fileName: 'audio.m4a',
+            mimeType: 'audio/mp4',
+          );
+
+          if (!mounted) return;
+          if (result['ok'] == true && result['url'] != null) {
+            await _sendMediaMessage(result['url'], 'audio');
+          } else {
+            setState(() => _isUploadingMedia = false);
+            _showSnack('Audio upload failed', isError: true);
+          }
+        }
+      } else {
+        if (await _audioRecorder.hasPermission()) {
+          if (kIsWeb) {
+            await _audioRecorder.start(
+                const RecordConfig(encoder: AudioEncoder.aacLc),
+                path: '');
+          } else {
+            final dir = await getTemporaryDirectory();
+            final path =
+                '${dir.path}/audio_${DateTime.now().millisecondsSinceEpoch}.m4a';
+            await _audioRecorder.start(
+                const RecordConfig(encoder: AudioEncoder.aacLc),
+                path: path);
+          }
+          if (!mounted) {
+            await _audioRecorder.stop();
+            return;
+          }
+          setState(() => _isRecording = true);
+          _activity.recording(true);
+        } else if (mounted) {
+          _showSnack(
+              'Allow microphone access for Sirvya in your phone Settings to record voice messages.',
+              isError: true);
         }
       }
-    } else {
-      if (await _audioRecorder.hasPermission()) {
-        if (kIsWeb) {
-          await _audioRecorder.start(RecordConfig(encoder: AudioEncoder.aacLc),
-              path: '');
-        } else {
-          final dir = await getTemporaryDirectory();
-          final path =
-              '${dir.path}/audio_${DateTime.now().millisecondsSinceEpoch}.m4a';
-          await _audioRecorder.start(RecordConfig(encoder: AudioEncoder.aacLc),
-              path: path);
-        }
-        setState(() => _isRecording = true);
-      } else if (mounted) {
-        _showSnack(
-            'Allow microphone access for Sirvya in your phone Settings to record voice messages.',
-            isError: true);
+    } catch (_) {
+      if (mounted) {
+        ApiService.showError(
+            context, 'Could not record or send audio. Please try again.');
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _recordBusy = false;
+          _isUploadingMedia = false;
+        });
       }
     }
   }
@@ -660,7 +784,7 @@ class _ClientConversationScreenState extends State<ClientConversationScreen>
     setState(() => _sending = true);
     try {
       final reqUrl = _getSendUrl();
-      final res = await http
+      final res = await _http
           .post(
             Uri.parse(reqUrl),
             headers: _headers,
@@ -671,7 +795,7 @@ class _ClientConversationScreenState extends State<ClientConversationScreen>
               if (caption != null && caption.isNotEmpty) 'body': caption,
             }),
           )
-          .timeout(Duration(seconds: 10));
+          .timeout(const Duration(seconds: 10));
 
       if (res.statusCode == 201) {
         await _fetchMessages(silent: true);
@@ -682,644 +806,89 @@ class _ClientConversationScreenState extends State<ClientConversationScreen>
     } catch (_) {
       _showSnack('Network error', isError: true);
     } finally {
-      if (mounted)
+      if (mounted) {
         setState(() {
           _sending = false;
           _isUploadingMedia = false;
         });
+      }
     }
     return false;
   }
 
   void _scrollToBottom() {
+    if (_unreadNew > 0 && mounted) setState(() => _unreadNew = 0);
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_scrollCtrl.hasClients) {
-        _scrollCtrl.animateTo(
-          _scrollCtrl.position.maxScrollExtent,
-          duration: Duration(milliseconds: 300),
-          curve: Curves.easeOutCubic,
-        );
+      if (mounted && _scrollCtrl.hasClients) {
+        _scrollCtrl.animateTo(0,
+            duration: const Duration(milliseconds: 220),
+            curve: Curves.easeOutCubic);
       }
     });
   }
 
-  bool _isMe(_Message msg) => msg.senderID == widget.clientID;
-
-  bool _isSameDay(DateTime a, DateTime b) =>
-      a.year == b.year && a.month == b.month && a.day == b.day;
-
-  List<dynamic> _buildTimeline() {
-    final items = <dynamic>[];
-    DateTime? lastDate;
-    for (final m in _messages) {
-      final d = DateTime(m.createdAt.year, m.createdAt.month, m.createdAt.day);
-      if (lastDate == null || d != lastDate) {
-        items.add(d);
-        lastDate = d;
-      }
-      items.add(m);
-    }
-    return items;
-  }
-
-  String _formatDivider(DateTime d) {
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    final target = DateTime(d.year, d.month, d.day);
-    final diff = today.difference(target).inDays;
-
-    if (diff == 0) return 'Today';
-    if (diff == 1) return 'Yesterday';
-    const m = [
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'May',
-      'Jun',
-      'Jul',
-      'Aug',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Dec'
-    ];
-    return '${d.day} ${m[d.month - 1]} ${d.year}';
-  }
-
+  bool _isMe(_Message m) => m.senderID == widget.clientID;
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      appBar: _buildAppBar(),
-      body: SafeArea(
-        child: Stack(
-          children: [
-            Column(
-              children: [
-                Container(
-                  width: double.infinity,
-                  color: context.fitlek.card,
-                  padding: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.info_outline_rounded,
-                          size: 16, color: context.fitlek.textMuted),
-                      SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          _batchSending
-                              ? 'Sending photo $_batchCurrent of $_batchTotal…'
-                              : 'Photos and voice messages are saved on your phone. Use Select messages to delete in bulk.',
-                          style: TextStyle(
-                              color: context.fitlek.textMuted,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500),
-                          textAlign: TextAlign.center,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Expanded(child: _buildMessagesList()),
-                _buildInputBar(),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  PreferredSizeWidget _buildAppBar() {
-    if (_selecting) return _selectionBar() as PreferredSizeWidget;
-    return AppBar(
-      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-      elevation: 0,
-      toolbarHeight: 64,
-      leadingWidth: 44,
-      leading: GestureDetector(
-        onTap: () => Navigator.pop(context),
-        child: Padding(
-          padding: EdgeInsets.only(left: 12),
-          child: Icon(Icons.arrow_back_ios_new_rounded,
-              color: Theme.of(context).colorScheme.onSurface, size: 24),
-        ),
-      ),
-      title: Row(
-        children: [
-          GestureDetector(
-            onTap: () {
-              if (widget.coachAvatar != null &&
-                  widget.coachAvatar!.isNotEmpty) {
-                Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => ImagePreview(
-                          imageUrl: widget.coachAvatar!, tag: 'header_avatar'),
-                    ));
-              }
-            },
-            child: Container(
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                border: Border.all(color: context.fitlek.border, width: 2),
-              ),
-              child: CircleAvatar(
-                radius: 20,
-                backgroundColor: context.fitlek.border,
-                backgroundImage:
-                    widget.coachAvatar != null && widget.coachAvatar!.isNotEmpty
-                        ? NetworkImage(widget.coachAvatar!)
-                        : null,
-                child: (widget.coachAvatar == null ||
-                        widget.coachAvatar!.isEmpty)
-                    ? Text(
-                        widget.coachName != null && widget.coachName!.isNotEmpty
-                            ? widget.coachName![0].toUpperCase()
-                            : '?',
-                        style: TextStyle(
-                            color: Theme.of(context).colorScheme.onSurface,
-                            fontSize: 16,
-                            fontWeight: FontWeight.w900),
-                      )
-                    : null,
-              ),
-            ),
-          ),
-          SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  widget.coachName ?? 'Conversation',
-                  style: TextStyle(
-                      color: Theme.of(context).colorScheme.onSurface,
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                if (widget.coachSpeciality != null)
-                  Text(
-                    widget.coachSpeciality!,
-                    style: TextStyle(
-                        color: context.fitlek.textMuted,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-              ],
-            ),
-          ),
-        ],
-      ),
-      actions: [
-        IconButton(
-            tooltip: 'Select messages',
-            onPressed: () => setState(() => _selecting = true),
-            icon: const Icon(Icons.checklist)),
-        _buildMoreMenu(),
-      ],
-      bottom: PreferredSize(
-        preferredSize: Size.fromHeight(1),
-        child: Container(height: 1, color: context.fitlek.card),
-      ),
-    );
-  }
-
-  Widget _buildMessagesList() {
-    if (_loading) {
-      return Center(
-        child: SizedBox(
-          width: 20,
-          height: 20,
-          child: CircularProgressIndicator(
-              color: Theme.of(context).colorScheme.primary, strokeWidth: 2),
-        ),
-      );
-    }
-
-    if (_error != null) {
-      return Center(
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              SizedBox(height: 60),
-              Icon(Icons.error_outline_rounded,
-                  color: context.fitlek.textMuted, size: 40),
-              SizedBox(height: 12),
-              Text(_error!,
-                  style:
-                      TextStyle(color: context.fitlek.textMuted, fontSize: 13)),
-              SizedBox(height: 16),
-              GestureDetector(
-                onTap: _fetchMessages,
-                child: Container(
-                  padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context)
-                        .colorScheme
-                        .primary
-                        .withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(
-                        color: Theme.of(context)
-                            .colorScheme
-                            .primary
-                            .withValues(alpha: 0.3)),
-                  ),
-                  child: Text(
-                    'RETRY',
-                    style: TextStyle(
-                        color: Theme.of(context).colorScheme.primary,
-                        fontWeight: FontWeight.w800,
-                        fontSize: 11,
-                        letterSpacing: 1),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
-    if (_messages.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              width: 64,
-              height: 64,
-              decoration: BoxDecoration(
-                  color: Theme.of(context)
-                      .colorScheme
-                      .primary
-                      .withValues(alpha: 0.08),
-                  shape: BoxShape.circle),
-              child: Icon(Icons.chat_bubble_outline_rounded,
-                  color: Theme.of(context)
-                      .colorScheme
-                      .primary
-                      .withValues(alpha: 0.4),
-                  size: 28),
-            ),
-            SizedBox(height: 16),
-            Text(
-              'Start the conversation',
-              style: TextStyle(
-                  color: context.fitlek.textMuted,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600),
-            ),
-            SizedBox(height: 6),
-            Text(
-              'Send your first message',
-              style: TextStyle(color: context.fitlek.textMuted, fontSize: 12),
-            ),
-          ],
-        ),
-      );
-    }
-
-    final timeline = _buildTimeline();
-
-    return ListView.builder(
-      controller: _scrollCtrl,
-      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-      itemCount: timeline.length + (_loadingMore ? 1 : 0),
-      itemBuilder: (context, i) {
-        if (_loadingMore && i == 0) {
-          return Padding(
-            padding: EdgeInsets.only(bottom: 12),
-            child: Center(
-              child: SizedBox(
-                width: 16,
-                height: 16,
-                child: CircularProgressIndicator(
-                    color: Theme.of(context).colorScheme.primary,
-                    strokeWidth: 2),
-              ),
-            ),
-          );
-        }
-
-        final item = timeline[i - (_loadingMore ? 1 : 0)];
-
-        if (item is DateTime) {
-          return Padding(
-            padding: EdgeInsets.symmetric(vertical: 14),
-            child: Center(
-              child: Container(
-                padding: EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                decoration: BoxDecoration(
-                  color: context.fitlek.card,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  _formatDivider(item),
-                  style: TextStyle(
-                      color: context.fitlek.textSecondary,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w500),
-                ),
-              ),
-            ),
-          );
-        }
-
-        final msg = item as _Message;
-        final isMe = _isMe(msg);
-        final idx = _messages.indexOf(msg);
-        final next = idx + 1 < _messages.length ? _messages[idx + 1] : null;
-        final isLastOfGroup = next == null ||
-            next.senderID != msg.senderID ||
-            !_isSameDay(next.createdAt, msg.createdAt);
-        final showAvatar = !isMe && isLastOfGroup;
-
-        return SelectableChatMessage(
+  Widget build(BuildContext context) => Scaffold(
+        appBar: _selecting
+            ? _selectionBar() as PreferredSizeWidget
+            : ConversationHeader(
+                loading: _fetching && !_loading,
+                activity: _activity,
+                name: widget.coachName ?? 'Conversation',
+                subtitle: widget.coachSpeciality ?? 'Fitness coach',
+                avatar: widget.coachAvatar,
+                onAvatar: () {
+                  final avatar = widget.coachAvatar;
+                  if (avatar?.isNotEmpty == true) {
+                    Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => ImagePreview(
+                                imageUrl: avatar!, tag: 'header_avatar')));
+                  }
+                },
+                actions: [_buildMoreMenu()]),
+        body: ConversationBody(
+            notice: _showStorageNotice,
+            loading: _loading,
+            error: _error,
+            uploading: _isUploadingMedia,
+            sending: _sending,
+            batch: _batchSending,
+            recording: _isRecording,
+            busy: _recordBusy,
+            loadingMore: _loadingMore,
             selecting: _selecting,
-            selected: _selected.contains(msg.id),
-            onToggle: () => _toggleSelected(msg.id),
-            child: Padding(
-              padding: EdgeInsets.only(bottom: 10),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                mainAxisAlignment:
-                    isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
-                children: [
-                  if (!isMe)
-                    SizedBox(
-                      width: 32,
-                      child: showAvatar
-                          ? Container(
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                border: Border.all(
-                                    color: Theme.of(context)
-                                        .colorScheme
-                                        .primary
-                                        .withValues(alpha: 0.3),
-                                    width: 1.5),
-                              ),
-                              child: CircleAvatar(
-                                radius: 14,
-                                backgroundColor: context.fitlek.card2,
-                                backgroundImage: msg.senderAvatar != null &&
-                                        msg.senderAvatar!.isNotEmpty
-                                    ? NetworkImage(msg.senderAvatar!)
-                                    : null,
-                                child: (msg.senderAvatar == null ||
-                                        msg.senderAvatar!.isEmpty)
-                                    ? Text(
-                                        msg.senderName != null &&
-                                                msg.senderName!.isNotEmpty
-                                            ? msg.senderName![0].toUpperCase()
-                                            : '?',
-                                        style: TextStyle(
-                                            color: Theme.of(context)
-                                                .colorScheme
-                                                .primary,
-                                            fontSize: 10,
-                                            fontWeight: FontWeight.w900),
-                                      )
-                                    : null,
-                              ),
-                            )
-                          : null,
-                    ),
-                  if (!isMe) SizedBox(width: 8),
-                  Flexible(
-                    child: Container(
-                      constraints: BoxConstraints(
-                          maxWidth: MediaQuery.of(context).size.width * 0.68),
-                      padding: EdgeInsets.all(
-                          msg.mediaType == 'image' && !msg.mediaExpired
-                              ? 4
-                              : 10),
-                      decoration: BoxDecoration(
-                        color: isMe
-                            ? Theme.of(context).colorScheme.primary
-                            : context.fitlek.border,
-                        borderRadius: BorderRadius.only(
-                          topLeft: Radius.circular(16),
-                          topRight: Radius.circular(16),
-                          bottomLeft: Radius.circular(isMe ? 16 : 4),
-                          bottomRight: Radius.circular(isMe ? 4 : 16),
-                        ),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          _buildBubbleContent(msg, isMe),
-                          SizedBox(height: 4),
-                          Row(
-                            mainAxisSize: MainAxisSize.min,
-                            mainAxisAlignment: MainAxisAlignment.end,
-                            children: [
-                              Text(
-                                _formatTime(msg.createdAt),
-                                style: TextStyle(
-                                  color: isMe
-                                      ? Theme.of(context)
-                                          .colorScheme
-                                          .onPrimary
-                                          .withValues(alpha: 0.6)
-                                      : context.fitlek.textMuted,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                              if (isMe) ...[
-                                SizedBox(width: 4),
-                                Icon(
-                                  msg.isRead
-                                      ? Icons.done_all_rounded
-                                      : Icons.done_rounded,
-                                  color: msg.isRead
-                                      ? Color(0xFF00A884)
-                                      : Theme.of(context)
-                                          .colorScheme
-                                          .onPrimary
-                                          .withValues(
-                                              alpha:
-                                                  0.6), // WhatsApp blue tick equivalent
-                                  size: 14,
-                                ),
-                              ],
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ));
-      },
-    );
-  }
-
-  Widget _buildBubbleContent(_Message message, bool isMe) {
-    final fgColor = isMe
-        ? Theme.of(context).colorScheme.onPrimary
-        : Theme.of(context).colorScheme.onSurface;
-
-    if (message.deleted)
-      return Text(
-          isMe
-              ? 'You deleted this message'
-              : 'This message was deleted by the sender',
-          style: TextStyle(color: fgColor, fontStyle: FontStyle.italic));
-    if (message.mediaType == 'image' || message.mediaType == 'audio') {
-      return LocalChatMedia(
-          key: ValueKey('media_${message.id}'),
-          messageID: message.id,
-          url: message.mediaUrl,
-          type: message.mediaType,
-          expired: message.mediaExpired,
-          isMe: isMe,
-          caption: message.body);
-    }
-
-    return Padding(
-      padding: EdgeInsets.symmetric(horizontal: 5),
-      child: Text(message.body ?? '',
-          style: TextStyle(color: fgColor, fontSize: 13.5, height: 1.4)),
-    );
-  }
-
-  Widget _buildInputBar() {
-    return Container(
-      padding: EdgeInsets.fromLTRB(
-          12, 8, 12, 8 + MediaQuery.of(context).padding.bottom),
-      decoration: BoxDecoration(
-        color: Theme.of(context).scaffoldBackgroundColor,
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          GestureDetector(
-            onTap: _showAttachOptions,
-            child: Padding(
-              padding: EdgeInsets.only(bottom: 10, right: 8),
-              child: Icon(Icons.add,
-                  color: Theme.of(context).colorScheme.onSurface, size: 28),
-            ),
-          ),
-          Expanded(
-            child: Container(
-              decoration: BoxDecoration(
-                color: Colors.transparent,
-                borderRadius: BorderRadius.circular(24),
-                border: Border.all(color: context.fitlek.border, width: 1.5),
-              ),
-              child: TextField(
-                controller: _msgCtrl,
-                focusNode: _focusNode,
-                style: TextStyle(
-                    color: Theme.of(context).colorScheme.onSurface,
-                    fontSize: 15),
-                maxLines: 4,
-                minLines: 1,
-                textInputAction: TextInputAction.send,
-                onChanged: (_) => setState(() {}),
-                onSubmitted: (_) => _sendMessage(),
-                readOnly: _isRecording || _isUploadingMedia,
-                decoration: InputDecoration(
-                  hintText:
-                      _isRecording ? 'Recording...' : 'Ã‰crire un message...',
-                  hintStyle:
-                      TextStyle(color: context.fitlek.textMuted, fontSize: 15),
-                  contentPadding:
-                      EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  border: InputBorder.none,
-                ),
-              ),
-            ),
-          ),
-          SizedBox(width: 8),
-          if (_isUploadingMedia)
-            SizedBox(
-                width: 44,
-                height: 44,
-                child: Center(
-                    child: CircularProgressIndicator(
-                        color: Theme.of(context).colorScheme.primary,
-                        strokeWidth: 2)))
-          else if (_msgCtrl.text.isEmpty && !_isRecording)
-            GestureDetector(
-                onTap: _toggleRecording,
-                child: Container(
-                    width: 44,
-                    height: 44,
-                    decoration: BoxDecoration(
-                        color: context.fitlek.border, shape: BoxShape.circle),
-                    child: Icon(Icons.mic_none_rounded,
-                        color: Theme.of(context).colorScheme.onSurface,
-                        size: 22)))
-          else if (_isRecording)
-            GestureDetector(
-                onTap: _toggleRecording,
-                child: Container(
-                    width: 44,
-                    height: 44,
-                    decoration: BoxDecoration(
-                        color: Colors.redAccent,
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                              color: Colors.redAccent.withValues(alpha: 0.35),
-                              blurRadius: 12,
-                              offset: Offset(0, 4))
-                        ]),
-                    child: Icon(Icons.stop_rounded,
-                        color: Theme.of(context).colorScheme.onSurface,
-                        size: 20)))
-          else
-            GestureDetector(
-              onTap: _sending ? null : _sendMessage,
-              child: AnimatedContainer(
-                duration: Duration(milliseconds: 200),
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: _sending
-                      ? context.fitlek.border.withValues(alpha: 0.5)
-                      : context.fitlek.border,
-                  shape: BoxShape.circle,
-                ),
-                child: _sending
-                    ? Center(
-                        child: SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(
-                              color: Theme.of(context).colorScheme.onSurface,
-                              strokeWidth: 2),
-                        ),
-                      )
-                    : Icon(Icons.send_rounded,
-                        color: Theme.of(context).colorScheme.onSurface,
-                        size: 20),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-
-  String _formatTime(DateTime d) {
-    return '${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}';
-  }
+            selected: _selected,
+            onSelect: _toggleSelected,
+            batchCurrent: _batchCurrent,
+            batchTotal: _batchTotal,
+            unread: _unreadNew,
+            scroll: _scrollCtrl,
+            text: _msgCtrl,
+            focus: _focusNode,
+            messages: _messages
+                .map((m) => ChatEntry(
+                    id: '${m.id}',
+                    time: m.createdAt,
+                    mine: _isMe(m),
+                    read: m.isRead,
+                    deleted: m.deleted,
+                    expired: m.mediaExpired,
+                    body: m.body,
+                    url: m.mediaUrl,
+                    type: m.mediaType))
+                .toList(),
+            closeNotice: () => setState(() => _showStorageNotice = false),
+            retry: () => _fetchMessages(silent: true),
+            retryOlder: _olderFailed ? _loadMore : null,
+            bottom: _scrollToBottom,
+            attach: _showAttachOptions,
+            gallery: _pickAndSendMultipleImages,
+            record: _toggleRecording,
+            send: _sendMessage),
+      );
 
   Widget _buildMoreMenu() {
     return PopupMenuButton<String>(
@@ -1327,22 +896,28 @@ class _ClientConversationScreenState extends State<ClientConversationScreen>
           color: Theme.of(context).colorScheme.onSurface, size: 24),
       color: context.fitlek.card,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      offset: Offset(0, 40),
+      offset: const Offset(0, 40),
       onSelected: (val) {
-        if (val == 'report') {
+        if (val == 'select') {
+          setState(() => _selecting = true);
+        } else if (val == 'refresh') {
+          _fetchMessages(silent: true);
+        } else if (val == 'report') {
           _showReportDialog();
         } else if (val == 'block') {
           _showBlockDialog();
         }
       },
       itemBuilder: (context) => [
+        const PopupMenuItem(value: 'select', child: Text('Select messages')),
+        const PopupMenuItem(value: 'refresh', child: Text('Refresh messages')),
         PopupMenuItem(
           value: 'report',
           child: Row(
             children: [
               Icon(Icons.flag_rounded,
                   color: context.fitlek.textMuted, size: 18),
-              SizedBox(width: 8),
+              const SizedBox(width: 8),
               Text('Report Coach',
                   style: TextStyle(
                       color: Theme.of(context).colorScheme.onSurface,
@@ -1356,7 +931,7 @@ class _ClientConversationScreenState extends State<ClientConversationScreen>
           child: Row(
             children: [
               Icon(Icons.block_rounded, color: context.fitlek.error, size: 18),
-              SizedBox(width: 8),
+              const SizedBox(width: 8),
               Text('Block Coach',
                   style: TextStyle(
                       color: context.fitlek.error,
@@ -1383,7 +958,7 @@ class _ClientConversationScreenState extends State<ClientConversationScreen>
     showDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setDialogState) => AlertDialog(
+        builder: (ctx, setDialogState) => AppDialog(
           backgroundColor: context.fitlek.card,
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -1398,7 +973,7 @@ class _ClientConversationScreenState extends State<ClientConversationScreen>
                   'Why are you reporting this user? We take these reports seriously.',
                   style:
                       TextStyle(color: context.fitlek.textMuted, fontSize: 13)),
-              SizedBox(height: 16),
+              const SizedBox(height: 16),
               ...reasons.map((r) => RadioListTile<String>(
                     title: Text(r,
                         style: TextStyle(
@@ -1452,24 +1027,25 @@ class _ClientConversationScreenState extends State<ClientConversationScreen>
           isError ? Colors.redAccent : Theme.of(context).colorScheme.primary,
       behavior: SnackBarBehavior.floating,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      margin: EdgeInsets.all(16),
+      margin: const EdgeInsets.all(16),
     ));
   }
 
   Future<void> _submitReport(String reason) async {
-    // We need the coach ID to report them.
-    // In this screen, we only have the conversation ID, we'd ideally pass the coachID but we don't have it easily.
-    // So we'll use a specific /report-conversation endpoint or fetch the coach ID.
-    // Since we only have `conversationID`, I'll use a new body structure.
+    final coachID = await _getCoachID();
+    if (coachID == null || coachID <= 0) {
+      _showSnack('Unable to identify coach to report', isError: true);
+      return;
+    }
     try {
-      final res = await http.post(
+      final res = await _http.post(
         Uri.parse('$baseUrl/ugc/report'),
         headers: _headers,
         body: jsonEncode({
-          'reportedID': widget
-              .conversationID, // This might need server-side resolution if type='conversation'
+          'reportedID': coachID,
           'reason': reason,
-          'type': 'conversation',
+          'type': 'user',
+          'entityID': widget.conversationID,
         }),
       );
       if (res.statusCode == 200) {
@@ -1486,7 +1062,7 @@ class _ClientConversationScreenState extends State<ClientConversationScreen>
     final name = widget.coachName ?? 'this coach';
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
+      builder: (ctx) => AppDialog(
         backgroundColor: context.fitlek.card,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Text('Block $name?',
@@ -1515,15 +1091,20 @@ class _ClientConversationScreenState extends State<ClientConversationScreen>
   }
 
   Future<void> _submitBlock() async {
+    final coachID = await _getCoachID();
+    if (coachID == null || coachID <= 0) {
+      _showSnack('Unable to identify coach to block', isError: true);
+      return;
+    }
     try {
-      final res = await http.post(
-        Uri.parse('$baseUrl/ugc/block-conversation'),
+      final res = await _http.post(
+        Uri.parse('$baseUrl/ugc/block'),
         headers: _headers,
-        body: jsonEncode({'conversationID': widget.conversationID}),
+        body: jsonEncode({'blockedID': coachID}),
       );
       if (res.statusCode == 200) {
         _showSnack('User blocked.');
-        if (mounted) Navigator.pop(context);
+        if (mounted) Navigator.pop(context, true);
       } else {
         _showSnack('Failed to block user', isError: true);
       }

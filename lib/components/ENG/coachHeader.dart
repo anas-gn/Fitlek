@@ -51,11 +51,12 @@ class CoachHeader extends StatelessWidget {
       child: Row(
         children: [
           // ── Brand area (SIRVYA logo) ──
-          const Flexible(
-            child: SirvyaLogo(variant: SirvyaLogoVariant.wordmark, height: 20),
+          const Expanded(
+            child: Align(
+                alignment: Alignment.centerLeft,
+                child: SirvyaLogo(
+                    variant: SirvyaLogoVariant.wordmark, height: 20)),
           ),
-
-          const Spacer(),
 
           // ── Notification button (real unread badge) ──
           _buildNotificationButton(context, cs, f),
@@ -151,28 +152,38 @@ class CoachHeader extends StatelessWidget {
           clipBehavior: Clip.none,
           children: [
             Container(
-              decoration: BoxDecoration(
+              width: 44,
+              height: 44,
+              foregroundDecoration: BoxDecoration(
                 shape: BoxShape.circle,
                 border: Border.all(color: cs.primary, width: 2),
               ),
               child: Hero(
                 tag: 'coach_avatar_$coachName',
-                child: CircleAvatar(
-                  radius: 20,
-                  backgroundColor: f.card2,
-                  backgroundImage:
-                      avatarUrl.isNotEmpty ? NetworkImage(avatarUrl) : null,
-                  child: avatarUrl.isEmpty
-                      ? Text(
+                child: ClipOval(
+                    child: ColoredBox(
+                  color: f.card2,
+                  child: avatarUrl.isNotEmpty
+                      ? Image.network(avatarUrl,
+                          width: 44,
+                          height: 44,
+                          fit: BoxFit.cover,
+                          alignment: Alignment.center,
+                          errorBuilder: (_, __, ___) => Center(
+                              child: Text(_initial,
+                                  style: TextStyle(
+                                      color: cs.primary,
+                                      fontWeight: FontWeight.w800))))
+                      : Center(
+                          child: Text(
                           _initial,
                           style: TextStyle(
                             color: cs.primary,
                             fontSize: 16,
                             fontWeight: FontWeight.w900,
                           ),
-                        )
-                      : null,
-                ),
+                        )),
+                )),
               ),
             ),
             Positioned(

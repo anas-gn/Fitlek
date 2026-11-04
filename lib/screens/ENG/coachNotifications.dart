@@ -1,3 +1,4 @@
+import '../../components/notification_card.dart';
 import '../../services/live_updates.dart';
 import '../../services/notification_navigation.dart';
 import 'package:flutter/material.dart';
@@ -11,11 +12,14 @@ class CoachNotifications extends StatefulWidget {
   State<CoachNotifications> createState() => _CoachNotificationsState();
 }
 
-class _CoachNotificationsState extends State<CoachNotifications> with LiveUpdates<CoachNotifications> {
+class _CoachNotificationsState extends State<CoachNotifications>
+    with LiveUpdates<CoachNotifications> {
   @override
   Set<String> get liveDomains => {'notifications'};
   @override
-  Future<void> refreshLiveData() async { await _load(silent:true); }
+  Future<void> refreshLiveData() async {
+    await _load(silent: true);
+  }
 
   static const int _pageSize = 30;
 
@@ -48,10 +52,11 @@ class _CoachNotificationsState extends State<CoachNotifications> with LiveUpdate
   }
 
   Future<void> _load({bool silent = false}) async {
-    if (!silent) setState(() {
-      _loading = true;
-      _error = false;
-    });
+    if (!silent)
+      setState(() {
+        _loading = true;
+        _error = false;
+      });
     final res =
         await ApiService.get('/coach/notifications?page=1&limit=$_pageSize');
     if (!mounted) return;
@@ -128,36 +133,6 @@ class _CoachNotificationsState extends State<CoachNotifications> with LiveUpdate
     ));
   }
 
-  ({IconData icon, Color color}) _typeStyle(String? type) {
-    final cs = Theme.of(context).colorScheme;
-    final f = context.fitlek;
-    switch (type) {
-      case 'app_campaign':
-        return (icon: Icons.campaign_rounded, color: cs.primary);
-      case 'new_message':
-        return (icon: Icons.chat_bubble_rounded, color: cs.primary);
-      case 'new_reservation':
-        return (icon: Icons.event_available_rounded, color: f.info);
-      case 'upcoming_session':
-        return (icon: Icons.alarm_rounded, color: f.warning);
-      default:
-        return (icon: Icons.notifications_rounded, color: f.textMuted);
-    }
-  }
-
-  String _timeAgo(dynamic raw) {
-    if (raw == null) return '';
-    final d = DateTime.tryParse(raw.toString());
-    if (d == null) return '';
-    final diff = DateTime.now().difference(d);
-    if (diff.inMinutes < 1) return 'Just now';
-    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
-    if (diff.inHours < 24) return '${diff.inHours}h ago';
-    if (diff.inDays == 1) return 'Yesterday';
-    if (diff.inDays < 7) return '${diff.inDays} days ago';
-    return '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
-  }
-
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
@@ -206,9 +181,13 @@ class _CoachNotificationsState extends State<CoachNotifications> with LiveUpdate
                             child: ListView.builder(
                               controller: _scrollCtrl,
                               padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-                              itemCount: _items.length + (_hasMore ? 1 : 0),
+                              itemCount: _items.length + (_hasMore ? 1 : 0) + 1,
                               itemBuilder: (_, i) {
-                                if (i >= _items.length) {
+                                if (i == 0)
+                                  return NotificationInboxIntro(
+                                      unreadCount: _unreadCount);
+                                final index = i - 1;
+                                if (index >= _items.length) {
                                   return const Padding(
                                     padding: EdgeInsets.all(16),
                                     child: Center(
@@ -219,7 +198,7 @@ class _CoachNotificationsState extends State<CoachNotifications> with LiveUpdate
                                                 strokeWidth: 2.2))),
                                   );
                                 }
-                                return _buildTile(_items[i]);
+                                return _buildTile(_items[index]);
                               },
                             ),
                           ),
@@ -229,69 +208,8 @@ class _CoachNotificationsState extends State<CoachNotifications> with LiveUpdate
     );
   }
 
-  Widget _buildTile(Map<String, dynamic> n) {
-    final cs = Theme.of(context).colorScheme;
-    final f = context.fitlek;
-    final isRead = n['isRead'] == 1 || n['isRead'] == true;
-    final style = _typeStyle(n['type']?.toString());
-    return GestureDetector(
-      onTap: () => _onTapNotification(n),
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 8),
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: isRead ? f.card : cs.primary.withValues(alpha: 0.06),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-              color: isRead ? f.border : cs.primary.withValues(alpha: 0.25)),
-        ),
-        child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Container(
-            width: 42,
-            height: 42,
-            decoration: BoxDecoration(
-              color: style.color.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(style.icon, color: style.color, size: 20),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child:
-                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Row(children: [
-                Expanded(
-                  child: Text((n['title'] ?? '').toString(),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                          color: cs.onSurface,
-                          fontSize: 14,
-                          fontWeight:
-                              isRead ? FontWeight.w600 : FontWeight.w800)),
-                ),
-                if (!isRead) ...[
-                  const SizedBox(width: 8),
-                  Container(
-                      width: 8,
-                      height: 8,
-                      decoration: BoxDecoration(
-                          color: cs.primary, shape: BoxShape.circle)),
-                ],
-              ]),
-              const SizedBox(height: 3),
-              Text((n['body'] ?? '').toString(),
-                  style: TextStyle(
-                      color: f.textSecondary, fontSize: 13, height: 1.35)),
-              const SizedBox(height: 6),
-              Text(_timeAgo(n['createdAt']),
-                  style: TextStyle(color: f.textMuted, fontSize: 11.5)),
-            ]),
-          ),
-        ]),
-      ),
-    );
-  }
+  Widget _buildTile(Map<String, dynamic> item) =>
+      NotificationCard(item: item, onTap: () => _onTapNotification(item));
 
   Widget _buildSkeleton() {
     final f = context.fitlek;

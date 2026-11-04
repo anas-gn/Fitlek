@@ -8,12 +8,12 @@ router.get('/', async (req, res) => {
     const offset = (page - 1) * limit;
 
     const [rows] = await db.query(
-      `SELECT a.id, a.title, a.content, a.imageUrl, a.link, a.publishedAt,
+      `SELECT a.id, a.title, a.content, a.imageUrl, a.link, a.buttonLabel, a.publishedAt,
               u.firstName, u.lastName, u.avatarUrl AS authorAvatar
        FROM actualites a
        JOIN users u ON u.id = a.adminID
        WHERE a.isPublished = 1
-       ORDER BY a.publishedAt DESC
+       ORDER BY a.publishedAt DESC, a.id DESC
        LIMIT ? OFFSET ?`,
       [Number(limit), Number(offset)]
     );
@@ -26,7 +26,7 @@ router.get('/', async (req, res) => {
 router.get('/:id', async (req, res) => {
   try {
     const [rows] = await db.query(
-      `SELECT a.id, a.title, a.content, a.imageUrl, a.link, a.publishedAt,
+      `SELECT a.id, a.title, a.content, a.imageUrl, a.link, a.buttonLabel, a.publishedAt,
               u.firstName, u.lastName, u.avatarUrl AS authorAvatar
        FROM actualites a
        JOIN users u ON u.id = a.adminID

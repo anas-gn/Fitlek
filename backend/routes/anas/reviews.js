@@ -1,6 +1,8 @@
 import express from 'express';
 const router = express.Router();
 import db from '../../config/db.js';
+import {createAndSendNotification} from '../../services/pushNotificationService.js';
+import {createHash} from 'node:crypto';
 // GET /reviews/coach/:coachID
 router.get('/coach/:coachID', async (req, res) => {
   try {
@@ -38,6 +40,7 @@ router.get('/coach/:coachID/mine', async (req, res) => {
 router.post('/', async (req, res) => {
   try {
     const { coachID, clientID, rating, comment } = req.body;
+    if (Number(clientID) !== Number(req.user.id)) return res.status(403).json({error:'Access denied'});
     if (!coachID || !clientID || !rating)
       return res.status(400).json({ error: 'coachID, clientID and rating required' });
     if (rating < 1 || rating > 5)
@@ -59,6 +62,7 @@ router.post('/', async (req, res) => {
        ON DUPLICATE KEY UPDATE rating=VALUES(rating), comment=VALUES(comment), updatedAt=NOW()`,
       [coachID, clientID, rating, comment || null]
     );
+    await createAndSendNotification({recipientUserID:coachID,type:'new_review',title:'New client feedback',body:`A client rated your coaching ${rating}/5. Open your profile to view your feedback.`,relatedEntityID:coachID,uniqueKey:`review:${coachID}:${clientID}:${createHash('sha256').update(`${rating}:${comment || ''}`).digest('hex')}`});
     res.status(201).json({ message: 'Review saved' });
   } catch (err) { res.status(500).json({ error: err.message }); }
 });

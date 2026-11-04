@@ -1,11 +1,18 @@
 import 'package:flutter/material.dart';
 import '../sirvya_logo.dart';
+import '../home_robot_wave.dart';
 import '../../theme/fitlek_theme_extension.dart';
 
 class ClientNavigationBar extends StatelessWidget {
+  static const double _logoSize = 54;
   final int currentIndex;
   final ValueChanged<int> onSelected;
-  const ClientNavigationBar({super.key, required this.currentIndex, required this.onSelected});
+  final VoidCallback onScanMeal;
+  const ClientNavigationBar(
+      {super.key,
+      required this.currentIndex,
+      required this.onSelected,
+      required this.onScanMeal});
   @override
   Widget build(BuildContext context) {
     const items = [
@@ -18,65 +25,84 @@ class ClientNavigationBar extends StatelessWidget {
     const leftItems = [0, 1];
     const rightItems = [2, 3];
 
-    return SafeArea(top: false, child: Stack(
-      clipBehavior: Clip.none,
-      alignment: Alignment.bottomCenter,
-      children: [
-        Container(
-          decoration: BoxDecoration(
-            color: context.fitlek.card,
-            border:
-                Border(top: BorderSide(color: context.fitlek.border, width: 1)),
-            boxShadow: [
-              BoxShadow(
-                color: context.fitlek.shadow,
-                blurRadius: 20,
-                offset: const Offset(0, -4),
-              ),
-            ],
-          ),
-          padding: const EdgeInsets.fromLTRB(8, 10, 8, 14),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              ...leftItems
-                  .map((i) => Expanded(child: _buildNavItem(context, i, items[i]))),
-              const SizedBox(width: 54),
-              ...rightItems
-                  .map((i) => Expanded(child: _buildNavItem(context, i, items[i]))),
-            ],
-          ),
-        ),
-        Positioned(
-          top: -8,
-          child: GestureDetector(
-            onTap: () => onSelected(0),
-            child: Container(
-              width: 54,
-              height: 54,
+    return SafeArea(
+        top: false,
+        child: Stack(
+          clipBehavior: Clip.none,
+          alignment: Alignment.bottomCenter,
+          children: [
+            Container(
               decoration: BoxDecoration(
+                color: context.fitlek.card,
+                border: Border(
+                    top: BorderSide(color: context.fitlek.border, width: 1)),
                 boxShadow: [
                   BoxShadow(
-                    color: Theme.of(context)
-                        .colorScheme
-                        .primary
-                        .withValues(alpha: 0.15),
+                    color: context.fitlek.shadow,
                     blurRadius: 20,
-                    spreadRadius: 2,
+                    offset: const Offset(0, -4),
                   ),
                 ],
               ),
-              child: const Center(
-                child: SirvyaLogo(variant: SirvyaLogoVariant.mark, height: 54),
+              padding: const EdgeInsets.fromLTRB(8, 10, 8, 14),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  ...leftItems.map((i) =>
+                      Expanded(child: _buildNavItem(context, i, items[i]))),
+                  const SizedBox(width: _logoSize),
+                  ...rightItems.map((i) =>
+                      Expanded(child: _buildNavItem(context, i, items[i]))),
+                ],
               ),
             ),
-          ),
-        ),
-      ],
-    ));
+            // The robot sits on the navbar surface; only the foreground logo
+            // overlaps it, so its wave can remain visible inside the navbar.
+            Positioned(
+              top: -30,
+              child: Transform.translate(
+                offset: const Offset(20, 12),
+                child: const HomeRobotWave(active: true),
+              ),
+            ),
+            Positioned(
+              top: -8,
+              child: Semantics(
+                label: 'Scan your meal',
+                button: true,
+                excludeSemantics: true,
+                onTap: onScanMeal,
+                child: GestureDetector(
+                  onTap: onScanMeal,
+                  child: Container(
+                    width: _logoSize,
+                    height: _logoSize,
+                    decoration: BoxDecoration(
+                      boxShadow: [
+                        BoxShadow(
+                          color: Theme.of(context)
+                              .colorScheme
+                              .primary
+                              .withValues(alpha: 0.15),
+                          blurRadius: 20,
+                          spreadRadius: 2,
+                        ),
+                      ],
+                    ),
+                    child: const Center(
+                      child: SirvyaLogo(
+                          variant: SirvyaLogoVariant.mark, height: _logoSize),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ));
   }
 
-  Widget _buildNavItem(BuildContext context, int index, (IconData, String) item) {
+  Widget _buildNavItem(
+      BuildContext context, int index, (IconData, String) item) {
     final active = index == currentIndex;
     return GestureDetector(
       onTap: () => onSelected(index),

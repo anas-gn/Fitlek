@@ -21,16 +21,28 @@ function parseStringList(value) {
   }
 }
 
+function parseJsonList(value) {
+  if (!value) return [];
+  try {
+    const parsed = typeof value === 'string' ? JSON.parse(value) : value;
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
 router.get('/', requireAuth, requireRole('coach'), async (req, res) => {
   const coachID = req.user.id;
   try {
     const [[row]] = await pool.query(
-      `SELECT u.id, u.firstName, u.lastName, u.email, u.gender, u.avatarUrl,
+      `SELECT u.id, u.firstName, u.lastName, u.email, u.gender, u.avatarUrl, u.phoneNumber,
               cp.bio, cp.specialty, cp.experience, cp.professionalTitle,
               cp.certifications, cp.specialties, cp.publicProfile, cp.directMessaging,
               cp.instagramPage, cp.invitationCode,
               cp.totalInvitations, cp.earnedPoints,
-              cp.tel, cp.price, cp.ville, cp.certificateUrl, cp.advisorID
+              COALESCE(NULLIF(TRIM(u.phoneNumber), ''), cp.tel) AS tel,
+              cp.price, cp.ville, cp.certificateUrl, cp.advisorID,
+              cp.languages, cp.showGender, cp.categoryID, cp.clientLevels, cp.coachingFormats, cp.gymName, cp.gymAddress, cp.gymImage, cp.serviceArea
        FROM users u
        JOIN coachprofiles cp ON cp.userID = u.id
        WHERE u.id = ?`,
@@ -39,8 +51,11 @@ router.get('/', requireAuth, requireRole('coach'), async (req, res) => {
     if (!row) return res.status(404).json({ message: 'Profile not found.' });
     res.json({
       ...row,
-      certifications: parseStringList(row.certifications),
+      certifications: parseJsonList(row.certifications),
       specialties: parseStringList(row.specialties),
+      languages: parseStringList(row.languages),
+      clientLevels: parseStringList(row.clientLevels),
+      showGender: Boolean(row.showGender ?? 1),
       publicProfile: Boolean(row.publicProfile),
       directMessaging: Boolean(row.directMessaging),
       referralReward: REFERRAL_REWARD_POINTS,

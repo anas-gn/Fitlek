@@ -1,3 +1,4 @@
+import '../../components/app_dialog.dart';
 import '../../services/image_upload_service.dart';
 import 'package:http_parser/http_parser.dart';
 import '../../services/media_picker_service.dart';
@@ -132,7 +133,7 @@ class _CoachPackagesState extends State<CoachPackages> {
   Future<void> _deletePackage(int id) async {
     final confirm = await showDialog<bool>(
         context: context,
-        builder: (ctx) => AlertDialog(
+        builder: (ctx) => AppDialog(
               backgroundColor: context.fitlek.card,
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16)),

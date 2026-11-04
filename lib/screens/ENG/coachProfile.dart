@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'clientCoachDetail.dart';
 import '../../models/anas/reservation.dart';
 import '../../models/coach_profile_completion.dart';
+import '../../components/profile_completed_badge.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
@@ -171,7 +172,9 @@ class CoachProfileData {
       totalInvitations: int.tryParse(json['totalInvitations'].toString()) ?? 0,
       earnedPoints: int.tryParse(json['earnedPoints'].toString()) ?? 0,
       referralReward: int.tryParse(json['referralReward'].toString()) ?? 20,
-      tel: json['tel']?.toString() ?? '',
+      tel: (json['phoneNumber']?.toString().trim().isNotEmpty ?? false)
+          ? json['phoneNumber'].toString().trim()
+          : json['tel']?.toString().trim() ?? '',
       ville: json['ville']?.toString() ?? '',
       price: parsedPrice,
       categoryID: json['categoryID'] != null
@@ -952,7 +955,13 @@ class _CoachProfileState extends State<CoachProfile>
 
     final progress = CoachProfileCompletion(
         _completionData, _galleryImages.length, _packageCount);
-    if (progress.isComplete) return SizedBox.shrink();
+    if (progress.isComplete) {
+      return const Padding(
+        padding: EdgeInsets.fromLTRB(16, 16, 16, 0),
+        child: Align(
+            alignment: Alignment.centerLeft, child: ProfileCompletedBadge()),
+      );
+    }
     final complete = progress.percent;
     final next = progress.next!;
     return Container(
@@ -1220,7 +1229,7 @@ class _CoachProfileState extends State<CoachProfile>
             onTap: () async {
               final token = await ApiService.getToken();
               if (token != null && mounted) {
-                Navigator.push(
+                await Navigator.push(
                   context,
                   MaterialPageRoute(
                       builder: (ctx) => CoachAccount(
@@ -1228,6 +1237,7 @@ class _CoachProfileState extends State<CoachProfile>
                           token: token,
                           onLogout: widget.onLogout)),
                 );
+                if (mounted) await _loadAll();
               }
             },
           ),

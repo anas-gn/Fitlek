@@ -1,4 +1,6 @@
+import '../../components/app_dialog.dart';
 import '../../services/live_updates.dart';
+import '../../services/connection_recovery.dart';
 import '../../theme/fitlek_theme_extension.dart';
 import 'dart:convert';
 import 'package:flutter/material.dart';
@@ -42,8 +44,25 @@ class _SessionsScreenState extends State<SessionsScreen>
 
   List<ReservationModel> _sessions = [];
   bool _loading = true;
+  bool _fetching = false;
   String? _error;
   String _selectedFilter = 'All';
+
+  void _updateSession(ReservationModel updated) {
+    if (!mounted) return;
+    setState(() {
+      _sessions = _sessions.map((session) {
+        if (session.id == updated.id) return updated;
+        if (session.coachID == updated.coachID &&
+            updated.reviewRating != null) {
+          return session.copyWith(
+              reviewRating: updated.reviewRating,
+              reviewComment: updated.reviewComment ?? '');
+        }
+        return session;
+      }).toList();
+    });
+  }
 
   @override
   void initState() {
@@ -59,6 +78,8 @@ class _SessionsScreenState extends State<SessionsScreen>
   }
 
   Future<void> _fetchSessions({bool silent = false}) async {
+    if (_fetching || !mounted) return;
+    _fetching = true;
     if (!silent)
       setState(() {
         _loading = true;
@@ -97,6 +118,7 @@ class _SessionsScreenState extends State<SessionsScreen>
 
         setState(() {
           _sessions = sessions;
+          _error = null;
           _loading = false;
         });
       } else {
@@ -107,11 +129,16 @@ class _SessionsScreenState extends State<SessionsScreen>
       }
     } catch (e) {
       if (mounted) {
+        final connectionFailed = ConnectionRecovery.report(e);
         setState(() {
-          _error = 'Unable to reach the server.';
+          _error = connectionFailed
+              ? 'Check your connection and try again.'
+              : 'Unable to load your sessions. Please try again.';
           _loading = false;
         });
       }
+    } finally {
+      _fetching = false;
     }
   }
 
@@ -177,6 +204,13 @@ class _SessionsScreenState extends State<SessionsScreen>
               if (!widget.embedded)
                 SirvyaLogo(variant: SirvyaLogoVariant.wordmark, height: 20),
               Spacer(),
+              IconButton(
+                tooltip: 'Refresh sessions',
+                onPressed: _loading
+                    ? null
+                    : () => _fetchSessions(silent: _sessions.isNotEmpty),
+                icon: const Icon(Icons.refresh_rounded),
+              ),
               if (!_loading && _error == null)
                 Container(
                   padding: EdgeInsets.symmetric(horizontal: 14, vertical: 8),
@@ -272,15 +306,21 @@ class _SessionsScreenState extends State<SessionsScreen>
               color: Theme.of(context).colorScheme.primary));
     }
 
-    if (_error != null) {
-      return Center(
+    if (_error != null && _sessions.isEmpty) {
+      return _refreshableState(
         child: Column(mainAxisSize: MainAxisSize.min, children: [
           Icon(Icons.wifi_off_rounded,
               color: context.fitlek.textSecondary, size: 52),
           SizedBox(height: 16),
           Text(_error!,
+              textAlign: TextAlign.center,
               style:
                   TextStyle(color: context.fitlek.textSecondary, fontSize: 15)),
+          const SizedBox(height: 16),
+          FilledButton.icon(
+              onPressed: () => _fetchSessions(),
+              icon: const Icon(Icons.refresh_rounded),
+              label: const Text('Try again')),
         ]),
       );
     }
@@ -295,10 +335,28 @@ class _SessionsScreenState extends State<SessionsScreen>
     );
   }
 
+  Widget _refreshableState({required Widget child}) => LayoutBuilder(
+        builder: (context, constraints) => RefreshIndicator(
+          onRefresh: _fetchSessions,
+          child: ListView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.all(24),
+            children: [
+              ConstrainedBox(
+                constraints: BoxConstraints(
+                    minHeight:
+                        (constraints.maxHeight - 48).clamp(0, double.infinity)),
+                child: Center(child: child),
+              )
+            ],
+          ),
+        ),
+      );
+
   Widget _buildSessionList(List<ReservationModel> sessions,
       {required String emptyMsg, required bool isPast}) {
     if (sessions.isEmpty) {
-      return Center(
+      return _refreshableState(
         child: Column(mainAxisSize: MainAxisSize.min, children: [
           Icon(Icons.calendar_month_outlined,
               color: context.fitlek.textSecondary, size: 48),
@@ -315,6 +373,7 @@ class _SessionsScreenState extends State<SessionsScreen>
       color: Theme.of(context).colorScheme.primary,
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
         padding: EdgeInsets.fromLTRB(24, 20, 24, 40),
         children: [
           if (isPast) _buildFiltersRow(),
@@ -325,12 +384,11 @@ class _SessionsScreenState extends State<SessionsScreen>
             ...sessions.map((s) => _SessionCard(
                   session: s,
                   token: widget.token,
+                  httpClient: widget.httpClient,
                   clientID: widget.clientID,
                   isPast: isPast,
-                  onUpdated: (updated) => setState(() {
-                    final idx = _sessions.indexWhere((s) => s.id == updated.id);
-                    if (idx != -1) _sessions[idx] = updated;
-                  }),
+                  onUpdated: _updateSession,
+                  onReturned: () => _fetchSessions(silent: true),
                   onCancelled: (id) => setState(() {
                     _sessions.removeWhere((s) => s.id == id);
                   }),
@@ -440,12 +498,11 @@ class _SessionsScreenState extends State<SessionsScreen>
       widgets.addAll(entry.value.map((s) => _SessionCard(
             session: s,
             token: widget.token,
+            httpClient: widget.httpClient,
             clientID: widget.clientID,
             isPast: true,
-            onUpdated: (updated) => setState(() {
-              final idx = _sessions.indexWhere((x) => x.id == updated.id);
-              if (idx != -1) _sessions[idx] = updated;
-            }),
+            onUpdated: _updateSession,
+            onReturned: () => _fetchSessions(silent: true),
             onCancelled: (id) => setState(() {
               _sessions.removeWhere((x) => x.id == id);
             }),
@@ -493,19 +550,23 @@ class _SessionsScreenState extends State<SessionsScreen>
 }
 
 class _SessionCard extends StatelessWidget {
+  final http.Client? httpClient;
   final ReservationModel session;
   final String token;
   final int clientID;
   final bool isPast;
   final void Function(ReservationModel updated) onUpdated;
+  final VoidCallback onReturned;
   final void Function(int id) onCancelled;
 
   const _SessionCard({
+    this.httpClient,
     required this.session,
     required this.token,
     required this.clientID,
     required this.isPast,
     required this.onUpdated,
+    required this.onReturned,
     required this.onCancelled,
   });
 
@@ -568,7 +629,7 @@ class _SessionCard extends StatelessWidget {
   Future<void> _cancel(BuildContext ctx) async {
     final confirm = await showDialog<bool>(
       context: ctx,
-      builder: (_) => AlertDialog(
+      builder: (_) => AppDialog(
         backgroundColor: ctx.fitlek.card,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Text('Cancel session',
@@ -620,6 +681,7 @@ class _SessionCard extends StatelessWidget {
           session: session,
           clientID: clientID,
           token: token,
+          httpClient: httpClient,
         ),
         transitionsBuilder: (_, animation, __, child) =>
             FadeTransition(opacity: animation, child: child),
@@ -629,6 +691,7 @@ class _SessionCard extends StatelessWidget {
       if (updated != null) {
         onUpdated(updated as ReservationModel);
       }
+      onReturned();
     });
   }
 
@@ -658,6 +721,7 @@ class _SessionCard extends StatelessWidget {
               builder: (_) => ClientConversationScreen(
                 conversationID: convID,
                 clientID: clientID,
+                coachID: session.coachID,
                 token: token,
                 coachName: session.coachName,
                 coachAvatar: session.coachImageUrl,
@@ -1022,7 +1086,7 @@ class _SessionCard extends StatelessWidget {
                   Expanded(
                     child: GestureDetector(
                       onTap: () {
-                        if (isPast && session.reviewRating == null) {
+                        if (isPast) {
                           _viewDetails(
                               context); // Go to session detail to leave a review
                         } else if (!isPast) {
@@ -1037,14 +1101,14 @@ class _SessionCard extends StatelessWidget {
                             border: Border.all(
                                 color: Theme.of(context).colorScheme.primary)),
                         alignment: Alignment.center,
-                        child: session.reviewRating != null
+                        child: isPast && session.reviewRating != null
                             ? FittedBox(
                                 fit: BoxFit.scaleDown,
                                 child: Row(
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
                                     Text(
-                                        'Your review: ${session.reviewRating}.0 ',
+                                        'Edit review: ${session.reviewRating}/5 ',
                                         style: TextStyle(
                                             color: context.fitlek.textSecondary,
                                             fontSize: 12)),

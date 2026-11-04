@@ -1,5 +1,6 @@
-import 'package:fitlek1/screens/ENG/coachOnboarding.dart';
-
+import 'coachOnboarding.dart';
+import 'nutritionGoal.dart';
+import '../../components/app_dialog.dart';
 import '../../services/referral_link_service.dart';
 import 'userLocationSettings.dart';
 import '../../components/location_picker.dart';
@@ -64,13 +65,51 @@ class _RegisterScreenState extends State<RegisterScreen>
   final _heightCtrl = TextEditingController();
   final _weightCtrl = TextEditingController();
   Map<String, dynamic>? _location;
+  Map<String, dynamic>? _nutritionPlan;
+  Map<String, dynamic>? get _signupNutritionPlan => _nutritionPlan == null
+      ? null
+      : {
+          ..._nutritionPlan!,
+          'height': double.tryParse(_heightCtrl.text.replaceAll(',', '.')),
+          'currentWeight':
+              double.tryParse(_weightCtrl.text.replaceAll(',', '.'))
+        };
+  Future<void> _chooseNutritionGoal() async {
+    final value = await Navigator.push<Map<String, dynamic>>(
+        context,
+        MaterialPageRoute(
+            builder: (_) => NutritionGoalScreen(
+                signup: true,
+                initial: _nutritionPlan ??
+                    {
+                      'height': double.tryParse(
+                          _heightCtrl.text.replaceAll(',', '.')),
+                      'currentWeight':
+                          double.tryParse(_weightCtrl.text.replaceAll(',', '.'))
+                    })));
+    if (value != null && mounted) {
+      setState(() {
+        _nutritionPlan = value;
+        if (value['height'] != null) _heightCtrl.text = '${value['height']}';
+        if (value['currentWeight'] != null) {
+          _weightCtrl.text = '${value['currentWeight']}';
+        }
+      });
+    }
+  }
+
   Future<bool> _ensureSignupLocation() async {
     if (_role != 'client' && _role != 'coach') return true;
+    if (_role == 'client' && _nutritionPlan == null) {
+      await _chooseNutritionGoal();
+      if (!mounted || _nutritionPlan == null) return false;
+    }
+    if (!mounted) return false;
     if (_role == 'client' && _selectedInterests.isEmpty) {
       final continued = await showDialog<bool>(
           context: context,
           builder: (ctx) => StatefulBuilder(
-              builder: (ctx, update) => AlertDialog(
+              builder: (ctx, update) => AppDialog(
                     title: const Text('Your interests'),
                     content: SingleChildScrollView(
                         child: _buildSpecialtiesSelector(
@@ -90,7 +129,10 @@ class _RegisterScreenState extends State<RegisterScreen>
     }
     if (_location?['city']?.toString().isNotEmpty == true &&
         _location?['latitude'] != null &&
-        _location?['longitude'] != null) return true;
+        _location?['longitude'] != null) {
+      return true;
+    }
+    if (!mounted) return false;
     final location = await Navigator.of(context)
         .push<Map<String, dynamic>>(MaterialPageRoute(
       builder: (_) => const UserLocationSettings(forSignup: true),
@@ -250,16 +292,22 @@ class _RegisterScreenState extends State<RegisterScreen>
         if (_role == 'client') {
           final weight =
               double.tryParse(_weightCtrl.text.trim().replaceAll(',', '.'));
-          if (weight == null || !weight.isFinite || weight <= 0 || weight > 500)
+          if (weight == null || !weight.isFinite || weight <= 0 || weight > 500) {
             return 'Enter a valid weight in kg';
+          }
         }
-        if (_role == 'client' && _selectedInterests.isEmpty)
+        if (_role == 'client' && _nutritionPlan == null) {
+          return 'Choose your nutrition goal, or select balanced habits to start simply';
+        }
+        if (_role == 'client' && _selectedInterests.isEmpty) {
           return 'Choose at least one interest (up to 5)';
+        }
         if ((_role == 'client' || _role == 'coach') &&
             ((_location?['city']?.toString().trim().isEmpty ?? true) ||
                 _location?['latitude'] == null ||
-                _location?['longitude'] == null))
+                _location?['longitude'] == null)) {
           return 'Press Use my current location to fill your location';
+        }
         if ((_role == 'coach' || _role == 'advisor') &&
             _selectedSpecialties.isEmpty) {
           return 'Please select at least one specialty (up to 5)';
@@ -403,6 +451,7 @@ class _RegisterScreenState extends State<RegisterScreen>
         'password': _passwordCtrl.text,
         'gender': _gender,
         'role': _role,
+        if (_role == 'client') 'nutritionPlan': _signupNutritionPlan,
         'height': double.tryParse(_heightCtrl.text.trim().replaceAll(',', '.')),
         if (_role == 'client')
           'weight':
@@ -416,8 +465,9 @@ class _RegisterScreenState extends State<RegisterScreen>
         if (_referralCtrl.text.trim().isNotEmpty) {
           body['referralCode'] = _referralCtrl.text.trim();
         }
-        if (_role != 'client')
+        if (_role != 'client') {
           body['specialties'] = List<String>.from(_selectedSpecialties);
+        }
       }
       final res = await http
           .post(
@@ -471,6 +521,7 @@ class _RegisterScreenState extends State<RegisterScreen>
         termsAccepted: _acceptedTerms,
         location: _location,
         interests: _role == 'client' ? _selectedInterests : null,
+        nutritionPlan: _role == 'client' ? _signupNutritionPlan : null,
         height: double.tryParse(_heightCtrl.text.trim().replaceAll(',', '.')),
         weight: _role == 'client'
             ? double.tryParse(_weightCtrl.text.trim().replaceAll(',', '.'))
@@ -587,6 +638,7 @@ class _RegisterScreenState extends State<RegisterScreen>
         termsAccepted: _acceptedTerms,
         location: _location,
         interests: _role == 'client' ? _selectedInterests : null,
+        nutritionPlan: _role == 'client' ? _signupNutritionPlan : null,
         height: double.tryParse(_heightCtrl.text.trim().replaceAll(',', '.')),
         weight: _role == 'client'
             ? double.tryParse(_weightCtrl.text.trim().replaceAll(',', '.'))
@@ -636,7 +688,7 @@ class _RegisterScreenState extends State<RegisterScreen>
           );
           break;
         case 'coach':
-          dest = const MainLayoutCoach();
+          dest = const CoachOnboarding();
           break;
         default:
           setState(() {
@@ -1310,13 +1362,13 @@ class _RegisterScreenState extends State<RegisterScreen>
                       strokeWidth: 2.5,
                     ),
                   )
-                : Row(
+                : const Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(Icons.apple_rounded,
+                      Icon(Icons.apple_rounded,
                           color: Colors.black, size: 26),
-                      const SizedBox(width: 10),
-                      const Text(
+                      SizedBox(width: 10),
+                      Text(
                         'CONTINUE WITH APPLE',
                         style: TextStyle(
                           color: Colors.black,
@@ -1386,7 +1438,18 @@ class _RegisterScreenState extends State<RegisterScreen>
       ],
       if (_role == 'client') ...[
         const SizedBox(height: 14),
-        _buildSpecialtiesSelector(interests: true)
+        _buildSpecialtiesSelector(interests: true),
+        const SizedBox(height: 14),
+        Card(
+            child: ListTile(
+                leading: const Icon(Icons.flag_outlined),
+                title: const Text('Your nutrition goal'),
+                subtitle: Text(_nutritionPlan == null
+                    ? 'Choose a goal to start your journey'
+                    : nutritionGoalLabels[_nutritionPlan!['goalType']] ??
+                        'Personal goal'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: _chooseNutritionGoal)),
       ],
       if (_role == 'client' || _role == 'coach') ...[
         const SizedBox(height: 18),

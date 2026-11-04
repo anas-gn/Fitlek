@@ -1,3 +1,4 @@
+import '../../components/app_dialog.dart';
 import '../../services/live_updates.dart';
 import 'dart:convert';
 import 'dart:async';
@@ -12,12 +13,14 @@ class SessionDetailScreen extends StatefulWidget {
   final ReservationModel session;
   final int clientID;
   final String token;
+  final http.Client? httpClient;
 
   const SessionDetailScreen({
     super.key,
     required this.session,
     required this.clientID,
     required this.token,
+    this.httpClient,
   });
 
   @override
@@ -45,6 +48,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen>
   final _commentCtrl = TextEditingController();
   bool _reviewSubmitted = false;
   bool _reviewLoading = false;
+  bool _editingReview = false;
 
   bool _cancelling = false;
   bool _priceBusy = false;
@@ -96,12 +100,19 @@ class _SessionDetailScreenState extends State<SessionDetailScreen>
 
   Future<void> _refreshSession() async {
     try {
-      final response = await http.get(
+      final response = await (widget.httpClient?.get ?? http.get)(
           Uri.parse('$baseUrl/reservations/${_session.id}/details'),
           headers: _headers);
-      if (mounted && response.statusCode == 200)
-        setState(() =>
-            _session = ReservationModel.fromJson(jsonDecode(response.body)));
+      if (mounted && response.statusCode == 200) {
+        setState(() {
+          _session = ReservationModel.fromJson(jsonDecode(response.body));
+          if (!_editingReview && _session.reviewRating != null) {
+            _selectedRating = _session.reviewRating!;
+            _commentCtrl.text = _session.reviewComment ?? '';
+            _reviewSubmitted = true;
+          }
+        });
+      }
     } catch (_) {}
   }
 
@@ -243,17 +254,16 @@ class _SessionDetailScreenState extends State<SessionDetailScreen>
 
   bool get _sessionIsPast => _session.sessionStart.isBefore(DateTime.now());
 
-  bool get _canReview => _session.isConfirmed && _sessionIsPast;
+  bool get _canReview =>
+      _session.reviewRating != null || (_session.isConfirmed && _sessionIsPast);
 
   /// Fetch le vrai rating moyen du coach depuis /reviews/coach/:id
   Future<void> _fetchRealCoachRating() async {
     try {
-      final res = await http
-          .get(
-            Uri.parse('$baseUrl/reviews/coach/${_session.coachID}'),
-            headers: _headers,
-          )
-          .timeout(const Duration(seconds: 8));
+      final res = await (widget.httpClient?.get ?? http.get)(
+        Uri.parse('$baseUrl/reviews/coach/${_session.coachID}'),
+        headers: _headers,
+      ).timeout(const Duration(seconds: 8));
       if (res.statusCode == 200) {
         final data = jsonDecode(res.body) as Map<String, dynamic>;
         if (mounted) {
@@ -315,29 +325,26 @@ class _SessionDetailScreenState extends State<SessionDetailScreen>
     final errorColor = context.fitlek.error;
     setState(() => _reviewLoading = true);
     try {
-      final res = await http
-          .post(
-            Uri.parse('$baseUrl/reviews'),
-            headers: _headers,
-            body: jsonEncode({
-              'clientID': widget.clientID,
-              'coachID': _session.coachID,
-              'rating': _selectedRating,
-              'comment': _commentCtrl.text.trim().isEmpty
-                  ? null
-                  : _commentCtrl.text.trim(),
-            }),
-          )
-          .timeout(const Duration(seconds: 10));
+      final res = await (widget.httpClient?.post ?? http.post)(
+        Uri.parse('$baseUrl/reviews'),
+        headers: _headers,
+        body: jsonEncode({
+          'clientID': widget.clientID,
+          'coachID': _session.coachID,
+          'rating': _selectedRating,
+          'comment': _commentCtrl.text.trim().isEmpty
+              ? null
+              : _commentCtrl.text.trim(),
+        }),
+      ).timeout(const Duration(seconds: 10));
 
       if (res.statusCode == 201) {
         setState(() {
           _reviewSubmitted = true;
+          _editingReview = false;
           _session = _session.copyWith(
             reviewRating: _selectedRating,
-            reviewComment: _commentCtrl.text.trim().isEmpty
-                ? null
-                : _commentCtrl.text.trim(),
+            reviewComment: _commentCtrl.text.trim(),
           );
         });
         _showSnack('Review published successfully!', color: successColor);
@@ -371,7 +378,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen>
   }) async {
     return await showDialog<bool>(
           context: context,
-          builder: (_) => AlertDialog(
+          builder: (_) => AppDialog(
             backgroundColor: context.fitlek.card,
             shape:
                 RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -425,7 +432,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen>
                             const SizedBox(height: 22),
                             _buildInfoCard(),
                             if (['awaiting', 'proposed', 'expired']
-                                .contains(_session.pricingStatus) &&
+                                    .contains(_session.pricingStatus) &&
                                 !_session.approvalExpired) ...[
                               const SizedBox(height: 16),
                               _buildPriceApproval()
@@ -915,7 +922,25 @@ class _SessionDetailScreenState extends State<SessionDetailScreen>
             ),
         ]),
         const SizedBox(height: 20),
-        alreadyReviewed ? _buildReviewDisplay() : _buildReviewForm(),
+        if (alreadyReviewed && !_editingReview) ...[
+          _buildReviewDisplay(),
+          TextButton.icon(
+              onPressed: () => setState(() {
+                    _selectedRating = _session.reviewRating ?? _selectedRating;
+                    _commentCtrl.text = _session.reviewComment ?? '';
+                    _editingReview = true;
+                  }),
+              icon: const Icon(Icons.edit_outlined, size: 17),
+              label: const Text('Edit my review')),
+        ] else ...[
+          _buildReviewForm(),
+          if (_editingReview)
+            TextButton(
+                onPressed: _reviewLoading
+                    ? null
+                    : () => setState(() => _editingReview = false),
+                child: const Text('Cancel editing')),
+        ],
       ]),
     );
   }
@@ -1071,7 +1096,10 @@ class _SessionDetailScreenState extends State<SessionDetailScreen>
                               : context.fitlek.textMuted,
                           size: 15),
                       const SizedBox(width: 8),
-                      Text('PUBLISH MY REVIEW',
+                      Text(
+                          _editingReview
+                              ? 'UPDATE MY REVIEW'
+                              : 'PUBLISH MY REVIEW',
                           style: TextStyle(
                               color: _selectedRating > 0
                                   ? Theme.of(context).colorScheme.onPrimary

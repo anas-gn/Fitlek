@@ -4,17 +4,40 @@ import { requireAuth, requireRole } from '../../middleware/auth.js';
 
 const router = Router();
 
+// A booking establishes a coaching relationship, even without an invitation.
+const clientActivity = `SELECT clientID, COUNT(*) AS sessionCount,
+  SUM(status = 'pending' AND TIMESTAMP(reservedDate,reservedTime) >= NOW()) AS pendingCount,
+  SUM(status = 'confirmed' AND TIMESTAMP(reservedDate,reservedTime) >= NOW()) AS upcomingCount,
+  MIN(CASE WHEN status = 'confirmed' AND TIMESTAMP(reservedDate,reservedTime) >= NOW()
+    THEN TIMESTAMP(reservedDate,reservedTime) END) AS nextSessionAt,
+  MIN(createdAt) AS firstBookingAt
+  FROM reservations WHERE coachID = ? GROUP BY clientID`;
+async function relationship(coachID, clientId) {
+  const [[rel]] = await pool.query(
+    `SELECT createdAt AS linkedAt, 1 AS isLinked FROM coachclients WHERE coachID = ? AND clientID = ?
+     UNION ALL
+     SELECT MIN(createdAt) AS linkedAt, 0 AS isLinked FROM reservations
+     WHERE coachID = ? AND clientID = ? HAVING COUNT(*) > 0 LIMIT 1`,
+    [coachID, clientId, coachID, clientId]);
+  return rel;
+}
+
 router.get('/', requireAuth, requireRole('coach'), async (req, res) => {
   const coachID = req.user.id;
   try {
     const [rows] = await pool.query(
       `SELECT u.id, u.firstName, u.lastName, u.email, u.avatarUrl, u.isPremium,
-              cc.createdAt AS linkedAt
-       FROM coachclients cc
-       JOIN users u ON u.id = cc.clientID
-       WHERE cc.coachID = ?
+              COALESCE(cc.createdAt, activity.firstBookingAt) AS linkedAt,
+              (cc.clientID IS NOT NULL) AS isLinked,
+              COALESCE(activity.sessionCount,0) AS sessionCount,
+              COALESCE(activity.pendingCount,0) AS pendingCount,
+              COALESCE(activity.upcomingCount,0) AS upcomingCount, activity.nextSessionAt
+       FROM users u
+       LEFT JOIN coachclients cc ON cc.clientID = u.id AND cc.coachID = ?
+       LEFT JOIN (${clientActivity}) activity ON activity.clientID = u.id
+       WHERE u.role = 'client' AND (cc.clientID IS NOT NULL OR activity.clientID IS NOT NULL)
        ORDER BY u.firstName ASC`,
-      [coachID]
+      [coachID, coachID]
     );
     res.json(rows);
   } catch (err) {
@@ -22,15 +45,12 @@ router.get('/', requireAuth, requireRole('coach'), async (req, res) => {
   }
 });
 
-// Client details — only for a client genuinely linked to the authenticated coach.
+// Client details are scoped to an invitation or booking with this coach.
 router.get('/:clientId', requireAuth, requireRole('coach'), async (req, res) => {
   const coachID = req.user.id;
   const { clientId } = req.params;
   try {
-    const [[rel]] = await pool.query(
-      `SELECT createdAt AS linkedAt FROM coachclients WHERE coachID = ? AND clientID = ?`,
-      [coachID, clientId]
-    );
+    const rel = await relationship(coachID, clientId);
     if (!rel) return res.status(403).json({ message: 'This client is not linked to you.' });
 
     const [[client]] = await pool.query(
@@ -44,14 +64,15 @@ router.get('/:clientId', requireAuth, requireRole('coach'), async (req, res) => 
       `SELECT
          COUNT(*) AS total,
          SUM(status = 'confirmed') AS confirmed,
-         SUM(status = 'pending') AS pending,
-         SUM(status = 'cancelled') AS cancelled
+         SUM(status = 'pending' AND TIMESTAMP(reservedDate,reservedTime) >= NOW()) AS pending,
+         SUM(status = 'cancelled') AS cancelled,
+         SUM(status = 'confirmed' AND TIMESTAMP(reservedDate,reservedTime) >= NOW()) AS upcoming
        FROM reservations WHERE coachID = ? AND clientID = ?`,
       [coachID, clientId]
     );
 
     const [recentSessions] = await pool.query(
-      `SELECT id, reservedDate, reservedTime, status, location
+      `SELECT id, reservedDate, reservedTime, status, location, pricingStatus, price, proposedPrice
        FROM reservations WHERE coachID = ? AND clientID = ?
        ORDER BY reservedDate DESC, reservedTime DESC LIMIT 5`,
       [coachID, clientId]
@@ -60,11 +81,13 @@ router.get('/:clientId', requireAuth, requireRole('coach'), async (req, res) => 
     res.json({
       ...client,
       linkedAt: rel.linkedAt,
+      isLinked: Boolean(rel.isLinked),
       reservations: {
         total: Number(stats.total) || 0,
         confirmed: Number(stats.confirmed) || 0,
         pending: Number(stats.pending) || 0,
         cancelled: Number(stats.cancelled) || 0,
+        upcoming: Number(stats.upcoming) || 0,
       },
       recentSessions,
     });
@@ -79,11 +102,14 @@ router.post('/:clientId/conversation', requireAuth, requireRole('coach'), async 
   const coachID = req.user.id;
   const { clientId } = req.params;
   try {
-    const [[rel]] = await pool.query(
-      `SELECT id FROM coachclients WHERE coachID = ? AND clientID = ?`,
-      [coachID, clientId]
-    );
+    const rel = await relationship(coachID, clientId);
     if (!rel) return res.status(403).json({ message: 'This client is not linked to you.' });
+
+    const [[blocked]] = await pool.query(
+      `SELECT id FROM user_blocks WHERE (blockerID = ? AND blockedID = ?)
+       OR (blockerID = ? AND blockedID = ?) LIMIT 1`,
+      [coachID, clientId, clientId, coachID]);
+    if (blocked) return res.status(403).json({ message: 'Messaging is unavailable for this client.' });
 
     const [[existing]] = await pool.query(
       `SELECT id FROM conversations WHERE coachID = ? AND clientID = ?`,

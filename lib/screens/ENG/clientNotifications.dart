@@ -1,8 +1,8 @@
 import '../../services/live_updates.dart';
+import '../../components/notification_card.dart';
 import '../../services/notification_navigation.dart';
 import 'package:flutter/material.dart';
 import '../../services/apiService.dart';
-import '../../theme/fitlek_theme_extension.dart';
 
 class ClientNotificationsScreen extends StatefulWidget {
   const ClientNotificationsScreen({super.key});
@@ -11,11 +11,14 @@ class ClientNotificationsScreen extends StatefulWidget {
       _ClientNotificationsScreenState();
 }
 
-class _ClientNotificationsScreenState extends State<ClientNotificationsScreen> with LiveUpdates<ClientNotificationsScreen> {
+class _ClientNotificationsScreenState extends State<ClientNotificationsScreen>
+    with LiveUpdates<ClientNotificationsScreen> {
   @override
-  Set<String> get liveDomains => {'notifications','reservations'};
+  Set<String> get liveDomains => {'notifications', 'reservations'};
   @override
-  Future<void> refreshLiveData() async { await _load(); }
+  Future<void> refreshLiveData() async {
+    await _load();
+  }
 
   List<Map<String, dynamic>> _items = [];
   bool _loading = true;
@@ -71,8 +74,7 @@ class _ClientNotificationsScreenState extends State<ClientNotificationsScreen> w
         appBar: AppBar(title: const Text('Notifications'), actions: [
           IconButton(
               tooltip: 'Mark all as read',
-              onPressed:
-                  _items.any((item) => item['isRead'] == 0) ? _readAll : null,
+              onPressed: _items.any(NotificationCard.unread) ? _readAll : null,
               icon: const Icon(Icons.done_all)),
         ]),
         body: _loading
@@ -86,31 +88,19 @@ class _ClientNotificationsScreenState extends State<ClientNotificationsScreen> w
                     child: ListView.builder(
                       physics: const AlwaysScrollableScrollPhysics(),
                       padding: const EdgeInsets.all(16),
-                      itemCount: _items.isEmpty ? 1 : _items.length,
+                      itemCount: _items.isEmpty ? 2 : _items.length + 1,
                       itemBuilder: (context, index) {
+                        if (index == 0)
+                          return NotificationInboxIntro(
+                              unreadCount:
+                                  _items.where(NotificationCard.unread).length);
                         if (_items.isEmpty)
                           return const Padding(
                               padding: EdgeInsets.all(32),
                               child: Text('No notifications yet.'));
-                        final item = _items[index];
-                        final price =
-                            item['type']?.toString().startsWith('price_') ??
-                                false;
-                        return Card(
-                            color: context.fitlek.card,
-                            child: ListTile(
-                                leading: Icon(price
-                                    ? Icons.payments_outlined
-                                    : Icons.notifications_outlined),
-                                title: Text(item['title'] ?? '',
-                                    style: TextStyle(
-                                        fontWeight: item['isRead'] == 0
-                                            ? FontWeight.w700
-                                            : FontWeight.w400)),
-                                subtitle: Text(item['body'] ?? ''),
-                                trailing:
-                                    const Icon(Icons.chevron_right_rounded),
-                                onTap: () => _open(item)));
+                        final item = _items[index - 1];
+                        return NotificationCard(
+                            item: item, onTap: () => _open(item));
                       },
                     )),
       );

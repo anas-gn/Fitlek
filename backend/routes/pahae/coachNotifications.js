@@ -4,36 +4,10 @@ import { requireAuth, requireRole } from '../../middleware/auth.js';
 
 const router = Router();
 
-// Session-reminder window (minutes before start). Reminders are generated
-// on-demand (no scheduler in this project) and de-duplicated by uniqueKey.
-const REMINDER_WINDOW_MINUTES = 60;
-
-// Materialize any due upcoming-session reminders for this coach.
-// Only confirmed, future sessions inside the window; INSERT IGNORE + the
-// UNIQUE(uniqueKey) constraint make this safe to run on every fetch.
-// Uses the DB clock for both NOW() and the session timestamp, so the same
-// timezone convention applies to reservedDate/reservedTime consistently.
-async function generateDueSessionReminders(coachID) {
-  await pool.query(
-    `INSERT IGNORE INTO notifications
-       (recipientUserID, type, title, body, relatedEntityID, actorName, actorAvatar, uniqueKey)
-     SELECT r.coachID,
-            'upcoming_session',
-            'Upcoming session',
-            CONCAT('Your session with ', c.firstName, ' ', c.lastName,
-                   ' starts at ', TIME_FORMAT(r.reservedTime, '%H:%i'), '.'),
-            r.id,
-            CONCAT(c.firstName, ' ', c.lastName),
-            c.avatarUrl,
-            CONCAT('session-reminder:', r.id, ':', ?, 'm:coach:', r.coachID)
-     FROM reservations r
-     JOIN users c ON c.id = r.clientID
-     WHERE r.coachID = ?
-       AND r.status = 'confirmed'
-       AND TIMESTAMP(r.reservedDate, r.reservedTime) > NOW()
-       AND TIMESTAMP(r.reservedDate, r.reservedTime) <= (NOW() + INTERVAL ? MINUTE)`,
-    [REMINDER_WINDOW_MINUTES, coachID, REMINDER_WINDOW_MINUTES]
-  );
+import {sendDueSessionReminders} from '../../services/sessionReminders.js';
+import {createAndSendNotification} from '../../services/pushNotificationService.js';
+async function generateDueSessionReminders() {
+  await sendDueSessionReminders(pool, createAndSendNotification);
 }
 
 // GET /coach/notifications?page=1&limit=30

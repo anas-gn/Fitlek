@@ -13,10 +13,10 @@ router.get('/', requireAuth, requireRole('coach'), async (req, res) => {
          c.clientID,
          u.firstName, u.lastName, u.avatarUrl,
          c.lastMessageAt,
-         (SELECT body FROM messages m WHERE m.conversationID = c.id
+         (SELECT body FROM messages m WHERE m.conversationID = c.id AND NOT EXISTS(SELECT 1 FROM chat_hidden_messages h WHERE h.messageID=m.id AND h.userID=c.coachID)
           ORDER BY m.createdAt DESC LIMIT 1) AS lastMessage,
          (SELECT COUNT(*) FROM messages m
-          WHERE m.conversationID = c.id AND m.senderID != ? AND m.isRead = 0) AS unreadCount
+          WHERE m.conversationID = c.id AND m.senderID != ? AND m.isRead = 0 AND m.deletedAt IS NULL AND NOT EXISTS(SELECT 1 FROM chat_hidden_messages h WHERE h.messageID=m.id AND h.userID=c.coachID)) AS unreadCount
        FROM conversations c
        JOIN users u ON u.id = c.clientID
        WHERE c.coachID = ?

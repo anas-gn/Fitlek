@@ -1,3 +1,7 @@
+import '../components/nutrition_goal_card.dart';
+import 'nutrition_diary_service.dart';
+import '../screens/ENG/nutritionTracker.dart';
+import '../components/app_dialog.dart';
 import '../screens/ENG/coachInviteClients.dart';
 import 'campaign_service.dart';
 import 'package:flutter/material.dart';
@@ -28,7 +32,34 @@ class NotificationNavigation {
       return;
     }
     Widget? screen;
-    if (type == 'new_message' && int.tryParse(id) != null) {
+    if (type.startsWith('nutrition_') && role == 'client') {
+      if (type == 'nutrition_monthly' || type == 'nutrition_yearly') {
+        final yearly = type == 'nutrition_yearly';
+        final year = int.tryParse(id.length >= 4 ? id.substring(0, 4) : '');
+        final month =
+            yearly ? 1 : int.tryParse(id.length == 6 ? id.substring(4, 6) : '');
+        screen = NutritionReviewScreen(
+            service: NutritionDiaryService(int.parse('${user['id']}'), token),
+            ownsService: true,
+            initialYearly: yearly,
+            initialDate: year != null &&
+                    year >= 2000 &&
+                    month != null &&
+                    month >= 1 &&
+                    month <= 12
+                ? DateTime(year, month)
+                : null);
+      } else {
+        final date = id.length == 8
+            ? DateTime.tryParse(
+                '${id.substring(0, 4)}-${id.substring(4, 6)}-${id.substring(6, 8)}')
+            : null;
+        screen = NutritionTrackerScreen(
+            clientID: int.parse('${user['id']}'),
+            token: token,
+            initialDate: date);
+      }
+    } else if (type == 'new_message' && int.tryParse(id) != null) {
       screen = coach
           ? CoachChat(
               conversation: CoachConversation(
@@ -42,6 +73,7 @@ class NotificationNavigation {
           : ClientConversationScreen(
               conversationID: int.parse(id),
               clientID: int.parse('${user['id']}'),
+              coachID: item['actorId'] != null ? int.tryParse('${item['actorId']}') : null,
               token: token,
               coachName: item['actorName']?.toString(),
               coachAvatar: item['actorAvatar']?.toString());
@@ -75,6 +107,7 @@ class NotificationNavigation {
           screen = ClientConversationScreen(
               conversationID: conversationID,
               clientID: int.parse('${user['id']}'),
+              coachID: item['actorId'] != null ? int.tryParse('${item['actorId']}') : null,
               token: token,
               coachName: item['actorName']?.toString());
         } else {
@@ -100,7 +133,7 @@ class NotificationNavigation {
     if (screen == null) {
       await showDialog(
           context: context,
-          builder: (ctx) => AlertDialog(
+          builder: (ctx) => AppDialog(
                 title: Text('${item['title'] ?? 'Notification'}'),
                 content: Text(
                     '${item['body'] ?? 'This item is no longer available.'}'),

@@ -9,7 +9,7 @@ class AudioManager {
   String? _currentlyPlayingUrl;
 
   /// Register a new player and stop the previously playing one
-  void playNew(AudioPlayer player, String url) async {
+  Future<void> playNew(AudioPlayer player, String url) async {
     if (_currentPlayer != null && _currentPlayer != player) {
       try {
         await _currentPlayer!.stop();
@@ -19,6 +19,13 @@ class AudioManager {
     }
     _currentPlayer = player;
     _currentlyPlayingUrl = url;
+  }
+
+  void release(AudioPlayer player) {
+    if (_currentPlayer == player) {
+      _currentPlayer = null;
+      _currentlyPlayingUrl = null;
+    }
   }
 
   void stopCurrent() async {

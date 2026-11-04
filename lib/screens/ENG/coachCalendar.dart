@@ -1,3 +1,4 @@
+import '../../components/app_dialog.dart';
 import '../../services/live_updates.dart';
 import 'package:flutter/material.dart';
 import '../../models/coachReservation.dart';
@@ -13,11 +14,15 @@ class CoachCalendar extends StatefulWidget {
   State<CoachCalendar> createState() => _CoachCalendarState();
 }
 
-class _CoachCalendarState extends State<CoachCalendar> with SingleTickerProviderStateMixin, LiveUpdates<CoachCalendar> {
+class _CoachCalendarState extends State<CoachCalendar>
+    with SingleTickerProviderStateMixin, LiveUpdates<CoachCalendar> {
   @override
-  Set<String> get liveDomains => {'calendar','reservations','availability','notifications','packages'};
+  Set<String> get liveDomains =>
+      {'calendar', 'reservations', 'availability', 'notifications', 'packages'};
   @override
-  Future<void> refreshLiveData() async { await _load(silent:true); }
+  Future<void> refreshLiveData() async {
+    await _load(silent: true);
+  }
 
   late TabController _tabController;
   DateTime _selectedDate = DateTime.now();
@@ -62,6 +67,7 @@ class _CoachCalendarState extends State<CoachCalendar> with SingleTickerProvider
                   date: DateTime.parse(r['reservedDate']),
                   time: (r['reservedTime'] as String?)?.substring(0, 5) ?? '',
                   location: r['location']?.toString(),
+                  companyName: r['companyName']?.toString(),
                   status: r['status'] == 'confirmed'
                       ? ReservationStatus.confirmed
                       : r['status'] == 'cancelled'
@@ -109,7 +115,7 @@ class _CoachCalendarState extends State<CoachCalendar> with SingleTickerProvider
     final controller = TextEditingController();
     final price = await showDialog<String>(
         context: context,
-        builder: (ctx) => AlertDialog(
+        builder: (ctx) => AppDialog(
                 title: const Text('Propose session price'),
                 content: Column(mainAxisSize: MainAxisSize.min, children: [
                   const Text(
@@ -119,7 +125,7 @@ class _CoachCalendarState extends State<CoachCalendar> with SingleTickerProvider
                       controller: controller,
                       keyboardType:
                           const TextInputType.numberWithOptions(decimal: true),
-                      decoration: const InputDecoration(
+                      decoration: InputDecoration(
                           labelText: 'Price per session (MAD)'))
                 ]),
                 actions: [

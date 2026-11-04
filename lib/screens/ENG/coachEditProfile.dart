@@ -1,3 +1,4 @@
+import '../../components/app_dialog.dart';
 import '../../services/media_picker_service.dart';
 import 'userLocationSettings.dart';
 import 'package:flutter/material.dart';
@@ -317,7 +318,7 @@ class _CoachEditProfileState extends State<CoachEditProfile> {
       builder: (ctx) {
         final cs = Theme.of(ctx).colorScheme;
         final f = ctx.fitlek;
-        return AlertDialog(
+        return AppDialog(
           backgroundColor: f.card,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
           title: Text(title, style: TextStyle(color: cs.onSurface, fontWeight: FontWeight.w800, fontSize: 16)),
@@ -905,7 +906,7 @@ class _CoachEditProfileState extends State<CoachEditProfile> {
         final cs = Theme.of(ctx).colorScheme;
         final f = ctx.fitlek;
         return StatefulBuilder(builder: (ctx, setDialogState) {
-          return AlertDialog(
+          return AppDialog(
             backgroundColor: f.card,
             shape:
                 RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
@@ -1200,7 +1201,7 @@ class _CoachEditProfileState extends State<CoachEditProfile> {
       builder: (ctx) {
         final cs = Theme.of(ctx).colorScheme;
         final f = ctx.fitlek;
-        return AlertDialog(
+        return AppDialog(
           backgroundColor: f.card,
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),

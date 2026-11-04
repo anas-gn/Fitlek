@@ -1,3 +1,4 @@
+import '../app_dialog.dart';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -25,7 +26,7 @@ class _BatchPreviewState extends State<_BatchPreview> {
   @override
   Widget build(BuildContext context) {
     final files = widget.files;
-    return AlertDialog(
+    return AppDialog(
         title: Text('Send ${files.length} photos'),
         content: SizedBox(
             width: 360,
@@ -49,7 +50,7 @@ class _BatchPreviewState extends State<_BatchPreview> {
               TextField(
                   controller: caption,
                   maxLength: 1000,
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                       hintText: 'Caption for the first photo (optional)'))
             ]))),
         actions: [

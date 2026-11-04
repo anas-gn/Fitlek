@@ -29,11 +29,25 @@ class CoachDashboard extends StatefulWidget {
 
 enum _DashState { loading, success, error }
 
-class _CoachDashboardState extends State<CoachDashboard> with LiveUpdates<CoachDashboard> {
+class _CoachDashboardState extends State<CoachDashboard>
+    with LiveUpdates<CoachDashboard> {
   @override
-  Set<String> get liveDomains => {'calendar','reservations','notifications','messages','profile','edit','invitations','reviews','clients'};
+  Set<String> get liveDomains => {
+        'calendar',
+        'reservations',
+        'notifications',
+        'messages',
+        'profile',
+        'edit',
+        'invitations',
+        'reviews',
+        'clients'
+      };
   @override
-  Future<void> refreshLiveData() async { await _loadData(silent:true); await _refreshVerification(); }
+  Future<void> refreshLiveData() async {
+    await _loadData(silent: true);
+    await _refreshVerification();
+  }
 
   Future<Map<String, dynamic>> _get(String path) =>
       (widget.load ?? ApiService.get)(path);
@@ -53,6 +67,12 @@ class _CoachDashboardState extends State<CoachDashboard> with LiveUpdates<CoachD
   int _tierProgress = 0;
   int _pointsRemaining = 0;
   int _periodClients = 0;
+  double _confirmedValue = 0;
+  int _loadVersion = 0;
+  final Map<String, Map<String, dynamic>> _periodCache = {};
+
+  String _percentage(int count) =>
+      '${(_totalReservations == 0 ? 0 : count * 100 / _totalReservations).toStringAsFixed(1)}% of total';
   List<Map<String, dynamic>> _recentReservations = [];
   List<Map<String, dynamic>> _notifications = [];
   List<Map<String, dynamic>> _recentClientInvitations = [];
@@ -165,12 +185,40 @@ class _CoachDashboardState extends State<CoachDashboard> with LiveUpdates<CoachD
   }
 
   Future<void> _loadData({bool silent = false}) async {
-    if (!silent && mounted && _state != _DashState.loading) {
+    final version = ++_loadVersion;
+    if (!silent &&
+        mounted &&
+        _periodCache.isEmpty &&
+        _state != _DashState.loading) {
       setState(() => _state = _DashState.loading);
     }
-    final result = await _get('/coach/dashboard?period=$_periodParam');
-    if (!mounted) return;
+    const periods = ['today', 'week', 'month'];
+    final results = await Future.wait(periods.map((period) async {
+      try {
+        return await _get('/coach/dashboard?period=$period');
+      } catch (_) {
+        return <String, dynamic>{'ok': false};
+      }
+    }));
+    if (!mounted || version != _loadVersion) return;
+    for (var i = 0; i < periods.length; i++) {
+      if (results[i]['ok'] == true) _periodCache[periods[i]] = results[i];
+    }
+    _applyData(_periodCache[_periodParam] ?? {'ok': false});
+  }
 
+  void _selectPeriod(int index) {
+    if (index == _selectedFilterIndex) return;
+    setState(() => _selectedFilterIndex = index);
+    final cached = _periodCache[_periodParam];
+    if (cached != null) {
+      _applyData(cached);
+    } else {
+      _loadData(silent: true);
+    }
+  }
+
+  void _applyData(Map<String, dynamic> result) {
     if (result['ok'] == true) {
       setState(() {
         _isVerified = result['isVerified'] == true;
@@ -179,6 +227,8 @@ class _CoachDashboardState extends State<CoachDashboard> with LiveUpdates<CoachD
         _confirmedReservations = _asInt(result['confirmedReservations']);
         _totalClients = _asInt(result['totalClients']);
         _periodClients = _asInt(result['periodClients']);
+        _confirmedValue =
+            double.tryParse('${result['confirmedValue'] ?? 0}') ?? 0;
         _invitationPoints = _asInt(result['invitationPoints']);
         _totalInvitations = _asInt(result['totalInvitations']);
         _invitationsThisWeek = _asInt(result['invitationsThisWeek']);
@@ -318,8 +368,7 @@ class _CoachDashboardState extends State<CoachDashboard> with LiveUpdates<CoachD
             isSelected: _selectedFilterIndex == 0,
             onTap: () {
               if (_selectedFilterIndex != 0) {
-                setState(() => _selectedFilterIndex = 0);
-                _loadData();
+                _selectPeriod(0);
               }
             },
           ),
@@ -333,8 +382,7 @@ class _CoachDashboardState extends State<CoachDashboard> with LiveUpdates<CoachD
             isSelected: _selectedFilterIndex == 1,
             onTap: () {
               if (_selectedFilterIndex != 1) {
-                setState(() => _selectedFilterIndex = 1);
-                _loadData();
+                _selectPeriod(1);
               }
             },
           ),
@@ -348,8 +396,7 @@ class _CoachDashboardState extends State<CoachDashboard> with LiveUpdates<CoachD
             isSelected: _selectedFilterIndex == 2,
             onTap: () {
               if (_selectedFilterIndex != 2) {
-                setState(() => _selectedFilterIndex = 2);
-                _loadData();
+                _selectPeriod(2);
               }
             },
           ),
@@ -593,7 +640,7 @@ class _CoachDashboardState extends State<CoachDashboard> with LiveUpdates<CoachD
           iconBg: f.success.withValues(alpha: 0.15),
           title: 'Confirmed',
           value: '$_confirmedReservations',
-          subtitle: '12.5% of total',
+          subtitle: _percentage(_confirmedReservations),
           subtitleColor: f.textSecondary,
         ),
         _statCard(
@@ -604,7 +651,7 @@ class _CoachDashboardState extends State<CoachDashboard> with LiveUpdates<CoachD
           iconBg: f.warning.withValues(alpha: 0.15),
           title: 'Pending',
           value: '$_pendingReservations',
-          subtitle: '87.5% of total',
+          subtitle: _percentage(_pendingReservations),
           subtitleColor: f.warning,
         ),
         _statCard(
@@ -613,9 +660,9 @@ class _CoachDashboardState extends State<CoachDashboard> with LiveUpdates<CoachD
           icon: Icons.attach_money_rounded,
           iconColor: f.textSecondary,
           iconBg: f.textSecondary.withValues(alpha: 0.15),
-          title: 'Total Earnings',
-          value: '0 MAD',
-          subtitle: '+0 this week',
+          title: 'Confirmed value',
+          value: '${_confirmedValue.toStringAsFixed(2)} MAD',
+          subtitle: 'Agreed prices · $_periodLabel',
           subtitleColor: f.textSecondary,
         ),
       ],
@@ -668,10 +715,15 @@ class _CoachDashboardState extends State<CoachDashboard> with LiveUpdates<CoachD
               ),
             ],
           ),
-          Text(
-            value,
-            style: TextStyle(
-                color: cs.onSurface, fontSize: 24, fontWeight: FontWeight.w900),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(value,
+                maxLines: 1,
+                style: TextStyle(
+                    color: cs.onSurface,
+                    fontSize: 24,
+                    fontWeight: FontWeight.w900)),
           ),
           Row(
             children: [
@@ -679,10 +731,12 @@ class _CoachDashboardState extends State<CoachDashboard> with LiveUpdates<CoachD
                 Icon(subtitleIcon, color: subtitleColor, size: 12),
                 const SizedBox(width: 4),
               ],
-              Text(
+              Flexible(
+                  child: Text(
                 subtitle,
+                maxLines: 2,
                 style: TextStyle(color: subtitleColor, fontSize: 11),
-              ),
+              )),
             ],
           ),
         ],

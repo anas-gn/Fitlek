@@ -1,3 +1,4 @@
+import '../../components/app_dialog.dart';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -65,7 +66,7 @@ class _BlockedUsersListState extends State<BlockedUsersList> {
   Future<void> _unblockUser(int blockedID, String name) async {
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
+      builder: (ctx) => AppDialog(
         backgroundColor: context.fitlek.card,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Text('Unblock $name?', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),

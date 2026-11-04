@@ -32,7 +32,8 @@ class CoachProfileCompletion {
     add('firstName', 'your first name', 'about');
     add('lastName', 'your last name', 'about');
     add('email', 'your email', 'account');
-    add('tel', 'your phone number', 'account');
+    steps.add(ProfileCompletionStep('Add your phone number to your profile.',
+        'account', filled('phoneNumber') || filled('tel')));
     add('gender', 'your gender', 'about');
     add('professionalTitle', 'your professional title', 'about');
     add('bio', 'your biography', 'about');

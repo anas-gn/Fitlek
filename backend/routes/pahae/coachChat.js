@@ -2,6 +2,7 @@ import { Router } from 'express';
 import pool from '../../config/db.js';
 import { requireAuth, requireRole } from '../../middleware/auth.js';
 import { createAndSendNotification } from '../../services/pushNotificationService.js';
+import {emitMessage,emitUser} from '../../services/realtime.js';
 
 const router = Router();
 
@@ -10,21 +11,22 @@ router.get('/:conversationId', requireAuth, requireRole('coach'), async (req, re
   const { conversationId } = req.params;
   try {
     const [[conv]] = await pool.query(
-      `SELECT id FROM conversations WHERE id = ? AND coachID = ?`,
+      `SELECT id,clientID FROM conversations WHERE id = ? AND coachID = ?`,
       [conversationId, coachID]
     );
     if (!conv) return res.status(403).json({ message: 'Access denied.' });
     const [messages] = await pool.query(
-      `SELECT id, senderID, body, mediaUrl, mediaType, mediaExpired, isRead, createdAt
-       FROM messages WHERE conversationID = ?
+      `SELECT id, senderID, body, CASE WHEN deletedAt IS NULL THEN mediaUrl ELSE NULL END AS mediaUrl, mediaType, mediaExpired, isRead, createdAt, deletedAt
+       FROM messages m WHERE conversationID = ? AND NOT EXISTS(SELECT 1 FROM chat_hidden_messages h WHERE h.messageID=m.id AND h.userID=?)
        ORDER BY createdAt ASC`,
-      [conversationId]
+      [conversationId, coachID]
     );
-    await pool.query(
+    const [read] = await pool.query(
       `UPDATE messages SET isRead = 1
        WHERE conversationID = ? AND senderID != ? AND isRead = 0`,
       [conversationId, coachID]
     );
+    if (read.affectedRows) emitUser(conv.clientID,'data_changed',{domain:'read_receipts',conversationID:conversationId});
     res.json(messages);
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -53,6 +55,7 @@ router.post('/:conversationId', requireAuth, requireRole('coach'), async (req, r
     );
 
     // Notify client via push notification
+    emitMessage({id:result.insertId,conversationID:Number(conversationId),senderID:Number(coachID),body:body?.trim() || null,mediaUrl:mediaUrl || null,mediaType:mediaType || 'text',isRead:false,createdAt:new Date().toISOString()},conv);
     try {
       const recipientID = conv.clientID;
       const [[coach]] = await pool.query('SELECT firstName, lastName, avatarUrl FROM users WHERE id = ?', [coachID]);

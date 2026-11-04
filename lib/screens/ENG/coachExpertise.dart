@@ -1,3 +1,5 @@
+import '../../components/category_icon.dart';
+import '../../components/app_dialog.dart';
 import '../../services/media_picker_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
@@ -143,13 +145,13 @@ class _CoachExpertiseState extends State<CoachExpertise> {
     final textCtrl = TextEditingController();
     final result = await showDialog<String>(
       context: context,
-      builder: (ctx) => AlertDialog(
+      builder: (ctx) => AppDialog(
         backgroundColor: context.fitlek.card,
         title: Text('Add specialty', style: TextStyle(color: Theme.of(ctx).colorScheme.onSurface)),
         content: TextField(
           controller: textCtrl,
           style: TextStyle(color: Theme.of(ctx).colorScheme.onSurface),
-          decoration: const InputDecoration(hintText: 'e.g. Strength building'),
+          decoration: InputDecoration(hintText: 'e.g. Strength building'),
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
@@ -176,7 +178,7 @@ class _CoachExpertiseState extends State<CoachExpertise> {
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setDialogState) {
-          return AlertDialog(
+          return AppDialog(
             backgroundColor: context.fitlek.card,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
             title: Text('Add certification', style: TextStyle(color: Theme.of(ctx).colorScheme.onSurface, fontWeight: FontWeight.w600)),
@@ -558,7 +560,7 @@ class _CoachExpertiseState extends State<CoachExpertise> {
                   value: c['id'] as int,
                   child: Row(
                     children: [
-                      Icon(Icons.fitness_center_rounded, color: context.fitlek.textSecondary, size: 20),
+                      CategoryIcon(name: '${c['icon'] ?? 'fitness_center'}', color: context.fitlek.textSecondary, size: 20),
                       const SizedBox(width: 12),
                       Text(c['name'] ?? '', style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontWeight: FontWeight.w600, fontSize: 15)),
                     ],
@@ -1002,3 +1004,4 @@ class _CoachExpertiseState extends State<CoachExpertise> {
     );
   }
 }
+

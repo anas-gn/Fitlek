@@ -33,10 +33,11 @@ router.post('/avatar', requireAuth, requireRole('coach'), (req, res) => {
         fs.mkdirSync(uploadDir, { recursive: true });
       }
 
-      const filename = `avatar_${req.query.userID || req.user?.id || req.user?._id || Date.now()}.webp`;
+      const filename = `avatar_${req.user.id}_${Date.now()}_${Math.round(Math.random()*1e9)}.webp`;
       const filepath = path.join(uploadDir, filename);
       
       await sharp(req.file.buffer)
+        .rotate()
         .resize(400, 400, { fit: 'cover', position: 'attention' })
         .webp({ quality: 80 })
         .toFile(filepath);

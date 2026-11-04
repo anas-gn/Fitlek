@@ -1,3 +1,4 @@
+import '../../components/app_dialog.dart';
 import '../../services/media_picker_service.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -562,7 +563,7 @@ class _CoachAboutYouState extends State<CoachAboutYou> {
       builder: (ctx) {
         final cs = Theme.of(ctx).colorScheme;
         final f = ctx.fitlek;
-        return AlertDialog(
+        return AppDialog(
           backgroundColor: f.card,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
           title: Text('Instagram handle', style: TextStyle(color: cs.onSurface, fontWeight: FontWeight.w800, fontSize: 16)),

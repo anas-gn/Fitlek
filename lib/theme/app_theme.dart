@@ -79,17 +79,32 @@ class AppTheme {
       bottomSheetTheme: BottomSheetThemeData(
         backgroundColor: fitlek.card,
         modalBackgroundColor: fitlek.card,
-        shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        modalBarrierColor: Colors.black.withValues(alpha: 0.55),
+        elevation: 16,
+        shape: RoundedRectangleBorder(
+          side: BorderSide(color: fitlek.border),
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
         ),
       ),
       dialogTheme: DialogThemeData(
         backgroundColor: fitlek.card,
         surfaceTintColor: Colors.transparent,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        elevation: 20,
+        barrierColor: Colors.black.withValues(alpha: 0.55),
+        titleTextStyle: TextStyle(
+            color: colorScheme.onSurface,
+            fontSize: 22,
+            fontWeight: FontWeight.w800,
+            letterSpacing: -0.5),
+        contentTextStyle:
+            TextStyle(color: fitlek.textSecondary, fontSize: 15, height: 1.5),
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(28),
+            side: BorderSide(color: fitlek.border)),
       ),
       snackBarTheme: SnackBarThemeData(
-        backgroundColor: isLight ? AppColors.cyprus : AppColors.darkSurfaceVariant,
+        backgroundColor:
+            isLight ? AppColors.cyprus : AppColors.darkSurfaceVariant,
         contentTextStyle: TextStyle(
           color: isLight ? AppColors.sand : AppColors.sand,
           fontWeight: FontWeight.w600,
@@ -101,6 +116,8 @@ class AppTheme {
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: fitlek.inputFill,
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         hintStyle: TextStyle(color: fitlek.textMuted),
         labelStyle: TextStyle(color: fitlek.textSecondary),
         border: OutlineInputBorder(
@@ -126,7 +143,8 @@ class AppTheme {
           foregroundColor: colorScheme.onPrimary,
           elevation: isLight ? 2 : 0,
           shadowColor: fitlek.shadow,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
           textStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
         ),
@@ -135,7 +153,8 @@ class AppTheme {
         style: OutlinedButton.styleFrom(
           foregroundColor: isLight ? AppColors.cyprus : AppColors.sand,
           side: BorderSide(color: isLight ? AppColors.cyprus : AppColors.sand),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
           textStyle: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
         ),
@@ -143,17 +162,32 @@ class AppTheme {
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
           foregroundColor: colorScheme.primary,
+          padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          textStyle: const TextStyle(fontWeight: FontWeight.w700),
+        ),
+      ),
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          minimumSize: const Size(48, 48),
+          padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          textStyle: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
         ),
       ),
       bottomNavigationBarTheme: BottomNavigationBarThemeData(
-        backgroundColor: isLight ? AppColors.lightSurface : AppColors.darkSurface,
+        backgroundColor:
+            isLight ? AppColors.lightSurface : AppColors.darkSurface,
         selectedItemColor: colorScheme.primary,
         unselectedItemColor: fitlek.navUnselected,
         type: BottomNavigationBarType.fixed,
         elevation: isLight ? 8 : 0,
       ),
       navigationBarTheme: NavigationBarThemeData(
-        backgroundColor: isLight ? AppColors.lightSurface : AppColors.darkSurface,
+        backgroundColor:
+            isLight ? AppColors.lightSurface : AppColors.darkSurface,
         indicatorColor: colorScheme.primary.withValues(alpha: 0.12),
         labelTextStyle: WidgetStateProperty.resolveWith((states) {
           final selected = states.contains(WidgetState.selected);

@@ -152,6 +152,7 @@ class _ClientConversationsListScreenState extends State<ClientConversationsListS
         ClientConversationScreen(
           conversationID: conv.id,
           clientID: widget.clientID,
+          coachID: conv.coachID,
           token: widget.token,
           coachName: conv.otherName,
           coachAvatar: conv.otherAvatar,

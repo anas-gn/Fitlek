@@ -1,5 +1,8 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'dart:ui' as ui;
+import '../components/campaign_dialog.dart';
+export '../components/campaign_dialog.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'apiService.dart';
 import 'notification_navigation.dart';
@@ -53,7 +56,8 @@ class CampaignService {
           ModalRoute.of(context)?.isCurrent != true) return;
       final item = Map<String, dynamic>.from(items.first);
       final seen = await ApiService.post('/campaigns/${item['id']}/seen', {});
-      if (seen['ok'] != true || seen['shouldShow'] != true ||
+      if (seen['ok'] != true ||
+          seen['shouldShow'] != true ||
           !context.mounted ||
           generation != _generation ||
           token != await ApiService.getToken()) return;
@@ -84,7 +88,15 @@ class CampaignService {
   static Future<void> show(
       BuildContext context, Map<String, dynamic> item) async {
     final open = await showDialog<bool>(
-        context: context, builder: (_) => CampaignDialog(item: item));
+        context: context,
+        barrierColor: Colors.black.withValues(alpha: .65),
+        animationStyle: AnimationStyle(
+            duration: const Duration(milliseconds: 280),
+            reverseDuration: const Duration(milliseconds: 180),
+            curve: Curves.easeOutCubic),
+        builder: (_) => BackdropFilter(
+            filter: ui.ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+            child: CampaignDialog(item: item)));
     if (open == true &&
         context.mounted &&
         '${item['destination'] ?? ''}'.isNotEmpty) {
@@ -146,48 +158,4 @@ class CampaignService {
     campaignDestination.value = null;
     campaignDestination.value = destination;
   }
-}
-
-class CampaignDialog extends StatelessWidget {
-  final Map<String, dynamic> item;
-  const CampaignDialog({super.key, required this.item});
-  @override
-  Widget build(BuildContext context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        title: Row(children: [
-          Expanded(child: Text('${item['title'] ?? 'What’s new at Sirvya'}')),
-          IconButton(
-              tooltip: 'Close announcement',
-              onPressed: () => Navigator.pop(context, false),
-              icon: const Icon(Icons.close))
-        ]),
-        content: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 420),
-            child: SingleChildScrollView(
-                child: Column(mainAxisSize: MainAxisSize.min, children: [
-              if ('${item['imageUrl'] ?? ''}'.isNotEmpty)
-                Padding(
-                    padding: const EdgeInsets.only(bottom: 16),
-                    child: ClipRRect(
-                        borderRadius: BorderRadius.circular(16),
-                        child: Image.network('${item['imageUrl']}',
-                            height: 160,
-                            width: double.infinity,
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) =>
-                                const SizedBox.shrink()))),
-              Text('${item['body'] ?? ''}'),
-            ]))),
-        actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('Not now')),
-          if ('${item['destination'] ?? ''}'.isNotEmpty)
-            FilledButton(
-                onPressed: () => Navigator.pop(context, true),
-                child: Text('${item['buttonLabel'] ?? ''}'.trim().isEmpty
-                    ? 'Learn more'
-                    : '${item['buttonLabel']}'))
-        ],
-      );
 }

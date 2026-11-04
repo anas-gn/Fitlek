@@ -1,3 +1,4 @@
+import '../../components/app_dialog.dart';
 import '../../services/live_updates.dart';
 import 'coachCalendar.dart';
 import 'package:flutter/material.dart';
@@ -764,7 +765,7 @@ class _CoachClientDetailState extends State<CoachClientDetail>
     showDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setDialogState) => AlertDialog(
+        builder: (ctx, setDialogState) => AppDialog(
           backgroundColor: context.fitlek.card,
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -841,7 +842,7 @@ class _CoachClientDetailState extends State<CoachClientDetail>
   void _showBlockDialog() {
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
+      builder: (ctx) => AppDialog(
         backgroundColor: context.fitlek.card,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: Text('Block $_fullName?',

@@ -1,3 +1,10 @@
+import {startNutritionReminderWorker} from './services/nutritionReminders.js';
+import chatMediaRoutes from './routes/anas/chatMedia.js';
+import publicInvite from './routes/anas/publicInvite.js';
+import campaignRoutes from './routes/anas/campaigns.js';
+import {ensureCampaignSchema,dispatchCampaigns} from './services/appCampaigns.js';
+import recommendationRoutes from './routes/anas/recommendations.js';
+import locationRoutes from './routes/anas/locations.js';
 import coachSignIn from './routes/pahae/coachSignIn.js';
 import coachSignUp from './routes/pahae/coachSignUp.js';
 import coachDashboard from './routes/pahae/coachDashboard.js';
@@ -29,13 +36,17 @@ import managerReservations from './routes/pahae/managerReservations.js';
 import managerProfile from './routes/pahae/managerProfile.js';
 
 import authRoutes from './routes/anas/auth.js';
+import actualitesRoutes from './routes/anas/actualites.js';
 import clientRoutes from './routes/anas/client.js';
 import coachRoutes from './routes/anas/coach.js';
+import favoritesRoutes from './routes/anas/favorites.js';
+import categoriesRoutes from './routes/anas/categories.js';
 import advisorProfilesRoutes from './routes/anas/advisorProfiles.js';
 import reservationsRoutes from './routes/anas/reservations.js';
 import coachAvailabilityRoutes from './routes/anas/coachAvailability.js';
 import conversationsRoutes from './routes/anas/conversations.js';
 import messagesRoutes from './routes/anas/messages.js';
+import chatActionsRoutes from './routes/anas/chatActions.js';
 import invitationsRoutes from './routes/anas/invitations.js';
 import coachClientsRoutes from './routes/anas/coachClients.js';
 import bansRoutes from './routes/anas/bans.js';
@@ -44,13 +55,19 @@ import weightHistoryRoutes from './routes/anas/weightHistory.js';
 import uploadRoutes from './routes/anas/upload.js';
 import appVersionRoutes from './routes/anas/appVersion.js';
 import ugcRoutes from './routes/anas/ugc.js';
+import packagesRoutes from './routes/anas/packages.js';
 
 import express from 'express';
 import path from 'path';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { initFirebase } from './config/firebase.js';
+import { initSocket } from './config/socket.js';
+import {realtimeWrites} from './services/realtime.js';
+import {publicMediaResponses} from './services/publicMedia.js';
+import {startRealtimeWorker} from './services/realtimeWorker.js';
 import { requireAuth } from './middleware/auth.js';
+import mealRoutes from './routes/anas/meals.js';
 import {
   ensureReferralSchema,
   ensureClientInvitationSchema,
@@ -63,6 +80,8 @@ import {
   ensureDeletedAccountsSchema,
   ensureUgcComplianceSchema,
   ensureCoachImagesSchema,
+  ensureCoachPackagesSchema,
+  ensureCoachLocationsSchema,
 } from './config/ensureSchema.js';
 import { startMediaCleanupJob } from './cron/mediaCleanup.js';
 dotenv.config();
@@ -99,6 +118,7 @@ startMediaCleanupJob();
   }
   try {
     await ensureOTPSchema();
+    await ensureCampaignSchema(pricingDb);
   } catch (e) {
     console.error('❌ OTP schema ensure failed:', e.message);
   }
@@ -127,11 +147,25 @@ startMediaCleanupJob();
   } catch (e) {
     console.error('❌ Coach images schema ensure failed:', e.message);
   }
+  try {
+    await ensureCoachPackagesSchema();
+  } catch (e) {
+    console.error('❌ Coach packages schema ensure failed:', e.message);
+  }
+  try {
+    await ensureCoachLocationsSchema();
+  } catch (e) {
+    console.error('❌ Coach locations schema ensure failed:', e.message);
+  }
+  startNutritionReminderWorker(pricingDb);
+  startRealtimeWorker(pricingDb).catch(error=>console.error('Live updates could not start:',error.message));
 })();
 
 
 
 const app = express();
+// Trust the local reverse proxy so uploaded media URLs retain HTTPS on iPhones.
+app.set('trust proxy', 'loopback');
 
 app.use(cors({
   origin: '*', 
@@ -141,6 +175,9 @@ app.use(cors({
 }));
 
 app.use(express.json());
+app.use('/api/meals', mealRoutes);
+app.use(publicMediaResponses);
+app.use(realtimeWrites);
 app.use(express.urlencoded({ extended: true }));
 
 // Serve static files for uploaded images
@@ -155,6 +192,17 @@ app.get('/api', (req, res) => {
   res.json({ ok: true, message: 'Sirvya API Server is Running' });
 });
 
+// A release is ready only when its database connection is available.
+app.get('/api/health', async (_req, res) => {
+  res.set('Cache-Control', 'no-store');
+  try {
+    await pricingDb.query('SELECT 1');
+    res.json({ ok: true });
+  } catch {
+    res.status(503).json({ ok: false });
+  }
+});
+
 app.use('/api/coach', coachAvatarRouter);
 app.use('/api/coach/auth',          coachSignIn);
 app.use('/api/coach/register',      coachSignUp);
@@ -163,12 +211,15 @@ app.use('/api/coach/calendar',      coachCalendar);
 app.use('/api/coach/conversations', coachConversations);
 app.use('/api/coach/chat',          coachChat);
 app.use('/api/coach/clients',       coachClients);
+app.use('/api/invite', publicInvite);
 app.use('/api/coach/invite',        coachInviteClients);
 app.use('/api/coach/invitations',   coachInvitations);
 app.use('/api/coach/notifications', coachNotifications);
 app.use('/api/coach/profile',       coachProfile);
 app.use('/api/coach/profile/edit',  coachEditProfile);
 
+app.use('/api/favorites', requireAuth, favoritesRoutes);
+app.use('/api/categories', categoriesRoutes);
 app.use('/api/manager/auth',             managerSignIn);
 app.use('/api/manager/dashboard',        managerDashboard);
 app.use('/api/manager/clients',          managerClients);
@@ -187,13 +238,19 @@ app.use('/api/manager/reservations',     managerReservations);
 app.use('/api/manager/profile',          managerProfile);
 
 app.use('/api/auth',          authRoutes);
+app.use('/api/recommendations', requireAuth, recommendationRoutes);
+app.use('/api/locations', requireAuth, locationRoutes);
 app.use('/api/clients',       requireAuth, clientRoutes);
 app.use('/api/coaches',       requireAuth, coachRoutes);
+app.use('/api/campaigns', requireAuth, campaignRoutes);
+app.use('/api/actualites', requireAuth, actualitesRoutes);
 app.use('/api/advisors',      requireAuth, advisorProfilesRoutes);
 app.use('/api/reservations',  requireAuth, reservationsRoutes);
 app.use('/api/availability',  requireAuth, coachAvailabilityRoutes);
 app.use('/api/conversations', requireAuth, conversationsRoutes);
 app.use('/api/messages',      requireAuth, messagesRoutes);
+app.use('/api/chat-actions', requireAuth, chatActionsRoutes);
+app.use('/api/chat-media', requireAuth, chatMediaRoutes);
 app.use('/api/invitations',   requireAuth, invitationsRoutes);
 app.use('/api/coach-clients', requireAuth, coachClientsRoutes);
 app.use('/api/bans',          requireAuth, bansRoutes);
@@ -202,8 +259,17 @@ app.use('/api/weight-history', requireAuth, weightHistoryRoutes);
 app.use('/api/upload',        requireAuth, uploadRoutes);
 app.use('/api/app-version',   appVersionRoutes);
 app.use('/api/ugc',           requireAuth, ugcRoutes);
+app.use('/api/packages',      requireAuth, packagesRoutes);
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`✅ Fitlek API running on port ${PORT}`));
+const server = app.listen(PORT, () => console.log(`✅ Fitlek API running on port ${PORT}`));
+initSocket(server, pricingDb);
 
 export default app;
+
+import pricingDb from './config/db.js';
+import {expirePriceRequests} from './services/priceApproval.js';
+import {createAndSendNotification as notifyPriceExpiry,sendPendingNotifications} from './services/pushNotificationService.js';
+import {sendDueSessionReminders} from './services/sessionReminders.js';
+let pricingExpiryRunning=false;
+setInterval(async()=>{if(pricingExpiryRunning)return;pricingExpiryRunning=true;try{await expirePriceRequests(pricingDb,notifyPriceExpiry);await sendDueSessionReminders(pricingDb,notifyPriceExpiry);await dispatchCampaigns(pricingDb);await sendPendingNotifications()}catch(error){console.error('Pricing expiry check failed',error.message)}finally{pricingExpiryRunning=false}},60000).unref();

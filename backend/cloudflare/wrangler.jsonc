@@ -1,0 +1,12 @@
+{
+  "name": "sirvya-invitations",
+  "main": "invite-worker.js",
+  "compatibility_date": "2026-10-11",
+  "account_id": "56e7ffa7e65d99ca2d88698caefdddf4",
+  "workers_dev": false,
+  "routes": [
+    {"pattern": "sirvya.com/invite/*", "zone_name": "sirvya.com"},
+    {"pattern": "www.sirvya.com/invite/*", "zone_name": "sirvya.com"}
+  ]
+}
+

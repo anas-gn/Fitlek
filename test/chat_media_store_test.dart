@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'dart:typed_data';
+import 'package:path/path.dart' as paths;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:fitlek1/services/chat_media_store.dart';
@@ -8,6 +9,7 @@ class FakeMediaDb implements Database {
   final String databasePath;
   final Map<int, Map<String, Object?>> rows = {};
   final List<String> events;
+  int updates = 0;
   FakeMediaDb(this.databasePath, this.events);
   @override
   dynamic noSuchMethod(Invocation call) {
@@ -24,6 +26,7 @@ class FakeMediaDb implements Database {
       return Future<int>.value(row['id'] as int);
     }
     if (call.memberName == #update) {
+      updates++;
       final id = (call.namedArguments[#whereArgs] as List).first as int;
       rows[id]!.addAll(
           Map<String, Object?>.from(call.positionalArguments[1] as Map));
@@ -56,7 +59,10 @@ void main() {
         cacheDeleteProvider: (_) async {},
         receiptProvider: (path, payload) async {
           acks++;
-          expect(await File(db.rows[1]!['path'] as String).exists(), true);
+          expect(
+              await File(paths.join(folder.path, db.rows[1]!['path'] as String))
+                  .exists(),
+              true);
           expect(events, ['persist']);
           expect('${payload['sha256']}'.length, 64);
           events.add('ack');
@@ -65,6 +71,47 @@ void main() {
   });
   tearDown(() async {
     await folder.delete(recursive: true);
+  });
+  test(
+      'relative filenames are durable and resolve against the current account folder',
+      () async {
+    final saved =
+        await store.resolve(1, 'https://server/audio.m4a', 'audio', false);
+    expect(db.rows[1]!['path'], '1.m4a');
+    expect(saved.filePath, paths.join(folder.path, '1.m4a'));
+  });
+  test(
+      'legacy iOS container paths relocate to existing files without another download',
+      () async {
+    final file = File(paths.join(folder.path, '1.m4a'));
+    await file.writeAsBytes([5, 6, 7]);
+    final thumb = File(paths.join(folder.path, '1.thumb.jpg'));
+    await thumb.writeAsBytes([1]);
+    db.rows[1] = {
+      'id': 1,
+      'path':
+          '/var/mobile/Containers/Data/Application/OLD-UUID/Library/Application Support/chat_media/12/1.m4a',
+      'thumbnail':
+          '/var/mobile/Containers/Data/Application/OLD-UUID/Library/Application Support/chat_media/12/1.thumb.jpg',
+      'deleted': 0,
+      'acknowledged': 1
+    };
+    final saved =
+        await store.resolve(1, 'https://server/audio.m4a', 'audio', true);
+    expect(saved.filePath, file.path);
+    expect(saved.thumbnailPath, thumb.path);
+    expect(db.rows[1]!['path'], '1.m4a');
+    expect(db.rows[1]!['thumbnail'], '1.thumb.jpg');
+    await store.resolve(1, 'https://server/audio.m4a', 'audio', true);
+    expect(db.updates, 1); // Only migrate once, never write on each scroll.
+    expect(downloads, 0);
+  });
+  test('fresh install cannot restore server-expired media', () async {
+    final saved =
+        await store.resolve(1, 'https://server/audio.m4a', 'audio', true);
+    expect(saved.filePath, isNull);
+    expect(downloads, 0);
+    expect(acks, 0);
   });
   test(
       'complete file and durable metadata precede acknowledgement; server expiry preserves local copy',

@@ -11,8 +11,11 @@ const SIRVYA_LOGO_URL = 'https://raw.githubusercontent.com/anas-gn/Fitlek/main/a
 
 export async function sendOTPEmail({ to, otp, type = 'signup' }) {
   const isSignUp = type === 'signup';
-  const title = isSignUp ? 'Verify Your Email' : 'Reset Your Password';
-  const subtitle = isSignUp
+  const isEmailChange = type === 'change_email_old' || type === 'change_email_new';
+  const title = isEmailChange ? 'Confirm Your Email Change' : isSignUp ? 'Verify Your Email' : 'Reset Your Password';
+  const subtitle = isEmailChange
+    ? (type === 'change_email_old' ? 'Verify your current email before changing the email on your Sirvya account.' : 'Verify this new email to finish changing the email on your Sirvya account.')
+    : isSignUp
     ? 'Use the verification code below to complete your Sirvya registration.'
     : 'Use the code below to reset your Sirvya account password.';
 
@@ -53,7 +56,7 @@ export async function sendOTPEmail({ to, otp, type = 'signup' }) {
     const data = await resend.emails.send({
       from: SENDER_EMAIL,
       to: [to],
-      subject: isSignUp ? `Your Sirvya Verification Code: ${otp}` : `Reset Password Code: ${otp}`,
+      subject: isEmailChange ? 'Sirvya email change verification code' : isSignUp ? `Your Sirvya Verification Code: ${otp}` : `Reset Password Code: ${otp}`,
       html: htmlContent,
     });
     

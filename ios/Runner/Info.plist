@@ -67,9 +67,9 @@
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
 	<key>NSCameraUsageDescription</key>
-	<string>SIRVYA uses your camera to scan QR codes and capture photos for your profile and chat messages.</string>
+	<string>SIRVYA uses your camera to scan meals, scan QR codes and capture photos for your profile and chat messages.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>SIRVYA uses photos you select for your profile, coach gallery, certificates and chat messages.</string>
+	<string>SIRVYA uses photos you select to analyze meals and for your profile, coach gallery, certificates and chat messages.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>SIRVYA uses your microphone when you record a voice message to send in chat.</string>
 	<key>UIBackgroundModes</key>

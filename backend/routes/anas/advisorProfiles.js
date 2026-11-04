@@ -1,6 +1,14 @@
 import express from 'express';
 const router = express.Router();
 import db from '../../config/db.js';
+import { coachingCompaniesEnabled } from '../../services/appFeatureFlags.js';
+
+router.get('/visibility', async (req, res) => {
+  try {
+    res.set('Cache-Control', 'no-store');
+    res.json({ coachingCompanies: await coachingCompaniesEnabled(db) });
+  } catch (_) { res.status(503).json({ error: 'Visibility setting unavailable' }); }
+});
 // ─── Routes spécifiques d'abord (/me avant /:userId) ───
 //
 // GET /advisors/me?userID=:id  — Profil de l'advisor actuel
@@ -110,6 +118,8 @@ router.get('/:advisorID/images', async (req, res) => {
 // GET /advisors  — Liste de tous les advisors
 router.get('/', async (req, res) => {
   try {
+    res.set('Cache-Control', 'no-store');
+    if (!await coachingCompaniesEnabled(db)) return res.json([]);
     const [rows] = await db.query(
       `SELECT u.id, u.firstName, u.lastName, u.email, u.avatarUrl,
               ap.specialty, ap.location, ap.companyName, ap.createdAt,ap.ville

@@ -1,6 +1,15 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:fitlek1/models/coach_profile_completion.dart';
 void main() {
+  test('saved account phone completes the phone step even with an empty legacy field', () {
+    final data = <String, dynamic>{'tel': '', 'phoneNumber': '+212612345678'};
+    final completion = CoachProfileCompletion(data, 0, 0);
+    expect(completion.steps[4].filled, isTrue);
+    data['phoneNumber'] = '   ';
+    expect(CoachProfileCompletion(data, 0, 0).steps[4].filled, isFalse);
+    data['tel'] = '+212612345679';
+    expect(CoachProfileCompletion(data, 0, 0).steps[4].filled, isTrue);
+  });
   test('all profile fields are needed and next step updates', () {
     final data = <String,dynamic>{};
     expect(CoachProfileCompletion(data,0,0).percent,0);

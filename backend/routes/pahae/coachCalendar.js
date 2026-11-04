@@ -1,4 +1,7 @@
+import {expirePriceRequests,sessionClock} from '../../services/priceApproval.js';
+import {createAndSendNotification} from '../../services/pushNotificationService.js';
 import { Router } from 'express';
+import {presentSessionLocation} from '../../services/sessionLocation.js';
 import pool from '../../config/db.js';
 import { requireAuth, requireRole } from '../../middleware/auth.js';
 
@@ -7,8 +10,11 @@ const router = Router();
 router.get('/reservations', requireAuth, requireRole('coach'), async (req, res) => {
   const coachID = req.user.id;
   try {
+    await expirePriceRequests(pool,createAndSendNotification);
     const [rows] = await pool.query(
-      `SELECT r.id, r.reservedDate, r.reservedTime, r.status, r.location,
+      `SELECT r.id, r.reservedDate, r.reservedTime, r.status, r.location, r.companyName, r.price, r.packageName,
+              CASE WHEN r.pricingStatus = 'fixed' AND r.price IS NULL THEN 'awaiting' ELSE r.pricingStatus END AS pricingStatus,
+              r.proposedPrice, r.quoteVersion,
               u.firstName, u.lastName, u.avatarUrl
        FROM reservations r
        JOIN users u ON u.id = r.clientID
@@ -16,7 +22,7 @@ router.get('/reservations', requireAuth, requireRole('coach'), async (req, res) 
        ORDER BY r.reservedDate ASC, r.reservedTime ASC`,
       [coachID]
     );
-    res.json(rows);
+    res.json(rows.map(presentSessionLocation));
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -26,12 +32,17 @@ router.patch('/reservations/:id/accept', requireAuth, requireRole('coach'), asyn
   const coachID = req.user.id;
   const { id } = req.params;
   try {
+    await expirePriceRequests(pool, createAndSendNotification);
     const [[res_]] = await pool.query(
-      `SELECT id FROM reservations WHERE id = ? AND coachID = ? AND status = 'pending'`,
+      `SELECT id, clientID, status, pricingStatus, price FROM reservations WHERE id = ? AND coachID = ?`,
       [id, coachID]
     );
     if (!res_) return res.status(404).json({ message: 'Reservation not found.' });
-    await pool.query(`UPDATE reservations SET status = 'confirmed' WHERE id = ?`, [id]);
+    if (res_.status !== 'pending') return res.status(409).json({ message: 'This reservation is no longer pending. Refresh to see its current status.' });
+    if (res_.pricingStatus !== 'fixed' || res_.price === null) return res.status(409).json({ message: res_.pricingStatus === 'proposed' ? 'Waiting for the client to accept your price offer.' : 'Propose a session price first. The client must accept it to confirm the booking.' });
+    const [updated] = await pool.query(`UPDATE reservations SET status = 'confirmed' WHERE id = ? AND coachID = ? AND pricingStatus='fixed' AND price IS NOT NULL AND status='pending' AND TIMESTAMP(reservedDate,reservedTime)>DATE_ADD(?,INTERVAL 1 HOUR)`, [id, coachID,sessionClock()]);
+    if (!updated.affectedRows) return res.status(409).json({ message: 'The reservation changed. Refresh and try again.' });
+    await createAndSendNotification({recipientUserID: res_.clientID, type:'reservation_confirmed', title:'Session confirmed', body:'Your coach confirmed your booking. Open it to see the session details.', relatedEntityID:id, uniqueKey:`resv_confirmed:${id}`});
     res.json({ message: 'Reservation confirmed.' });
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -45,7 +56,7 @@ router.patch('/reservations/:id/reject', requireAuth, requireRole('coach'), asyn
   if (!reason) return res.status(400).json({ message: 'Rejection reason is required.' });
   try {
     const [[res_]] = await pool.query(
-      `SELECT id FROM reservations WHERE id = ? AND coachID = ? AND status = 'pending'`,
+      `SELECT id, clientID FROM reservations WHERE id = ? AND coachID = ? AND status = 'pending'`,
       [id, coachID]
     );
     if (!res_) return res.status(404).json({ message: 'Reservation not found.' });
@@ -53,6 +64,7 @@ router.patch('/reservations/:id/reject', requireAuth, requireRole('coach'), asyn
       `UPDATE reservations SET status = 'cancelled', rejectionReason = ?, cancelledBy = 'coach' WHERE id = ?`,
       [reason, id]
     );
+    await createAndSendNotification({recipientUserID:res_.clientID,type:'reservation_rejected',title:'Booking declined',body:`Your coach declined the request. Reason: ${reason}`,relatedEntityID:id,uniqueKey:`resv_rejected:${id}`});
     res.json({ message: 'Reservation rejected.' });
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -66,7 +78,7 @@ router.patch('/reservations/:id/cancel', requireAuth, requireRole('coach'), asyn
   if (!reason) return res.status(400).json({ message: 'Cancellation reason is required.' });
   try {
     const [[res_]] = await pool.query(
-      `SELECT id, reservedDate FROM reservations
+      `SELECT id, clientID, reservedDate FROM reservations
        WHERE id = ? AND coachID = ? AND status = 'confirmed'`,
       [id, coachID]
     );
@@ -79,6 +91,7 @@ router.patch('/reservations/:id/cancel', requireAuth, requireRole('coach'), asyn
       `UPDATE reservations SET status = 'cancelled', cancellationReason = ?, cancelledBy = 'coach' WHERE id = ?`,
       [reason, id]
     );
+    await createAndSendNotification({recipientUserID:res_.clientID,type:'reservation_cancelled',title:'Session cancelled',body:`Your coach cancelled the session. Reason: ${reason}`,relatedEntityID:id,uniqueKey:`resv_cancelled:${id}`});
     res.json({ message: 'Reservation cancelled.' });
   } catch (err) {
     res.status(500).json({ message: err.message });

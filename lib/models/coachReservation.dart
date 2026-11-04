@@ -1,3 +1,5 @@
+import '../services/session_location.dart';
+
 enum ReservationStatus { pending, confirmed, cancelled }
 
 class CoachReservation {
@@ -12,6 +14,7 @@ class CoachReservation {
   final DateTime date;
   final String time;
   final String? location;
+  final String? companyName;
   ReservationStatus status;
   String? rejectionReason;
   String? cancellationReason;
@@ -28,6 +31,7 @@ class CoachReservation {
     required this.date,
     required this.time,
     this.location,
+    this.companyName,
     required this.status,
     this.rejectionReason,
     this.cancellationReason,
@@ -40,16 +44,6 @@ class CoachReservation {
   /// Human-friendly label for the location value stored at booking time.
   /// The client sends 'home', 'gym', or 'To be defined'.
   String get locationLabel {
-    switch (location) {
-      case 'home':
-        return "Client's home";
-      case 'gym':
-        return 'Coach\'s gym';
-      case null:
-      case '':
-        return 'To be defined';
-      default:
-        return location!;
-    }
+    return sessionLocationLabel(location: location, companyName: companyName);
   }
 }
