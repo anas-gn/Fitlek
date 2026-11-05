@@ -42,7 +42,7 @@ class MealShareSheet extends StatefulWidget {
 class _MealShareSheetState extends State<MealShareSheet> {
   final GlobalKey _boundaryKey = GlobalKey();
   late MealShareFormat _format;
-  MealShareStyle _style = MealShareStyle.stravaOverlay;
+  MealShareStyle _style = MealShareStyle.sirvyaOverlay;
   bool _showIngredients = false;
   bool _sharing = false;
 
@@ -116,7 +116,7 @@ class _MealShareSheetState extends State<MealShareSheet> {
                         ),
                         SizedBox(height: 2),
                         Text(
-                          'Strava-style photo overlay for Stories & Posts',
+                          'Sirvya photo overlay for Stories & Posts',
                           style: TextStyle(
                             color: mealMuted,
                             fontSize: 11.5,
@@ -184,16 +184,16 @@ class _MealShareSheetState extends State<MealShareSheet> {
 
               const SizedBox(height: 8),
 
-              // 4. Style Selector (Strava Photo Overlay vs Classic Card)
+              // 4. Style Selector (Sirvya Photo Overlay vs Classic Card)
               Row(
                 children: [
                   Expanded(
                     child: _buildStyleChip(
-                      title: 'Strava Overlay',
+                      title: 'Sirvya Overlay',
                       icon: Icons.layers_rounded,
-                      selected: _style == MealShareStyle.stravaOverlay,
+                      selected: _style == MealShareStyle.sirvyaOverlay,
                       onTap: () => setState(
-                          () => _style = MealShareStyle.stravaOverlay),
+                          () => _style = MealShareStyle.sirvyaOverlay),
                     ),
                   ),
                   const SizedBox(width: 8),

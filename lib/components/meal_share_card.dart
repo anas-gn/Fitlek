@@ -14,14 +14,17 @@ enum MealShareFormat {
 
 /// Visual presentation style for the meal share graphic.
 enum MealShareStyle {
-  /// Strava-inspired: full-bleed meal photo with brand logo and stats HUD overlaid directly on top.
-  stravaOverlay,
+  /// Sirvya photo overlay: full-bleed native meal photo with brand logo and stats HUD overlaid directly on top.
+  sirvyaOverlay,
 
   /// Structured dark card layout with photo and stats in dedicated sections.
-  classicCard,
+  classicCard;
+
+  /// Backwards compatibility alias
+  static const MealShareStyle stravaOverlay = sirvyaOverlay;
 }
 
-/// A visually striking, Strava-inspired marketing share card for meals scanned or logged in SIRVYA.
+/// A visually striking marketing share card for meals scanned or logged in SIRVYA.
 class MealShareCard extends StatelessWidget {
   final ScannedMeal meal;
   final MealShareFormat format;
@@ -32,12 +35,14 @@ class MealShareCard extends StatelessWidget {
     super.key,
     required this.meal,
     this.format = MealShareFormat.story,
-    this.style = MealShareStyle.stravaOverlay,
+    this.style = MealShareStyle.sirvyaOverlay,
     this.showIngredients = false,
   });
 
   bool get isStory => format == MealShareFormat.story;
-  bool get isStrava => style == MealShareStyle.stravaOverlay;
+  bool get isSirvyaOverlay =>
+      style == MealShareStyle.sirvyaOverlay ||
+      style == MealShareStyle.stravaOverlay;
 
   @override
   Widget build(BuildContext context) {
@@ -62,47 +67,46 @@ class MealShareCard extends StatelessWidget {
             offset: const Offset(0, 10),
           ),
           BoxShadow(
-            color: mealLime.withValues(alpha: 0.1),
-            blurRadius: 30,
-            spreadRadius: -4,
+            color: Colors.black.withValues(alpha: 0.3),
+            blurRadius: 18,
           ),
         ],
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(28),
-        child: isStrava
-            ? _buildStravaLayout(calories, protein, carbs, fat)
+        child: isSirvyaOverlay
+            ? _buildSirvyaLayout(calories, protein, carbs, fat)
             : _buildClassicCardLayout(calories, protein, carbs, fat),
       ),
     );
   }
 
   // ===========================================================================
-  // 1. STRAVA PHOTO OVERLAY STYLE (Full-Bleed Photo + Floating HUD)
+  // 1. SIRVYA PHOTO OVERLAY STYLE (Full-Bleed Native Photo + Pure White HUD)
   // ===========================================================================
-  Widget _buildStravaLayout(
+  Widget _buildSirvyaLayout(
       int calories, int protein, int carbs, int fat) {
     return Stack(
       fit: StackFit.expand,
       children: [
-        // 1. Full-bleed Photo Background
+        // 1. Full-bleed Native Photo Background (food photo extends edge-to-edge)
         _buildPhotoBackground(),
 
-        // 2. Top Vignette Gradient (for header contrast)
+        // 2. Top Vignette Gradient (pure neutral black fade for logo contrast)
         Positioned(
           top: 0,
           left: 0,
           right: 0,
-          height: isStory ? 160 : 120,
+          height: isStory ? 140 : 100,
           child: const DecoratedBox(
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
-                stops: [0.0, 0.5, 1.0],
+                stops: [0.0, 0.6, 1.0],
                 colors: [
-                  Color(0xE6000000), // ~90% black at top
-                  Color(0x66000000), // ~40% black
+                  Color(0xB3000000), // 70% black at top
+                  Color(0x40000000), // 25% black
                   Colors.transparent,
                 ],
               ),
@@ -110,12 +114,13 @@ class MealShareCard extends StatelessWidget {
           ),
         ),
 
-        // 3. Bottom Vignette Gradient (for stats and info contrast)
+        // 3. Bottom Vignette Gradient (pure neutral black fade directly behind text)
+        // No green tint, letting the native photo remain visible underneath!
         Positioned(
           bottom: 0,
           left: 0,
           right: 0,
-          height: isStory ? 380 : 280,
+          height: isStory ? 320 : 230,
           child: const DecoratedBox(
             decoration: BoxDecoration(
               gradient: LinearGradient(
@@ -123,45 +128,32 @@ class MealShareCard extends StatelessWidget {
                 end: Alignment.topCenter,
                 stops: [0.0, 0.45, 0.8, 1.0],
                 colors: [
-                  Color(0xFF020907), // Solid deep dark emerald black
-                  Color(0xF2020907), // 95%
-                  Color(0x73020907), // 45%
-                  Colors.transparent,
+                  Color(0xCC000000), // 80% black at very bottom
+                  Color(0x99000000), // 60% black behind stats
+                  Color(0x33000000), // 20% black
+                  Colors.transparent, // transparent so native food photo is visible
                 ],
               ),
             ),
           ),
         ),
 
-        // 4. Subtle Bottom Wave/Contour lines (matching the brand signature)
-        Positioned(
-          bottom: 0,
-          left: 0,
-          right: 0,
-          height: isStory ? 100 : 70,
-          child: IgnorePointer(
-            child: CustomPaint(
-              painter: _SirvyaBottomWavePainter(),
-            ),
-          ),
-        ),
-
-        // 5. Content Elements Layered on Top of the Image
+        // 4. Content Elements Layered Directly on Top of the Native Image
         Padding(
           padding: EdgeInsets.symmetric(
             horizontal: 18,
-            vertical: isStory ? 20 : 12,
+            vertical: isStory ? 22 : 14,
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Clean Centered Logo without outline or AI scan badge
+              // Clean Centered Logo using logo_dark.png
               _buildCleanTopLogo(),
 
               const Spacer(),
 
-              // Bottom Stats & Meal Details
-              _buildStravaBottomHUD(calories, protein, carbs, fat),
+              // Bottom Stats & Meal Details in pure white directly on top of image
+              _buildSirvyaBottomHUD(calories, protein, carbs, fat),
             ],
           ),
         ),
@@ -207,49 +199,31 @@ class MealShareCard extends StatelessWidget {
     );
   }
 
-  /// Clean centered SIRVYA logo with green S mark and white wordmark,
+  /// Clean centered SIRVYA logo using `assets/branding/logo_dark.png`,
   /// without any outline box or "AI MEAL SCAN" badge.
   Widget _buildCleanTopLogo() {
+    final double logoHeight = isStory ? 28 : 22;
     return Center(
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          SirvyaLogo(
-            variant: SirvyaLogoVariant.mark,
-            height: isStory ? 24 : 20,
-            color: mealLime,
-          ),
-          const SizedBox(width: 8),
-          Text(
-            'SIRVYA',
-            style: TextStyle(
-              color: Colors.white,
-              fontSize: isStory ? 22 : 18,
-              fontWeight: FontWeight.w900,
-              letterSpacing: 2.2,
-              shadows: const [
-                Shadow(
-                  color: Colors.black87,
-                  blurRadius: 10,
-                  offset: Offset(0, 1),
-                ),
-              ],
-            ),
-          ),
-        ],
+      child: Image.asset(
+        'assets/branding/logo_dark.png',
+        height: logoHeight,
+        fit: BoxFit.contain,
+        semanticLabel: 'SIRVYA',
+        errorBuilder: (context, error, stackTrace) => const SirvyaLogo(
+          variant: SirvyaLogoVariant.wordmark,
+          height: 24,
+        ),
       ),
     );
   }
 
-  Widget _buildStravaBottomHUD(
+  Widget _buildSirvyaBottomHUD(
       int calories, int protein, int carbs, int fat) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisSize: MainAxisSize.min,
       children: [
-        // Meal Title
+        // Meal Title in Pure White with soft shadow
         Text(
           meal.name,
           maxLines: 2,
@@ -264,7 +238,7 @@ class MealShareCard extends StatelessWidget {
               Shadow(
                 color: Colors.black,
                 offset: Offset(0, 2),
-                blurRadius: 8,
+                blurRadius: 10,
               ),
             ],
           ),
@@ -272,31 +246,30 @@ class MealShareCard extends StatelessWidget {
 
         // Optional Ingredients Pills (only if toggled on)
         if (showIngredients && meal.ingredients.isNotEmpty) ...[
-          SizedBox(height: isStory ? 8 : 4),
+          SizedBox(height: isStory ? 10 : 6),
           _buildIngredientsChips(),
         ],
 
-        SizedBox(height: isStory ? (showIngredients ? 12 : 18) : (showIngredients ? 6 : 10)),
+        SizedBox(height: isStory ? 18 : 12),
 
-        // 4-Column Stats Row with clean vertical dividers
+        // 4-Column Stats Row - All in Pure White
         Row(
           children: [
-            // 1. Calories
+            // 1. Calories (Pure White)
             Expanded(
               child: _buildStatColumn(
                 icon: const Icon(
                   Icons.local_fire_department_rounded,
-                  color: Color(0xFF2CE080),
+                  color: Colors.white,
                   size: 21,
                 ),
                 label: 'Calories',
                 value: '$calories',
                 subUnit: 'kcal',
-                subUnitColor: const Color(0xFF2CE080),
               ),
             ),
             _buildVerticalDivider(),
-            // 2. Protein
+            // 2. Protein (Pure White)
             Expanded(
               child: _buildStatColumn(
                 icon: const MuscleBicepIcon(size: 20, color: Colors.white),
@@ -305,7 +278,7 @@ class MealShareCard extends StatelessWidget {
               ),
             ),
             _buildVerticalDivider(),
-            // 3. Carbs
+            // 3. Carbs (Pure White)
             Expanded(
               child: _buildStatColumn(
                 icon: const WheatGrainIcon(size: 20, color: Colors.white),
@@ -314,7 +287,7 @@ class MealShareCard extends StatelessWidget {
               ),
             ),
             _buildVerticalDivider(),
-            // 4. Fat
+            // 4. Fat (Pure White)
             Expanded(
               child: _buildStatColumn(
                 icon: const Icon(
@@ -329,12 +302,7 @@ class MealShareCard extends StatelessWidget {
           ],
         ),
 
-        SizedBox(height: isStory ? 14 : 8),
-
-        // Continuous Rounded Proportional Macro Bar
-        _buildMacroDistributionBar(protein, carbs, fat),
-
-        SizedBox(height: isStory ? 20 : 6),
+        SizedBox(height: isStory ? 24 : 14),
       ],
     );
   }
@@ -344,7 +312,6 @@ class MealShareCard extends StatelessWidget {
     required String label,
     required String value,
     String? subUnit,
-    Color? subUnitColor,
   }) {
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -354,17 +321,20 @@ class MealShareCard extends StatelessWidget {
           height: 22,
           child: Center(child: icon),
         ),
-        const SizedBox(height: 4),
+        const SizedBox(height: 5),
         Text(
           label,
           style: TextStyle(
-            color: Colors.white.withValues(alpha: 0.72),
+            color: Colors.white.withValues(alpha: 0.85),
             fontSize: isStory ? 10.5 : 9.5,
-            fontWeight: FontWeight.w500,
+            fontWeight: FontWeight.w600,
             letterSpacing: 0.2,
+            shadows: const [
+              Shadow(color: Colors.black87, blurRadius: 4),
+            ],
           ),
         ),
-        const SizedBox(height: 2),
+        const SizedBox(height: 3),
         FittedBox(
           fit: BoxFit.scaleDown,
           child: Text(
@@ -374,22 +344,28 @@ class MealShareCard extends StatelessWidget {
               fontSize: isStory ? 22 : 19,
               fontWeight: FontWeight.w900,
               letterSpacing: -0.4,
+              shadows: const [
+                Shadow(color: Colors.black87, blurRadius: 6, offset: Offset(0, 1)),
+              ],
             ),
           ),
         ),
         if (subUnit != null) ...[
-          const SizedBox(height: 1),
+          const SizedBox(height: 2),
           Text(
             subUnit,
             style: TextStyle(
-              color: subUnitColor ?? mealLime,
+              color: Colors.white,
               fontSize: isStory ? 11 : 9.5,
               fontWeight: FontWeight.w800,
               letterSpacing: 0.2,
+              shadows: const [
+                Shadow(color: Colors.black87, blurRadius: 4),
+              ],
             ),
           ),
         ] else
-          SizedBox(height: isStory ? 14 : 11),
+          SizedBox(height: isStory ? 15 : 12),
       ],
     );
   }
@@ -399,7 +375,7 @@ class MealShareCard extends StatelessWidget {
       width: 1,
       height: 40,
       margin: const EdgeInsets.symmetric(horizontal: 2),
-      color: Colors.white.withValues(alpha: 0.16),
+      color: Colors.white.withValues(alpha: 0.25),
     );
   }
 
@@ -415,14 +391,14 @@ class MealShareCard extends StatelessWidget {
             color: Colors.black.withValues(alpha: 0.5),
             borderRadius: BorderRadius.circular(8),
             border: Border.all(
-              color: Colors.white.withValues(alpha: 0.15),
+              color: Colors.white.withValues(alpha: 0.2),
               width: 0.8,
             ),
           ),
           child: Text(
             '${i.name} (${i.grams.round()}g)',
-            style: TextStyle(
-              color: Colors.white.withValues(alpha: 0.9),
+            style: const TextStyle(
+              color: Colors.white,
               fontSize: 9.5,
               fontWeight: FontWeight.w600,
             ),
@@ -545,11 +521,10 @@ class MealShareCard extends StatelessWidget {
               Expanded(
                 child: _buildStatColumn(
                   icon: const Icon(Icons.local_fire_department_rounded,
-                      color: Color(0xFF2CE080), size: 20),
+                      color: Colors.white, size: 20),
                   label: 'Calories',
                   value: '$calories',
                   subUnit: 'kcal',
-                  subUnitColor: const Color(0xFF2CE080),
                 ),
               ),
               _buildVerticalDivider(),
@@ -579,39 +554,7 @@ class MealShareCard extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 10),
-          _buildMacroDistributionBar(protein, carbs, fat),
         ],
-      ),
-    );
-  }
-
-  // ===========================================================================
-  // COMMON HELPERS
-  // ===========================================================================
-  Widget _buildMacroDistributionBar(int protein, int carbs, int fat) {
-    final double pCal = protein * 4.0;
-    final double cCal = carbs * 4.0;
-    final double fCal = fat * 9.0;
-    final double totalCal = pCal + cCal + fCal;
-
-    if (totalCal <= 0) return const SizedBox.shrink();
-
-    final int pFlex = (pCal / totalCal * 100).round().clamp(1, 100);
-    final int cFlex = (cCal / totalCal * 100).round().clamp(1, 100);
-    final int fFlex = (fCal / totalCal * 100).round().clamp(1, 100);
-
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(10),
-      child: SizedBox(
-        height: 5.5,
-        child: Row(
-          children: [
-            Expanded(flex: pFlex, child: Container(color: const Color(0xFF2CE080))),
-            Expanded(flex: cFlex, child: Container(color: const Color(0xFFF5B041))),
-            Expanded(flex: fFlex, child: Container(color: const Color(0xFFA855F7))),
-          ],
-        ),
       ),
     );
   }
@@ -740,44 +683,4 @@ class _WheatGrainPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant _WheatGrainPainter oldDelegate) =>
       oldDelegate.color != color;
-}
-
-/// Abstract wave lines in deep emerald representing Sirvya brand contours.
-class _SirvyaBottomWavePainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    final strokePaint = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.4
-      ..color = const Color(0xFF2CE080).withValues(alpha: 0.10);
-
-    final path1 = Path();
-    path1.moveTo(0, size.height * 0.75);
-    path1.quadraticBezierTo(
-      size.width * 0.35,
-      size.height * 0.35,
-      size.width * 0.70,
-      size.height * 0.78,
-    );
-    path1.quadraticBezierTo(
-      size.width * 0.88,
-      size.height * 0.95,
-      size.width,
-      size.height * 0.80,
-    );
-    canvas.drawPath(path1, strokePaint);
-
-    final path2 = Path();
-    path2.moveTo(size.width * 0.1, size.height);
-    path2.quadraticBezierTo(
-      size.width * 0.45,
-      size.height * 0.55,
-      size.width,
-      size.height * 0.95,
-    );
-    canvas.drawPath(path2, strokePaint);
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

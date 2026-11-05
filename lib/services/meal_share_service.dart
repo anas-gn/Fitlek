@@ -52,7 +52,7 @@ class MealShareService {
     required GlobalKey boundaryKey,
     required ScannedMeal meal,
     required MealShareFormat format,
-    MealShareStyle style = MealShareStyle.stravaOverlay,
+    MealShareStyle style = MealShareStyle.sirvyaOverlay,
   }) async {
     final caption = generateMarketingCaption(meal);
 

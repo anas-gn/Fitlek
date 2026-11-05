@@ -74,7 +74,7 @@ void main() {
               child: MealShareCard(
                 meal: meal,
                 format: MealShareFormat.story,
-                style: MealShareStyle.stravaOverlay,
+                style: MealShareStyle.sirvyaOverlay,
                 showIngredients: false,
               ),
             ),
@@ -83,8 +83,14 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      // Brand logo present without outline/AI badge
-      expect(find.text('SIRVYA'), findsWidgets);
+      // Brand logo present as logo_dark.png without outline/AI badge
+      expect(
+          find.byWidgetPredicate((w) =>
+              w is Image &&
+              w.image is AssetImage &&
+              (w.image as AssetImage).assetName ==
+                  'assets/branding/logo_dark.png'),
+          findsOneWidget);
       expect(find.text('AI MEAL SCAN'), findsNothing);
       expect(find.text('GET SIRVYA'), findsNothing);
 
@@ -121,7 +127,7 @@ void main() {
               child: MealShareCard(
                 meal: meal,
                 format: MealShareFormat.story,
-                style: MealShareStyle.stravaOverlay,
+                style: MealShareStyle.sirvyaOverlay,
                 showIngredients: true,
               ),
             ),
@@ -148,7 +154,7 @@ void main() {
               child: MealShareCard(
                 meal: meal,
                 format: MealShareFormat.post,
-                style: MealShareStyle.stravaOverlay,
+                style: MealShareStyle.sirvyaOverlay,
               ),
             ),
           ),
@@ -156,7 +162,13 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('SIRVYA'), findsWidgets);
+      expect(
+          find.byWidgetPredicate((w) =>
+              w is Image &&
+              w.image is AssetImage &&
+              (w.image as AssetImage).assetName ==
+                  'assets/branding/logo_dark.png'),
+          findsOneWidget);
       expect(find.text('AI MEAL SCAN'), findsNothing);
       expect(find.text('Avocado Toast with Poached Eggs'), findsOneWidget);
       expect(find.text('420'), findsOneWidget);
@@ -184,7 +196,13 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('SIRVYA'), findsWidgets);
+      expect(
+          find.byWidgetPredicate((w) =>
+              w is Image &&
+              w.image is AssetImage &&
+              (w.image as AssetImage).assetName ==
+                  'assets/branding/logo_dark.png'),
+          findsOneWidget);
       expect(find.text('Avocado Toast with Poached Eggs'), findsOneWidget);
       expect(find.text('420'), findsOneWidget);
       expect(tester.takeException(), isNull);
@@ -217,7 +235,7 @@ void main() {
       expect(find.text('Share Your Meal'), findsOneWidget);
       expect(find.text('Story (9:16)'), findsOneWidget);
       expect(find.text('Post Card'), findsOneWidget);
-      expect(find.text('Strava Overlay'), findsOneWidget);
+      expect(find.text('Sirvya Overlay'), findsOneWidget);
       expect(find.text('Card View'), findsOneWidget);
       expect(find.text('Include Ingredients Breakdown'), findsOneWidget);
       expect(find.text('Share Story / Post'), findsOneWidget);
@@ -235,8 +253,8 @@ void main() {
       await tester.tap(find.text('Post Card'));
       await tester.pumpAndSettle();
 
-      // Switch back to Strava Overlay
-      await tester.tap(find.text('Strava Overlay'));
+      // Switch back to Sirvya Overlay
+      await tester.tap(find.text('Sirvya Overlay'));
       await tester.pumpAndSettle();
 
       expect(find.text('Share Story / Post'), findsOneWidget);
