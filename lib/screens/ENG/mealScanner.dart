@@ -394,6 +394,7 @@ class _IngredientEditorState extends State<_IngredientEditor> {
   String _lastSearchedOnlineQuery = '';
 
   bool get _isEditMode => widget.ingredient != null;
+  bool get _manual => widget.ingredient?.grams == 0;
 
   double get _currentGrams {
     final val = double.tryParse(_gramsCtrl.text.replaceAll(',', '.')) ?? 0.0;
@@ -958,10 +959,12 @@ class _IngredientEditorState extends State<_IngredientEditor> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    _isEditMode ? 'Adjust portion' : 'Add food item',
-                    style: const TextStyle(
-                        fontSize: 20, fontWeight: FontWeight.w800),
+                  Expanded(
+                    child: Text(
+                      _isEditMode ? 'Adjust portion' : 'Add food item',
+                      style: const TextStyle(
+                          fontSize: 20, fontWeight: FontWeight.w800),
+                    ),
                   ),
                   IconButton(
                     icon: const Icon(Icons.close_rounded, size: 22),
@@ -971,32 +974,112 @@ class _IngredientEditorState extends State<_IngredientEditor> {
               ),
               const SizedBox(height: 12),
 
-              // Step 1: If no food selected and not editing, show 2-tier search
-              if (!hasSelectedFood && !_isEditMode) ...[
-                _buildSearchSection(),
-                const SizedBox(height: 12),
-                Center(
-                  child: TextButton(
-                    onPressed: () => setState(() {
-                      _selectedFood = const FoodItem(
-                          id: 'custom',
-                          name: 'Custom food',
-                          calories: 0,
-                          protein: 0,
-                          carbs: 0,
-                          fat: 0);
-                      _manualOverride = true;
-                    }),
-                    child: const Text('Or enter custom macros manually',
-                        style: TextStyle(color: _muted, fontSize: 12)),
-                  ),
+              if (_manual) ...[
+                TextFormField(
+                  controller: _nameCtrl,
+                  decoration: const InputDecoration(labelText: 'Food name'),
+                  validator: (v) =>
+                      (v ?? '').trim().isEmpty ? 'Enter a food name' : null,
                 ),
-              ],
-
-              // Step 2: Food is selected -> Quantity & Auto-Calculated Nutrition
-              if (hasSelectedFood || _isEditMode) ...[
-                if (hasSelectedFood) _buildSelectedFoodCard(),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextFormField(
+                        controller: _macrosCtrl[0],
+                        keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true),
+                        decoration:
+                            const InputDecoration(labelText: 'Calories (kcal)'),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: TextFormField(
+                        controller: _macrosCtrl[1],
+                        keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true),
+                        decoration:
+                            const InputDecoration(labelText: 'Protein (g)'),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextFormField(
+                        controller: _macrosCtrl[2],
+                        keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true),
+                        decoration:
+                            const InputDecoration(labelText: 'Carbs (g)'),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: TextFormField(
+                        controller: _macrosCtrl[3],
+                        keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true),
+                        decoration:
+                            const InputDecoration(labelText: 'Fat (g)'),
+                      ),
+                    ),
+                  ],
+                ),
                 const SizedBox(height: 16),
+                _primary('Apply', () {
+                  if (!_form.currentState!.validate()) return;
+                  final double Function(TextEditingController) parseVal = (c) =>
+                      double.tryParse(c.text.replaceAll(',', '.')) ?? 0.0;
+                  final ingredient = MealIngredient(
+                    name: _nameCtrl.text.trim(),
+                    grams: 0,
+                    quantity: '1 serving',
+                    calories: parseVal(_macrosCtrl[0]),
+                    protein: parseVal(_macrosCtrl[1]),
+                    carbs: parseVal(_macrosCtrl[2]),
+                    fat: parseVal(_macrosCtrl[3]),
+                  );
+                  Navigator.pop(context, ingredient);
+                }),
+              ] else ...[
+                // Step 1: If no food selected and not editing, show 2-tier search
+                if (!hasSelectedFood && !_isEditMode) ...[
+                  _buildSearchSection(),
+                  const SizedBox(height: 12),
+                  Center(
+                    child: TextButton(
+                      onPressed: () => setState(() {
+                        _selectedFood = const FoodItem(
+                            id: 'custom',
+                            name: 'Custom food',
+                            calories: 0,
+                            protein: 0,
+                            carbs: 0,
+                            fat: 0);
+                        _manualOverride = true;
+                      }),
+                      child: const Text('Or enter custom macros manually',
+                          style: TextStyle(color: _muted, fontSize: 12)),
+                    ),
+                  ),
+                ],
+
+                // Step 2: Food is selected -> Quantity & Auto-Calculated Nutrition
+                if (hasSelectedFood || _isEditMode) ...[
+                  if (hasSelectedFood) _buildSelectedFoodCard(),
+                  const SizedBox(height: 12),
+
+                  TextFormField(
+                    controller: _nameCtrl,
+                    decoration: const InputDecoration(labelText: 'Food name'),
+                    validator: (v) =>
+                        (v ?? '').trim().isEmpty ? 'Enter a food name' : null,
+                  ),
+                  const SizedBox(height: 12),
 
                 // Weight input + Unit Switcher
                 Row(
@@ -1109,12 +1192,14 @@ class _IngredientEditorState extends State<_IngredientEditor> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Text(
-                            'Calculated Nutrition',
-                            style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w700,
-                                color: _muted),
+                          const Expanded(
+                            child: Text(
+                              'Calculated Nutrition',
+                              style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w700,
+                                  color: _muted),
+                            ),
                           ),
                           Row(
                             children: [
@@ -1151,11 +1236,13 @@ class _IngredientEditorState extends State<_IngredientEditor> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      _manualOverride
-                          ? 'Manual values active'
-                          : 'Values auto-calculated',
-                      style: const TextStyle(color: _muted, fontSize: 12),
+                    Expanded(
+                      child: Text(
+                        _manualOverride
+                            ? 'Manual values active'
+                            : 'Values auto-calculated',
+                        style: const TextStyle(color: _muted, fontSize: 12),
+                      ),
                     ),
                     TextButton(
                       onPressed: () {
@@ -1234,7 +1321,7 @@ class _IngredientEditorState extends State<_IngredientEditor> {
                 const SizedBox(height: 16),
 
                 // Apply Button
-                _primary(_isEditMode ? 'Save changes' : 'Add to meal', () {
+                _primary(_isEditMode ? 'Apply' : 'Add to meal', () {
                   if (!_form.currentState!.validate()) return;
                   final grams = _currentGrams;
 
@@ -1265,6 +1352,7 @@ class _IngredientEditorState extends State<_IngredientEditor> {
                 }),
               ],
             ],
+          ],
           ),
         ),
       ),

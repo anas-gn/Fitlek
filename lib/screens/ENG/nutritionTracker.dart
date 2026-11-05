@@ -7,6 +7,7 @@ import '../../components/meal_visuals.dart';
 import '../../services/meal_scan_service.dart';
 import '../../services/nutrition_diary_service.dart';
 import '../../theme/fitlek_theme_extension.dart';
+import '../../components/meal_share_modal.dart';
 import 'mealScanner.dart';
 
 class NutritionTrackerScreen extends StatefulWidget {
@@ -470,6 +471,11 @@ class _NutritionTrackerScreenState extends State<NutritionTrackerScreen>
                             style: TextStyle(
                                 color: c.textMuted, fontSize: 10, height: 1.6))
                       ])),
+                  IconButton(
+                      tooltip: 'Share ${meal.name}',
+                      onPressed: () => showMealShareModal(context, meal),
+                      icon: Icon(Icons.share_outlined,
+                          size: 19, color: c.textMuted)),
                   IconButton(
                       tooltip: 'Remove ${meal.name}',
                       onPressed: () => _delete(meal),

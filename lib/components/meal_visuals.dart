@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import 'dart:convert';
 import '../services/meal_scan_service.dart';
 import '../constants/urls.dart';
+import 'meal_share_modal.dart';
 
 const mealInk = Color(0xFF071E19);
 const mealSurface = Color(0xFF15372C);
@@ -183,6 +184,18 @@ class MealResultView extends StatelessWidget {
               expandedHeight: 305,
               title: const Text('Meal analysis',
                   style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600)),
+              actions: [
+                IconButton(
+                    tooltip: 'Share meal',
+                    onPressed: () => showMealShareModal(context, meal),
+                    icon: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: const BoxDecoration(
+                            shape: BoxShape.circle, color: Color(0x88071E19)),
+                        child: const Icon(Icons.share_rounded,
+                            size: 19, color: mealCream))),
+                const SizedBox(width: 8),
+              ],
               leading: IconButton(
                   tooltip: 'Back',
                   onPressed: () => Navigator.maybePop(context),
@@ -256,7 +269,9 @@ class MealResultView extends StatelessWidget {
                   const SizedBox(height: 18)
                 ],
                 _nutrition(),
-                const SizedBox(height: 26),
+                const SizedBox(height: 14),
+                _shareBanner(context),
+                const SizedBox(height: 22),
                 Row(children: [
                   const Expanded(
                       child: Text('Inside your plate',
@@ -368,6 +383,66 @@ class MealResultView extends StatelessWidget {
             _macro('Fat', 'fat', mealFat)
           ]),
         ]),
+      );
+
+  Widget _shareBanner(BuildContext context) => InkWell(
+        onTap: () => showMealShareModal(context, meal),
+        borderRadius: BorderRadius.circular(20),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [Color(0xFF0C2B24), Color(0xFF08221C)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: mealLime.withValues(alpha: 0.28)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.25),
+                blurRadius: 8,
+                offset: const Offset(0, 3),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(9),
+                decoration: BoxDecoration(
+                  color: mealLime.withValues(alpha: 0.16),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child:
+                    const Icon(Icons.share_rounded, color: mealLime, size: 20),
+              ),
+              const SizedBox(width: 14),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Share meal card',
+                      style: TextStyle(
+                        color: mealCream,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    SizedBox(height: 2),
+                    Text(
+                      'Post to Instagram Stories, WhatsApp, or Facebook',
+                      style: TextStyle(color: mealMuted, fontSize: 11),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(Icons.arrow_forward_ios_rounded,
+                  color: mealLime, size: 14),
+            ],
+          ),
+        ),
       );
   Widget _macro(String title, String key, Color color) => Expanded(
       child: Container(
