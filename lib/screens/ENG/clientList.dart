@@ -1720,9 +1720,9 @@ class _ShimmerCardState extends State<_ShimmerCard>
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
-        color: const Color(0xFF13322B),
+        color: context.fitlek.card,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+        border: Border.all(color: context.fitlek.border),
       ),
       clipBehavior: Clip.antiAlias,
       child: Padding(
@@ -1888,10 +1888,9 @@ class _CoachCardState extends State<_CoachCard> {
         child: Container(
           margin: const EdgeInsets.only(bottom: 16),
           decoration: BoxDecoration(
-            color: const Color(
-                0xFF13322B), // Dark green cyprus background to match design
+            color: f.card,
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+            border: Border.all(color: f.border),
             boxShadow: [
               BoxShadow(
                   color: f.shadow, blurRadius: 16, offset: const Offset(0, 6)),
@@ -1965,8 +1964,10 @@ class _CoachCardState extends State<_CoachCard> {
                                         coach.fullName,
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,
-                                        style: const TextStyle(
-                                          color: Colors.white,
+                                        style: TextStyle(
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .onSurface,
                                           fontSize: 18,
                                           fontWeight: FontWeight.w800,
                                         ),
@@ -1988,7 +1989,7 @@ class _CoachCardState extends State<_CoachCard> {
                                       : Icons.favorite_border_rounded,
                                   color: widget.isFavorite
                                       ? Colors.redAccent
-                                      : Colors.white70,
+                                      : f.textMuted,
                                   size: 18,
                                 ),
                               ),
@@ -2000,15 +2001,15 @@ class _CoachCardState extends State<_CoachCard> {
                             coach.displaySpecialties,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                                color: Colors.white70, fontSize: 13),
+                            style: TextStyle(
+                                color: f.textSecondary, fontSize: 13),
                           ),
                           const SizedBox(height: 6),
                           // Location
                           Row(
                             children: [
                               Icon(Icons.location_on_rounded,
-                                  color: Colors.white.withValues(alpha: 0.6),
+                                  color: f.textMuted,
                                   size: 12),
                               const SizedBox(width: 3),
                               Flexible(
@@ -2016,8 +2017,8 @@ class _CoachCardState extends State<_CoachCard> {
                                   coach.locationLabel,
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
-                                      color: Colors.white70, fontSize: 12),
+                                  style: TextStyle(
+                                      color: f.textMuted, fontSize: 12),
                                 ),
                               ),
                             ],
@@ -2035,30 +2036,31 @@ class _CoachCardState extends State<_CoachCard> {
                                 hasRating
                                     ? widget.avgRating.toStringAsFixed(1)
                                     : 'New',
-                                style: const TextStyle(
-                                    color: Colors.white,
+                                style: TextStyle(
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .onSurface,
                                     fontSize: 13,
                                     fontWeight: FontWeight.w700),
                               ),
                               if (hasRating)
                                 Text(
                                   ' (${widget.reviewCount})',
-                                  style: const TextStyle(
-                                      color: Colors.white54, fontSize: 12),
+                                  style: TextStyle(
+                                      color: f.textMuted, fontSize: 12),
                                 ),
                               if (coach.isAvailableToday) ...[
-                                const SizedBox(width: 12),
                                 const SizedBox(width: 12),
                                 Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    const Icon(Icons.event_available_rounded,
-                                        color: Color(0xFFD4F844), size: 14),
+                                    Icon(Icons.event_available_rounded,
+                                        color: f.success, size: 14),
                                     const SizedBox(width: 4),
-                                    const Text(
+                                    Text(
                                       'Available today',
                                       style: TextStyle(
-                                          color: Color(0xFFD4F844),
+                                          color: f.success,
                                           fontSize: 12,
                                           fontWeight: FontWeight.w600),
                                     ),
@@ -2086,15 +2088,17 @@ class _CoachCardState extends State<_CoachCard> {
                             Text(
                               'From',
                               style: TextStyle(
-                                color: Colors.white.withValues(alpha: 0.55),
+                                color: f.textMuted,
                                 fontSize: 10,
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
                             Text(
                               '${coach.minPrice!.toInt()} MAD',
-                              style: const TextStyle(
-                                color: Colors.white,
+                              style: TextStyle(
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurface,
                                 fontSize: 15,
                                 fontWeight: FontWeight.w900,
                               ),
@@ -2110,15 +2114,17 @@ class _CoachCardState extends State<_CoachCard> {
                             Text(
                               'Price',
                               style: TextStyle(
-                                color: Colors.white.withValues(alpha: 0.55),
+                                color: f.textMuted,
                                 fontSize: 10,
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
-                            const Text(
+                            Text(
                               'Price on request',
                               style: TextStyle(
-                                color: Colors.white,
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onSurface,
                                 fontSize: 15,
                                 fontWeight: FontWeight.w900,
                               ),
@@ -2164,32 +2170,36 @@ class _CoachCardState extends State<_CoachCard> {
                         padding: const EdgeInsets.symmetric(
                             horizontal: 18, vertical: 11),
                         decoration: BoxDecoration(
-                          color: const Color(
-                              0xFFE8F5C0), // Light lime/cream to match design
+                          color: Theme.of(context).colorScheme.primary,
                           borderRadius: BorderRadius.circular(24),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.15),
+                              color: f.shadow,
                               blurRadius: 8,
                               offset: const Offset(0, 2),
                             ),
                           ],
                         ),
-                        child: const Row(
+                        child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Text(
                               'View & book',
                               style: TextStyle(
-                                color: Color(0xFF0D2B22),
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onPrimary,
                                 fontSize: 13,
                                 fontWeight: FontWeight.w800,
                                 letterSpacing: -0.2,
                               ),
                             ),
-                            SizedBox(width: 6),
+                            const SizedBox(width: 6),
                             Icon(Icons.arrow_forward_rounded,
-                                color: Color(0xFF0D2B22), size: 15),
+                                color: Theme.of(context)
+                                    .colorScheme
+                                    .onPrimary,
+                                size: 15),
                           ],
                         ),
                       ),

@@ -846,16 +846,17 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> with SingleTicker
 
   Widget _sectionHeaderWithIcon(String title, IconData icon,
       {Widget? trailing}) {
+    final onSurface = Theme.of(context).colorScheme.onSurface;
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Row(
           children: [
-            Icon(icon, color: Colors.white, size: 20),
+            Icon(icon, color: onSurface, size: 20),
             const SizedBox(width: 8),
             Text(title,
-                style: const TextStyle(
-                    color: Colors.white,
+                style: TextStyle(
+                    color: onSurface,
                     fontSize: 16,
                     fontWeight: FontWeight.bold)),
           ],
@@ -885,10 +886,16 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> with SingleTicker
                     child: Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF0C2420),
+                        color: context.fitlek.card,
                         borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                            color: Colors.white.withValues(alpha: 0.1)),
+                        border: Border.all(color: context.fitlek.border),
+                        boxShadow: [
+                          BoxShadow(
+                            color: context.fitlek.shadow,
+                            blurRadius: 8,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
                       ),
                       child: Row(
                         children: [
@@ -896,7 +903,7 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> with SingleTicker
                               c.isApproved
                                   ? Icons.verified_user_outlined
                                   : Icons.workspace_premium_outlined,
-                              color: Colors.white,
+                              color: Theme.of(context).colorScheme.primary,
                               size: 24),
                           const SizedBox(width: 12),
                           Expanded(
@@ -904,8 +911,10 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> with SingleTicker
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(cert,
-                                    style: const TextStyle(
-                                        color: Colors.white,
+                                    style: TextStyle(
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .onSurface,
                                         fontSize: 14,
                                         fontWeight: FontWeight.w600)),
                                 const SizedBox(height: 2),
@@ -914,8 +923,7 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> with SingleTicker
                                         ? 'Verified by Sirvya'
                                         : 'Self-reported',
                                     style: TextStyle(
-                                        color:
-                                            Colors.white.withValues(alpha: 0.7),
+                                        color: context.fitlek.textMuted,
                                         fontSize: 12)),
                               ],
                             ),
@@ -956,11 +964,13 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> with SingleTicker
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (ctx) {
+        final onSurface = Theme.of(context).colorScheme.onSurface;
+        final f = context.fitlek;
         return Container(
           height: MediaQuery.of(ctx).size.height * 0.75,
-          decoration: const BoxDecoration(
-            color: Color(0xFF0F2C24),
-            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          decoration: BoxDecoration(
+            color: f.card,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
           ),
           child: Column(
             children: [
@@ -970,7 +980,7 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> with SingleTicker
                   width: 40,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.3),
+                    color: f.border,
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
@@ -981,15 +991,15 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> with SingleTicker
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Row(
+                    Row(
                       children: [
                         Icon(Icons.inventory_2_outlined,
-                            color: Colors.white, size: 22),
-                        SizedBox(width: 10),
+                            color: onSurface, size: 22),
+                        const SizedBox(width: 10),
                         Text(
                           'Coaching packages',
                           style: TextStyle(
-                            color: Colors.white,
+                            color: onSurface,
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
                           ),
@@ -997,20 +1007,19 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> with SingleTicker
                       ],
                     ),
                     IconButton(
-                      icon: const Icon(Icons.close, color: Colors.white),
+                      icon: Icon(Icons.close, color: onSurface),
                       onPressed: () => Navigator.pop(ctx),
                     ),
                   ],
                 ),
               ),
-              Divider(color: Colors.white.withValues(alpha: 0.1), height: 1),
+              Divider(color: f.border, height: 1),
               Expanded(
                 child: _packages.isEmpty
                     ? Center(
                         child: Text(
                           'No packages available for this coach.',
-                          style: TextStyle(
-                              color: Colors.white.withValues(alpha: 0.6)),
+                          style: TextStyle(color: f.textMuted),
                         ),
                       )
                     : ListView.separated(
@@ -1022,10 +1031,9 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> with SingleTicker
                           return Container(
                             padding: const EdgeInsets.all(16),
                             decoration: BoxDecoration(
-                              color: const Color(0xFF0C2420),
+                              color: f.card2,
                               borderRadius: BorderRadius.circular(16),
-                              border: Border.all(
-                                  color: Colors.white.withValues(alpha: 0.12)),
+                              border: Border.all(color: f.border),
                             ),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1037,8 +1045,8 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> with SingleTicker
                                     Expanded(
                                       child: Text(
                                         pkg.name,
-                                        style: const TextStyle(
-                                          color: Colors.white,
+                                        style: TextStyle(
+                                          color: onSurface,
                                           fontSize: 16,
                                           fontWeight: FontWeight.bold,
                                         ),
@@ -1047,8 +1055,10 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> with SingleTicker
                                     if (pkg.price != null)
                                       Text(
                                         '${pkg.price!.toInt()} MAD',
-                                        style: const TextStyle(
-                                          color: Color(0xFF38BDF8),
+                                        style: TextStyle(
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .primary,
                                           fontSize: 16,
                                           fontWeight: FontWeight.bold,
                                         ),
@@ -1061,8 +1071,7 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> with SingleTicker
                                   Text(
                                     pkg.description!,
                                     style: TextStyle(
-                                      color:
-                                          Colors.white.withValues(alpha: 0.7),
+                                      color: f.textSecondary,
                                       fontSize: 13,
                                       height: 1.4,
                                     ),
@@ -1071,14 +1080,13 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> with SingleTicker
                                 const SizedBox(height: 14),
                                 Row(
                                   children: [
-                                    const Icon(Icons.access_time_rounded,
-                                        color: Color(0xFF94A8A3), size: 14),
+                                    Icon(Icons.access_time_rounded,
+                                        color: f.textMuted, size: 14),
                                     const SizedBox(width: 6),
                                     Text(
                                       '${pkg.sessions ?? 1} session${pkg.sessions != null && pkg.sessions! > 1 ? 's' : ''} · 60 min${pkg.sessions != null && pkg.sessions! > 1 ? ' each' : ''}',
                                       style: TextStyle(
-                                          color: Colors.white
-                                              .withValues(alpha: 0.6),
+                                          color: f.textSecondary,
                                           fontSize: 12),
                                     ),
                                     const Spacer(),
@@ -1088,9 +1096,12 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> with SingleTicker
                                         _navigateToBooking(pkg);
                                       },
                                       style: ElevatedButton.styleFrom(
-                                        backgroundColor:
-                                            const Color(0xFF38BDF8),
-                                        foregroundColor: Colors.black,
+                                        backgroundColor: Theme.of(context)
+                                            .colorScheme
+                                            .primary,
+                                        foregroundColor: Theme.of(context)
+                                            .colorScheme
+                                            .onPrimary,
                                         elevation: 0,
                                         padding: const EdgeInsets.symmetric(
                                             horizontal: 16, vertical: 8),
@@ -1155,9 +1166,9 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> with SingleTicker
             width: double.infinity,
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: const Color(0xFF0C2420),
+              color: f.card,
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+              border: Border.all(color: f.border),
             ),
             child: Text('No packages available for this coach.',
                 style: TextStyle(color: f.textMuted, fontSize: 13)),
@@ -1175,8 +1186,8 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> with SingleTicker
         const SizedBox(height: 12),
         Row(
           children: [
-            const Icon(Icons.info_outline_rounded,
-                color: Color(0xFF94A8A3), size: 14),
+            Icon(Icons.info_outline_rounded,
+                color: f.textMuted, size: 14),
             const SizedBox(width: 6),
             Text('Agree on the price before confirmation.',
                 style: TextStyle(color: f.textMuted, fontSize: 12)),
@@ -1195,16 +1206,23 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> with SingleTicker
         margin: const EdgeInsets.only(right: 12),
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: const Color(0xFF0C2420),
+          color: f.card,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+          border: Border.all(color: f.border),
+          boxShadow: [
+            BoxShadow(
+              color: f.shadow,
+              blurRadius: 10,
+              offset: const Offset(0, 3),
+            ),
+          ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(pkg.name,
-                style: const TextStyle(
-                    color: Colors.white,
+                style: TextStyle(
+                    color: cs.onSurface,
                     fontSize: 14.5,
                     fontWeight: FontWeight.w800)),
             if (pkg.description != null && pkg.description!.isNotEmpty) ...[
@@ -1219,12 +1237,12 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> with SingleTicker
             Container(
                 width: double.infinity,
                 height: 1,
-                color: Colors.white.withValues(alpha: 0.05)),
+                color: f.border),
             const SizedBox(height: 12),
             Row(
               children: [
-                const Icon(Icons.access_time_rounded,
-                    color: Color(0xFF94A8A3), size: 14),
+                Icon(Icons.access_time_rounded,
+                    color: f.textMuted, size: 14),
                 const SizedBox(width: 6),
                 Text(
                     '${pkg.sessions ?? 1} session${pkg.sessions != null && pkg.sessions! > 1 ? 's' : ''} · 60 min${pkg.sessions != null && pkg.sessions! > 1 ? ' each' : ''}',
@@ -1238,8 +1256,8 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> with SingleTicker
                 Expanded(
                   child: Row(
                     children: [
-                      const Icon(Icons.layers_outlined,
-                          color: Colors.white, size: 14),
+                      Icon(Icons.layers_outlined,
+                          color: cs.onSurface, size: 14),
                       const SizedBox(width: 6),
                       Flexible(
                         child: Text(
@@ -1247,8 +1265,8 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> with SingleTicker
                                 ? '${pkg.price!.toInt()} MAD'
                                 : 'On request',
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                                color: Colors.white,
+                            style: TextStyle(
+                                color: cs.onSurface,
                                 fontSize: 13,
                                 fontWeight: FontWeight.bold)),
                       ),
@@ -1259,14 +1277,14 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> with SingleTicker
                   padding:
                       const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF38BDF8).withValues(alpha: 0.15),
+                    color: cs.primary.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(
-                        color: const Color(0xFF38BDF8).withValues(alpha: 0.3)),
+                        color: cs.primary.withValues(alpha: 0.25)),
                   ),
-                  child: const Text('Book >',
+                  child: Text('Book >',
                       style: TextStyle(
-                          color: Color(0xFF38BDF8),
+                          color: cs.primary,
                           fontSize: 11,
                           fontWeight: FontWeight.w700)),
                 ),
@@ -1400,8 +1418,8 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> with SingleTicker
                     child: Text(name,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                            color: Colors.white,
+                        style: TextStyle(
+                            color: Theme.of(context).colorScheme.onSurface,
                             fontSize: 34,
                             fontWeight: FontWeight.w900,
                             letterSpacing: -1.2,
@@ -1422,7 +1440,10 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> with SingleTicker
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                         style: TextStyle(
-                            color: Colors.white.withValues(alpha: 0.85),
+                            color: Theme.of(context)
+                                .colorScheme
+                                .onSurface
+                                .withValues(alpha: 0.85),
                             fontSize: 15,
                             fontWeight: FontWeight.w600)),
                   ),
@@ -1431,12 +1452,12 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> with SingleTicker
               const SizedBox(height: 8),
               Row(children: [
                 Icon(Icons.location_on_rounded,
-                    color: Colors.white.withValues(alpha: 0.6), size: 14),
+                    color: context.fitlek.textMuted, size: 14),
                 const SizedBox(width: 4),
                 Flexible(child: Text(c.locationLabel,
                     maxLines: 1, overflow: TextOverflow.ellipsis,
                     style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.8),
+                        color: context.fitlek.textMuted,
                         fontSize: 13,
                         fontWeight: FontWeight.w500))),
                 if (c.isAvailableToday) ...[
@@ -1445,8 +1466,11 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> with SingleTicker
                     padding:
                         const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF0C381E),
+                      color: context.fitlek.success.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                          color:
+                              context.fitlek.success.withValues(alpha: 0.3)),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
@@ -1454,16 +1478,16 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> with SingleTicker
                         Container(
                           width: 6,
                           height: 6,
-                          decoration: const BoxDecoration(
-                            color: Color(0xFF10B981),
+                          decoration: BoxDecoration(
+                            color: context.fitlek.success,
                             shape: BoxShape.circle,
                           ),
                         ),
                         const SizedBox(width: 6),
-                        const Text(
+                        Text(
                           'Available today',
                           style: TextStyle(
-                              color: Color(0xFF10B981),
+                              color: context.fitlek.success,
                               fontSize: 11,
                               fontWeight: FontWeight.w600),
                         ),
@@ -1535,9 +1559,16 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> with SingleTicker
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
       child: Container(
         decoration: BoxDecoration(
-          color: const Color(0xFF0F2C24),
+          color: context.fitlek.card,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+          border: Border.all(color: context.fitlek.border),
+          boxShadow: [
+            BoxShadow(
+              color: context.fitlek.shadow,
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
         child: IntrinsicHeight(
           child: Row(
@@ -1548,7 +1579,7 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> with SingleTicker
                 Icons.star_rounded,
               ),
               VerticalDivider(
-                  color: Colors.white.withValues(alpha: 0.1),
+                  color: context.fitlek.border,
                   thickness: 1,
                   width: 1),
               _statSegment(
@@ -1557,7 +1588,7 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> with SingleTicker
                 Icons.chat_bubble_outline_rounded,
               ),
               VerticalDivider(
-                  color: Colors.white.withValues(alpha: 0.1),
+                  color: context.fitlek.border,
                   thickness: 1,
                   width: 1),
               _statSegment(
@@ -1579,7 +1610,7 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> with SingleTicker
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, color: Colors.white, size: 20),
+            Icon(icon, color: Theme.of(context).colorScheme.primary, size: 20),
             const SizedBox(width: 12),
             Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -1587,8 +1618,8 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> with SingleTicker
               children: [
                 Text(
                   value,
-                  style: const TextStyle(
-                    color: Colors.white,
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurface,
                     fontSize: 15,
                     fontWeight: FontWeight.bold,
                   ),
@@ -1596,7 +1627,7 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> with SingleTicker
                 Text(
                   label,
                   style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.7),
+                    color: context.fitlek.textMuted,
                     fontSize: 11,
                   ),
                 ),
@@ -1630,12 +1661,21 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> with SingleTicker
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: const Color(0xFFF2F4E2), // Pale beige color
+          color: context.fitlek.card,
           borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: context.fitlek.border),
+          boxShadow: [
+            BoxShadow(
+              color: context.fitlek.shadow,
+              blurRadius: 10,
+              offset: const Offset(0, 3),
+            ),
+          ],
         ),
         child: Row(
           children: [
-            const Icon(Icons.layers_outlined, color: Colors.black, size: 28),
+            Icon(Icons.layers_outlined,
+                color: Theme.of(context).colorScheme.primary, size: 28),
             const SizedBox(width: 16),
             Expanded(
               child: Column(
@@ -1643,8 +1683,8 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> with SingleTicker
                 children: [
                   Text(
                     title,
-                    style: const TextStyle(
-                      color: Colors.black,
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.onSurface,
                       fontSize: 16,
                       fontWeight: FontWeight.w900,
                     ),
@@ -1652,7 +1692,7 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> with SingleTicker
                   Text(
                     subtitle,
                     style: TextStyle(
-                      color: Colors.black.withValues(alpha: 0.6),
+                      color: context.fitlek.textSecondary,
                       fontSize: 13,
                       fontWeight: FontWeight.w500,
                     ),
@@ -1671,10 +1711,16 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> with SingleTicker
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       decoration: BoxDecoration(
-        color: Theme.of(context).scaffoldBackgroundColor,
+        color: context.fitlek.card,
         border: Border(
             top: BorderSide(
-                color: Colors.white.withValues(alpha: 0.1), width: 1)),
+                color: context.fitlek.border, width: 1)),
+        boxShadow: [
+          BoxShadow(
+              color: context.fitlek.shadow,
+              blurRadius: 10,
+              offset: const Offset(0, -2)),
+        ],
       ),
       child: Row(children: [
         Expanded(flex: 3, child: _buildBookBtn(ctx, s)),
@@ -1690,18 +1736,20 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> with SingleTicker
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 16),
         decoration: BoxDecoration(
-          color: const Color(0xFF0F2C24),
+          color: context.fitlek.card2,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: const Color(0xFF38BDF8)),
+          border: Border.all(color: context.fitlek.border),
         ),
         child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-          const Icon(Icons.chat_bubble_outline_rounded,
-              color: Colors.white, size: 20),
+          Icon(Icons.chat_bubble_outline_rounded,
+              color: Theme.of(context).colorScheme.onSurface, size: 20),
           const SizedBox(width: 8),
-          const Text(
+          Text(
             'Message',
             style: TextStyle(
-                color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+                color: Theme.of(context).colorScheme.onSurface,
+                fontWeight: FontWeight.bold,
+                fontSize: 14),
           ),
         ]),
       ),
@@ -1726,16 +1774,16 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> with SingleTicker
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 16),
           decoration: BoxDecoration(
-            color: const Color(0xFFF2F4E2), // Pale beige color
+            color: Theme.of(context).colorScheme.primary,
             borderRadius: BorderRadius.circular(16),
           ),
           child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-            const Icon(Icons.calendar_month_outlined,
-                color: Colors.black, size: 20),
+            Icon(Icons.calendar_month_outlined,
+                color: Theme.of(context).colorScheme.onPrimary, size: 20),
             const SizedBox(width: 8),
-            const Text('Request booking',
+            Text('Request booking',
                 style: TextStyle(
-                    color: Colors.black,
+                    color: Theme.of(context).colorScheme.onPrimary,
                     fontWeight: FontWeight.w900,
                     fontSize: 14)),
           ]),
@@ -1806,20 +1854,21 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> with SingleTicker
                     padding:
                         const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                     decoration: BoxDecoration(
-                        color: const Color(0xFF0C2420),
+                        color: context.fitlek.card,
                         borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: const Color(0xFF1E5C53))),
+                        border: Border.all(color: context.fitlek.border)),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         isInsta
                             ? const InstagramIcon(size: 14)
                             : Icon(getIconForTag(tag),
-                                color: const Color(0xFF38BDF8), size: 14),
+                                color: Theme.of(context).colorScheme.primary,
+                                size: 14),
                         const SizedBox(width: 6),
                         Text(tag,
-                            style: const TextStyle(
-                                color: Colors.white,
+                            style: TextStyle(
+                                color: Theme.of(context).colorScheme.onSurface,
                                 fontSize: 13,
                                 fontWeight: FontWeight.w500)),
                       ],
@@ -1841,12 +1890,12 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> with SingleTicker
                   width: 3,
                   height: 16,
                   decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: Theme.of(context).colorScheme.primary,
                       borderRadius: BorderRadius.circular(4))),
               const SizedBox(width: 8),
-              const Text('About',
+              Text('About',
                   style: TextStyle(
-                      color: Colors.white,
+                      color: Theme.of(context).colorScheme.onSurface,
                       fontSize: 16,
                       fontWeight: FontWeight.bold)),
             ],
@@ -2102,12 +2151,12 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> with SingleTicker
             children: [
               Row(
                 children: [
-                  const Icon(Icons.calendar_today_outlined,
-                      color: Colors.white, size: 20),
+                  Icon(Icons.calendar_today_outlined,
+                      color: Theme.of(context).colorScheme.onSurface, size: 20),
                   const SizedBox(width: 8),
-                  const Text('Availability',
+                  Text('Availability',
                       style: TextStyle(
-                          color: Colors.white,
+                          color: Theme.of(context).colorScheme.onSurface,
                           fontSize: 16,
                           fontWeight: FontWeight.bold)),
                 ],
@@ -2152,7 +2201,7 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> with SingleTicker
               Container(
                   width: 1,
                   height: 40,
-                  color: Colors.white.withValues(alpha: 0.1)),
+                  color: context.fitlek.border),
               const SizedBox(width: 16),
               Expanded(
                 child: _loadingAvailability
@@ -2271,24 +2320,30 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> with SingleTicker
         width: 60,
         padding: const EdgeInsets.symmetric(vertical: 10),
         decoration: BoxDecoration(
-          color: const Color(0xFF0C2420),
+          color: selected
+              ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.12)
+              : context.fitlek.card,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
               color: selected
-                  ? const Color(0xFF38BDF8)
-                  : Colors.white.withValues(alpha: 0.1)),
+                  ? Theme.of(context).colorScheme.primary
+                  : context.fitlek.border),
         ),
         child: Column(
           children: [
             Text(day,
                 style: TextStyle(
-                    color: Colors.white.withValues(alpha: selected ? 1 : 0.7),
+                    color: selected
+                        ? Theme.of(context).colorScheme.primary
+                        : Theme.of(context).colorScheme.onSurface,
                     fontSize: 12,
                     fontWeight: FontWeight.w600)),
             const SizedBox(height: 2),
             Text(date,
                 style: TextStyle(
-                    color: Colors.white.withValues(alpha: selected ? 1 : 0.7),
+                    color: selected
+                        ? Theme.of(context).colorScheme.primary
+                        : context.fitlek.textMuted,
                     fontSize: 11)),
           ],
         ),
@@ -2307,20 +2362,24 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> with SingleTicker
         alignment: Alignment.center,
         decoration: BoxDecoration(
           color: available
-              ? const Color(0xFF0C2420)
-              : Colors.black.withValues(alpha: 0.3),
+              ? (selected
+                  ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.12)
+                  : context.fitlek.card)
+              : context.fitlek.card2.withValues(alpha: 0.5),
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
               color: selected
-                  ? const Color(0xFF38BDF8)
-                  : Colors.white.withValues(alpha: 0.1)),
+                  ? Theme.of(context).colorScheme.primary
+                  : context.fitlek.border),
         ),
         child: Text(
           time,
           style: TextStyle(
             color: available
-                ? Colors.white.withValues(alpha: selected ? 1 : 0.7)
-                : Colors.white.withValues(alpha: 0.3),
+                ? (selected
+                    ? Theme.of(context).colorScheme.primary
+                    : Theme.of(context).colorScheme.onSurface)
+                : context.fitlek.textMuted.withValues(alpha: 0.4),
             fontSize: 13,
             decoration:
                 available ? TextDecoration.none : TextDecoration.lineThrough,
@@ -2426,12 +2485,12 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> with SingleTicker
         children: [
           Row(
             children: [
-              const Icon(Icons.location_on_outlined,
-                  color: Colors.white, size: 20),
+              Icon(Icons.location_on_outlined,
+                  color: Theme.of(context).colorScheme.onSurface, size: 20),
               const SizedBox(width: 8),
-              const Text('Practical info',
+              Text('Practical info',
                   style: TextStyle(
-                      color: Colors.white,
+                      color: Theme.of(context).colorScheme.onSurface,
                       fontSize: 16,
                       fontWeight: FontWeight.bold)),
             ],
@@ -2440,14 +2499,21 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> with SingleTicker
           Container(
             clipBehavior: Clip.antiAlias,
             decoration: BoxDecoration(
-              color: const Color(0xFF0F2C24),
+              color: context.fitlek.card,
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+              border: Border.all(color: context.fitlek.border),
+              boxShadow: [
+                BoxShadow(
+                  color: context.fitlek.shadow,
+                  blurRadius: 10,
+                  offset: const Offset(0, 3),
+                ),
+              ],
             ),
             child: Column(
               children: [
                 _practicalRow(Icons.location_on, 'Casablanca', null),
-                Divider(color: Colors.white.withValues(alpha: 0.05), height: 1),
+                Divider(color: context.fitlek.border, height: 1),
                 if (c.instagramPage.isNotEmpty) ...[
                   Builder(builder: (context) {
                     String handle = c.instagramPage.trim();
@@ -2479,7 +2545,7 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> with SingleTicker
                     );
                   }),
                   Divider(
-                      color: Colors.white.withValues(alpha: 0.05), height: 1),
+                      color: context.fitlek.border, height: 1),
                 ],
                 _practicalRow(
                   Icons.qr_code_2,
@@ -2511,17 +2577,17 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> with SingleTicker
             children: [
               customIcon ??
                   Icon(icon,
-                      color: Colors.white.withValues(alpha: 0.7), size: 20),
+                      color: Theme.of(context).colorScheme.primary, size: 20),
               const SizedBox(width: 16),
               Expanded(
                   child: Text(text,
-                      style: const TextStyle(
-                          color: Colors.white,
+                      style: TextStyle(
+                          color: Theme.of(context).colorScheme.onSurface,
                           fontSize: 14,
                           fontWeight: FontWeight.w500))),
               if (trailingIcon != null)
                 Icon(trailingIcon,
-                    color: Colors.white.withValues(alpha: 0.5), size: 20),
+                    color: context.fitlek.textMuted, size: 20),
             ],
           ),
         ),
@@ -2598,14 +2664,14 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> with SingleTicker
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Row(
+              Row(
                 children: [
                   Icon(Icons.chat_bubble_outline_rounded,
-                      color: Colors.white, size: 20),
-                  SizedBox(width: 8),
+                      color: Theme.of(context).colorScheme.onSurface, size: 20),
+                  const SizedBox(width: 8),
                   Text('Client reviews',
                       style: TextStyle(
-                          color: Colors.white,
+                          color: Theme.of(context).colorScheme.onSurface,
                           fontSize: 16,
                           fontWeight: FontWeight.bold)),
                 ],
