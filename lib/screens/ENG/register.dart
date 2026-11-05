@@ -1800,69 +1800,68 @@ class _RegisterScreenState extends State<RegisterScreen>
                         children: [
                           _buildLegalTextSection(
                             'General Information',
-                            'Effective Date: July 20, 2026\nVersion: 1.0.0\nOperating Entity: DevUnivers (Morocco)\nPlatform: Sirvya App & Associated Website',
+                            'Effective Date: November 2026\nVersion: 1.0.3\nOperating Entity: DevUnivers (Morocco)\nContact: privacy@devunivers.com | support@devunivers.com\nPlatform: Sirvya Mobile Application & Associated Infrastructure',
                           ),
                           _buildLegalTextSection(
-                            'Legal Disclaimer',
-                            'The following framework represents a comprehensive foundational legal structure for Sirvya. Prior to deployment in a production environment, these documents must be reviewed by a licensed Moroccan legal professional to ensure absolute compliance with local regulations (e.g., CNDP requirements for data privacy in Morocco) and international standards as the platform expands.',
+                            'Legal Framework & International Scope',
+                            'Sirvya is operated by DevUnivers in Morocco and designed for global accessibility. This comprehensive legal framework governs your use of Sirvya worldwide. It adheres to Moroccan privacy regulations (Law 09-08 / CNDP) and aligns with international data protection benchmarks including the EU General Data Protection Regulation (GDPR) and global consumer protection standards.',
                           ),
                           _buildLegalTextSection(
                             'Definitions',
-                            '• Platform: Refers to the Sirvya application, its associated web infrastructure, and services provided by DevUnivers.\n'
-                                '• Company: Refers to DevUnivers, the legal entity operating the Sirvya platform in Morocco.\n'
-                                '• User: Refers to any individual who creates an account on the Platform to book services, view content, or interact with Coaches and Gyms.\n'
-                                '• Coach: Refers to an independent fitness professional, personal trainer, or instructor offering services, advice, or training sessions via the Platform.\n'
-                                '• Gym: Refers to an independent fitness facility, studio, or center listed on the Platform for booking purposes.',
+                            '• Platform: Refers to the Sirvya application, its associated web infrastructure, AI services, and systems provided by DevUnivers.\n'
+                                '• Company: Refers to DevUnivers, the operating legal entity.\n'
+                                '• User: Any individual creating an account on the Platform to track nutrition, workouts, book services, or interact with Coaches/Gyms.\n'
+                                '• Coach: An independent fitness professional or personal trainer offering services or advice via the Platform.\n'
+                                '• Gym: An independent fitness facility or studio listed on the Platform.',
                           ),
                           _buildLegalTextSection(
                             '1. Terms of Service (ToS)',
-                            '1.1 Acceptance of Terms\nBy creating an account, accessing, or using Sirvya, you agree to be bound by these Terms of Service. Sirvya is developed, maintained, and operated by DevUnivers. If you do not agree to all the terms and conditions outlined in this framework, you must immediately cease all use of the Platform and uninstall the application.\n\n'
-                                '1.2 Eligibility & Age Requirements\nUsers must be at least 18 years old (or the legal age of majority in their jurisdiction) to independently register for an account. Minors between the ages of 13 and 17 may only use the platform with verifiable parental or guardian consent. Sirvya is not intended for children under the age of 13. We reserve the right to request age verification and terminate accounts that violate this provision.\n\n'
-                                '1.3 Account Security, Integrity, & Prohibited Actions\nYou are fully responsible for safeguarding your account credentials. You must promptly notify us of any unauthorized use of your account. Sirvya strictly prohibits: account sharing/selling/transferring; using bots/scripts/scraping tools; reverse engineering/decompiling; or attempting to bypass platform security.\n\n'
-                                '1.4 Future Subscription & Marketplace Terms\nWhile Sirvya does not currently process direct financial transactions, the platform is structured for future monetization, including subscriptions and marketplace transactions. Separate terms covering chargebacks, recurring billing, and processing fees will take effect upon integration.\n\n'
-                                '1.5 Limitation of Liability & Force Majeure\nTo the maximum extent permitted by applicable law, DevUnivers and Sirvya shall not be held liable for indirect, incidental, special, or consequential damages arising from app usage, booking disputes, or interactions between Users and Coaches/Gyms.\n\n'
-                                '1.6 Governing Law & Dispute Resolution\nThese terms are governed by and construed in accordance with the laws of the Kingdom of Morocco. Any disputes shall be subject to the exclusive jurisdiction of the competent courts of Morocco.',
+                            '1.1 Acceptance of Terms\nBy accessing, creating an account, or using Sirvya, you agree to be bound by these Terms of Service. If you do not agree to these terms, you must discontinue use and uninstall the app.\n\n'
+                                '1.2 Eligibility & Age Requirements\nUsers must be at least 18 years old (or the legal age of majority in their jurisdiction) to independently register. Minors between 13 and 17 may only use the platform under parental/guardian supervision and verifiable consent. Sirvya is strictly not intended for children under 13.\n\n'
+                                '1.3 Account Security & Integrity\nYou are responsible for safeguarding your credentials. Account sharing, selling, automated scraping, reverse engineering, security tampering, or unauthorized commercial exploitation is strictly prohibited.\n\n'
+                                '1.4 Subscription & Marketplace Terms\nWhile certain core features are currently provided free or in beta, Sirvya reserves the right to introduce optional premium features, subscriptions, or transaction fees with clear prior notice.\n\n'
+                                '1.5 Limitation of Liability\nTo the maximum extent permitted by applicable law, DevUnivers, Sirvya, and their affiliates shall not be liable for indirect, incidental, punitive, or consequential damages resulting from app usage, workout activities, nutritional tracking, or interactions with independent third parties.\n\n'
+                                '1.6 Governing Law & International Users\nThese Terms are governed by and construed in accordance with the laws of the Kingdom of Morocco. If you are an individual consumer residing outside Morocco (such as in the European Union, United Kingdom, United States, or GCC), nothing in these Terms deprives you of the mandatory statutory consumer protections provided by the laws of your country of habitual residence. In case of any concern, we encourage contacting support@devunivers.com for informal amicable resolution.',
                           ),
                           _buildLegalTextSection(
-                            '2. Privacy Policy',
-                            '2.1 Data Collection & Purpose\nSirvya collects personal and usage data exclusively to provide, personalize, and improve the user experience (Name, email, phone number, profile picture, height, weight, BMI, chat messages, booking history).\n\n'
-                                '2.2 Data Security, Storage, & Encryption\nSirvya employs robust security measures. All passwords are cryptographically hashed and never stored in plain text. Communications between the app and servers use TLS/SSL encryption.\n\n'
-                                '2.3 Data Retention\nWe retain personal data as long as your account remains active or as strictly necessary to fulfill operational/legal obligations.',
+                            '2. Privacy Policy & Data Protection',
+                            '2.1 Data Collection & Purpose\nWe collect personal and health-related fitness data exclusively to provide personalized fitness tracking, coach discovery, and nutrition analytics (name, email, age, height, weight, BMI, meal logs, macros, booking records, and chat communications).\n\n'
+                                '2.2 Health & Biometric Data Consent\nTracking nutrition, calories, body weight, and workout metrics involves health-related data. By using these optional features, you provide your explicit consent for Sirvya to store and process this data to display your diary, calculate calorie targets, and track fitness progress.\n\n'
+                                '2.3 AI Meal Scanning & Microsoft Azure\nOptional meal photo analysis transmits stripped image data via secure TLS encryption to Microsoft Azure AI (GPT-4 mini) solely to estimate foods, portions, and macros. Photos are processed ephemerally in memory and are not retained in Sirvya server storage.\n\n'
+                                '2.4 Location & OpenStreetMap Nominatim\nWhen granted permission, device location is accessed to detect your city and display nearby coaches. Reverse geocoding is powered by OpenStreetMap Nominatim under OSM privacy safeguards. Your precise GPS coordinates are never broadcast to other users.\n\n'
+                                '2.5 International & GDPR User Rights\nRegardless of your country of residence, you have full control over your personal data:\n'
+                                '• Right to Access: Request a copy of your personal data.\n'
+                                '• Right to Rectification: Correct or update any inaccurate information.\n'
+                                '• Right to Erasure: Request total deletion of your account and linked records.\n'
+                                '• Right to Withdraw Consent: Discontinue health/location tracking at any time.\n'
+                                '• In-App Deletion: You can permanently delete your account directly inside the app settings under your profile.\n'
+                                'For any privacy inquiry, contact privacy@devunivers.com.',
                           ),
                           _buildLegalTextSection(
-                            '3. Health & Medical Disclaimer',
-                            '3.1 Not a Healthcare Provider\nSIRVYA IS NOT A MEDICAL PLATFORM, HEALTHCARE PROVIDER, OR DIAGNOSTIC TOOL. Platform features and independent Coach services are not substitutes for professional medical advice, diagnosis, or treatment.\n\n'
-                                '3.2 Assumption of Risk\nEngaging in physical exercise involves inherent risks. Users must consult a physician before starting any training or nutrition program booked through Sirvya. Users voluntarily assume all physical risks.\n\n'
-                                '3.3 Emergencies\nIn a medical emergency during a session, users must immediately contact local emergency medical services.',
+                            '3. Health, Medical & Allergen Disclaimers',
+                            '3.1 NOT A HEALTHCARE PROVIDER\nSIRVYA IS NOT A MEDICAL PLATFORM, MEDICAL DEVICE, OR HEALTHCARE PROVIDER. App content, AI estimates, and Coach services are for informational and lifestyle purposes only and must NEVER replace qualified medical diagnosis or professional healthcare advice.\n\n'
+                                '3.2 CRITICAL ALLERGY WARNING\nNEITHER SIRVYA, ITS AI IMAGE SCANNER, NOR ITS INGREDIENT DATABASES DETECT OR VERIFY ALLERGENS (such as peanuts, tree nuts, gluten, dairy, shellfish, soy, or eggs). NEVER rely on Sirvya or photo scans if you have food allergies, celiac disease, or medical dietary restrictions. Always check manufacturer labels.\n\n'
+                                '3.3 Assumption of Physical Risk\nPhysical exercise entails inherent risks of injury. Consult a licensed physician prior to starting any new training or nutrition regimen. You voluntarily assume all physical risks associated with workouts.\n\n'
+                                '3.4 Emergency Services\nIn the event of a medical emergency, immediately contact your local emergency response services (such as 15/190 in Morocco, 112 in the EU, or 911 in the US).',
                           ),
                           _buildLegalTextSection(
-                            '4. Coach & Gym Terms (Independent Contractor Agreement)',
-                            '4.1 Platform Role & Independent Status\nSirvya does not employ coaches, trainers, nutritionists, or gym staff. All Coaches and Gyms operate as independent businesses/contractors.\n\n'
-                                '4.2 Comprehensive Liability Waiver\nCoaches and Gyms are solely responsible for workout safety, nutrition advice, injury prevention, and qualification maintenance.\n\n'
-                                '4.3 Fraudulent Credentials & Misrepresentation\nUploading false certificates or lying about qualifications results in immediate account termination and potential legal action.',
+                            '4. Open Source & Third-Party Database Attribution',
+                            'Food and nutritional information in Sirvya is powered in part by the Open Food Facts global collaborative database (openfoodfacts.org), made available under the Open Database License (ODbL 1.0) and Database Contents License (DbCL). Open Food Facts is an independent open-data project and does not endorse Sirvya.',
                           ),
                           _buildLegalTextSection(
-                            '5. Community Guidelines',
-                            'Zero-tolerance policy for: Harassment & Abuse, Fake Accounts, Spam & Scams, and Offensive Content.',
+                            '5. Coach & Gym Terms (Independent Contractors)',
+                            '5.1 Independent Status\nSirvya is a neutral technology platform connecting users with fitness providers. Coaches and Gyms operate as independent businesses and are solely responsible for their sessions, guidance, and qualifications.\n\n'
+                                '5.2 Zero Tolerance for Fraudulent Credentials\nFalsification of professional certifications or misrepresentation results in immediate account expulsion and potential legal reporting.',
                           ),
                           _buildLegalTextSection(
-                            '6. Data Deletion Policy',
-                            '6.1 Requesting Deletion\nUsers may request account deletion directly through app settings or by writing to privacy@devunivers.com.\n\n'
-                                '6.2 Processing\nData is anonymized or erased within 30 days, subject to legal/regulatory exceptions.',
+                            '6. Community Guidelines & Intellectual Property',
+                            '6.1 Community Standards: Zero tolerance for harassment, hate speech, spam, offensive media, or unauthorized commercial solicitation.\n\n'
+                                '6.2 Intellectual Property: Sirvya brand assets, designs, code, and interfaces are the proprietary property of DevUnivers. Users retain ownership of their personal workout content.',
                           ),
                           _buildLegalTextSection(
-                            '7. Cookie Policy',
-                            'The Sirvya website utilizes Essential Cookies for authentication/navigation and Analytics Cookies for performance monitoring.',
-                          ),
-                          _buildLegalTextSection(
-                            '8. Copyright & Intellectual Property',
-                            '8.1 Platform IP: All branding, source code, UI/UX, and logos belong exclusively to DevUnivers.\n'
-                                '8.2 User & AI-Generated Content: Uploading copyrighted or fraudulent AI-generated content is strictly prohibited.',
-                          ),
-                          _buildLegalTextSection(
-                            '9. Booking & Cancellation Policy',
-                            '9.1 Commitment: Automated systems detect and block fake bookings.\n'
-                                '9.2 Cancellations: Enforced per the individual provider\'s rules.',
+                            '7. Booking & Cancellation Policy',
+                            '7.1 Commitment: Automated systems detect and prevent fraudulent bookings.\n'
+                                '7.2 Provider Policies: Individual session cancellations are governed by the specific Coach or Gym policy selected at booking.',
                           ),
                         ],
                       ),
