@@ -4,7 +4,7 @@ import '../services/meal_share_service.dart';
 import 'meal_share_card.dart';
 import 'meal_visuals.dart';
 
-/// Shows the meal sharing modal sheet with live interactive preview and story/post formats.
+/// Shows the meal sharing modal sheet with live interactive preview and Strava/card styles.
 Future<void> showMealShareModal(BuildContext context, ScannedMeal meal) {
   return showModalBottomSheet<void>(
     context: context,
@@ -30,6 +30,7 @@ class MealShareSheet extends StatefulWidget {
 class _MealShareSheetState extends State<MealShareSheet> {
   final GlobalKey _boundaryKey = GlobalKey();
   MealShareFormat _format = MealShareFormat.story;
+  MealShareStyle _style = MealShareStyle.stravaOverlay;
   bool _sharing = false;
 
   ScannedMeal get meal => widget.meal;
@@ -44,6 +45,7 @@ class _MealShareSheetState extends State<MealShareSheet> {
         boundaryKey: _boundaryKey,
         meal: meal,
         format: _format,
+        style: _style,
       );
     } finally {
       if (mounted) setState(() => _sharing = false);
@@ -95,7 +97,7 @@ class _MealShareSheetState extends State<MealShareSheet> {
                         ),
                         SizedBox(height: 2),
                         Text(
-                          'Post on Instagram, WhatsApp, or Facebook',
+                          'Strava-style photo overlay for Stories & Posts',
                           style: TextStyle(
                             color: mealMuted,
                             fontSize: 11.5,
@@ -123,9 +125,9 @@ class _MealShareSheetState extends State<MealShareSheet> {
                 ],
               ),
 
-              const SizedBox(height: 14),
+              const SizedBox(height: 12),
 
-              // 3. Format Switcher Tabs
+              // 3. Format Switcher Tabs (Story vs Post)
               Container(
                 padding: const EdgeInsets.all(4),
                 decoration: BoxDecoration(
@@ -139,7 +141,7 @@ class _MealShareSheetState extends State<MealShareSheet> {
                 child: Row(
                   children: [
                     Expanded(
-                      child: _buildFormatTab(
+                      child: _buildSelectorTab(
                         title: 'Story (9:16)',
                         icon: Icons.stay_current_portrait_rounded,
                         selected: isStory,
@@ -149,7 +151,7 @@ class _MealShareSheetState extends State<MealShareSheet> {
                     ),
                     const SizedBox(width: 4),
                     Expanded(
-                      child: _buildFormatTab(
+                      child: _buildSelectorTab(
                         title: 'Post Card',
                         icon: Icons.crop_square_rounded,
                         selected: !isStory,
@@ -161,9 +163,36 @@ class _MealShareSheetState extends State<MealShareSheet> {
                 ),
               ),
 
-              const SizedBox(height: 16),
+              const SizedBox(height: 8),
 
-              // 4. Live Interactive Preview with RepaintBoundary
+              // 4. Style Selector (Strava Photo Overlay vs Classic Card)
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildStyleChip(
+                      title: 'Strava Overlay',
+                      icon: Icons.layers_rounded,
+                      selected: _style == MealShareStyle.stravaOverlay,
+                      onTap: () => setState(
+                          () => _style = MealShareStyle.stravaOverlay),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _buildStyleChip(
+                      title: 'Card View',
+                      icon: Icons.dashboard_rounded,
+                      selected: _style == MealShareStyle.classicCard,
+                      onTap: () => setState(
+                          () => _style = MealShareStyle.classicCard),
+                    ),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 14),
+
+              // 5. Live Interactive Preview with RepaintBoundary
               Center(
                 child: Container(
                   constraints: BoxConstraints(
@@ -189,6 +218,7 @@ class _MealShareSheetState extends State<MealShareSheet> {
                         child: MealShareCard(
                           meal: meal,
                           format: _format,
+                          style: _style,
                         ),
                       ),
                     ),
@@ -196,9 +226,9 @@ class _MealShareSheetState extends State<MealShareSheet> {
                 ),
               ),
 
-              const SizedBox(height: 18),
+              const SizedBox(height: 16),
 
-              // 5. Primary Share Button
+              // 6. Primary Share Button
               SizedBox(
                 width: double.infinity,
                 height: 50,
@@ -245,7 +275,7 @@ class _MealShareSheetState extends State<MealShareSheet> {
 
               const SizedBox(height: 10),
 
-              // 6. Secondary Options Row
+              // 7. Secondary Options Row
               Row(
                 children: [
                   Expanded(
@@ -284,7 +314,7 @@ class _MealShareSheetState extends State<MealShareSheet> {
     );
   }
 
-  Widget _buildFormatTab({
+  Widget _buildSelectorTab({
     required String title,
     required IconData icon,
     required bool selected,
@@ -321,6 +351,58 @@ class _MealShareSheetState extends State<MealShareSheet> {
                 ),
               ),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStyleChip({
+    required String title,
+    required IconData icon,
+    required bool selected,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(20),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: selected
+              ? mealLime.withValues(alpha: 0.2)
+              : mealSurface.withValues(alpha: 0.6),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: selected
+                ? mealLime
+                : Colors.white.withValues(alpha: 0.1),
+            width: selected ? 1.2 : 0.8,
+          ),
+        ),
+        child: Center(
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  icon,
+                  size: 14,
+                  color: selected ? mealLime : mealMuted,
+                ),
+                const SizedBox(width: 5),
+                Text(
+                  title,
+                  style: TextStyle(
+                    color: selected ? mealLime : mealMuted,
+                    fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
+                    fontSize: 11.5,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

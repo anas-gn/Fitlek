@@ -52,6 +52,7 @@ class MealShareService {
     required GlobalKey boundaryKey,
     required ScannedMeal meal,
     required MealShareFormat format,
+    MealShareStyle style = MealShareStyle.stravaOverlay,
   }) async {
     final caption = generateMarketingCaption(meal);
 
@@ -61,7 +62,7 @@ class MealShareService {
       if (bytes != null && !kIsWeb) {
         final tempDir = await getTemporaryDirectory();
         final filename =
-            'sirvya_meal_${format.name}_${DateTime.now().millisecondsSinceEpoch}.png';
+            'sirvya_meal_${format.name}_${style.name}_${DateTime.now().millisecondsSinceEpoch}.png';
         final file = File('${tempDir.path}/$filename');
         await file.writeAsBytes(bytes, flush: true);
 
@@ -114,3 +115,4 @@ class MealShareService {
     }
   }
 }
+

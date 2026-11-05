@@ -61,7 +61,7 @@ void main() {
   });
 
   group('MealShareCard', () {
-    testWidgets('renders story format with branding and nutrition',
+    testWidgets('renders Strava photo overlay in story format',
         (tester) async {
       await tester.binding.setSurfaceSize(const Size(400, 900));
       addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -74,6 +74,7 @@ void main() {
               child: MealShareCard(
                 meal: meal,
                 format: MealShareFormat.story,
+                style: MealShareStyle.stravaOverlay,
               ),
             ),
           ),
@@ -92,7 +93,7 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('renders post format with branding and nutrition',
+    testWidgets('renders Strava photo overlay in post format',
         (tester) async {
       await tester.binding.setSurfaceSize(const Size(400, 900));
       addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -105,6 +106,34 @@ void main() {
               child: MealShareCard(
                 meal: meal,
                 format: MealShareFormat.post,
+                style: MealShareStyle.stravaOverlay,
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('AI MEAL SCAN'), findsOneWidget);
+      expect(find.text('Avocado Toast with Poached Eggs'), findsOneWidget);
+      expect(find.text('420'), findsOneWidget);
+      expect(find.text('GET SIRVYA'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('renders classic card style', (tester) async {
+      await tester.binding.setSurfaceSize(const Size(400, 900));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      final meal = testMeal();
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Center(
+              child: MealShareCard(
+                meal: meal,
+                format: MealShareFormat.story,
+                style: MealShareStyle.classicCard,
               ),
             ),
           ),
@@ -121,7 +150,7 @@ void main() {
   });
 
   group('MealShareSheet', () {
-    testWidgets('opens sheet and toggles formats', (tester) async {
+    testWidgets('opens sheet and toggles formats and styles', (tester) async {
       await tester.binding.setSurfaceSize(const Size(390, 850));
       addTearDown(() => tester.binding.setSurfaceSize(null));
 
@@ -145,11 +174,21 @@ void main() {
       expect(find.text('Share Your Meal'), findsOneWidget);
       expect(find.text('Story (9:16)'), findsOneWidget);
       expect(find.text('Post Card'), findsOneWidget);
+      expect(find.text('Strava Overlay'), findsOneWidget);
+      expect(find.text('Card View'), findsOneWidget);
       expect(find.text('Share Story / Post'), findsOneWidget);
       expect(find.text('Copy Caption & Link'), findsOneWidget);
 
-      // Switch to Post Card
+      // Switch to Card View style
+      await tester.tap(find.text('Card View'));
+      await tester.pumpAndSettle();
+
+      // Switch to Post Card format
       await tester.tap(find.text('Post Card'));
+      await tester.pumpAndSettle();
+
+      // Switch back to Strava Overlay
+      await tester.tap(find.text('Strava Overlay'));
       await tester.pumpAndSettle();
 
       expect(find.text('Share Story / Post'), findsOneWidget);
