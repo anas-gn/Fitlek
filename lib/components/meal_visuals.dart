@@ -7,6 +7,7 @@ import 'package:flutter/services.dart';
 import 'dart:convert';
 import '../services/meal_scan_service.dart';
 import '../constants/urls.dart';
+import 'meal_share_card.dart';
 import 'meal_share_modal.dart';
 
 const mealInk = Color(0xFF071E19);
@@ -385,61 +386,146 @@ class MealResultView extends StatelessWidget {
         ]),
       );
 
-  Widget _shareBanner(BuildContext context) => InkWell(
-        onTap: () => showMealShareModal(context, meal),
-        borderRadius: BorderRadius.circular(20),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [Color(0xFF0C2B24), Color(0xFF08221C)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
+  Widget _shareBanner(BuildContext context) => Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [Color(0xFF0F362B), Color(0xFF08221B)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(22),
+          border: Border.all(
+            color: mealLime.withValues(alpha: 0.32),
+            width: 1.2,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.35),
+              blurRadius: 14,
+              offset: const Offset(0, 5),
             ),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: mealLime.withValues(alpha: 0.28)),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.25),
-                blurRadius: 8,
-                offset: const Offset(0, 3),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            InkWell(
+              onTap: () => showMealShareModal(context, meal),
+              borderRadius: BorderRadius.circular(12),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(9),
+                    decoration: BoxDecoration(
+                      color: mealLime.withValues(alpha: 0.18),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(Icons.share_rounded,
+                        color: mealLime, size: 20),
+                  ),
+                  const SizedBox(width: 12),
+                  const Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Share to',
+                          style: TextStyle(
+                            color: mealCream,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: -0.2,
+                          ),
+                        ),
+                        SizedBox(height: 2),
+                        Text(
+                          'Post your meal & macros to Instagram, WhatsApp & more',
+                          style: TextStyle(color: mealMuted, fontSize: 11),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const Icon(Icons.arrow_forward_ios_rounded,
+                      color: mealLime, size: 14),
+                ],
               ),
-            ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: _socialChannelPill(
+                    context: context,
+                    label: 'Story',
+                    icon: Icons.camera_alt_outlined,
+                    color: const Color(0xFFE1306C),
+                    format: MealShareFormat.story,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _socialChannelPill(
+                    context: context,
+                    label: 'WhatsApp',
+                    icon: Icons.chat_bubble_outline_rounded,
+                    color: const Color(0xFF25D366),
+                    format: MealShareFormat.story,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _socialChannelPill(
+                    context: context,
+                    label: 'Post',
+                    icon: Icons.crop_square_rounded,
+                    color: const Color(0xFF1877F2),
+                    format: MealShareFormat.post,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      );
+
+  Widget _socialChannelPill({
+    required BuildContext context,
+    required String label,
+    required IconData icon,
+    required Color color,
+    required MealShareFormat format,
+  }) =>
+      InkWell(
+        onTap: () => showMealShareModal(context, meal, initialFormat: format),
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
+          decoration: BoxDecoration(
+            color: mealInk.withValues(alpha: 0.55),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: color.withValues(alpha: 0.45),
+              width: 0.9,
+            ),
           ),
           child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Container(
-                padding: const EdgeInsets.all(9),
-                decoration: BoxDecoration(
-                  color: mealLime.withValues(alpha: 0.16),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child:
-                    const Icon(Icons.share_rounded, color: mealLime, size: 20),
-              ),
-              const SizedBox(width: 14),
-              const Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Share meal card',
-                      style: TextStyle(
-                        color: mealCream,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    SizedBox(height: 2),
-                    Text(
-                      'Post to Instagram Stories, WhatsApp, or Facebook',
-                      style: TextStyle(color: mealMuted, fontSize: 11),
-                    ),
-                  ],
+              Icon(icon, size: 13, color: color),
+              const SizedBox(width: 5),
+              Flexible(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: mealCream,
+                    fontSize: 11.5,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ),
-              const Icon(Icons.arrow_forward_ios_rounded,
-                  color: mealLime, size: 14),
             ],
           ),
         ),

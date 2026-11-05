@@ -5,7 +5,11 @@ import 'meal_share_card.dart';
 import 'meal_visuals.dart';
 
 /// Shows the meal sharing modal sheet with live interactive preview and Strava/card styles.
-Future<void> showMealShareModal(BuildContext context, ScannedMeal meal) {
+Future<void> showMealShareModal(
+  BuildContext context,
+  ScannedMeal meal, {
+  MealShareFormat initialFormat = MealShareFormat.story,
+}) {
   return showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
@@ -14,14 +18,22 @@ Future<void> showMealShareModal(BuildContext context, ScannedMeal meal) {
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
     ),
-    builder: (context) => MealShareSheet(meal: meal),
+    builder: (context) => MealShareSheet(
+      meal: meal,
+      initialFormat: initialFormat,
+    ),
   );
 }
 
 class MealShareSheet extends StatefulWidget {
   final ScannedMeal meal;
+  final MealShareFormat initialFormat;
 
-  const MealShareSheet({super.key, required this.meal});
+  const MealShareSheet({
+    super.key,
+    required this.meal,
+    this.initialFormat = MealShareFormat.story,
+  });
 
   @override
   State<MealShareSheet> createState() => _MealShareSheetState();
@@ -29,11 +41,18 @@ class MealShareSheet extends StatefulWidget {
 
 class _MealShareSheetState extends State<MealShareSheet> {
   final GlobalKey _boundaryKey = GlobalKey();
-  MealShareFormat _format = MealShareFormat.story;
+  late MealShareFormat _format;
   MealShareStyle _style = MealShareStyle.stravaOverlay;
+  bool _showIngredients = false;
   bool _sharing = false;
 
   ScannedMeal get meal => widget.meal;
+
+  @override
+  void initState() {
+    super.initState();
+    _format = widget.initialFormat;
+  }
 
   Future<void> _handleShare() async {
     if (_sharing) return;
@@ -190,9 +209,64 @@ class _MealShareSheetState extends State<MealShareSheet> {
                 ],
               ),
 
+              const SizedBox(height: 8),
+
+              // 5. Toggle Ingredients Breakdown
+              InkWell(
+                onTap: () =>
+                    setState(() => _showIngredients = !_showIngredients),
+                borderRadius: BorderRadius.circular(14),
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                  decoration: BoxDecoration(
+                    color: _showIngredients
+                        ? mealLime.withValues(alpha: 0.14)
+                        : mealSurface.withValues(alpha: 0.5),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(
+                      color: _showIngredients
+                          ? mealLime.withValues(alpha: 0.5)
+                          : Colors.white.withValues(alpha: 0.08),
+                      width: 1,
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        _showIngredients
+                            ? Icons.check_circle_rounded
+                            : Icons.add_circle_outline_rounded,
+                        size: 15,
+                        color: _showIngredients ? mealLime : mealMuted,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Include Ingredients Breakdown',
+                          style: TextStyle(
+                            color: _showIngredients ? mealCream : mealMuted,
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                      Switch.adaptive(
+                        value: _showIngredients,
+                        activeColor: mealLime,
+                        materialTapTargetSize:
+                            MaterialTapTargetSize.shrinkWrap,
+                        onChanged: (val) =>
+                            setState(() => _showIngredients = val),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
               const SizedBox(height: 14),
 
-              // 5. Live Interactive Preview with RepaintBoundary
+              // 6. Live Interactive Preview with RepaintBoundary
               Center(
                 child: Container(
                   constraints: BoxConstraints(
@@ -219,6 +293,7 @@ class _MealShareSheetState extends State<MealShareSheet> {
                           meal: meal,
                           format: _format,
                           style: _style,
+                          showIngredients: _showIngredients,
                         ),
                       ),
                     ),
@@ -228,7 +303,7 @@ class _MealShareSheetState extends State<MealShareSheet> {
 
               const SizedBox(height: 16),
 
-              // 6. Primary Share Button
+              // 7. Primary Share Button
               SizedBox(
                 width: double.infinity,
                 height: 50,
@@ -275,7 +350,7 @@ class _MealShareSheetState extends State<MealShareSheet> {
 
               const SizedBox(height: 10),
 
-              // 7. Secondary Options Row
+              // 8. Secondary Options Row
               Row(
                 children: [
                   Expanded(

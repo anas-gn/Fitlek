@@ -61,7 +61,7 @@ void main() {
   });
 
   group('MealShareCard', () {
-    testWidgets('renders Strava photo overlay in story format',
+    testWidgets('renders clean photo overlay in story format without AI badge or outline',
         (tester) async {
       await tester.binding.setSurfaceSize(const Size(400, 900));
       addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -75,6 +75,7 @@ void main() {
                 meal: meal,
                 format: MealShareFormat.story,
                 style: MealShareStyle.stravaOverlay,
+                showIngredients: false,
               ),
             ),
           ),
@@ -82,18 +83,59 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('AI MEAL SCAN'), findsOneWidget);
+      // Brand logo present without outline/AI badge
+      expect(find.text('SIRVYA'), findsWidgets);
+      expect(find.text('AI MEAL SCAN'), findsNothing);
+      expect(find.text('GET SIRVYA'), findsNothing);
+
+      // Meal title
       expect(find.text('Avocado Toast with Poached Eggs'), findsOneWidget);
+
+      // 4-Column stats
+      expect(find.text('Calories'), findsOneWidget);
+      expect(find.text('Protein'), findsOneWidget);
+      expect(find.text('Carbs'), findsOneWidget);
+      expect(find.text('Fat'), findsOneWidget);
+
       expect(find.text('420'), findsOneWidget);
+      expect(find.text('kcal'), findsOneWidget);
       expect(find.text('20g'), findsOneWidget);
       expect(find.text('34g'), findsOneWidget);
       expect(find.text('24g'), findsOneWidget);
-      expect(find.text('GET SIRVYA'), findsOneWidget);
-      expect(find.text('BREAKFAST'), findsOneWidget);
+
+      // Ingredients hidden by default
+      expect(find.text('Poached Eggs (100g)'), findsNothing);
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('renders Strava photo overlay in post format',
+    testWidgets('renders ingredients breakdown when showIngredients is true',
+        (tester) async {
+      await tester.binding.setSurfaceSize(const Size(400, 900));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      final meal = testMeal();
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Center(
+              child: MealShareCard(
+                meal: meal,
+                format: MealShareFormat.story,
+                style: MealShareStyle.stravaOverlay,
+                showIngredients: true,
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Poached Eggs (100g)'), findsOneWidget);
+      expect(find.text('Avocado (80g)'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('renders photo overlay in post format',
         (tester) async {
       await tester.binding.setSurfaceSize(const Size(400, 900));
       addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -114,10 +156,11 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('AI MEAL SCAN'), findsOneWidget);
+      expect(find.text('SIRVYA'), findsWidgets);
+      expect(find.text('AI MEAL SCAN'), findsNothing);
       expect(find.text('Avocado Toast with Poached Eggs'), findsOneWidget);
       expect(find.text('420'), findsOneWidget);
-      expect(find.text('GET SIRVYA'), findsOneWidget);
+      expect(find.text('GET SIRVYA'), findsNothing);
       expect(tester.takeException(), isNull);
     });
 
@@ -141,16 +184,16 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('AI MEAL SCAN'), findsOneWidget);
+      expect(find.text('SIRVYA'), findsWidgets);
       expect(find.text('Avocado Toast with Poached Eggs'), findsOneWidget);
       expect(find.text('420'), findsOneWidget);
-      expect(find.text('GET SIRVYA'), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
   });
 
   group('MealShareSheet', () {
-    testWidgets('opens sheet and toggles formats and styles', (tester) async {
+    testWidgets('opens sheet and toggles formats, styles, and ingredients',
+        (tester) async {
       await tester.binding.setSurfaceSize(const Size(390, 850));
       addTearDown(() => tester.binding.setSurfaceSize(null));
 
@@ -176,8 +219,13 @@ void main() {
       expect(find.text('Post Card'), findsOneWidget);
       expect(find.text('Strava Overlay'), findsOneWidget);
       expect(find.text('Card View'), findsOneWidget);
+      expect(find.text('Include Ingredients Breakdown'), findsOneWidget);
       expect(find.text('Share Story / Post'), findsOneWidget);
       expect(find.text('Copy Caption & Link'), findsOneWidget);
+
+      // Toggle ingredients breakdown
+      await tester.tap(find.text('Include Ingredients Breakdown'));
+      await tester.pumpAndSettle();
 
       // Switch to Card View style
       await tester.tap(find.text('Card View'));
@@ -197,7 +245,7 @@ void main() {
   });
 
   group('MealResultView share banner & action', () {
-    testWidgets('shows share button in app bar and share banner in body',
+    testWidgets('shows share button in app bar and Share to card in body',
         (tester) async {
       await tester.binding.setSurfaceSize(const Size(390, 850));
       addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -217,10 +265,13 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byTooltip('Share meal'), findsOneWidget);
-      expect(find.text('Share meal card'), findsOneWidget);
+      expect(find.text('Share to'), findsOneWidget);
+      expect(find.text('Story'), findsOneWidget);
+      expect(find.text('WhatsApp'), findsOneWidget);
+      expect(find.text('Post'), findsOneWidget);
 
-      // Tap share banner
-      await tester.tap(find.text('Share meal card'));
+      // Tap share card
+      await tester.tap(find.text('Share to'));
       await tester.pumpAndSettle();
 
       expect(find.text('Share Your Meal'), findsOneWidget);
