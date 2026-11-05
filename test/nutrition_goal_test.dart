@@ -105,6 +105,95 @@ void main() {
             eligible: false),
         isNull);
   });
+
+  group('calculateRecommendedTargets', () {
+    test('calculates accurate deficit and macros for weight loss (male)', () {
+      final rec = calculateRecommendedTargets(
+        age: 25,
+        height: 180,
+        weight: 80,
+        sex: 'male',
+        activity: 'moderate',
+        goalType: 'lose',
+      );
+
+      expect(rec, isNotNull);
+      // BMR = 10*80 + 6.25*180 - 5*25 + 5 = 1805
+      // TDEE = 1805 * 1.55 = 2797.75
+      // Cal = 2797.75 - 400 = 2397.75 -> rounded to 2400
+      expect(rec!.calories, 2400);
+      expect(rec.diff, -400);
+      expect(rec.protein, 136); // 80 * 1.7 = 136g
+      expect(rec.fat, closeTo(75, 1)); // 2400 * 0.28 / 9 = 74.66 -> 75g
+      expect(rec.carbs, closeTo(296, 2)); // (2400 - 136*4 - 74.66*9)/4 = 296g
+    });
+
+    test('calculates maintenance targets for female', () {
+      final rec = calculateRecommendedTargets(
+        age: 30,
+        height: 165,
+        weight: 60,
+        sex: 'female',
+        activity: 'light',
+        goalType: 'maintain',
+      );
+
+      expect(rec, isNotNull);
+      // BMR = 10*60 + 6.25*165 - 5*30 - 161 = 1320.25
+      // TDEE = 1320.25 * 1.375 = 1815.34 -> 1825
+      expect(rec!.calories, 1825);
+      expect(rec.diff, 0);
+      expect(rec.protein, closeTo(91, 1)); // 60 * 1.4 = 84 -> min 20% = 91g
+      expect(rec.fat, closeTo(57, 1));
+      expect(rec.carbs, closeTo(237, 2));
+    });
+
+    test('supports high-protein macro split', () {
+      final rec = calculateRecommendedTargets(
+        age: 25,
+        height: 180,
+        weight: 80,
+        sex: 'male',
+        activity: 'moderate',
+        goalType: 'lose',
+        macroSplit: 'high_protein',
+      );
+
+      expect(rec, isNotNull);
+      expect(rec!.calories, 2400);
+      // 35% protein: 2400 * 0.35 / 4 = 210g
+      expect(rec.protein, 210);
+      // 40% carbs: 2400 * 0.40 / 4 = 240g
+      expect(rec.carbs, 240);
+      // 25% fat: 2400 * 0.25 / 9 = 67g
+      expect(rec.fat, 67);
+    });
+
+    test('returns null for incomplete or invalid biological parameters', () {
+      expect(
+        calculateRecommendedTargets(
+          age: null,
+          height: 180,
+          weight: 80,
+          sex: 'male',
+          activity: 'moderate',
+          goalType: 'lose',
+        ),
+        isNull,
+      );
+      expect(
+        calculateRecommendedTargets(
+          age: 12,
+          height: 180,
+          weight: 80,
+          sex: 'male',
+          activity: 'moderate',
+          goalType: 'lose',
+        ),
+        isNull,
+      );
+    });
+  });
   for (final dark in [true, false]) {
     testWidgets(
         'profile goal can be edited and reminders are opt-in, dark=$dark',

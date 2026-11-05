@@ -56,6 +56,131 @@ double? maintenanceCalories(
       : null;
 }
 
+class RecommendedTargets {
+  final double calories;
+  final double protein;
+  final double carbs;
+  final double fat;
+  final double tdee;
+  final double bmr;
+  final double diff;
+  final String note;
+
+  const RecommendedTargets({
+    required this.calories,
+    required this.protein,
+    required this.carbs,
+    required this.fat,
+    required this.tdee,
+    required this.bmr,
+    required this.diff,
+    required this.note,
+  });
+}
+
+RecommendedTargets? calculateRecommendedTargets({
+  required double? age,
+  required double? height,
+  required double? weight,
+  required String? sex,
+  required String activity,
+  required String goalType,
+  String macroSplit = 'balanced',
+}) {
+  if (age == null ||
+      age < 15 ||
+      age > 95 ||
+      height == null ||
+      height < 100 ||
+      height > 260 ||
+      weight == null ||
+      weight < 30 ||
+      weight > 350) {
+    return null;
+  }
+
+  final isMale = sex?.toLowerCase() == 'male';
+  final sexOffset = isMale ? 5.0 : -161.0;
+  final bmr = (10.0 * weight) + (6.25 * height) - (5.0 * age) + sexOffset;
+
+  final activityMultiplier = const {
+    'low': 1.2,
+    'light': 1.375,
+    'moderate': 1.55,
+    'high': 1.725,
+  }[activity] ?? 1.375;
+
+  final tdee = bmr * activityMultiplier;
+
+  double targetCalories = tdee;
+  double diff = 0.0;
+  String note;
+
+  if (goalType == 'lose') {
+    diff = -400.0;
+    targetCalories = tdee - 400.0;
+    final floor = isMale ? 1500.0 : 1200.0;
+    if (targetCalories < floor) {
+      targetCalories = floor;
+      diff = targetCalories - tdee;
+    }
+    note = 'Healthy deficit (~400 kcal) for steady, sustainable fat loss (~0.4 kg/week).';
+  } else if (goalType == 'gain') {
+    diff = 350.0;
+    targetCalories = tdee + 350.0;
+    note = 'Controlled surplus (+350 kcal) to support clean muscle hypertrophy with minimal fat gain.';
+  } else {
+    diff = 0.0;
+    targetCalories = tdee;
+    note = 'Maintenance energy to stabilize body weight and build consistent healthy habits.';
+  }
+
+  targetCalories = (targetCalories / 25).round() * 25.0;
+
+  double pGrams;
+  double fGrams;
+  double cGrams;
+
+  switch (macroSplit) {
+    case 'high_protein':
+      pGrams = (targetCalories * 0.35) / 4.0;
+      fGrams = (targetCalories * 0.25) / 9.0;
+      cGrams = (targetCalories * 0.40) / 4.0;
+      break;
+
+    case 'low_carb':
+      pGrams = (targetCalories * 0.30) / 4.0;
+      fGrams = (targetCalories * 0.50) / 9.0;
+      cGrams = (targetCalories * 0.20) / 4.0;
+      break;
+
+    case 'balanced':
+    default:
+      final pPerKg = (goalType == 'lose' || goalType == 'gain') ? 1.7 : 1.4;
+      pGrams = weight * pPerKg;
+      final minP = (targetCalories * 0.20) / 4.0;
+      final maxP = (targetCalories * 0.32) / 4.0;
+      if (pGrams < minP) pGrams = minP;
+      if (pGrams > maxP) pGrams = maxP;
+
+      fGrams = (targetCalories * 0.28) / 9.0;
+      final rem = targetCalories - (pGrams * 4.0) - (fGrams * 9.0);
+      cGrams = (rem > 0 ? rem : 0) / 4.0;
+      break;
+  }
+
+  return RecommendedTargets(
+    calories: targetCalories,
+    protein: pGrams.roundToDouble(),
+    carbs: cGrams.roundToDouble(),
+    fat: fGrams.roundToDouble(),
+    tdee: (tdee / 25).round() * 25.0,
+    bmr: bmr.roundToDouble(),
+    diff: diff,
+    note: note,
+  );
+}
+
 class NutritionGoalScreen extends StatefulWidget {
   final Map<String, dynamic>? initial;
   final NutritionDiaryService? service;
@@ -71,6 +196,7 @@ class _NutritionGoalScreenState extends State<NutritionGoalScreen> {
   late final Map<String, TextEditingController> _fields;
   late String _type, _activity, _zone, _diet, _status;
   String? _sex;
+  String _macroSplit = 'balanced';
   bool _eligible = false,
       _enabled = false,
       _calorieAlerts = true,
@@ -106,6 +232,7 @@ class _NutritionGoalScreenState extends State<NutritionGoalScreen> {
     _diet = p['diet'] ?? 'balanced';
     _status = p['status'] ?? 'active';
     _sex = p['formulaSex'];
+    _macroSplit = p['macroSplit'] ?? 'balanced';
     _eligible = p['estimateEligible'] == true;
     _enabled = reminders['enabled'] == true;
     _calorieAlerts = reminders['calorieAlerts'] != false;
@@ -146,6 +273,7 @@ class _NutritionGoalScreenState extends State<NutritionGoalScreen> {
         'targetWeight': _weightGoal ? _value('targetWeight') : null,
         'activity': _activity,
         'formulaSex': _sex,
+        'macroSplit': _macroSplit,
         'estimateEligible': _eligible,
         'diet': _diet,
         'timeZone': _zone,
@@ -275,6 +403,294 @@ class _NutritionGoalScreenState extends State<NutritionGoalScreen> {
               : Text(subtitle, style: const TextStyle(fontSize: 11)),
           value: value,
           onChanged: _saving ? null : change);
+
+  Widget _macroStatBadge(
+    BuildContext context,
+    String label,
+    String value,
+    String unit,
+    String caption, {
+    required Color color,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withValues(alpha: 0.25)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            label,
+            style: TextStyle(
+                fontSize: 10, color: color, fontWeight: FontWeight.w700),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          const SizedBox(height: 2),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.baseline,
+            textBaseline: TextBaseline.alphabetic,
+            children: [
+              Text(value,
+                  style: const TextStyle(
+                      fontSize: 15, fontWeight: FontWeight.w800)),
+              const SizedBox(width: 3),
+              Flexible(
+                child: Text(
+                  unit,
+                  style: TextStyle(
+                      fontSize: 9,
+                      color: color.withValues(alpha: 0.85),
+                      fontWeight: FontWeight.w600),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 1),
+          Text(
+            caption,
+            style: TextStyle(fontSize: 9, color: context.fitlek.textMuted),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSmartTargetsCard(
+      BuildContext context, RecommendedTargets? rec) {
+    final primary = Theme.of(context).colorScheme.primary;
+
+    if (rec == null) {
+      return Container(
+        margin: const EdgeInsets.only(bottom: 16),
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: context.fitlek.card,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: context.fitlek.border),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.auto_awesome_rounded, color: primary, size: 22),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                'Complete your age, height, weight & biological sex above to see personalized daily calorie and macro recommendations.',
+                style: TextStyle(
+                  color: context.fitlek.textMuted,
+                  fontSize: 12,
+                  height: 1.4,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final styleOptions = [
+      ('balanced', '🥑 Balanced'),
+      ('high_protein', '🍗 High Protein'),
+      ('low_carb', '🥗 Low Carb'),
+    ];
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 20),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: context.fitlek.card,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: primary.withValues(alpha: 0.35),
+          width: 1.5,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: primary.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(Icons.auto_awesome_rounded,
+                    color: primary, size: 20),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Recommended Daily Targets',
+                      style:
+                          TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
+                    ),
+                    Text(
+                      rec.note,
+                      style: TextStyle(
+                        color: context.fitlek.textMuted,
+                        fontSize: 11,
+                        height: 1.3,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+
+          // Macro Grid
+          Row(
+            children: [
+              Expanded(
+                child: _macroStatBadge(
+                  context,
+                  'Calories',
+                  '${rec.calories.round()}',
+                  'kcal/day',
+                  rec.diff < 0
+                      ? '${rec.diff.round()} deficit'
+                      : rec.diff > 0
+                          ? '+${rec.diff.round()} surplus'
+                          : 'Maintenance',
+                  color: primary,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _macroStatBadge(
+                  context,
+                  'Protein',
+                  '${rec.protein.round()}g',
+                  '${((rec.protein * 4 / rec.calories) * 100).round()}%',
+                  'Muscle recovery',
+                  color: Colors.blueAccent,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: _macroStatBadge(
+                  context,
+                  'Carbs',
+                  '${rec.carbs.round()}g',
+                  '${((rec.carbs * 4 / rec.calories) * 100).round()}%',
+                  'Daily energy',
+                  color: Colors.amberAccent,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: _macroStatBadge(
+                  context,
+                  'Fat',
+                  '${rec.fat.round()}g',
+                  '${((rec.fat * 9 / rec.calories) * 100).round()}%',
+                  'Hormone health',
+                  color: Colors.orangeAccent,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+
+          // Dietary Style selector
+          Wrap(
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: 6,
+            runSpacing: 4,
+            children: [
+              Text(
+                'Dietary Style: ',
+                style: TextStyle(
+                  color: context.fitlek.textMuted,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              ...styleOptions.map((opt) {
+                final isSelected = _macroSplit == opt.$1;
+                return ChoiceChip(
+                  label: Text(
+                    opt.$2,
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight:
+                          isSelected ? FontWeight.w700 : FontWeight.w500,
+                      color: isSelected ? Colors.black87 : null,
+                    ),
+                  ),
+                  selected: isSelected,
+                  selectedColor: primary,
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  onSelected: (val) {
+                    if (val) setState(() => _macroSplit = opt.$1);
+                  },
+                );
+              }),
+            ],
+          ),
+          const SizedBox(height: 14),
+
+          // 1-Tap Apply Button
+          SizedBox(
+            width: double.infinity,
+            height: 44,
+            child: FilledButton.icon(
+              key: const ValueKey('apply-recommended-targets-btn'),
+              style: FilledButton.styleFrom(
+                backgroundColor: primary,
+                foregroundColor: Colors.black87,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              icon: const Icon(Icons.bolt_rounded, size: 20),
+              label: const Text(
+                'Apply Recommended Targets',
+                style: TextStyle(fontWeight: FontWeight.w800, fontSize: 13),
+              ),
+              onPressed: () {
+                setState(() {
+                  _fields['calories']!.text =
+                      rec.calories.round().toString();
+                  _fields['protein']!.text = rec.protein.round().toString();
+                  _fields['carbs']!.text = rec.carbs.round().toString();
+                  _fields['fat']!.text = rec.fat.round().toString();
+                });
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    backgroundColor: context.fitlek.card,
+                    content: Text(
+                      'Applied ${rec.calories.round()} kcal · ${rec.protein.round()}g P · ${rec.carbs.round()}g C · ${rec.fat.round()}g F!',
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                    duration: const Duration(seconds: 2),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
   @override
   Widget build(BuildContext context) {
     final estimate = maintenanceCalories(
@@ -287,6 +703,17 @@ class _NutritionGoalScreenState extends State<NutritionGoalScreen> {
         sex: _sex,
         activity: _activity,
         eligible: _eligible);
+    final recommended = calculateRecommendedTargets(
+        age: _value('age'),
+        height: _value('height'),
+        weight: (_restart || widget.signup)
+            ? _value('currentWeight')
+            : (widget.initial?['latestWeight'] as num?)?.toDouble() ??
+                _value('currentWeight'),
+        sex: _sex,
+        activity: _activity,
+        goalType: _type,
+        macroSplit: _macroSplit);
     return Scaffold(
         appBar: AppBar(
             title:
@@ -317,7 +744,7 @@ class _NutritionGoalScreenState extends State<NutritionGoalScreen> {
                                 isExpanded: true,
                                 initialValue: _type,
                                 decoration:
-                                    InputDecoration(labelText: 'My goal'),
+                                    const InputDecoration(labelText: 'My goal'),
                                 items: [
                                   for (final entry
                                       in nutritionGoalLabels.entries)
@@ -349,10 +776,28 @@ class _NutritionGoalScreenState extends State<NutritionGoalScreen> {
                             if (_weightGoal)
                               _number('targetWeight', 'Target weight (kg)',
                                   required: true, min: 25, max: 500),
+                            if (!_minor)
+                              DropdownButtonFormField<String>(
+                                  isExpanded: true,
+                                  initialValue: _sex,
+                                  decoration: const InputDecoration(
+                                      labelText:
+                                          'Biological sex (for metabolic formula)'),
+                                  items: const [
+                                    DropdownMenuItem(
+                                        value: 'male', child: Text('Male')),
+                                    DropdownMenuItem(
+                                        value: 'female', child: Text('Female'))
+                                  ],
+                                  onChanged: _saving
+                                      ? null
+                                      : (value) =>
+                                          setState(() => _sex = value)),
+                            const SizedBox(height: 16),
                             DropdownButtonFormField<String>(
                                 isExpanded: true,
                                 initialValue: _activity,
-                                decoration: InputDecoration(
+                                decoration: const InputDecoration(
                                     labelText: 'Usual activity'),
                                 items: [
                                   for (final entry in {
@@ -375,7 +820,7 @@ class _NutritionGoalScreenState extends State<NutritionGoalScreen> {
                             DropdownButtonFormField<String>(
                                 isExpanded: true,
                                 initialValue: _diet,
-                                decoration: InputDecoration(
+                                decoration: const InputDecoration(
                                     labelText: 'Food preference'),
                                 items: [
                                   for (final entry in {
@@ -398,8 +843,10 @@ class _NutritionGoalScreenState extends State<NutritionGoalScreen> {
                       if (!_minor)
                         _section(
                             'Daily targets',
-                            'Optional: enter targets from your own plan or a qualified nutrition professional. Blank fields track without targets.',
+                            'Set your daily calorie and macronutrient targets. You can apply our smart recommendations or customize your own numbers below.',
                             [
+                              _buildSmartTargetsCard(context, recommended),
+                              const SizedBox(height: 8),
                               for (final key in nutritionKeys)
                                 _number(key,
                                     '${mealTypeLabel(key)} (${key == 'calories' ? 'kcal' : 'g'})',
@@ -418,7 +865,7 @@ class _NutritionGoalScreenState extends State<NutritionGoalScreen> {
                                     DropdownButtonFormField<String>(
                                         isExpanded: true,
                                         initialValue: _sex,
-                                        decoration: InputDecoration(
+                                        decoration: const InputDecoration(
                                             labelText: 'Sex used for the estimate'),
                                         items: const [
                                           DropdownMenuItem(
@@ -512,7 +959,7 @@ class _NutritionGoalScreenState extends State<NutritionGoalScreen> {
                               DropdownButtonFormField<String>(
                                   isExpanded: true,
                                   initialValue: _zone,
-                                  decoration: InputDecoration(
+                                  decoration: const InputDecoration(
                                       labelText: 'Reminder time zone'),
                                   items: [
                                     for (final zone in {..._zones, _zone})

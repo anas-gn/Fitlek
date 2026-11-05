@@ -85,7 +85,8 @@ class _RegisterScreenState extends State<RegisterScreen>
                       'height': double.tryParse(
                           _heightCtrl.text.replaceAll(',', '.')),
                       'currentWeight':
-                          double.tryParse(_weightCtrl.text.replaceAll(',', '.'))
+                          double.tryParse(_weightCtrl.text.replaceAll(',', '.')),
+                      'formulaSex': _gender?.toLowerCase(),
                     })));
     if (value != null && mounted) {
       setState(() {
