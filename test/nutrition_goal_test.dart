@@ -258,6 +258,59 @@ void main() {
     expect(tester.takeException(), isNull);
   });
   testWidgets(
+      'skipping goal setup during signup returns skipped: true via app bar action',
+      (tester) async {
+    Map<String, dynamic>? result;
+    await tester.pumpWidget(MaterialApp(
+        theme: AppTheme.dark,
+        home: Builder(
+            builder: (context) => Scaffold(
+                body: ElevatedButton(
+                    onPressed: () async {
+                      result = await Navigator.push<Map<String, dynamic>>(
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) =>
+                                  const NutritionGoalScreen(signup: true)));
+                    },
+                    child: const Text('Open goal'))))));
+    await tester.tap(find.text('Open goal'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('skip-goal-signup-btn')), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('skip-goal-signup-btn')));
+    await tester.pumpAndSettle();
+    expect(result, isNotNull);
+    expect(result?['skipped'], isTrue);
+    expect(tester.takeException(), isNull);
+  });
+  testWidgets(
+      'skipping goal setup during signup returns skipped: true via bottom button',
+      (tester) async {
+    Map<String, dynamic>? result;
+    await tester.pumpWidget(MaterialApp(
+        theme: AppTheme.dark,
+        home: Builder(
+            builder: (context) => Scaffold(
+                body: ElevatedButton(
+                    onPressed: () async {
+                      result = await Navigator.push<Map<String, dynamic>>(
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) =>
+                                  const NutritionGoalScreen(signup: true)));
+                    },
+                    child: const Text('Open goal'))))));
+    await tester.tap(find.text('Open goal'));
+    await tester.pumpAndSettle();
+    final bottomSkip = find.byKey(const ValueKey('skip-goal-bottom-btn'));
+    await tester.ensureVisible(bottomSkip);
+    await tester.tap(bottomSkip);
+    await tester.pumpAndSettle();
+    expect(result, isNotNull);
+    expect(result?['skipped'], isTrue);
+    expect(tester.takeException(), isNull);
+  });
+  testWidgets(
       'off-screen required fields still prevent an incomplete weight goal from saving',
       (tester) async {
     final service = GoalService();

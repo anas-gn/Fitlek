@@ -66,6 +66,7 @@ class _RegisterScreenState extends State<RegisterScreen>
   final _weightCtrl = TextEditingController();
   Map<String, dynamic>? _location;
   Map<String, dynamic>? _nutritionPlan;
+  bool _skippedNutritionGoal = false;
   Map<String, dynamic>? get _signupNutritionPlan => _nutritionPlan == null
       ? null
       : {
@@ -89,7 +90,15 @@ class _RegisterScreenState extends State<RegisterScreen>
                       'formulaSex': _gender?.toLowerCase(),
                     })));
     if (value != null && mounted) {
+      if (value['skipped'] == true) {
+        setState(() {
+          _skippedNutritionGoal = true;
+          _nutritionPlan = null;
+        });
+        return;
+      }
       setState(() {
+        _skippedNutritionGoal = false;
         _nutritionPlan = value;
         if (value['height'] != null) _heightCtrl.text = '${value['height']}';
         if (value['currentWeight'] != null) {
@@ -101,10 +110,6 @@ class _RegisterScreenState extends State<RegisterScreen>
 
   Future<bool> _ensureSignupLocation() async {
     if (_role != 'client' && _role != 'coach') return true;
-    if (_role == 'client' && _nutritionPlan == null) {
-      await _chooseNutritionGoal();
-      if (!mounted || _nutritionPlan == null) return false;
-    }
     if (!mounted) return false;
     if (_role == 'client' && _selectedInterests.isEmpty) {
       final continued = await showDialog<bool>(
@@ -297,9 +302,6 @@ class _RegisterScreenState extends State<RegisterScreen>
             return 'Enter a valid weight in kg';
           }
         }
-        if (_role == 'client' && _nutritionPlan == null) {
-          return 'Choose your nutrition goal, or select balanced habits to start simply';
-        }
         if (_role == 'client' && _selectedInterests.isEmpty) {
           return 'Choose at least one interest (up to 5)';
         }
@@ -452,7 +454,8 @@ class _RegisterScreenState extends State<RegisterScreen>
         'password': _passwordCtrl.text,
         'gender': _gender,
         'role': _role,
-        if (_role == 'client') 'nutritionPlan': _signupNutritionPlan,
+        if (_role == 'client' && _signupNutritionPlan != null)
+          'nutritionPlan': _signupNutritionPlan,
         'height': double.tryParse(_heightCtrl.text.trim().replaceAll(',', '.')),
         if (_role == 'client')
           'weight':
@@ -1443,13 +1446,39 @@ class _RegisterScreenState extends State<RegisterScreen>
         const SizedBox(height: 14),
         Card(
             child: ListTile(
-                leading: const Icon(Icons.flag_outlined),
-                title: const Text('Your nutrition goal'),
-                subtitle: Text(_nutritionPlan == null
-                    ? 'Choose a goal to start your journey'
-                    : nutritionGoalLabels[_nutritionPlan!['goalType']] ??
-                        'Personal goal'),
-                trailing: const Icon(Icons.chevron_right),
+                leading: Icon(
+                  _nutritionPlan != null
+                      ? Icons.flag_rounded
+                      : Icons.flag_outlined,
+                  color: _nutritionPlan != null
+                      ? Theme.of(context).colorScheme.primary
+                      : null,
+                ),
+                title: const Text('Your nutrition goal (optional)'),
+                subtitle: Text(_nutritionPlan != null
+                    ? (nutritionGoalLabels[_nutritionPlan!['goalType']] ??
+                        'Personal goal')
+                    : (_skippedNutritionGoal
+                        ? 'Skipped · You can set this up later in your profile'
+                        : 'Optional · Tap to configure or skip for now')),
+                trailing: _nutritionPlan != null
+                    ? IconButton(
+                        icon: const Icon(Icons.close_rounded, size: 20),
+                        tooltip: 'Clear goal',
+                        onPressed: () => setState(() {
+                          _nutritionPlan = null;
+                          _skippedNutritionGoal = true;
+                        }),
+                      )
+                    : (_skippedNutritionGoal
+                        ? const Icon(Icons.chevron_right)
+                        : TextButton(
+                            onPressed: () => setState(() {
+                              _skippedNutritionGoal = true;
+                            }),
+                            child: const Text('Skip',
+                                style: TextStyle(fontWeight: FontWeight.w600)),
+                          )),
                 onTap: _chooseNutritionGoal)),
       ],
       if (_role == 'client' || _role == 'coach') ...[

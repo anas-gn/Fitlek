@@ -717,7 +717,17 @@ class _NutritionGoalScreenState extends State<NutritionGoalScreen> {
     return Scaffold(
         appBar: AppBar(
             title:
-                Text(widget.signup ? 'Your first goal' : 'My nutrition goal')),
+                Text(widget.signup ? 'Your first goal' : 'My nutrition goal'),
+            actions: [
+              if (widget.signup)
+                TextButton(
+                  key: const ValueKey('skip-goal-signup-btn'),
+                  onPressed: () =>
+                      Navigator.pop(context, const {'skipped': true}),
+                  child: const Text('Skip for now',
+                      style: TextStyle(fontWeight: FontWeight.w600)),
+                ),
+            ]),
         body: Form(
             key: _form,
             child: SingleChildScrollView(
@@ -1042,6 +1052,20 @@ class _NutritionGoalScreenState extends State<NutritionGoalScreen> {
                                   : widget.signup
                                       ? 'Use this goal'
                                       : 'Save my goal'))),
+                      if (widget.signup) ...[
+                        const SizedBox(height: 10),
+                        Center(
+                          child: TextButton(
+                            key: const ValueKey('skip-goal-bottom-btn'),
+                            onPressed: () =>
+                                Navigator.pop(context, const {'skipped': true}),
+                            child: const Text(
+                              "I'll set this up later in my profile",
+                              style: TextStyle(fontSize: 13),
+                            ),
+                          ),
+                        ),
+                      ],
                     ]))));
   }
 }
