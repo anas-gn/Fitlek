@@ -2650,7 +2650,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String clientSessionsEditReviewRating(int rating) {
-    return 'Rating: $rating/5 ';
+    return 'Edit review: $rating/5 ';
   }
 
   @override
