@@ -1,3 +1,4 @@
+import 'package:fitlek1/l10n/app_localizations.dart';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -46,6 +47,10 @@ void main() {
     });
     addTearDown(client.close);
     await tester.pumpWidget(MaterialApp(
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      locale: const Locale('en'),
+      
         theme: AppTheme.dark,
         home: SessionsScreen(clientID: 8, token: 'test', httpClient: client)));
     await tester.pumpAndSettle();
@@ -62,8 +67,8 @@ void main() {
     await tester.ensureVisible(find.byIcon(Icons.star_outline_rounded).last);
     await tester.tap(find.byIcon(Icons.star_outline_rounded).last);
     await tester.enterText(find.byType(TextField), 'Even better this time');
-    await tester.ensureVisible(find.text('UPDATE MY REVIEW'));
-    await tester.tap(find.text('UPDATE MY REVIEW'));
+    await tester.ensureVisible(find.text('Update Review'));
+    await tester.tap(find.text('Update Review'));
     await tester.pumpAndSettle();
     expect(writes, 1);
     expect(rating, 5);

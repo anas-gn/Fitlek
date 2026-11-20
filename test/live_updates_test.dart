@@ -1,3 +1,4 @@
+import 'package:fitlek1/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -39,7 +40,11 @@ void main() {
       (tester) async {
     SharedPreferences.setMockInitialValues({});
     int calls = 0;
-    await tester.pumpWidget(MaterialApp(home: LiveProbe(() => calls++)));
+    await tester.pumpWidget(MaterialApp(
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      locale: const Locale('en'),
+      home: LiveProbe(() => calls++)));
     SocketService().invalidate('packages');
     await tester.pump(const Duration(milliseconds: 300));
     expect(calls, 0);

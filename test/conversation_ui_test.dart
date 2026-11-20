@@ -1,3 +1,4 @@
+import 'package:fitlek1/l10n/app_localizations.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
@@ -62,6 +63,10 @@ void main() {
       var sends = 0, plays = 0, speeds = 0;
       double? seek;
       await tester.pumpWidget(MaterialApp(
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      locale: const Locale('en'),
+      
           theme: dark ? AppTheme.dark : AppTheme.light,
           home: Scaffold(
               appBar: const ConversationHeader(
@@ -116,6 +121,10 @@ void main() {
   testWidgets('untapped audio does not allocate native players',
       (tester) async {
     await tester.pumpWidget(MaterialApp(
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      locale: const Locale('en'),
+      
         home: Scaffold(
             body: ListView(children: [
       for (var i = 0; i < 12; i++)
@@ -136,6 +145,10 @@ void main() {
     final store = WaitingMedia();
     addTearDown(store.mediaChanges.close);
     await tester.pumpWidget(MaterialApp(
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      locale: const Locale('en'),
+      
         home: Scaffold(
             body: SizedBox(
                 width: 280,
@@ -179,6 +192,10 @@ void main() {
           (r) async => http.Response(jsonEncode(await history(r.url)), 200));
       addTearDown(client.close);
       await tester.pumpWidget(MaterialApp(
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      locale: const Locale('en'),
+      
           theme: AppTheme.dark,
           home: coach
               ? CoachChat(
@@ -241,6 +258,10 @@ void main() {
         r.method == 'POST' ? await sent.future : http.Response('[]', 200));
     addTearDown(client.close);
     await tester.pumpWidget(MaterialApp(
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      locale: const Locale('en'),
+      
         theme: AppTheme.dark,
         home: ClientConversationScreen(
             conversationID: 1,

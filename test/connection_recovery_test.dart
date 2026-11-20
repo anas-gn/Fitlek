@@ -1,3 +1,4 @@
+import 'package:fitlek1/l10n/app_localizations.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -41,6 +42,10 @@ void main() {
     addTearDown(client.close);
     final navigator = GlobalKey<NavigatorState>();
     await tester.pumpWidget(MaterialApp(
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      locale: const Locale('en'),
+      
       theme: AppTheme.dark,
       navigatorKey: navigator,
       builder: (_, child) =>
@@ -74,6 +79,10 @@ void main() {
     });
     addTearDown(client.close);
     await tester.pumpWidget(MaterialApp(
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      locale: const Locale('en'),
+      
       theme: AppTheme.dark,
       home: SessionsScreen(clientID: 8, token: 'test', httpClient: client),
     ));
