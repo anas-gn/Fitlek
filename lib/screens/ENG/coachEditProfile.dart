@@ -1,3 +1,4 @@
+import 'package:fitlek1/l10n/app_localizations.dart';
 import '../../components/app_dialog.dart';
 import '../../services/media_picker_service.dart';
 import 'userLocationSettings.dart';
@@ -215,18 +216,33 @@ class _CoachEditProfileState extends State<CoachEditProfile> {
         mimeType: mime,
       );
       if (up['ok'] != true) {
-        _showSnack(up['message']?.toString() ?? 'Upload failed', isError: true);
+        if (mounted) {
+          _showSnack(
+              up['message']?.toString() ??
+                  AppLocalizations.of(context).coachEditProfileUploadFailed,
+              isError: true);
+        }
         return;
       }
       final newUrl = up['url']?.toString();
       if (newUrl == null || newUrl.isEmpty) {
-        _showSnack('Upload failed', isError: true);
+        if (mounted) {
+          _showSnack(AppLocalizations.of(context).coachEditProfileUploadFailed,
+              isError: true);
+        }
         return;
       }
       setState(() => _avatarUrl = newUrl);
-      _showSnack('Photo ready. Save to confirm.');
+      if (mounted) {
+        _showSnack(AppLocalizations.of(context).coachEditProfilePhotoReady);
+      }
     } catch (e) {
-      _showSnack('Error: $e', isError: true);
+      if (mounted) {
+        _showSnack(
+            AppLocalizations.of(context)
+                .coachEditProfileErrorWithDetail(e.toString()),
+            isError: true);
+      }
     } finally {
       if (mounted) setState(() => _uploadingAvatar = false);
     }
@@ -236,7 +252,9 @@ class _CoachEditProfileState extends State<CoachEditProfile> {
     if (_uploadingGallery || _saving) return;
     final int allowedImages = 5 - _galleryImages.length;
     if (allowedImages <= 0) {
-      _showSnack('Maximum 5 images allowed in the gallery', isError: true);
+      _showSnack(
+          AppLocalizations.of(context).coachEditProfileGalleryMaxImages,
+          isError: true);
       return;
     }
 
@@ -249,8 +267,9 @@ class _CoachEditProfileState extends State<CoachEditProfile> {
     if (files.isEmpty) return;
 
     final filesToUpload = files.take(allowedImages).toList();
-    if (files.length > allowedImages) {
-      _showSnack('Only $allowedImages images will be added to respect the limit.');
+    if (files.length > allowedImages && mounted) {
+      _showSnack(AppLocalizations.of(context)
+          .coachEditProfileGalleryLimitWarning(allowedImages));
     }
 
     setState(() => _uploadingGallery = true);
@@ -275,16 +294,27 @@ class _CoachEditProfileState extends State<CoachEditProfile> {
         );
         if (up['ok'] != true) {
           anyError = true;
-          _showSnack(up['message']?.toString() ?? 'Upload failed for ${file.name}', isError: true);
+          if (mounted) {
+            _showSnack(
+                up['message']?.toString() ??
+                    AppLocalizations.of(context)
+                        .coachEditProfileUploadFailedForFile(file.name),
+                isError: true);
+          }
         }
       }
       
-      if (!anyError) {
-        _showSnack('Images added to gallery!');
+      if (!anyError && mounted) {
+        _showSnack(AppLocalizations.of(context).coachEditProfileGalleryAdded);
       }
       await _loadGallery(); // Reload the gallery to get the new images
     } catch (e) {
-      _showSnack('Error: $e', isError: true);
+      if (mounted) {
+        _showSnack(
+            AppLocalizations.of(context)
+                .coachEditProfileErrorWithDetail(e.toString()),
+            isError: true);
+      }
     } finally {
       if (mounted) setState(() => _uploadingGallery = false);
     }
@@ -298,12 +328,25 @@ class _CoachEditProfileState extends State<CoachEditProfile> {
         setState(() {
           _galleryImages.removeWhere((img) => img['id'] == imageId);
         });
-        _showSnack('Image deleted');
+        if (mounted) {
+          _showSnack(AppLocalizations.of(context).coachEditProfileImageDeleted);
+        }
       } else {
-        _showSnack(res['message']?.toString() ?? 'Error deleting image', isError: true);
+        if (mounted) {
+          _showSnack(
+              res['message']?.toString() ??
+                  AppLocalizations.of(context)
+                      .coachEditProfileImageDeleteFailed,
+              isError: true);
+        }
       }
     } catch (e) {
-      _showSnack('Error: $e', isError: true);
+      if (mounted) {
+        _showSnack(
+            AppLocalizations.of(context)
+                .coachEditProfileErrorWithDetail(e.toString()),
+            isError: true);
+      }
     }
   }
 
@@ -318,6 +361,7 @@ class _CoachEditProfileState extends State<CoachEditProfile> {
       builder: (ctx) {
         final cs = Theme.of(ctx).colorScheme;
         final f = ctx.fitlek;
+        final l10n = AppLocalizations.of(ctx);
         return AppDialog(
           backgroundColor: f.card,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
@@ -342,11 +386,11 @@ class _CoachEditProfileState extends State<CoachEditProfile> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: Text('Cancel', style: TextStyle(color: f.textMuted, fontWeight: FontWeight.w600)),
+              child: Text(l10n.coachEditProfileCancel, style: TextStyle(color: f.textMuted, fontWeight: FontWeight.w600)),
             ),
             TextButton(
               onPressed: () => Navigator.pop(ctx, ctrl.text.trim()),
-              child: Text('Add', style: TextStyle(color: cs.primary, fontWeight: FontWeight.w800)),
+              child: Text(l10n.coachEditProfileAdd, style: TextStyle(color: cs.primary, fontWeight: FontWeight.w800)),
             ),
           ],
         );
@@ -358,30 +402,37 @@ class _CoachEditProfileState extends State<CoachEditProfile> {
   }
 
   Future<void> _addCertification() async {
-    final value = await _promptText(title: 'Add Certification', hint: 'e.g. NASM Master Trainer');
+    final l10n = AppLocalizations.of(context);
+    final value = await _promptText(
+        title: l10n.coachEditProfileAddCertificationTitle,
+        hint: l10n.coachEditProfileAddCertificationHint);
     if (value == null) return;
     final exists = _certifications.any((c) => c.toLowerCase() == value.toLowerCase());
     if (exists) {
-      _showSnack('This certification is already added', isError: true);
+      _showSnack(l10n.coachEditProfileCertificationExists, isError: true);
       return;
     }
     if (_certifications.length >= 10) {
-      _showSnack('Maximum 10 certifications', isError: true);
+      _showSnack(l10n.coachEditProfileMaxCertifications, isError: true);
       return;
     }
     setState(() => _certifications.add(value));
   }
 
   Future<void> _addSpecialty() async {
-    final value = await _promptText(title: 'Add Specialty', hint: 'e.g. Hypertrophy', maxLength: 60);
+    final l10n = AppLocalizations.of(context);
+    final value = await _promptText(
+        title: l10n.coachEditProfileAddSpecialtyTitle,
+        hint: l10n.coachEditProfileAddSpecialtyHint,
+        maxLength: 60);
     if (value == null) return;
     final exists = _specialties.any((c) => c.toLowerCase() == value.toLowerCase());
     if (exists) {
-      _showSnack('This specialty is already added', isError: true);
+      _showSnack(l10n.coachEditProfileSpecialtyExists, isError: true);
       return;
     }
     if (_specialties.length >= 10) {
-      _showSnack('Maximum 10 specialties', isError: true);
+      _showSnack(l10n.coachEditProfileMaxSpecialties, isError: true);
       return;
     }
     setState(() => _specialties.add(value));
@@ -393,7 +444,8 @@ class _CoachEditProfileState extends State<CoachEditProfile> {
 
     final (firstName, lastName) = _splitName(_fullNameCtrl.text);
     if (firstName.isEmpty || lastName.isEmpty) {
-      _showSnack('Please enter your full name', isError: true);
+      _showSnack(AppLocalizations.of(context).coachEditProfileEnterFullName,
+          isError: true);
       return;
     }
 
@@ -427,22 +479,40 @@ class _CoachEditProfileState extends State<CoachEditProfile> {
       if (!mounted) return;
 
       if (res['ok'] == true) {
-        _showSnack('Profile updated');
+        _showSnack(AppLocalizations.of(context).coachEditProfileUpdatedSnack);
         Navigator.of(context).pop(true);
       } else {
-        _showSnack(res['message']?.toString() ?? 'Error while updating', isError: true);
+        _showSnack(
+            res['message']?.toString() ??
+                AppLocalizations.of(context).coachEditProfileUpdateError,
+            isError: true);
       }
     } catch (e) {
-      if (mounted) _showSnack('Error: $e', isError: true);
+      if (mounted) {
+        _showSnack(
+            AppLocalizations.of(context)
+                .coachEditProfileErrorWithDetail(e.toString()),
+            isError: true);
+      }
     } finally {
       if (mounted) setState(() => _saving = false);
     }
+  }
+
+  String _genderLabel(String g) {
+    final l10n = AppLocalizations.of(context);
+    return switch (g) {
+      'Male' => l10n.coachEditProfileGenderMale,
+      'Female' => l10n.coachEditProfileGenderFemale,
+      _ => l10n.coachEditProfileGenderOther,
+    };
   }
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final f = context.fitlek;
+    final l10n = AppLocalizations.of(context);
 
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
@@ -451,7 +521,7 @@ class _CoachEditProfileState extends State<CoachEditProfile> {
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         centerTitle: false,
-        title: Text('Edit Profile', style: TextStyle(color: cs.onSurface, fontSize: 17, fontWeight: FontWeight.w800)),
+        title: Text(l10n.coachEditProfileTitle, style: TextStyle(color: cs.onSurface, fontSize: 17, fontWeight: FontWeight.w800)),
         iconTheme: IconThemeData(color: cs.onSurface),
       ),
       body: SafeArea(
@@ -467,13 +537,13 @@ class _CoachEditProfileState extends State<CoachEditProfile> {
                   _buildAvatarPicker(cs, f),
                   const SizedBox(height: 16),
                   Text(
-                    'Edit Profile',
+                    l10n.coachEditProfileTitle,
                     textAlign: TextAlign.center,
                     style: TextStyle(color: cs.primary, fontSize: 28, fontWeight: FontWeight.w900, height: 1.1),
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    'Update your professional details',
+                    l10n.coachEditProfileSubtitle,
                     textAlign: TextAlign.center,
                     style: TextStyle(color: f.textMuted, fontSize: 13.5, fontWeight: FontWeight.w500),
                   ),
@@ -593,17 +663,18 @@ class _CoachEditProfileState extends State<CoachEditProfile> {
   }
 
   Widget _buildBasicInformation(ColorScheme cs, FitlekColors f) {
+    final l10n = AppLocalizations.of(context);
     return _card(
       children: [
-        _sectionHeader('BASIC INFORMATION'),
+        _sectionHeader(l10n.coachEditProfileSectionBasicInfo),
         const SizedBox(height: 16),
         _labeledField(
-          label: 'Full Name',
+          label: l10n.coachEditProfileFullNameLabel,
           child: TextFormField(
             controller: _fullNameCtrl,
             textCapitalization: TextCapitalization.words,
             validator: (v) => (v == null || v.trim().split(RegExp(r'\s+')).where((e) => e.isNotEmpty).length < 2)
-                ? 'Enter first and last name'
+                ? l10n.coachEditProfileFullNameValidator
                 : null,
             style: TextStyle(color: cs.onSurface, fontSize: 14.5, fontWeight: FontWeight.w600),
             decoration: _inputDecoration(f, cs),
@@ -611,30 +682,30 @@ class _CoachEditProfileState extends State<CoachEditProfile> {
         ),
         const SizedBox(height: 14),
         _labeledField(
-          label: 'Email',
+          label: l10n.coachEditProfileEmailLabel,
           child: TextFormField(
             controller: _emailCtrl,
             keyboardType: TextInputType.emailAddress,
             autofillHints: const [AutofillHints.email],
             validator: (v) {
               final value = (v ?? '').trim();
-              if (value.isEmpty) return 'Email is required';
+              if (value.isEmpty) return l10n.coachEditProfileEmailRequired;
               if (!RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$').hasMatch(value)) {
-                return 'Enter a valid email';
+                return l10n.coachEditProfileEmailInvalid;
               }
               return null;
             },
             style: TextStyle(color: cs.onSurface, fontSize: 14.5, fontWeight: FontWeight.w600),
-            decoration: _inputDecoration(f, cs, hint: 'you@example.com'),
+            decoration: _inputDecoration(f, cs, hint: l10n.coachEditProfileEmailHint),
           ),
         ),
         const SizedBox(height: 14),
         _labeledField(
-          label: 'Gender',
+          label: l10n.coachEditProfileGenderLabel,
           child: DropdownButtonFormField<String>(
             initialValue: _gender,
             items: _genders
-                .map((g) => DropdownMenuItem(value: g, child: Text(g)))
+                .map((g) => DropdownMenuItem(value: g, child: Text(_genderLabel(g))))
                 .toList(),
             onChanged: (v) {
               if (v != null) setState(() => _gender = v);
@@ -645,22 +716,22 @@ class _CoachEditProfileState extends State<CoachEditProfile> {
           ),
         ),
         _labeledField(
-          label: 'Professional Title',
+          label: l10n.coachEditProfileProfessionalTitleLabel,
           child: TextFormField(
             controller: _titleCtrl,
             textCapitalization: TextCapitalization.words,
             style: TextStyle(color: cs.onSurface, fontSize: 14.5, fontWeight: FontWeight.w600),
-            decoration: _inputDecoration(f, cs, hint: 'e.g. Elite Performance Specialist'),
+            decoration: _inputDecoration(f, cs, hint: l10n.coachEditProfileProfessionalTitleHint),
           ),
         ),
         const SizedBox(height: 14),
         _labeledField(
-          label: 'Bio',
+          label: l10n.coachEditProfileBioLabel,
           child: TextFormField(
             controller: _bioCtrl,
             maxLines: 5,
             textCapitalization: TextCapitalization.sentences,
-            validator: (v) => (v == null || v.trim().isEmpty) ? 'Bio is required' : null,
+            validator: (v) => (v == null || v.trim().isEmpty) ? l10n.coachEditProfileBioRequired : null,
             style: TextStyle(color: cs.onSurface, fontSize: 14.5, fontWeight: FontWeight.w500, height: 1.45),
             decoration: _inputDecoration(f, cs),
           ),
@@ -670,22 +741,23 @@ class _CoachEditProfileState extends State<CoachEditProfile> {
   }
 
   Widget _buildContactInformation(ColorScheme cs, FitlekColors f) {
+    final l10n = AppLocalizations.of(context);
     return _card(
       children: [
-        _sectionHeader('CONTACT & LOCATION', icon: Icons.contact_mail_rounded),
+        _sectionHeader(l10n.coachEditProfileSectionContactLocation, icon: Icons.contact_mail_rounded),
         const SizedBox(height: 16),
         _labeledField(
-          label: 'Phone',
+          label: l10n.coachEditProfilePhoneLabel,
           child: TextFormField(
             controller: _telCtrl,
             keyboardType: TextInputType.phone,
             style: TextStyle(color: cs.onSurface, fontSize: 14.5, fontWeight: FontWeight.w600),
-            decoration: _inputDecoration(f, cs, hint: '+212 6XX XXX XXX'),
+            decoration: _inputDecoration(f, cs, hint: l10n.coachEditProfilePhoneHint),
           ),
         ),
         const SizedBox(height: 14),
         _labeledField(
-          label: 'City',
+          label: l10n.coachEditProfileCityLabel,
           child: TextFormField(
             controller: _villeCtrl,
             readOnly: true,
@@ -695,17 +767,17 @@ class _CoachEditProfileState extends State<CoachEditProfile> {
               if (mounted && city != null) setState(() => _villeCtrl.text = city);
             },
             style: TextStyle(color: cs.onSurface, fontSize: 14.5, fontWeight: FontWeight.w600),
-            decoration: _inputDecoration(f, cs, hint: 'Use location').copyWith(
+            decoration: _inputDecoration(f, cs, hint: l10n.coachEditProfileCityHint).copyWith(
                 suffixIcon: const Icon(Icons.my_location)),
           ),
         ),
         const SizedBox(height: 14),
         _labeledField(
-          label: 'Instagram',
+          label: l10n.coachEditProfileInstagramLabel,
           child: TextFormField(
             controller: _instagramCtrl,
             style: TextStyle(color: cs.onSurface, fontSize: 14.5, fontWeight: FontWeight.w600),
-            decoration: _inputDecoration(f, cs, hint: '@yourhandle'),
+            decoration: _inputDecoration(f, cs, hint: l10n.coachEditProfileInstagramHint),
           ),
         ),
       ],
@@ -713,14 +785,15 @@ class _CoachEditProfileState extends State<CoachEditProfile> {
   }
 
   Widget _buildCertifications(ColorScheme cs, FitlekColors f) {
+    final l10n = AppLocalizations.of(context);
     return _card(
       children: [
-        _sectionHeader('CERTIFICATIONS', icon: Icons.verified_rounded),
+        _sectionHeader(l10n.coachEditProfileSectionCertifications, icon: Icons.verified_rounded),
         const SizedBox(height: 14),
         if (_certifications.isEmpty)
           Padding(
             padding: const EdgeInsets.only(bottom: 10),
-            child: Text('No certifications yet.', style: TextStyle(color: f.textMuted, fontSize: 13)),
+            child: Text(l10n.coachEditProfileNoCertifications, style: TextStyle(color: f.textMuted, fontSize: 13)),
           ),
         ..._certifications.asMap().entries.map((entry) {
           final index = entry.key;
@@ -755,7 +828,7 @@ class _CoachEditProfileState extends State<CoachEditProfile> {
               width: double.infinity,
               padding: const EdgeInsets.symmetric(vertical: 14),
               child: Center(
-                child: Text('+ Add Certification',
+                child: Text(l10n.coachEditProfileAddCertificationButton,
                     style: TextStyle(color: cs.primary, fontSize: 13.5, fontWeight: FontWeight.w700)),
               ),
             ),
@@ -766,12 +839,13 @@ class _CoachEditProfileState extends State<CoachEditProfile> {
   }
 
   Widget _buildSpecialties(ColorScheme cs, FitlekColors f) {
+    final l10n = AppLocalizations.of(context);
     return _card(
       children: [
-        _sectionHeader('SPECIALTIES', icon: Icons.fitness_center_rounded),
+        _sectionHeader(l10n.coachEditProfileSectionSpecialties, icon: Icons.fitness_center_rounded),
         const SizedBox(height: 6),
         Text(
-          'Select the specialties you teach (you can select multiple):',
+          l10n.coachEditProfileSpecialtiesDescription,
           style: TextStyle(color: f.textMuted, fontSize: 12.5),
         ),
         const SizedBox(height: 12),
@@ -787,7 +861,7 @@ class _CoachEditProfileState extends State<CoachEditProfile> {
                     _specialties.removeWhere((s) => s.toLowerCase() == spec.toLowerCase());
                   } else {
                     if (_specialties.length >= 10) {
-                      _showSnack('Maximum 10 specialties', isError: true);
+                      _showSnack(l10n.coachEditProfileMaxSpecialties, isError: true);
                       return;
                     }
                     _specialties.add(spec);
@@ -830,7 +904,7 @@ class _CoachEditProfileState extends State<CoachEditProfile> {
         ),
         if (_specialties.any((s) => !_suggestedSpecialties.any((opt) => opt.toLowerCase() == s.toLowerCase()))) ...[
           const SizedBox(height: 14),
-          Text('Custom Specialties:', style: TextStyle(color: f.textMuted, fontSize: 12, fontWeight: FontWeight.w700)),
+          Text(l10n.coachEditProfileCustomSpecialties, style: TextStyle(color: f.textMuted, fontSize: 12, fontWeight: FontWeight.w700)),
           const SizedBox(height: 8),
           Wrap(
             spacing: 8,
@@ -875,7 +949,7 @@ class _CoachEditProfileState extends State<CoachEditProfile> {
               children: [
                 Icon(Icons.add_rounded, size: 16, color: cs.primary),
                 const SizedBox(width: 4),
-                Text('Add Other Specialty', style: TextStyle(color: cs.primary, fontSize: 12.5, fontWeight: FontWeight.w700)),
+                Text(l10n.coachEditProfileAddOtherSpecialty, style: TextStyle(color: cs.primary, fontSize: 12.5, fontWeight: FontWeight.w700)),
               ],
             ),
           ),
@@ -905,13 +979,16 @@ class _CoachEditProfileState extends State<CoachEditProfile> {
       builder: (ctx) {
         final cs = Theme.of(ctx).colorScheme;
         final f = ctx.fitlek;
+        final l10n = AppLocalizations.of(ctx);
         return StatefulBuilder(builder: (ctx, setDialogState) {
           return AppDialog(
             backgroundColor: f.card,
             shape:
                 RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
             title: Text(
-              existing == null ? 'Add Package' : 'Edit Package',
+              existing == null
+                  ? l10n.coachEditProfileAddPackageTitle
+                  : l10n.coachEditProfileEditPackageTitle,
               style: TextStyle(
                   color: cs.onSurface,
                   fontWeight: FontWeight.w800,
@@ -923,7 +1000,7 @@ class _CoachEditProfileState extends State<CoachEditProfile> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // Name
-                  Text('Package Name *',
+                  Text(l10n.coachEditProfilePackageNameLabel,
                       style: TextStyle(
                           color: f.textMuted,
                           fontSize: 12,
@@ -937,7 +1014,7 @@ class _CoachEditProfileState extends State<CoachEditProfile> {
                         fontSize: 14,
                         fontWeight: FontWeight.w600),
                     decoration: InputDecoration(
-                      hintText: 'e.g. Starter Pack',
+                      hintText: l10n.coachEditProfilePackageNameHint,
                       hintStyle: TextStyle(color: f.textMuted),
                       filled: true,
                       fillColor: f.inputFill,
@@ -957,7 +1034,7 @@ class _CoachEditProfileState extends State<CoachEditProfile> {
                   ),
                   const SizedBox(height: 14),
                   // Description
-                  Text('Description (optional)',
+                  Text(l10n.coachEditProfilePackageDescriptionLabel,
                       style: TextStyle(
                           color: f.textMuted,
                           fontSize: 12,
@@ -969,7 +1046,7 @@ class _CoachEditProfileState extends State<CoachEditProfile> {
                     textCapitalization: TextCapitalization.sentences,
                     style: TextStyle(color: cs.onSurface, fontSize: 13.5),
                     decoration: InputDecoration(
-                      hintText: 'Describe what\'s included…',
+                      hintText: l10n.coachEditProfilePackageDescriptionHint,
                       hintStyle: TextStyle(color: f.textMuted),
                       filled: true,
                       fillColor: f.inputFill,
@@ -989,7 +1066,7 @@ class _CoachEditProfileState extends State<CoachEditProfile> {
                   ),
                   const SizedBox(height: 14),
                   // Sessions
-                  Text('Number of sessions (optional)',
+                  Text(l10n.coachEditProfilePackageSessionsLabel,
                       style: TextStyle(
                           color: f.textMuted,
                           fontSize: 12,
@@ -1003,7 +1080,7 @@ class _CoachEditProfileState extends State<CoachEditProfile> {
                         fontSize: 14,
                         fontWeight: FontWeight.w600),
                     decoration: InputDecoration(
-                      hintText: 'e.g. 12',
+                      hintText: l10n.coachEditProfilePackageSessionsHint,
                       hintStyle: TextStyle(color: f.textMuted),
                       filled: true,
                       fillColor: f.inputFill,
@@ -1029,12 +1106,12 @@ class _CoachEditProfileState extends State<CoachEditProfile> {
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('Set a price',
+                          Text(l10n.coachEditProfilePackageSetPriceTitle,
                               style: TextStyle(
                                   color: cs.onSurface,
                                   fontSize: 13.5,
                                   fontWeight: FontWeight.w700)),
-                          Text('Leave off to discuss price after booking',
+                          Text(l10n.coachEditProfilePackageSetPriceSubtitle,
                               style: TextStyle(
                                   color: f.textMuted, fontSize: 11)),
                         ],
@@ -1087,7 +1164,7 @@ class _CoachEditProfileState extends State<CoachEditProfile> {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text('Visible to clients',
+                        Text(l10n.coachEditProfilePackageVisibleToClients,
                             style: TextStyle(
                                 color: cs.onSurface,
                                 fontSize: 13.5,
@@ -1108,7 +1185,7 @@ class _CoachEditProfileState extends State<CoachEditProfile> {
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(ctx),
-                child: Text('Cancel',
+                child: Text(l10n.coachEditProfileCancel,
                     style: TextStyle(
                         color: f.textMuted, fontWeight: FontWeight.w600)),
               ),
@@ -1116,7 +1193,8 @@ class _CoachEditProfileState extends State<CoachEditProfile> {
                 onPressed: () async {
                   final name = nameCtrl.text.trim();
                   if (name.isEmpty) {
-                    _showSnack('Package name is required', isError: true);
+                    _showSnack(l10n.coachEditProfilePackageNameRequired,
+                        isError: true);
                     return;
                   }
                   Navigator.pop(ctx, {
@@ -1133,7 +1211,10 @@ class _CoachEditProfileState extends State<CoachEditProfile> {
                     'isActive': isActive,
                   });
                 },
-                child: Text(existing == null ? 'Add' : 'Update',
+                child: Text(
+                    existing == null
+                        ? l10n.coachEditProfileAdd
+                        : l10n.coachEditProfileUpdate,
                     style: TextStyle(
                         color: cs.primary, fontWeight: FontWeight.w800)),
               ),
@@ -1182,15 +1263,29 @@ class _CoachEditProfileState extends State<CoachEditProfile> {
               .timeout(const Duration(seconds: 10));
         }
         if (res.statusCode == 200 || res.statusCode == 201) {
-          _showSnack(
-              existing == null ? 'Package added!' : 'Package updated!');
+          if (mounted) {
+            final l10n = AppLocalizations.of(context);
+            _showSnack(existing == null
+                ? l10n.coachEditProfilePackageAdded
+                : l10n.coachEditProfilePackageUpdated);
+          }
           await _loadPackages();
         } else {
           final body = jsonDecode(res.body);
-          _showSnack(body['error'] ?? 'Error', isError: true);
+          if (mounted) {
+            _showSnack(
+                body['error'] ??
+                    AppLocalizations.of(context).coachEditProfileGenericError,
+                isError: true);
+          }
         }
       } catch (e) {
-        _showSnack('Network error: $e', isError: true);
+        if (mounted) {
+          _showSnack(
+              AppLocalizations.of(context)
+                  .coachEditProfileNetworkError(e.toString()),
+              isError: true);
+        }
       }
     });
   }
@@ -1201,24 +1296,25 @@ class _CoachEditProfileState extends State<CoachEditProfile> {
       builder: (ctx) {
         final cs = Theme.of(ctx).colorScheme;
         final f = ctx.fitlek;
+        final l10n = AppLocalizations.of(ctx);
         return AppDialog(
           backgroundColor: f.card,
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-          title: Text('Delete package?',
+          title: Text(l10n.coachEditProfileDeletePackageTitle,
               style: TextStyle(
                   color: cs.onSurface, fontWeight: FontWeight.w800)),
           content: Text(
-              'Are you sure you want to delete "${pkg.name}"? This cannot be undone.',
+              l10n.coachEditProfileDeletePackageConfirm(pkg.name),
               style: TextStyle(color: f.textMuted, fontSize: 13)),
           actions: [
             TextButton(
                 onPressed: () => Navigator.pop(ctx, false),
-                child: Text('Cancel',
+                child: Text(l10n.coachEditProfileCancel,
                     style: TextStyle(color: f.textMuted))),
             TextButton(
               onPressed: () => Navigator.pop(ctx, true),
-              child: Text('Delete',
+              child: Text(l10n.coachEditProfileDelete,
                   style: TextStyle(
                       color: f.error, fontWeight: FontWeight.w800)),
             ),
@@ -1239,23 +1335,36 @@ class _CoachEditProfileState extends State<CoachEditProfile> {
           )
           .timeout(const Duration(seconds: 10));
       if (res.statusCode == 200) {
-        _showSnack('Package deleted');
+        if (mounted) {
+          _showSnack(AppLocalizations.of(context).coachEditProfilePackageDeleted);
+        }
         await _loadPackages();
       } else {
         final body = jsonDecode(res.body);
-        _showSnack(body['error'] ?? 'Error', isError: true);
+        if (mounted) {
+          _showSnack(
+              body['error'] ??
+                  AppLocalizations.of(context).coachEditProfileGenericError,
+              isError: true);
+        }
       }
     } catch (e) {
-      _showSnack('Network error: $e', isError: true);
+      if (mounted) {
+        _showSnack(
+            AppLocalizations.of(context)
+                .coachEditProfileNetworkError(e.toString()),
+            isError: true);
+      }
     }
   }
 
   Widget _buildPackagesSection(ColorScheme cs, FitlekColors f) {
+    final l10n = AppLocalizations.of(context);
     return _card(children: [
       Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          _sectionHeader('COACHING PACKAGES',
+          _sectionHeader(l10n.coachEditProfileSectionPackages,
               icon: Icons.workspace_premium_rounded),
           Text('${_packages.length}/3',
               style: TextStyle(
@@ -1266,7 +1375,7 @@ class _CoachEditProfileState extends State<CoachEditProfile> {
       ),
       const SizedBox(height: 6),
       Text(
-        'Offer up to 3 packages. Price is optional — leave it off to discuss after booking.',
+        l10n.coachEditProfilePackagesDescription,
         style: TextStyle(color: f.textMuted, fontSize: 12, height: 1.5),
       ),
       const SizedBox(height: 14),
@@ -1294,7 +1403,7 @@ class _CoachEditProfileState extends State<CoachEditProfile> {
                 width: double.infinity,
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 child: Center(
-                  child: Text('+ Add Package',
+                  child: Text(l10n.coachEditProfileAddPackageButton,
                       style: TextStyle(
                           color: cs.primary,
                           fontSize: 13.5,
@@ -1315,7 +1424,7 @@ class _CoachEditProfileState extends State<CoachEditProfile> {
               Icon(Icons.info_outline_rounded,
                   size: 14, color: cs.primary),
               const SizedBox(width: 8),
-              Text('Maximum 3 packages reached',
+              Text(l10n.coachEditProfileMaxPackagesReached,
                   style: TextStyle(
                       color: cs.primary,
                       fontSize: 12,
@@ -1328,6 +1437,7 @@ class _CoachEditProfileState extends State<CoachEditProfile> {
 
   Widget _buildPackageCard(
       CoachPackage pkg, ColorScheme cs, FitlekColors f) {
+    final l10n = AppLocalizations.of(context);
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(14),
@@ -1375,7 +1485,7 @@ class _CoachEditProfileState extends State<CoachEditProfile> {
                         color: f.textMuted.withValues(alpha: 0.12),
                         borderRadius: BorderRadius.circular(6),
                       ),
-                      child: Text('Hidden',
+                      child: Text(l10n.coachEditProfilePackageHidden,
                           style: TextStyle(
                               color: f.textMuted,
                               fontSize: 9,
@@ -1393,12 +1503,12 @@ class _CoachEditProfileState extends State<CoachEditProfile> {
                 const SizedBox(height: 5),
                 Wrap(spacing: 8, children: [
                   if (pkg.sessions != null)
-                    _pkgChip('${pkg.sessions} sessions', cs),
+                    _pkgChip(l10n.coachEditProfilePackageSessionsChip(pkg.sessions!), cs),
                   pkg.price != null
                       ? _pkgChip(
                           '${pkg.price!.toInt()} MAD', cs,
                           colored: true)
-                      : _pkgChip('Price on request', cs),
+                      : _pkgChip(l10n.coachEditProfilePriceOnRequest, cs),
                 ]),
               ],
             ),
@@ -1460,13 +1570,14 @@ class _CoachEditProfileState extends State<CoachEditProfile> {
       );
 
   Widget _buildGallerySection(ColorScheme cs, FitlekColors f) {
+    final l10n = AppLocalizations.of(context);
 
     return _card(
       children: [
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            _sectionHeader('GALLERY', icon: Icons.photo_library_rounded),
+            _sectionHeader(l10n.coachEditProfileSectionGallery, icon: Icons.photo_library_rounded),
             Text('${_galleryImages.length}/5', style: TextStyle(color: f.textMuted, fontSize: 12, fontWeight: FontWeight.w700)),
           ],
         ),
@@ -1481,7 +1592,7 @@ class _CoachEditProfileState extends State<CoachEditProfile> {
         else if (_galleryImages.isEmpty)
           Padding(
             padding: const EdgeInsets.only(bottom: 10),
-            child: Text('No images in your gallery yet.', style: TextStyle(color: f.textMuted, fontSize: 13)),
+            child: Text(l10n.coachEditProfileGalleryEmpty, style: TextStyle(color: f.textMuted, fontSize: 13)),
           )
         else
           GridView.builder(
@@ -1538,7 +1649,7 @@ class _CoachEditProfileState extends State<CoachEditProfile> {
                 child: Center(
                   child: _uploadingGallery
                       ? SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: cs.primary))
-                      : Text('+ Add Gallery Image', style: TextStyle(color: cs.primary, fontSize: 13.5, fontWeight: FontWeight.w700)),
+                      : Text(l10n.coachEditProfileAddGalleryImageButton, style: TextStyle(color: cs.primary, fontSize: 13.5, fontWeight: FontWeight.w700)),
                 ),
               ),
             ),
@@ -1548,13 +1659,14 @@ class _CoachEditProfileState extends State<CoachEditProfile> {
   }
 
   Widget _buildAccountSettings(ColorScheme cs, FitlekColors f) {
+    final l10n = AppLocalizations.of(context);
     return _card(
       children: [
-        _sectionHeader('ACCOUNT SETTINGS'),
+        _sectionHeader(l10n.coachEditProfileSectionAccountSettings),
         const SizedBox(height: 8),
         _toggleRow(
-          title: 'Public Profile',
-          subtitle: 'Allow potential clients to find you',
+          title: l10n.coachEditProfilePublicProfileTitle,
+          subtitle: l10n.coachEditProfilePublicProfileSubtitle,
           value: _publicProfile,
           onChanged: (v) => setState(() => _publicProfile = v),
           cs: cs,
@@ -1562,8 +1674,8 @@ class _CoachEditProfileState extends State<CoachEditProfile> {
         ),
         Divider(height: 1, color: f.border.withValues(alpha: 0.7)),
         _toggleRow(
-          title: 'Direct Messaging',
-          subtitle: 'Enable instant chat with clients',
+          title: l10n.coachEditProfileDirectMessagingTitle,
+          subtitle: l10n.coachEditProfileDirectMessagingSubtitle,
           value: _directMessaging,
           onChanged: (v) => setState(() => _directMessaging = v),
           cs: cs,
@@ -1634,10 +1746,11 @@ class _CoachEditProfileState extends State<CoachEditProfile> {
   }
 
   Widget _buildSaveButton(ColorScheme cs) {
+    final l10n = AppLocalizations.of(context);
     return GestureDetector(
       onTap: _saving ? null : _save,
       child: Container(
-        height: 54,
+        height: 50,
         decoration: BoxDecoration(
           color: _saving ? cs.primary.withValues(alpha: 0.6) : cs.primary,
           borderRadius: BorderRadius.circular(16),
@@ -1657,7 +1770,7 @@ class _CoachEditProfileState extends State<CoachEditProfile> {
                   children: [
                     Icon(Icons.save_rounded, size: 18, color: cs.onPrimary),
                     const SizedBox(width: 8),
-                    Text('Save Profile Changes',
+                    Text(l10n.coachEditProfileSaveChangesButton,
                         style: TextStyle(color: cs.onPrimary, fontSize: 15, fontWeight: FontWeight.w800)),
                   ],
                 ),

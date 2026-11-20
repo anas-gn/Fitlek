@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:fitlek1/l10n/app_localizations.dart';
 import '../services/meal_scan_service.dart';
 import '../services/meal_share_service.dart';
 import 'meal_share_card.dart';
@@ -73,6 +74,7 @@ class _MealShareSheetState extends State<MealShareSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final isStory = _format == MealShareFormat.story;
     final cardAspectRatio = isStory ? (360 / 640) : (360 / 450);
 
@@ -101,23 +103,23 @@ class _MealShareSheetState extends State<MealShareSheet> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Expanded(
+                  Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Share Your Meal',
-                          style: TextStyle(
+                          l10n.mealShareModalTitle,
+                          style: const TextStyle(
                             color: mealCream,
                             fontSize: 21,
                             fontWeight: FontWeight.w800,
                             letterSpacing: -0.4,
                           ),
                         ),
-                        SizedBox(height: 2),
+                        const SizedBox(height: 2),
                         Text(
-                          'Sirvya photo overlay for Stories & Posts',
-                          style: TextStyle(
+                          l10n.mealShareModalSubtitle,
+                          style: const TextStyle(
                             color: mealMuted,
                             fontSize: 11.5,
                           ),
@@ -126,7 +128,7 @@ class _MealShareSheetState extends State<MealShareSheet> {
                     ),
                   ),
                   IconButton(
-                    tooltip: 'Close',
+                    tooltip: l10n.mealShareModalClose,
                     onPressed: () => Navigator.pop(context),
                     icon: Container(
                       padding: const EdgeInsets.all(6),
@@ -161,7 +163,7 @@ class _MealShareSheetState extends State<MealShareSheet> {
                   children: [
                     Expanded(
                       child: _buildSelectorTab(
-                        title: 'Story (9:16)',
+                        title: l10n.mealShareModalStoryTab,
                         icon: Icons.stay_current_portrait_rounded,
                         selected: isStory,
                         onTap: () => setState(
@@ -171,7 +173,7 @@ class _MealShareSheetState extends State<MealShareSheet> {
                     const SizedBox(width: 4),
                     Expanded(
                       child: _buildSelectorTab(
-                        title: 'Post Card',
+                        title: l10n.mealShareModalPostTab,
                         icon: Icons.crop_square_rounded,
                         selected: !isStory,
                         onTap: () =>
@@ -189,7 +191,7 @@ class _MealShareSheetState extends State<MealShareSheet> {
                 children: [
                   Expanded(
                     child: _buildStyleChip(
-                      title: 'Sirvya Overlay',
+                      title: l10n.mealShareModalStyleOverlay,
                       icon: Icons.layers_rounded,
                       selected: _style == MealShareStyle.sirvyaOverlay,
                       onTap: () => setState(
@@ -199,7 +201,7 @@ class _MealShareSheetState extends State<MealShareSheet> {
                   const SizedBox(width: 8),
                   Expanded(
                     child: _buildStyleChip(
-                      title: 'Card View',
+                      title: l10n.mealShareModalStyleCard,
                       icon: Icons.dashboard_rounded,
                       selected: _style == MealShareStyle.classicCard,
                       onTap: () => setState(
@@ -243,7 +245,7 @@ class _MealShareSheetState extends State<MealShareSheet> {
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          'Include Ingredients Breakdown',
+                          l10n.mealShareModalIncludeIngredients,
                           style: TextStyle(
                             color: _showIngredients ? mealCream : mealMuted,
                             fontSize: 11.5,
@@ -326,17 +328,17 @@ class _MealShareSheetState extends State<MealShareSheet> {
                             color: Color(0xFF031914),
                           ),
                         )
-                      : const FittedBox(
+                      : FittedBox(
                           fit: BoxFit.scaleDown,
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Icon(Icons.share_rounded, size: 19),
-                              SizedBox(width: 8),
+                              const Icon(Icons.share_rounded, size: 19),
+                              const SizedBox(width: 8),
                               Text(
-                                'Share Story / Post',
-                                style: TextStyle(
+                                l10n.mealShareModalShareButton,
+                                style: const TextStyle(
                                   fontSize: 15,
                                   fontWeight: FontWeight.w800,
                                   letterSpacing: -0.2,
@@ -368,11 +370,11 @@ class _MealShareSheetState extends State<MealShareSheet> {
                         padding: const EdgeInsets.symmetric(vertical: 11),
                       ),
                       icon: const Icon(Icons.copy_rounded, size: 15),
-                      label: const FittedBox(
+                      label: FittedBox(
                         fit: BoxFit.scaleDown,
                         child: Text(
-                          'Copy Caption & Link',
-                          style: TextStyle(
+                          l10n.mealShareModalCopyCaptionButton,
+                          style: const TextStyle(
                             fontSize: 12.5,
                             fontWeight: FontWeight.w600,
                           ),

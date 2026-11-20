@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:fitlek1/l10n/app_localizations.dart';
 import '../../services/nutrition_diary_service.dart';
 import '../../theme/fitlek_theme_extension.dart';
 
@@ -9,6 +10,36 @@ const nutritionGoalLabels = {
   'gain': 'Gain weight gradually',
   'maintain': 'Maintain my weight'
 };
+
+String _localizedGoalLabel(AppLocalizations l10n, String key) {
+  switch (key) {
+    case 'balanced':
+      return l10n.nutritionGoalTypeBalanced;
+    case 'lose':
+      return l10n.nutritionGoalTypeLose;
+    case 'gain':
+      return l10n.nutritionGoalTypeGain;
+    case 'maintain':
+      return l10n.nutritionGoalTypeMaintain;
+    default:
+      return nutritionGoalLabels[key] ?? key;
+  }
+}
+
+String _localizedMacroLabel(AppLocalizations l10n, String key) {
+  switch (key) {
+    case 'calories':
+      return l10n.nutritionGoalMacroCalories;
+    case 'protein':
+      return l10n.nutritionGoalMacroProtein;
+    case 'carbs':
+      return l10n.nutritionGoalMacroCarbs;
+    case 'fat':
+      return l10n.nutritionGoalMacroFat;
+    default:
+      return mealTypeLabel(key);
+  }
+}
 const _zones = [
   'Africa/Casablanca',
   'Europe/Paris',
@@ -293,10 +324,10 @@ class _NutritionGoalScreenState extends State<NutritionGoalScreen> {
         },
       };
   Future<void> _save() async {
+    final l10n = AppLocalizations.of(context);
     if (!_form.currentState!.validate()) return;
     if (_weightGoal && !_adult) {
-      setState(() => _error =
-          'Weight-change goals are available for adults. Choose balanced habits for meal tracking.');
+      setState(() => _error = l10n.nutritionGoalAdultWeightError);
       return;
     }
     final current = _value('currentWeight'),
@@ -305,8 +336,7 @@ class _NutritionGoalScreenState extends State<NutritionGoalScreen> {
     if (_weightGoal &&
         ((target! / (height! / 100) / (height / 100)) < 18.5 ||
             (_type == 'lose' ? target >= current! : target <= current!))) {
-      setState(() => _error =
-          'Review your target weight and goal direction. This planner does not support underweight targets.');
+      setState(() => _error = l10n.nutritionGoalTargetDirectionError);
       return;
     }
     final data = _data();
@@ -342,30 +372,32 @@ class _NutritionGoalScreenState extends State<NutritionGoalScreen> {
   }
 
   Widget _number(String key, String label,
-          {bool required = false, double min = 0, double max = 500}) =>
-      Padding(
-          padding: const EdgeInsets.only(bottom: 14),
-          child: TextFormField(
-            key: ValueKey('goal-$key'),
-            controller: _fields[key],
-            enabled: !_saving,
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            decoration: InputDecoration(labelText: label),
-            onChanged: (_) => setState(() {}),
-            validator: (raw) {
-              if (raw == null || raw.trim().isEmpty) {
-                return required ? 'Add $label' : null;
-              }
-              final value = double.tryParse(raw.replaceAll(',', '.'));
-              return value == null ||
-                      !value.isFinite ||
-                      value < min ||
-                      value > max ||
-                      (key == 'age' && value != value.roundToDouble())
-                  ? 'Enter a valid $label'
-                  : null;
-            },
-          ));
+          {bool required = false, double min = 0, double max = 500}) {
+    final l10n = AppLocalizations.of(context);
+    return Padding(
+        padding: const EdgeInsets.only(bottom: 14),
+        child: TextFormField(
+          key: ValueKey('goal-$key'),
+          controller: _fields[key],
+          enabled: !_saving,
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          decoration: InputDecoration(labelText: label),
+          onChanged: (_) => setState(() {}),
+          validator: (raw) {
+            if (raw == null || raw.trim().isEmpty) {
+              return required ? l10n.nutritionGoalFieldRequired(label) : null;
+            }
+            final value = double.tryParse(raw.replaceAll(',', '.'));
+            return value == null ||
+                    !value.isFinite ||
+                    value < min ||
+                    value > max ||
+                    (key == 'age' && value != value.roundToDouble())
+                ? l10n.nutritionGoalFieldInvalid(label)
+                : null;
+          },
+        ));
+  }
   Widget _section(String title, String subtitle, List<Widget> children) =>
       Container(
           margin: const EdgeInsets.only(bottom: 18),
@@ -464,8 +496,20 @@ class _NutritionGoalScreenState extends State<NutritionGoalScreen> {
     );
   }
 
+  String _localizedRecommendedNote(AppLocalizations l10n) {
+    switch (_type) {
+      case 'lose':
+        return l10n.nutritionGoalNoteLose;
+      case 'gain':
+        return l10n.nutritionGoalNoteGain;
+      default:
+        return l10n.nutritionGoalNoteMaintain;
+    }
+  }
+
   Widget _buildSmartTargetsCard(
       BuildContext context, RecommendedTargets? rec) {
+    final l10n = AppLocalizations.of(context);
     final primary = Theme.of(context).colorScheme.primary;
 
     if (rec == null) {
@@ -483,7 +527,7 @@ class _NutritionGoalScreenState extends State<NutritionGoalScreen> {
             const SizedBox(width: 12),
             Expanded(
               child: Text(
-                'Complete your age, height, weight & biological sex above to see personalized daily calorie and macro recommendations.',
+                l10n.nutritionGoalCompleteProfilePrompt,
                 style: TextStyle(
                   color: context.fitlek.textMuted,
                   fontSize: 12,
@@ -497,9 +541,9 @@ class _NutritionGoalScreenState extends State<NutritionGoalScreen> {
     }
 
     final styleOptions = [
-      ('balanced', '🥑 Balanced'),
-      ('high_protein', '🍗 High Protein'),
-      ('low_carb', '🥗 Low Carb'),
+      ('balanced', l10n.nutritionGoalStyleBalanced),
+      ('high_protein', l10n.nutritionGoalStyleHighProtein),
+      ('low_carb', l10n.nutritionGoalStyleLowCarb),
     ];
 
     return Container(
@@ -532,13 +576,13 @@ class _NutritionGoalScreenState extends State<NutritionGoalScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'Recommended Daily Targets',
-                      style:
-                          TextStyle(fontSize: 15, fontWeight: FontWeight.w800),
+                    Text(
+                      l10n.nutritionGoalRecommendedTitle,
+                      style: const TextStyle(
+                          fontSize: 15, fontWeight: FontWeight.w800),
                     ),
                     Text(
-                      rec.note,
+                      _localizedRecommendedNote(l10n),
                       style: TextStyle(
                         color: context.fitlek.textMuted,
                         fontSize: 11,
@@ -558,14 +602,14 @@ class _NutritionGoalScreenState extends State<NutritionGoalScreen> {
               Expanded(
                 child: _macroStatBadge(
                   context,
-                  'Calories',
+                  l10n.nutritionGoalMacroCalories,
                   '${rec.calories.round()}',
-                  'kcal/day',
+                  l10n.nutritionGoalUnitKcalPerDay,
                   rec.diff < 0
-                      ? '${rec.diff.round()} deficit'
+                      ? l10n.nutritionGoalDeficitBadge(rec.diff.round())
                       : rec.diff > 0
-                          ? '+${rec.diff.round()} surplus'
-                          : 'Maintenance',
+                          ? l10n.nutritionGoalSurplusBadge(rec.diff.round())
+                          : l10n.nutritionGoalMaintenanceBadge,
                   color: primary,
                 ),
               ),
@@ -573,10 +617,10 @@ class _NutritionGoalScreenState extends State<NutritionGoalScreen> {
               Expanded(
                 child: _macroStatBadge(
                   context,
-                  'Protein',
+                  l10n.nutritionGoalMacroProtein,
                   '${rec.protein.round()}g',
                   '${((rec.protein * 4 / rec.calories) * 100).round()}%',
-                  'Muscle recovery',
+                  l10n.nutritionGoalCaptionMuscleRecovery,
                   color: Colors.blueAccent,
                 ),
               ),
@@ -588,10 +632,10 @@ class _NutritionGoalScreenState extends State<NutritionGoalScreen> {
               Expanded(
                 child: _macroStatBadge(
                   context,
-                  'Carbs',
+                  l10n.nutritionGoalMacroCarbs,
                   '${rec.carbs.round()}g',
                   '${((rec.carbs * 4 / rec.calories) * 100).round()}%',
-                  'Daily energy',
+                  l10n.nutritionGoalCaptionDailyEnergy,
                   color: Colors.amberAccent,
                 ),
               ),
@@ -599,10 +643,10 @@ class _NutritionGoalScreenState extends State<NutritionGoalScreen> {
               Expanded(
                 child: _macroStatBadge(
                   context,
-                  'Fat',
+                  l10n.nutritionGoalMacroFat,
                   '${rec.fat.round()}g',
                   '${((rec.fat * 9 / rec.calories) * 100).round()}%',
-                  'Hormone health',
+                  l10n.nutritionGoalCaptionHormoneHealth,
                   color: Colors.orangeAccent,
                 ),
               ),
@@ -617,7 +661,7 @@ class _NutritionGoalScreenState extends State<NutritionGoalScreen> {
             runSpacing: 4,
             children: [
               Text(
-                'Dietary Style: ',
+                l10n.nutritionGoalDietaryStyleLabel,
                 style: TextStyle(
                   color: context.fitlek.textMuted,
                   fontSize: 11,
@@ -662,9 +706,10 @@ class _NutritionGoalScreenState extends State<NutritionGoalScreen> {
                 ),
               ),
               icon: const Icon(Icons.bolt_rounded, size: 20),
-              label: const Text(
-                'Apply Recommended Targets',
-                style: TextStyle(fontWeight: FontWeight.w800, fontSize: 13),
+              label: Text(
+                l10n.nutritionGoalApplyRecommendedBtn,
+                style:
+                    const TextStyle(fontWeight: FontWeight.w800, fontSize: 13),
               ),
               onPressed: () {
                 setState(() {
@@ -678,7 +723,11 @@ class _NutritionGoalScreenState extends State<NutritionGoalScreen> {
                   SnackBar(
                     backgroundColor: context.fitlek.card,
                     content: Text(
-                      'Applied ${rec.calories.round()} kcal · ${rec.protein.round()}g P · ${rec.carbs.round()}g C · ${rec.fat.round()}g F!',
+                      l10n.nutritionGoalAppliedToast(
+                          rec.calories.round(),
+                          rec.protein.round(),
+                          rec.carbs.round(),
+                          rec.fat.round()),
                       style: const TextStyle(fontWeight: FontWeight.w600),
                     ),
                     duration: const Duration(seconds: 2),
@@ -693,6 +742,7 @@ class _NutritionGoalScreenState extends State<NutritionGoalScreen> {
   }
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final estimate = maintenanceCalories(
         age: _value('age'),
         height: _value('height'),
@@ -716,16 +766,17 @@ class _NutritionGoalScreenState extends State<NutritionGoalScreen> {
         macroSplit: _macroSplit);
     return Scaffold(
         appBar: AppBar(
-            title:
-                Text(widget.signup ? 'Your first goal' : 'My nutrition goal'),
+            title: Text(widget.signup
+                ? l10n.nutritionGoalTitleSignup
+                : l10n.nutritionGoalTitle),
             actions: [
               if (widget.signup)
                 TextButton(
                   key: const ValueKey('skip-goal-signup-btn'),
                   onPressed: () =>
                       Navigator.pop(context, const {'skipped': true}),
-                  child: const Text('Skip for now',
-                      style: TextStyle(fontWeight: FontWeight.w600)),
+                  child: Text(l10n.nutritionGoalSkipForNow,
+                      style: const TextStyle(fontWeight: FontWeight.w600)),
                 ),
             ]),
         body: Form(
@@ -735,32 +786,33 @@ class _NutritionGoalScreenState extends State<NutritionGoalScreen> {
                 child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      const Text('A plan that fits your life.',
-                          style: TextStyle(
+                      Text(l10n.nutritionGoalHeaderTitle,
+                          style: const TextStyle(
                               fontSize: 30,
                               fontWeight: FontWeight.w800,
                               letterSpacing: -1)),
                       const SizedBox(height: 8),
-                      Text(
-                          'Start simply. You can change your goal, targets or reminders from My profile at any time.',
+                      Text(l10n.nutritionGoalHeaderSubtitle,
                           style: TextStyle(
                               color: context.fitlek.textMuted, height: 1.5)),
                       const SizedBox(height: 22),
                       _section(
-                          'What matters to you?',
-                          'A weight goal is optional. Balanced habits lets you track meals without a weight target.',
+                          l10n.nutritionGoalSectionWhatMattersTitle,
+                          l10n.nutritionGoalSectionWhatMattersSub,
                           [
                             DropdownButtonFormField<String>(
                                 isExpanded: true,
                                 initialValue: _type,
-                                decoration:
-                                    const InputDecoration(labelText: 'My goal'),
+                                decoration: InputDecoration(
+                                    labelText: l10n.nutritionGoalMyGoalLabel),
                                 items: [
                                   for (final entry
                                       in nutritionGoalLabels.entries)
                                     DropdownMenuItem(
                                         value: entry.key,
-                                        child: Text(entry.value,
+                                        child: Text(
+                                            _localizedGoalLabel(
+                                                l10n, entry.key),
                                             maxLines: 1,
                                             overflow: TextOverflow.ellipsis,
                                             style:
@@ -775,29 +827,34 @@ class _NutritionGoalScreenState extends State<NutritionGoalScreen> {
                                           }
                                         })),
                             const SizedBox(height: 18),
-                            _number('age', 'Age (years)',
+                            _number('age', l10n.nutritionGoalAgeLabel,
                                 required: _weightGoal, min: 13, max: 100),
                             if (!_minor)
-                              _number('height', 'Height (cm)',
+                              _number('height', l10n.nutritionGoalHeightLabel,
                                   required: _weightGoal, min: 1, max: 300),
                             if (!_minor)
-                              _number('currentWeight', 'Starting weight (kg)',
+                              _number('currentWeight',
+                                  l10n.nutritionGoalStartingWeightLabel,
                                   required: _weightGoal, min: 1, max: 500),
                             if (_weightGoal)
-                              _number('targetWeight', 'Target weight (kg)',
+                              _number('targetWeight',
+                                  l10n.nutritionGoalTargetWeightLabel,
                                   required: true, min: 25, max: 500),
                             if (!_minor)
                               DropdownButtonFormField<String>(
                                   isExpanded: true,
                                   initialValue: _sex,
-                                  decoration: const InputDecoration(
-                                      labelText:
-                                          'Biological sex (for metabolic formula)'),
-                                  items: const [
+                                  decoration: InputDecoration(
+                                      labelText: l10n
+                                          .nutritionGoalBiologicalSexLabel),
+                                  items: [
                                     DropdownMenuItem(
-                                        value: 'male', child: Text('Male')),
+                                        value: 'male',
+                                        child: Text(l10n.nutritionGoalSexMale)),
                                     DropdownMenuItem(
-                                        value: 'female', child: Text('Female'))
+                                        value: 'female',
+                                        child:
+                                            Text(l10n.nutritionGoalSexFemale))
                                   ],
                                   onChanged: _saving
                                       ? null
@@ -807,14 +864,16 @@ class _NutritionGoalScreenState extends State<NutritionGoalScreen> {
                             DropdownButtonFormField<String>(
                                 isExpanded: true,
                                 initialValue: _activity,
-                                decoration: const InputDecoration(
-                                    labelText: 'Usual activity'),
+                                decoration: InputDecoration(
+                                    labelText:
+                                        l10n.nutritionGoalUsualActivityLabel),
                                 items: [
                                   for (final entry in {
-                                    'low': 'Mostly seated',
-                                    'light': 'Lightly active',
-                                    'moderate': 'Moderately active',
-                                    'high': 'Very active'
+                                    'low': l10n.nutritionGoalActivityLow,
+                                    'light': l10n.nutritionGoalActivityLight,
+                                    'moderate':
+                                        l10n.nutritionGoalActivityModerate,
+                                    'high': l10n.nutritionGoalActivityHigh
                                   }.entries)
                                     DropdownMenuItem(
                                         value: entry.key,
@@ -830,14 +889,16 @@ class _NutritionGoalScreenState extends State<NutritionGoalScreen> {
                             DropdownButtonFormField<String>(
                                 isExpanded: true,
                                 initialValue: _diet,
-                                decoration: const InputDecoration(
-                                    labelText: 'Food preference'),
+                                decoration: InputDecoration(
+                                    labelText:
+                                        l10n.nutritionGoalFoodPreferenceLabel),
                                 items: [
                                   for (final entry in {
-                                    'balanced': 'No specific preference',
-                                    'vegetarian': 'Vegetarian',
-                                    'vegan': 'Vegan',
-                                    'halal': 'Halal'
+                                    'balanced': l10n.nutritionGoalDietBalanced,
+                                    'vegetarian':
+                                        l10n.nutritionGoalDietVegetarian,
+                                    'vegan': l10n.nutritionGoalDietVegan,
+                                    'halal': l10n.nutritionGoalDietHalal
                                   }.entries)
                                     DropdownMenuItem(
                                         value: entry.key,
@@ -852,57 +913,61 @@ class _NutritionGoalScreenState extends State<NutritionGoalScreen> {
                           ]),
                       if (!_minor)
                         _section(
-                            'Daily targets',
-                            'Set your daily calorie and macronutrient targets. You can apply our smart recommendations or customize your own numbers below.',
+                            l10n.nutritionGoalSectionDailyTargetsTitle,
+                            l10n.nutritionGoalSectionDailyTargetsSub,
                             [
                               _buildSmartTargetsCard(context, recommended),
                               const SizedBox(height: 8),
                               for (final key in nutritionKeys)
                                 _number(key,
-                                    '${mealTypeLabel(key)} (${key == 'calories' ? 'kcal' : 'g'})',
+                                    '${_localizedMacroLabel(l10n, key)} (${key == 'calories' ? 'kcal' : 'g'})',
                                     max: key == 'calories' ? 20000 : 2000),
                               ExpansionTile(
                                   tilePadding: EdgeInsets.zero,
-                                  title: const Text(
-                                      'Estimate maintenance calories',
-                                      style: TextStyle(fontSize: 14)),
+                                  title: Text(
+                                      l10n.nutritionGoalEstimateMaintenanceTitle,
+                                      style: const TextStyle(fontSize: 14)),
                                   children: [
-                                    const Text(
-                                        'Optional general estimate for healthy adults aged 18–80. It does not calculate a weight-loss or weight-gain diet.',
-                                        style: TextStyle(
+                                    Text(
+                                        l10n.nutritionGoalEstimateMaintenanceSub,
+                                        style: const TextStyle(
                                             fontSize: 12, height: 1.5)),
                                     const SizedBox(height: 12),
                                     DropdownButtonFormField<String>(
                                         isExpanded: true,
                                         initialValue: _sex,
-                                        decoration: const InputDecoration(
-                                            labelText: 'Sex used for the estimate'),
-                                        items: const [
+                                        decoration: InputDecoration(
+                                            labelText: l10n
+                                                .nutritionGoalSexEstimateLabel),
+                                        items: [
                                           DropdownMenuItem(
                                               value: 'male',
-                                              child: Text('Male')),
+                                              child: Text(
+                                                  l10n.nutritionGoalSexMale)),
                                           DropdownMenuItem(
                                               value: 'female',
-                                              child: Text('Female'))
+                                              child: Text(
+                                                  l10n.nutritionGoalSexFemale))
                                         ],
                                         onChanged: _saving
                                             ? null
                                             : (value) =>
                                                 setState(() => _sex = value)),
                                     _switch(
-                                        'General estimates are suitable for me',
+                                        l10n.nutritionGoalGeneralEstimatesSuitable,
                                         _eligible,
                                         (value) =>
                                             setState(() => _eligible = value),
-                                        subtitle:
-                                            'Use manual targets if pregnant, breastfeeding, under a medical diet or unsure.'),
+                                        subtitle: l10n
+                                            .nutritionGoalGeneralEstimatesSub),
                                     if (estimate != null)
                                       Padding(
                                           padding:
                                               const EdgeInsets.only(bottom: 12),
                                           child: Column(children: [
                                             Text(
-                                                'About ${estimate.round()} kcal/day for maintenance',
+                                                l10n.nutritionGoalAboutMaintenanceKcal(
+                                                    estimate.round()),
                                                 style: const TextStyle(
                                                     fontWeight:
                                                         FontWeight.w800)),
@@ -915,62 +980,62 @@ class _NutritionGoalScreenState extends State<NutritionGoalScreen> {
                                                           estimate
                                                               .toStringAsFixed(
                                                                   0)),
-                                                  child: const Text(
-                                                      'Use maintenance estimate'))
+                                                  child: Text(l10n
+                                                      .nutritionGoalUseMaintenanceBtn))
                                           ]))
                                     else
-                                      const Padding(
-                                          padding: EdgeInsets.symmetric(
+                                      Padding(
+                                          padding: const EdgeInsets.symmetric(
                                               vertical: 12),
                                           child: Text(
-                                              'Add adult age, height, weight, sex and eligibility to see an estimate. Some needs are outside this general estimator.',
-                                              style: TextStyle(fontSize: 12))),
+                                              l10n.nutritionGoalEstimatePrompt,
+                                              style: const TextStyle(
+                                                  fontSize: 12))),
                                     TextButton(
                                         onPressed: () => launchUrl(Uri.parse(
                                             'https://www.niddk.nih.gov/health-information/weight-management/body-weight-planner')),
-                                        child: const Text(
-                                            'About general calorie planning')),
+                                        child: Text(l10n
+                                            .nutritionGoalAboutCaloriePlanning)),
                                   ]),
                             ]),
                       if (_minor)
                         _section(
-                            'Meal tracking for younger clients',
-                            'This mode records meals without calorie targets or weight-change prompts. A qualified professional can guide individual needs.',
+                            l10n.nutritionGoalMinorSectionTitle,
+                            l10n.nutritionGoalMinorSectionSub,
                             []),
                       _section(
-                          'Support on your terms',
-                          'Reminders use your logged meals, which may be incomplete. They never ask you to skip meals or compensate for eating.',
+                          l10n.nutritionGoalSectionSupportTitle,
+                          l10n.nutritionGoalSectionSupportSub,
                           [
-                            _switch('Nutrition reminders', _enabled,
+                            _switch(l10n.nutritionGoalRemindersTitle, _enabled,
                                 (value) => setState(() => _enabled = value),
-                                subtitle:
-                                    'Optional. Up to 3 routine reminders a day, spaced apart.'),
+                                subtitle: l10n.nutritionGoalRemindersSub),
                             if (_enabled) ...[
                               if (_adult)
                                 _switch(
-                                    'Calorie target check-ins',
+                                    l10n.nutritionGoalCalorieCheckinsTitle,
                                     _calorieAlerts,
                                     (value) =>
                                         setState(() => _calorieAlerts = value),
                                     subtitle:
-                                        'Gentle alerts when logged calories exceed your target. Targets below 1,500 kcal do not trigger alerts.'),
+                                        l10n.nutritionGoalCalorieCheckinsSub),
                               if (_adult)
-                                _switch('Include gentle meal ideas', _ideas,
+                                _switch(l10n.nutritionGoalMealIdeasTitle, _ideas,
                                     (value) => setState(() => _ideas = value),
-                                    subtitle:
-                                        'Suggestions that respect your appetite and routine.'),
+                                    subtitle: l10n.nutritionGoalMealIdeasSub),
                               if (_adult && _weightGoal)
-                                _switch('Weekly weight check-in', _weekly,
+                                _switch(l10n.nutritionGoalWeeklyWeightCheckin,
+                                    _weekly,
                                     (value) => setState(() => _weekly = value)),
-                              _switch('Monthly progress review', _monthly,
+                              _switch(l10n.nutritionGoalMonthlyReview, _monthly,
                                   (value) => setState(() => _monthly = value)),
-                              _switch('Yearly progress review', _yearly,
+                              _switch(l10n.nutritionGoalYearlyReview, _yearly,
                                   (value) => setState(() => _yearly = value)),
                               DropdownButtonFormField<String>(
                                   isExpanded: true,
                                   initialValue: _zone,
-                                  decoration: const InputDecoration(
-                                      labelText: 'Reminder time zone'),
+                                  decoration: InputDecoration(
+                                      labelText: l10n.nutritionGoalTimeZoneLabel),
                                   items: [
                                     for (final zone in {..._zones, _zone})
                                       DropdownMenuItem(
@@ -985,11 +1050,11 @@ class _NutritionGoalScreenState extends State<NutritionGoalScreen> {
                                           setState(() => _zone = value!)),
                               const SizedBox(height: 12),
                               for (final entry in {
-                                'breakfast': 'Breakfast check-in',
-                                'lunch': 'Lunch check-in',
-                                'dinner': 'Dinner check-in',
-                                'quietStart': 'Quiet hours start',
-                                'quietEnd': 'Quiet hours end'
+                                'breakfast': l10n.nutritionGoalBreakfastCheckin,
+                                'lunch': l10n.nutritionGoalLunchCheckin,
+                                'dinner': l10n.nutritionGoalDinnerCheckin,
+                                'quietStart': l10n.nutritionGoalQuietHoursStart,
+                                'quietEnd': l10n.nutritionGoalQuietHoursEnd
                               }.entries)
                                 ListTile(
                                     contentPadding: EdgeInsets.zero,
@@ -1002,41 +1067,44 @@ class _NutritionGoalScreenState extends State<NutritionGoalScreen> {
                                     onTap: _saving
                                         ? null
                                         : () => _time(entry.key)),
-                              const Text(
-                                  'Reminders inside quiet hours are skipped; equal start and end times turn quiet hours off. Notifications also need device permission.',
-                                  style: TextStyle(fontSize: 11)),
+                              Text(l10n.nutritionGoalQuietHoursNote,
+                                  style: const TextStyle(fontSize: 11)),
                             ],
                           ]),
                       if (!widget.signup)
                         _section(
-                            'Your goal status',
-                            'Pause whenever you like. For a weight goal, two recent weigh-in days must confirm the target before automatic completion.',
+                            l10n.nutritionGoalSectionStatusTitle,
+                            l10n.nutritionGoalSectionStatusSub,
                             [
                               DropdownButtonFormField<String>(
                                   isExpanded: true,
                                   initialValue: _status,
-                                  items: const [
+                                  items: [
                                     DropdownMenuItem(
-                                        value: 'active', child: Text('Active')),
+                                        value: 'active',
+                                        child: Text(
+                                            l10n.nutritionGoalStatusActive)),
                                     DropdownMenuItem(
-                                        value: 'paused', child: Text('Paused')),
+                                        value: 'paused',
+                                        child: Text(
+                                            l10n.nutritionGoalStatusPaused)),
                                     DropdownMenuItem(
                                         value: 'achieved',
-                                        child: Text('Goal reached'))
+                                        child: Text(
+                                            l10n.nutritionGoalStatusAchieved))
                                   ],
                                   onChanged: _saving
                                       ? null
                                       : (value) =>
                                           setState(() => _status = value!)),
                               _switch(
-                                  'Start a fresh goal',
+                                  l10n.nutritionGoalStartFreshTitle,
                                   _restart,
                                   (value) => setState(() {
                                         _restart = value;
                                         if (value) _status = 'active';
                                       }),
-                                  subtitle:
-                                      'Reset the baseline and start date using these settings.'),
+                                  subtitle: l10n.nutritionGoalStartFreshSub),
                             ]),
                       if (_error != null)
                         Padding(
@@ -1048,10 +1116,10 @@ class _NutritionGoalScreenState extends State<NutritionGoalScreen> {
                           child: FilledButton(
                               onPressed: _saving ? null : _save,
                               child: Text(_saving
-                                  ? 'Saving…'
+                                  ? l10n.nutritionGoalSaving
                                   : widget.signup
-                                      ? 'Use this goal'
-                                      : 'Save my goal'))),
+                                      ? l10n.nutritionGoalUseThisGoal
+                                      : l10n.nutritionGoalSaveMyGoal))),
                       if (widget.signup) ...[
                         const SizedBox(height: 10),
                         Center(
@@ -1059,9 +1127,9 @@ class _NutritionGoalScreenState extends State<NutritionGoalScreen> {
                             key: const ValueKey('skip-goal-bottom-btn'),
                             onPressed: () =>
                                 Navigator.pop(context, const {'skipped': true}),
-                            child: const Text(
-                              "I'll set this up later in my profile",
-                              style: TextStyle(fontSize: 13),
+                            child: Text(
+                              l10n.nutritionGoalSetupLaterInProfile,
+                              style: const TextStyle(fontSize: 13),
                             ),
                           ),
                         ),

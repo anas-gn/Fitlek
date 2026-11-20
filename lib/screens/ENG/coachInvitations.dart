@@ -1,3 +1,4 @@
+import 'package:fitlek1/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import '../../services/live_updates.dart';
 import '../../services/apiService.dart';
@@ -47,10 +48,10 @@ class _CoachInvitationsState extends State<CoachInvitations> with LiveUpdates<Co
     if (dt == null) return '';
     final d = DateTime.parse(dt);
     final diff = DateTime.now().difference(d);
-    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
-    if (diff.inHours < 24) return '${diff.inHours}h ago';
-    if (diff.inDays == 1) return 'Yesterday';
-    if (diff.inDays < 7) return '${diff.inDays} days ago';
+    if (diff.inMinutes < 60) return AppLocalizations.of(context).coachInvitationsMinutesAgo(diff.inMinutes);
+    if (diff.inHours < 24) return AppLocalizations.of(context).coachInvitationsHoursAgo(diff.inHours);
+    if (diff.inDays == 1) return AppLocalizations.of(context).coachInvitationsYesterday;
+    if (diff.inDays < 7) return AppLocalizations.of(context).coachInvitationsDaysAgo(diff.inDays);
     return '${d.day}/${d.month}/${d.year}';
   }
 
@@ -71,7 +72,7 @@ class _CoachInvitationsState extends State<CoachInvitations> with LiveUpdates<Co
       });
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(result['message']?.toString() ?? 'Something went wrong, please try again.')),
+        SnackBar(content: Text(result['message']?.toString() ?? AppLocalizations.of(context).coachInvitationsGenericError)),
       );
     }
   }
@@ -98,7 +99,7 @@ class _CoachInvitationsState extends State<CoachInvitations> with LiveUpdates<Co
                         child: Column(children: [
                           Icon(Icons.link_off_rounded, color: f.textMuted, size: 56),
                           const SizedBox(height: 12),
-                          Text('No invitations clicked yet', style: TextStyle(color: f.textMuted, fontSize: 15)),
+                          Text(AppLocalizations.of(context).coachInvitationsEmpty, style: TextStyle(color: f.textMuted, fontSize: 15)),
                         ]))
                     else
                       ..._invitations.map((inv) => _buildInvitationItem(inv)),
@@ -120,7 +121,7 @@ class _CoachInvitationsState extends State<CoachInvitations> with LiveUpdates<Co
           decoration: BoxDecoration(color: f.card, borderRadius: BorderRadius.circular(12), border: Border.all(color: f.border)),
           child: Icon(Icons.arrow_back_ios_new_rounded, color: cs.onSurface, size: 18))),
       const SizedBox(width: 16),
-      Text('Invitations', style: TextStyle(color: cs.onSurface, fontSize: 18, fontWeight: FontWeight.w700)),
+      Text(AppLocalizations.of(context).coachInvitationsTitle, style: TextStyle(color: cs.onSurface, fontSize: 18, fontWeight: FontWeight.w700)),
     ]));
   }
 
@@ -136,13 +137,13 @@ class _CoachInvitationsState extends State<CoachInvitations> with LiveUpdates<Co
       boxShadow: [BoxShadow(color: cs.primary.withValues(alpha: 0.35), blurRadius: 24, offset: const Offset(0, 8))]),
     child: Row(children: [
       Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text('Client Invitation Points', style: TextStyle(color: cs.onPrimary.withValues(alpha: 0.75), fontSize: 12, fontWeight: FontWeight.w600, letterSpacing: 0.3)),
+        Text(AppLocalizations.of(context).coachInvitationsPointsHeader, style: TextStyle(color: cs.onPrimary.withValues(alpha: 0.75), fontSize: 12, fontWeight: FontWeight.w600, letterSpacing: 0.3)),
         const SizedBox(height: 4),
-        Text('$_totalPoints pts', style: TextStyle(color: cs.onPrimary, fontSize: 36, fontWeight: FontWeight.w900, height: 1, letterSpacing: -0.5)),
+        Text(AppLocalizations.of(context).coachInvitationsPointsValue(_totalPoints), style: TextStyle(color: cs.onPrimary, fontSize: 36, fontWeight: FontWeight.w900, height: 1, letterSpacing: -0.5)),
       ])),
       Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
         Text('$accepted', style: TextStyle(color: cs.onPrimary, fontSize: 42, fontWeight: FontWeight.w900, height: 1)),
-        Text('accepted clients', style: TextStyle(color: cs.onPrimary.withValues(alpha: 0.6), fontSize: 12, fontWeight: FontWeight.w600)),
+        Text(AppLocalizations.of(context).coachInvitationsAcceptedClients, style: TextStyle(color: cs.onPrimary.withValues(alpha: 0.6), fontSize: 12, fontWeight: FontWeight.w600)),
       ]),
     ]),
   );
@@ -175,8 +176,8 @@ class _CoachInvitationsState extends State<CoachInvitations> with LiveUpdates<Co
               border: Border.all(color: inv['status'] == 'accepted' ? cs.primary.withValues(alpha: 0.3) : f.error.withValues(alpha: 0.3))),
             child: Text(
               inv['status'] == 'accepted'
-                  ? '+${inv['pointsEarned'] ?? 20} pts'
-                  : 'Declined',
+                  ? AppLocalizations.of(context).coachInvitationsPointsEarned((inv['pointsEarned'] ?? 20) as int)
+                  : AppLocalizations.of(context).coachInvitationsDeclined,
               style: TextStyle(color: inv['status'] == 'accepted' ? cs.primary : f.error, fontSize: 13, fontWeight: FontWeight.w700))),
       ]),
       if (inv['status'] == 'pending') ...[
@@ -188,7 +189,7 @@ class _CoachInvitationsState extends State<CoachInvitations> with LiveUpdates<Co
               side: BorderSide(color: f.border),
               padding: const EdgeInsets.symmetric(vertical: 10),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
-            child: Text('Decline', style: TextStyle(color: f.textSecondary, fontWeight: FontWeight.w600)))),
+            child: Text(AppLocalizations.of(context).coachInvitationsDecline, style: TextStyle(color: f.textSecondary, fontWeight: FontWeight.w600)))),
           const SizedBox(width: 10),
           Expanded(child: ElevatedButton(
             onPressed: () => _respond(inv, true),
@@ -196,7 +197,7 @@ class _CoachInvitationsState extends State<CoachInvitations> with LiveUpdates<Co
               backgroundColor: cs.primary,
               padding: const EdgeInsets.symmetric(vertical: 10),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
-            child: Text('Accept', style: TextStyle(color: cs.onPrimary, fontWeight: FontWeight.w700)))),
+            child: Text(AppLocalizations.of(context).coachInvitationsAccept, style: TextStyle(color: cs.onPrimary, fontWeight: FontWeight.w700)))),
         ]),
       ],
     ]),

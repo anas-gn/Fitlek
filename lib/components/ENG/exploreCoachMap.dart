@@ -1,3 +1,4 @@
+import 'package:fitlek1/l10n/app_localizations.dart';
 import 'dart:math' as math;
 import '../../services/live_updates.dart';
 import 'dart:async';
@@ -161,7 +162,7 @@ class _ExploreCoachMapState extends State<ExploreCoachMap> with LiveUpdates<Expl
           isScrollControlled: true,
           builder: (context) => SafeArea(
                 child: ListView(shrinkWrap: true, children: [
-                  const ListTile(title: Text('Coaches in this area')),
+                  ListTile(title: Text(AppLocalizations.of(context).exploreCoachMapCoachesInArea)),
                   for (final coach in coaches)
                     ListTile(
                         title: Text(coach.fullName),
@@ -212,7 +213,7 @@ class _ExploreCoachMapState extends State<ExploreCoachMap> with LiveUpdates<Expl
                 const SizedBox(height: 6),
                 FilledButton(
                     onPressed: () => widget.onOpen(coach),
-                    child: const Text('View & Book')),
+                    child: Text(AppLocalizations.of(context).exploreCoachMapViewAndBook)),
               ])),
         ]),
       );
@@ -262,7 +263,7 @@ class _ExploreCoachMapState extends State<ExploreCoachMap> with LiveUpdates<Expl
       return Center(
           child: Column(mainAxisSize: MainAxisSize.min, children: [
         Text(_error!, textAlign: TextAlign.center),
-        TextButton(onPressed: _load, child: const Text('Retry')),
+        TextButton(onPressed: _load, child: Text(AppLocalizations.of(context).exploreCoachMapRetry)),
       ]));
     return LayoutBuilder(builder: (context, constraints) {
       final compact = constraints.maxHeight < 300;
@@ -382,7 +383,7 @@ class _ExploreCoachMapState extends State<ExploreCoachMap> with LiveUpdates<Expl
                 child: Container(
                     color: Colors.white.withValues(alpha: 0.9),
                     padding: const EdgeInsets.all(3),
-                    child: const Text('© OpenStreetMap contributors',
+                    child: Text(AppLocalizations.of(context).exploreCoachMapOsmCopyright,
                         style:
                             TextStyle(color: Color(0xFF064B43), fontSize: 9))),
               )),

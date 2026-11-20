@@ -1,3 +1,4 @@
+import 'package:fitlek1/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'login.dart';
@@ -23,30 +24,40 @@ class _WelcomeScreenState extends State<WelcomeScreen>
   late Animation<Offset> _textSlide;
   late Animation<double> _textFade;
 
-  static const List<_OnboardingData> _pages = [
-    _OnboardingData(
-      imageUrl: 'assets/branding/sirvya3.jfif',
-      tag: 'COACHING',
-      title: 'Your Coach,',
-      titleAccent: 'On Demand.',
-      subtitle:
-          'Find certified coaches near you and book a session in seconds.',
-    ),
-    _OnboardingData(
-      imageUrl: 'assets/branding/sirvya4.jfif',
-      tag: 'PROGRESS',
-      title: 'Track Every',
-      titleAccent: 'Milestone.',
-      subtitle: 'Monitor your sessions and measure your growth day after day.',
-    ),
-    _OnboardingData(
-      imageUrl: 'assets/branding/sirvya5.jfif',
-      tag: 'COMMUNITY',
-      title: 'Join',
-      titleAccent: 'SIRVYA.',
-      subtitle: 'Connect with top coaches and transform your body for good.',
-    ),
+  static const List<String> _pages = [
+    'assets/branding/sirvya3.jfif',
+    'assets/branding/sirvya4.jfif',
+    'assets/branding/sirvya5.jfif',
   ];
+
+  _OnboardingData _pageData(AppLocalizations l, int i) {
+    switch (i) {
+      case 0:
+        return _OnboardingData(
+          imageUrl: _pages[0],
+          tag: l.welcomePage1Tag,
+          title: l.welcomePage1Title,
+          titleAccent: l.welcomePage1Accent,
+          subtitle: l.welcomePage1Subtitle,
+        );
+      case 1:
+        return _OnboardingData(
+          imageUrl: _pages[1],
+          tag: l.welcomePage2Tag,
+          title: l.welcomePage2Title,
+          titleAccent: l.welcomePage2Accent,
+          subtitle: l.welcomePage2Subtitle,
+        );
+      default:
+        return _OnboardingData(
+          imageUrl: _pages[2],
+          tag: l.welcomePage3Tag,
+          title: l.welcomePage3Title,
+          titleAccent: l.welcomePage3Accent,
+          subtitle: l.welcomePage3Subtitle,
+        );
+    }
+  }
 
   @override
   void initState() {
@@ -123,7 +134,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
     if (!_showIntro) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
-    final data = _pages[_currentPage];
+    final data = _pageData(AppLocalizations.of(context), _currentPage);
     final isLast = _currentPage == _pages.length - 1;
 
     return Scaffold(
@@ -134,7 +145,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
             controller: _pageController,
             itemCount: _pages.length,
             onPageChanged: _onPageChanged,
-            itemBuilder: (_, i) => _FullscreenImage(url: _pages[i].imageUrl),
+            itemBuilder: (_, i) => _FullscreenImage(url: _pages[i]),
           ),
           Positioned.fill(
             child: DecoratedBox(
@@ -174,7 +185,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                         curve: Curves.easeInOutCubic,
                       ),
                       child: Text(
-                        'Skip',
+                        AppLocalizations.of(context).welcomeSkip,
                         style: TextStyle(
                           color: Colors.white.withValues(alpha: 0.4),
                           fontSize: 14,
@@ -257,13 +268,13 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                         const SizedBox(height: 40),
                         if (isLast) ...[
                           _CTAButton(
-                            label: 'LOG IN',
+                            label: AppLocalizations.of(context).welcomeLogIn,
                             onTap: _goToLogin,
                             isPrimary: true,
                           ),
                           const SizedBox(height: 12),
                           _CTAButton(
-                            label: 'CREATE AN ACCOUNT',
+                            label: AppLocalizations.of(context).welcomeCreateAccount,
                             onTap: _goToRegister,
                             isPrimary: false,
                           ),
@@ -312,7 +323,7 @@ class _OnboardingData {
   final String titleAccent;
   final String subtitle;
 
-  const _OnboardingData({
+  _OnboardingData({
     required this.imageUrl,
     required this.tag,
     required this.title,

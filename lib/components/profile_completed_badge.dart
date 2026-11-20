@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:fitlek1/l10n/app_localizations.dart';
 import '../theme/fitlek_theme_extension.dart';
 
 class ProfileCompletedBadge extends StatelessWidget {
@@ -7,8 +8,9 @@ class ProfileCompletedBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final success = context.fitlek.success;
+    final l10n = AppLocalizations.of(context);
     return Semantics(
-      label: 'Profile completed',
+      label: l10n.profileCompletedBadgeLabel,
       excludeSemantics: true,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
@@ -21,7 +23,7 @@ class ProfileCompletedBadge extends StatelessWidget {
           Icon(Icons.check_circle_outline_rounded, size: 18, color: success),
           const SizedBox(width: 7),
           Flexible(
-              child: Text('Profile completed',
+              child: Text(l10n.profileCompletedBadgeLabel,
                   style: TextStyle(
                       color: success,
                       fontSize: 12,

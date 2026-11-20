@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:fitlek1/l10n/app_localizations.dart';
 import '../sirvya_logo.dart';
 import '../home_robot_wave.dart';
 import '../../theme/fitlek_theme_extension.dart';
@@ -15,11 +16,12 @@ class ClientNavigationBar extends StatelessWidget {
       required this.onScanMeal});
   @override
   Widget build(BuildContext context) {
-    const items = [
-      (Icons.home_rounded, 'Home'),
-      (Icons.search_rounded, 'Explore'),
-      (Icons.calendar_today_rounded, 'Sessions'),
-      (Icons.person_rounded, 'Profile'),
+    final l10n = AppLocalizations.of(context);
+    final items = [
+      (Icons.home_rounded, l10n.clientNavHome),
+      (Icons.search_rounded, l10n.clientNavExplore),
+      (Icons.calendar_today_rounded, l10n.clientNavSessions),
+      (Icons.person_rounded, l10n.clientNavProfile),
     ];
 
     const leftItems = [0, 1];
@@ -68,7 +70,7 @@ class ClientNavigationBar extends StatelessWidget {
             Positioned(
               top: -8,
               child: Semantics(
-                label: 'Scan your meal',
+                label: l10n.clientNavScanMealLabel,
                 button: true,
                 excludeSemantics: true,
                 onTap: onScanMeal,

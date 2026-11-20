@@ -1,0 +1,78 @@
+{
+  "coachInviteClientsLoadError": "Unable to load invitations. Please try again.",
+  "coachInviteClientsCopied": "Copied to clipboard",
+  "coachInviteClientsShareTitle": "Join me on SIRVYA",
+  "coachInviteClientsShareText": "You are invited to join me on SIRVYA. Find your coach or grow your coaching business.\n\n{link}\n\nInvitation code: {code}",
+  "@coachInviteClientsShareText": {
+    "placeholders": {
+      "link": {
+        "type": "String"
+      },
+      "code": {
+        "type": "String"
+      }
+    }
+  },
+  "coachInviteClientsShareFallback": "Join me on SIRVYA: {link}\nInvitation code: {code}",
+  "@coachInviteClientsShareFallback": {
+    "placeholders": {
+      "link": {
+        "type": "String"
+      },
+      "code": {
+        "type": "String"
+      }
+    }
+  },
+  "coachInviteClientsTitle": "Invite & grow",
+  "coachInviteClientsRetry": "Retry",
+  "coachInviteClientsHeading": "Grow your SIRVYA network",
+  "coachInviteClientsIntro": "One code for clients and coaches. Track the people who successfully sign up through your invitation.",
+  "coachInviteClientsYourCode": "Your invitation code",
+  "coachInviteClientsCopyCode": "Copy code",
+  "coachInviteClientsCopyLink": "Copy link",
+  "coachInviteClientsShare": "Share",
+  "coachInviteClientsClientsJoined": "Clients joined",
+  "coachInviteClientsCoachesJoined": "Coaches joined",
+  "coachInviteClientsPoints": "{count, plural, =1{{count} point} other{{count} points}}",
+  "@coachInviteClientsPoints": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "coachInviteClientsRewardBalance": "Your total reward balance",
+  "coachInviteClientsHowRewards": "How rewards work",
+  "coachInviteClientsRewardRules": "Coach: 40 points after a new account is created.\nClient: 20 points when you accept their connection in Clients. Sharing or opening a link does not earn points.",
+  "coachInviteClientsPeopleInvited": "People you invited",
+  "coachInviteClientsFilterAll": "All",
+  "coachInviteClientsFilterClients": "Clients",
+  "coachInviteClientsFilterCoaches": "Coaches",
+  "coachInviteClientsEmpty": "No signups in this category yet. Share your link to get started.",
+  "coachInviteClientsRoleCoach": "Coach",
+  "coachInviteClientsRoleClient": "Client",
+  "coachInviteClientsStatusPending": "Connection pending",
+  "coachInviteClientsStatusConnected": "Connected",
+  "coachInviteClientsStatusDeclined": "Connection declined",
+  "coachInviteClientsStatusRegistered": "Registered",
+  "coachInviteClientsRoleStatus": "{role} • {status}",
+  "@coachInviteClientsRoleStatus": {
+    "placeholders": {
+      "role": {
+        "type": "String"
+      },
+      "status": {
+        "type": "String"
+      }
+    }
+  },
+  "coachInviteClientsPointsAwarded": "+{count} {count, plural, =1{pt} other{pts}}",
+  "@coachInviteClientsPointsAwarded": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  }
+}

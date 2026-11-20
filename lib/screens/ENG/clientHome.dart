@@ -15,6 +15,8 @@ import 'clientConversation.dart';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:intl/intl.dart';
+import 'package:fitlek1/l10n/app_localizations.dart';
 import 'clientConversationList.dart';
 import 'package:fitlek1/constants/urls.dart';
 import 'package:fitlek1/models/anas/reservation.dart';
@@ -93,12 +95,13 @@ class _UpcomingSession {
     required this.status,
   });
 
-  factory _UpcomingSession.fromJson(Map<String, dynamic> j) {
+  factory _UpcomingSession.fromJson(
+      Map<String, dynamic> j, String sessionFallback) {
     return _UpcomingSession(
       id: j['id'] ?? 0,
       coachName: j['coachName'] ?? j['coach_name'] ?? '',
       coachAvatar: j['coachImageUrl'] ?? j['coachAvatar'],
-      sessionTitle: j['sessionTitle'] ?? j['title'] ?? 'Session',
+      sessionTitle: j['sessionTitle'] ?? j['title'] ?? sessionFallback,
       sessionStart:
           DateTime.tryParse(j['sessionStart'] ?? j['session_start'] ?? '') ??
               DateTime.now(),
@@ -341,10 +344,12 @@ class _HomeScreenState extends State<HomeScreen> with LiveUpdates<HomeScreen> {
       if (res.statusCode == 200) {
         final List data = jsonDecode(res.body);
         if (mounted) {
+          final fallback =
+              AppLocalizations.of(context).clientHomeSessionFallback;
           setState(() {
             _upcomingSessions = data
-                .map(
-                    (e) => _UpcomingSession.fromJson(e as Map<String, dynamic>))
+                .map((e) => _UpcomingSession.fromJson(
+                    e as Map<String, dynamic>, fallback))
                 .where((s) => s.sessionStart.isAfter(DateTime.now()))
                 .take(3)
                 .toList();
@@ -459,7 +464,8 @@ class _HomeScreenState extends State<HomeScreen> with LiveUpdates<HomeScreen> {
       });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('Unable to update favorites'),
+          content: Text(
+              AppLocalizations.of(context).clientHomeUpdateFavoritesFailed),
           backgroundColor: context.fitlek.error,
           behavior: SnackBarBehavior.floating,
           shape:
@@ -532,16 +538,18 @@ class _HomeScreenState extends State<HomeScreen> with LiveUpdates<HomeScreen> {
         _fetchCoachRatings();
       } else {
         setState(() {
-          _coachError = 'Error (${res.statusCode})';
+          _coachError = AppLocalizations.of(context)
+              .clientHomeErrorCode(res.statusCode);
           _loadingCoaches = false;
         });
       }
     } catch (error) {
       if (!mounted) return;
+      final l10n = AppLocalizations.of(context);
       setState(() {
         _coachError = error is FormatException || error is TypeError
-            ? 'Could not load recommendations. Please try again.'
-            : 'Unable to connect. Please try again.';
+            ? l10n.clientHomeLoadRecommendationsFailed
+            : l10n.clientHomeConnectFailed;
         _loadingCoaches = false;
       });
     }
@@ -612,14 +620,16 @@ class _HomeScreenState extends State<HomeScreen> with LiveUpdates<HomeScreen> {
         });
       } else {
         setState(() {
-          _advisorError = 'Error (${res.statusCode})';
+          _advisorError = AppLocalizations.of(context)
+              .clientHomeErrorCode(res.statusCode);
           _loadingAdvisors = false;
         });
       }
     } catch (_) {
       if (!mounted) return;
       setState(() {
-        _advisorError = 'Server unreachable';
+        _advisorError =
+            AppLocalizations.of(context).clientHomeServerUnreachable;
         _loadingAdvisors = false;
       });
     }
@@ -860,6 +870,7 @@ class _HomeScreenState extends State<HomeScreen> with LiveUpdates<HomeScreen> {
   }
 
   Widget _buildHomeBody() {
+    final l10n = AppLocalizations.of(context);
     return RefreshIndicator(
       color: Theme.of(context).colorScheme.primary,
       backgroundColor: context.fitlek.card,
@@ -886,9 +897,11 @@ class _HomeScreenState extends State<HomeScreen> with LiveUpdates<HomeScreen> {
                           contentPadding: const EdgeInsets.symmetric(
                               horizontal: 18, vertical: 8),
                           leading: const Icon(Icons.restaurant_rounded),
-                          title: const Text('Your nutrition diary',
-                              style: TextStyle(fontWeight: FontWeight.w800)),
-                          subtitle: const Text('Calories, macros & every meal'),
+                          title: Text(l10n.clientHomeNutritionDiaryTitle,
+                              style: const TextStyle(
+                                  fontWeight: FontWeight.w800)),
+                          subtitle:
+                              Text(l10n.clientHomeNutritionDiarySubtitle),
                           trailing: const Icon(Icons.arrow_forward_rounded),
                           onTap: () => Navigator.push(
                               context,
@@ -905,12 +918,13 @@ class _HomeScreenState extends State<HomeScreen> with LiveUpdates<HomeScreen> {
             onDestination: _openAnnouncementDestination,
           )),
           if (_favoriteCoaches.isNotEmpty) ...[
-            SliverToBoxAdapter(child: _sectionHeader('My Favorites')),
+            SliverToBoxAdapter(
+                child: _sectionHeader(l10n.clientHomeSectionMyFavorites)),
             SliverToBoxAdapter(child: _buildFavoriteList()),
           ],
           SliverToBoxAdapter(
             child: _sectionHeader(
-              'Recommended for You',
+              l10n.clientHomeSectionRecommended,
               onSeeAll: () => setState(() => _navIndex = 1),
             ),
           ),
@@ -922,7 +936,7 @@ class _HomeScreenState extends State<HomeScreen> with LiveUpdates<HomeScreen> {
                 child: TextButton.icon(
                   onPressed: _determinePosition,
                   icon: const Icon(Icons.my_location_rounded, size: 18),
-                  label: const Text('Set location to see distances'),
+                  label: Text(l10n.clientHomeSetLocationDistances),
                 ),
               ),
             ),
@@ -930,7 +944,7 @@ class _HomeScreenState extends State<HomeScreen> with LiveUpdates<HomeScreen> {
           if (_upcomingSessions.isNotEmpty || _loadingSessions) ...[
             SliverToBoxAdapter(
               child: _sectionHeader(
-                'Upcoming Sessions',
+                l10n.clientHomeSectionUpcomingSessions,
                 onSeeAll: () => setState(() => _navIndex = 2),
               ),
             ),
@@ -939,7 +953,7 @@ class _HomeScreenState extends State<HomeScreen> with LiveUpdates<HomeScreen> {
           if (_coachingCompaniesEnabled) ...[
             SliverToBoxAdapter(
               child: _sectionHeader(
-                'Coaching companies',
+                l10n.clientHomeSectionCoachingCompanies,
                 onSeeAll: () => setState(() => _navIndex = 1),
               ),
             ),
@@ -952,6 +966,7 @@ class _HomeScreenState extends State<HomeScreen> with LiveUpdates<HomeScreen> {
   }
 
   Widget _buildHeroBanner() {
+    final l10n = AppLocalizations.of(context);
     return Stack(
       children: [
         SizedBox(
@@ -996,9 +1011,9 @@ class _HomeScreenState extends State<HomeScreen> with LiveUpdates<HomeScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'Your\nGoals.\nOur Coaches.',
-                style: TextStyle(
+              Text(
+                l10n.clientHomeHeroTitle,
+                style: const TextStyle(
                   color: Colors.white,
                   fontSize: 36,
                   fontWeight: FontWeight.w900,
@@ -1008,7 +1023,7 @@ class _HomeScreenState extends State<HomeScreen> with LiveUpdates<HomeScreen> {
               ),
               const SizedBox(height: 10),
               Text(
-                'Find the right coach, book a\nsession and start your journey.',
+                l10n.clientHomeHeroSubtitle,
                 style: TextStyle(
                   color: Colors.white.withValues(alpha: 0.80),
                   fontSize: 14,
@@ -1030,7 +1045,7 @@ class _HomeScreenState extends State<HomeScreen> with LiveUpdates<HomeScreen> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        'Find your coach',
+                        l10n.clientHomeFindYourCoach,
                         style: TextStyle(
                           color: Theme.of(context).colorScheme.onPrimary,
                           fontWeight: FontWeight.w800,
@@ -1093,7 +1108,7 @@ class _HomeScreenState extends State<HomeScreen> with LiveUpdates<HomeScreen> {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  'TRAIN • CONNECT • PROGRESS',
+                  AppLocalizations.of(context).clientHomeTagline,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     color: muted,
@@ -1125,7 +1140,7 @@ class _HomeScreenState extends State<HomeScreen> with LiveUpdates<HomeScreen> {
                     child: Text(
                       (_clientVille != null && _clientVille!.isNotEmpty)
                           ? _clientVille!
-                          : 'Set Location',
+                          : AppLocalizations.of(context).clientHomeSetLocation,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         color: foreground,
@@ -1270,29 +1285,30 @@ class _HomeScreenState extends State<HomeScreen> with LiveUpdates<HomeScreen> {
               clientID: widget.clientID, token: widget.token)));
 
   Widget _buildQuickActions() {
+    final l10n = AppLocalizations.of(context);
     final actions = [
       (
         Icons.calendar_today_rounded,
-        'Book a\nSession',
+        l10n.clientHomeActionBookSession,
         () => setState(() => _navIndex = 1),
       ),
       (
         Icons.person_search_rounded,
-        'Find a\nCoach',
+        l10n.clientHomeActionFindCoach,
         () {
           setState(() => _navIndex = 1);
         }
       ),
       (
         Icons.qr_code_scanner_rounded,
-        'Scan\nQR',
+        l10n.clientHomeActionScanQr,
         () {
           CoachQrNavigation.scanAndOpen(context);
         }
       ),
       (
         null,
-        'Sirvya AI\nScan meal',
+        l10n.clientHomeActionScanMeal,
         _openMealScanner,
       ),
     ];
@@ -1373,7 +1389,7 @@ class _HomeScreenState extends State<HomeScreen> with LiveUpdates<HomeScreen> {
                 child: Row(
                   children: [
                     Text(
-                      'See all',
+                      AppLocalizations.of(context).clientHomeSeeAll,
                       style: TextStyle(
                         color: Theme.of(context).colorScheme.primary,
                         fontSize: 13,
@@ -1402,7 +1418,9 @@ class _HomeScreenState extends State<HomeScreen> with LiveUpdates<HomeScreen> {
           final isSelected = isAll
               ? _selectedSpecialty == null
               : _selectedSpecialty == _categories[index - 1].name;
-          final label = isAll ? 'All' : _categories[index - 1].name;
+          final label = isAll
+              ? AppLocalizations.of(context).clientHomeCategoryAll
+              : _categories[index - 1].name;
 
           return GestureDetector(
             onTap: () =>
@@ -1492,6 +1510,7 @@ class _HomeScreenState extends State<HomeScreen> with LiveUpdates<HomeScreen> {
     }
 
     if (_coachError != null || _coaches.isEmpty) {
+      final l10n = AppLocalizations.of(context);
       return Container(
         height: 80,
         alignment: Alignment.center,
@@ -1499,12 +1518,13 @@ class _HomeScreenState extends State<HomeScreen> with LiveUpdates<HomeScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Text(
-              _coachError ?? 'No coaches available',
+              _coachError ?? l10n.clientHomeNoCoachesAvailable,
               textAlign: TextAlign.center,
               style: TextStyle(color: context.fitlek.textMuted, fontSize: 13),
             ),
             if (_coachError != null)
-              TextButton(onPressed: _fetchCoaches, child: const Text('Retry')),
+              TextButton(
+                  onPressed: _fetchCoaches, child: Text(l10n.clientHomeRetry)),
           ],
         ),
       );
@@ -1554,15 +1574,17 @@ class _HomeScreenState extends State<HomeScreen> with LiveUpdates<HomeScreen> {
   }
 
   Widget _buildSessionTile(_UpcomingSession s) {
+    final l10n = AppLocalizations.of(context);
     final now = DateTime.now();
     final diff = s.sessionStart.difference(now);
     final String whenLabel;
     if (diff.inDays == 0) {
-      whenLabel = 'Today • ${_fmt(s.sessionStart)}';
+      whenLabel = l10n.clientHomeSessionTodayAt(_fmt(s.sessionStart));
     } else if (diff.inDays == 1) {
-      whenLabel = 'Tomorrow • ${_fmt(s.sessionStart)}';
+      whenLabel = l10n.clientHomeSessionTomorrowAt(_fmt(s.sessionStart));
     } else {
-      whenLabel = '${_fmtDate(s.sessionStart)} • ${_fmt(s.sessionStart)}';
+      whenLabel = l10n.clientHomeSessionDateAt(
+          _fmtDate(s.sessionStart), _fmt(s.sessionStart));
     }
 
     return GestureDetector(
@@ -1610,7 +1632,7 @@ class _HomeScreenState extends State<HomeScreen> with LiveUpdates<HomeScreen> {
                   ),
                   const SizedBox(height: 3),
                   Text(
-                    'With ${s.coachName}',
+                    l10n.clientHomeWithCoach(s.coachName),
                     style: TextStyle(
                       color: context.fitlek.textMuted,
                       fontSize: 12,
@@ -1667,21 +1689,8 @@ class _HomeScreenState extends State<HomeScreen> with LiveUpdates<HomeScreen> {
       '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
 
   String _fmtDate(DateTime dt) {
-    const months = [
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'May',
-      'Jun',
-      'Jul',
-      'Aug',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Dec'
-    ];
-    return '${dt.day} ${months[dt.month - 1]}';
+    return DateFormat.MMMd(Localizations.localeOf(context).toString())
+        .format(dt);
   }
 
   Widget _buildAdvisorList() {
@@ -1709,7 +1718,8 @@ class _HomeScreenState extends State<HomeScreen> with LiveUpdates<HomeScreen> {
         height: 80,
         alignment: Alignment.center,
         child: Text(
-          _advisorError ?? 'No companies available',
+          _advisorError ??
+              AppLocalizations.of(context).clientHomeNoCompaniesAvailable,
           style: TextStyle(color: context.fitlek.textMuted, fontSize: 13),
         ),
       );
@@ -1892,7 +1902,9 @@ class _CoachCard extends StatelessWidget {
                         ),
                         const SizedBox(width: 3),
                         Text(
-                          hasRating ? rating.toStringAsFixed(1) : 'New',
+                          hasRating
+                              ? rating.toStringAsFixed(1)
+                              : AppLocalizations.of(context).clientHomeNewBadge,
                           style: TextStyle(
                             color: Theme.of(context).colorScheme.onSurface,
                             fontSize: 11,
@@ -1961,6 +1973,7 @@ class _CompanyCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final int totalReviews = advisor.totalReviews ?? 0;
     final bool hasRating = totalReviews > 0;
 
@@ -2007,7 +2020,7 @@ class _CompanyCard extends StatelessWidget {
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
-                        '${advisor.coachCount} coaches',
+                        l10n.clientHomeCoachCount(advisor.coachCount),
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 9,
@@ -2048,7 +2061,7 @@ class _CompanyCard extends StatelessWidget {
                     Text(
                       advisor.specialty.isNotEmpty
                           ? advisor.specialty
-                          : 'Coaching',
+                          : l10n.clientHomeCoachingDefault,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
@@ -2065,7 +2078,7 @@ class _CompanyCard extends StatelessWidget {
                         Text(
                           advisor.ville?.isNotEmpty == true
                               ? advisor.ville!
-                              : 'Morocco',
+                              : l10n.clientHomeCountryDefault,
                           style: TextStyle(
                             color: context.fitlek.textMuted,
                             fontSize: 10.5,
@@ -2079,7 +2092,7 @@ class _CompanyCard extends StatelessWidget {
                         const SizedBox(width: 3),
                         if (hasRating)
                           Text(
-                            ' ($totalReviews reviews)',
+                            l10n.clientHomeCompanyReviewsCount(totalReviews),
                             style: TextStyle(
                               color: context.fitlek.textMuted,
                               fontSize: 10,
@@ -2105,7 +2118,7 @@ class _CompanyCard extends StatelessWidget {
                             width: 1),
                       ),
                       child: Text(
-                        'VIEW COACHES',
+                        l10n.clientHomeViewCoaches,
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           color: Theme.of(context).colorScheme.primary,

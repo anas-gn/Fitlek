@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:fitlek1/l10n/app_localizations.dart';
 import 'package:image_picker/image_picker.dart';
 
 class AppMediaPicker {
@@ -8,12 +9,13 @@ class AppMediaPicker {
   AppMediaPicker(this.context);
   void _showError(PlatformException error) {
     if (!context.mounted) return;
+    final l10n = AppLocalizations.of(context);
     final denied =
         error.code.contains('denied') || error.code.contains('restricted');
     ScaffoldMessenger.maybeOf(context)?.showSnackBar(SnackBar(
         content: Text(denied
-            ? 'Allow camera or photo access for Sirvya in your phone Settings, then try again.'
-            : 'Could not open this photo. Please try again.')));
+            ? l10n.mediaPickerPermissionDenied
+            : l10n.mediaPickerOpenPhotoFailed)));
   }
 
   Future<XFile?> pickImage(

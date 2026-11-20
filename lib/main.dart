@@ -13,6 +13,8 @@ import 'components/app_version_checker.dart';
 import 'components/video_splash_screen.dart';
 import 'components/connection_recovery_prompt.dart';
 import 'globals.dart';
+import 'services/locale_service.dart';
+import 'l10n/app_localizations.dart';
 
 void main() async {
   try {
@@ -41,6 +43,7 @@ void main() async {
     } catch (e) {
       debugPrint('Invitation links unavailable: $e');
     }
+    await LocaleService.load();
     final themeController = ThemeController();
     await themeController.load();
     runApp(Fitlek(themeController: themeController));
@@ -69,7 +72,13 @@ class _FitlekState extends State<Fitlek> {
       child: ListenableBuilder(
         listenable: widget.themeController,
         builder: (context, _) {
-          return MaterialApp(
+          return ValueListenableBuilder<Locale?>(
+            valueListenable: LocaleService.locale,
+            builder: (context, locale, _) => MaterialApp(
+            locale: locale,
+            supportedLocales: AppLocalizations.supportedLocales,
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            onGenerateTitle: (ctx) => 'Sirvya',
             debugShowCheckedModeBanner: false,
             theme: AppTheme.light,
             darkTheme: AppTheme.dark,
@@ -86,7 +95,7 @@ class _FitlekState extends State<Fitlek> {
               onFinished: () => setState(() => _introFinished = true),
               nextScreen: const SessionRouter(),
             ),
-          );
+          ));
         },
       ),
     );

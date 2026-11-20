@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:fitlek1/l10n/app_localizations.dart';
 import '../theme/fitlek_theme_extension.dart';
 import 'sirvya_logo.dart';
 
@@ -12,12 +13,14 @@ class CampaignDialog extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
     final f = context.fitlek;
     final dark = Theme.of(context).brightness == Brightness.dark;
+    final l10n = AppLocalizations.of(context);
     final destination = '${item['destination'] ?? ''}'.trim().isNotEmpty;
     final imageUrl = '${item['imageUrl'] ?? ''}'.trim();
     final hasImage = imageProvider != null || imageUrl.isNotEmpty;
     final button = '${item['buttonLabel'] ?? ''}'.trim();
-    final action =
-        destination ? (button.isEmpty ? 'Explore now' : button) : 'Got it';
+    final action = destination
+        ? (button.isEmpty ? l10n.campaignDialogExploreNow : button)
+        : l10n.campaignDialogGotIt;
     return Dialog(
         backgroundColor: Colors.transparent,
         surfaceTintColor: Colors.transparent,
@@ -83,9 +86,9 @@ class CampaignDialog extends StatelessWidget {
                                   height: 22,
                                   color: Color(0xFFF2EFDF)),
                               const SizedBox(width: 9),
-                              Text('SIRVYA  /  INSIDE',
-                                  style: TextStyle(
-                                      color: const Color(0xFFF2EFDF),
+                              Text(l10n.campaignDialogBrandHeader,
+                                  style: const TextStyle(
+                                      color: Color(0xFFF2EFDF),
                                       fontSize: 10,
                                       fontWeight: FontWeight.w700,
                                       letterSpacing: 2)),
@@ -102,7 +105,7 @@ class CampaignDialog extends StatelessWidget {
                                         color: Colors.white
                                             .withValues(alpha: .22))),
                                 child: IconButton(
-                                    tooltip: 'Close announcement',
+                                    tooltip: l10n.campaignDialogCloseTooltip,
                                     onPressed: () =>
                                         Navigator.pop(context, false),
                                     icon: const Icon(Icons.close_rounded,
@@ -126,7 +129,7 @@ class CampaignDialog extends StatelessWidget {
                                                   : f.success,
                                               shape: BoxShape.circle)),
                                       const SizedBox(width: 8),
-                                      Text('SELECTED FOR YOU',
+                                      Text(l10n.campaignDialogSelectedForYou,
                                           style: TextStyle(
                                               color: dark
                                                   ? const Color(0xFFBDDC9B)
@@ -137,7 +140,7 @@ class CampaignDialog extends StatelessWidget {
                                     ]),
                                     const SizedBox(height: 13),
                                     Text(
-                                        '${item['title'] ?? 'Something new at Sirvya'}',
+                                        '${item['title'] ?? l10n.campaignDialogDefaultTitle}',
                                         style: TextStyle(
                                             color: cs.onSurface,
                                             fontSize: 27,
@@ -203,8 +206,8 @@ class CampaignDialog extends StatelessWidget {
                                       Navigator.pop(context, false),
                                   style: TextButton.styleFrom(
                                       foregroundColor: f.textMuted),
-                                  child: const Text('Maybe later',
-                                      style: TextStyle(fontSize: 12))),
+                                  child: Text(l10n.campaignDialogMaybeLater,
+                                      style: const TextStyle(fontSize: 12))),
                           ])),
                     ]))));
   }

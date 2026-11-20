@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../services/apiService.dart';
+import 'package:fitlek1/l10n/app_localizations.dart';
 import 'clientChangeEmail.dart';
 
 class CoachChangeEmail extends StatefulWidget {
@@ -25,7 +26,7 @@ class _CoachChangeEmailState extends State<CoachChangeEmail> {
           return ClientChangeEmailScreen(
               currentEmail: '${snapshot.data?['email'] ?? ''}');
         return Scaffold(
-            appBar: AppBar(title: const Text('Change email')),
+            appBar: AppBar(title: Text(AppLocalizations.of(context).coachChangeEmailTitle)),
             body: Center(
                 child: snapshot.connectionState == ConnectionState.waiting
                     ? const CircularProgressIndicator()
@@ -33,6 +34,6 @@ class _CoachChangeEmailState extends State<CoachChangeEmail> {
                         onPressed: () => setState(() =>
                             _profile = ApiService.get('/coaches/me/profile')),
                         child:
-                            const Text('Could not load your email. Retry'))));
+                            Text(AppLocalizations.of(context).coachChangeEmailLoadRetry))));
       });
 }

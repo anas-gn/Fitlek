@@ -1,3 +1,4 @@
+import 'package:fitlek1/l10n/app_localizations.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart' show ValueListenable;
@@ -83,7 +84,7 @@ class ConversationBody extends StatelessWidget {
                     child: Text(
                         'Could not refresh. Your messages are still here.',
                         style: TextStyle(fontSize: 11))),
-                TextButton(onPressed: retry, child: const Text('Retry'))
+                TextButton(onPressed: retry, child: Text(AppLocalizations.of(context).conversationRetry))
               ])),
         Expanded(
             child: loading
@@ -98,7 +99,7 @@ class ConversationBody extends StatelessWidget {
                         TextButton.icon(
                             onPressed: retry,
                             icon: const Icon(Icons.refresh),
-                            label: const Text('Retry'))
+                            label: Text(AppLocalizations.of(context).conversationRetry))
                       ]))
                     : Stack(children: [
                         ConversationTimeline(
@@ -189,7 +190,7 @@ class ConversationHeader extends StatelessWidget
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-            tooltip: 'Back',
+            tooltip: AppLocalizations.of(context).conversationBackTooltip,
             onPressed: () => Navigator.maybePop(context),
             icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 23)),
         title: Row(children: [
@@ -263,11 +264,11 @@ class ChatStorageNotice extends StatelessWidget {
             size: 19, color: context.fitlek.textSecondary),
         const SizedBox(width: 10),
         Expanded(
-            child: Text('Photos and voice notes stay on this device',
+            child: Text(AppLocalizations.of(context).conversationStorageNotice,
                 style: TextStyle(
                     fontSize: 12, color: context.fitlek.textSecondary))),
         IconButton(
-            tooltip: 'Dismiss storage notice',
+            tooltip: AppLocalizations.of(context).conversationDismissNoticeTooltip,
             onPressed: onClose,
             icon: Icon(Icons.close_rounded,
                 size: 18, color: context.fitlek.textMuted)),
@@ -324,7 +325,7 @@ class ChatLoading extends StatelessWidget {
             height: 20,
             child: CircularProgressIndicator(strokeWidth: 2)),
         const SizedBox(height: 12),
-        Text('Loading conversation…',
+        Text(AppLocalizations.of(context).conversationLoading,
             style: TextStyle(color: context.fitlek.textMuted)),
       ]);
 }
@@ -412,10 +413,10 @@ class _ConversationTimelineState extends State<ConversationTimeline> {
           child: Column(mainAxisSize: MainAxisSize.min, children: [
         Icon(Icons.forum_outlined, size: 42, color: context.fitlek.textMuted),
         const SizedBox(height: 16),
-        const Text('Start the conversation',
+        Text(AppLocalizations.of(context).conversationEmptyTitle,
             style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
         const SizedBox(height: 6),
-        Text('A little hello goes a long way.',
+        Text(AppLocalizations.of(context).conversationEmptySubtitle,
             style: TextStyle(color: context.fitlek.textMuted)),
       ]));
     }
@@ -459,7 +460,7 @@ class _ConversationTimelineState extends State<ConversationTimeline> {
                         child: TextButton.icon(
                             onPressed: retryOlder,
                             icon: const Icon(Icons.refresh_rounded),
-                            label: const Text('Retry older messages')))
+                            label: Text(AppLocalizations.of(context).conversationRetryOlder)))
                     : const SizedBox(height: 8);
           }
           final item = items[index];
@@ -686,7 +687,7 @@ class _ConversationComposerState extends State<ConversationComposer> {
                                     maxLines: 4,
                                     style: const TextStyle(fontSize: 14),
                                     decoration: InputDecoration(
-                                        hintText: 'Write a message…',
+                                        hintText: AppLocalizations.of(context).conversationWriteMessageHint,
                                         hintStyle: TextStyle(
                                             color: context.fitlek.textMuted),
                                         filled: false,
@@ -699,7 +700,7 @@ class _ConversationComposerState extends State<ConversationComposer> {
                                                 vertical: 14)))),
                         if (!widget.recording)
                           IconButton(
-                              tooltip: 'Photo gallery',
+                              tooltip: AppLocalizations.of(context).conversationPhotoGalleryTooltip,
                               onPressed: widget.busy ? null : widget.onGallery,
                               icon: Icon(Icons.image_outlined,
                                   size: 22,

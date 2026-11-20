@@ -1,4 +1,5 @@
 import '../../services/conversation_activity.dart';
+import 'package:fitlek1/l10n/app_localizations.dart';
 import '../../components/ENG/conversationUi.dart';
 import '../../components/app_dialog.dart';
 import '../../components/ENG/chatImageBatchPreview.dart';
@@ -54,7 +55,8 @@ class _CoachChatState extends State<CoachChat> with LiveUpdates<CoachChat> {
   void _toggleSelected(int id) {
     if (id <= 0 || _deleting) return;
     if (!_selected.contains(id) && _selected.length >= 100) {
-      ApiService.showError(context, 'Select up to 100 messages at a time.');
+      ApiService.showError(
+          context, AppLocalizations.of(context).coachChatMaxSelection);
       return;
     }
     setState(() {
@@ -78,6 +80,7 @@ class _CoachChatState extends State<CoachChat> with LiveUpdates<CoachChat> {
       onDelete: _deleteSelected);
   Future<void> _deleteSelected() async {
     if (_deleting || _selected.isEmpty) return;
+    final l10n = AppLocalizations.of(context);
     final selected = _messages
         .where((m) => _selected.contains(int.tryParse(m.id) ?? 0))
         .toList();
@@ -90,20 +93,20 @@ class _CoachChatState extends State<CoachChat> with LiveUpdates<CoachChat> {
     final scope = await showDialog<String>(
         context: context,
         builder: (ctx) => AppDialog(
-                title: Text('Delete ${_selected.length} messages?'),
-                content: const Text(
-                    'Delete for everyone is available for your own messages during the first 30 minutes.'),
+                title:
+                    Text(l10n.coachChatDeleteMessagesTitle(_selected.length)),
+                content: Text(l10n.coachChatDeleteMessagesContent),
                 actions: [
                   TextButton(
                       onPressed: () => Navigator.pop(ctx),
-                      child: const Text('Cancel')),
+                      child: Text(l10n.coachChatCancel)),
                   TextButton(
                       onPressed: () => Navigator.pop(ctx, 'me'),
-                      child: const Text('Delete for me')),
+                      child: Text(l10n.coachChatDeleteForMe)),
                   if (everyone)
                     TextButton(
                         onPressed: () => Navigator.pop(ctx, 'everyone'),
-                        child: const Text('Delete for everyone'))
+                        child: Text(l10n.coachChatDeleteForEveryone))
                 ]));
     if (scope == null || !mounted) return;
     _deleting = true;
@@ -115,7 +118,9 @@ class _CoachChatState extends State<CoachChat> with LiveUpdates<CoachChat> {
       if (!mounted) return;
       if (result['ok'] != true) {
         ApiService.showError(
-            context, result['message'] ?? 'Could not delete messages.');
+            context,
+            result['message'] ??
+                AppLocalizations.of(context).coachChatDeleteFailed);
         return;
       }
       for (final id in ids) {
@@ -305,7 +310,7 @@ class _CoachChatState extends State<CoachChat> with LiveUpdates<CoachChat> {
       if (mounted) {
         setState(() {
           _loading = false;
-          _error = 'Could not refresh messages. Check your connection.';
+          _error = AppLocalizations.of(context).coachChatRefreshError;
         });
       }
     } finally {
@@ -392,7 +397,8 @@ class _CoachChatState extends State<CoachChat> with LiveUpdates<CoachChat> {
     if (result['ok'] != true) {
       _msgCtrl.text = text;
       setState(() => _messages.remove(tempMsg));
-      ApiService.showError(context, result['message'] ?? 'Send failed.');
+      ApiService.showError(context,
+          result['message'] ?? AppLocalizations.of(context).coachChatSendFailed);
     } else {
       setState(() => _messages.remove(tempMsg));
       await _loadMessages(silent: true);
@@ -402,6 +408,7 @@ class _CoachChatState extends State<CoachChat> with LiveUpdates<CoachChat> {
   void _showAttachOptions() {
     if (_batchSending || _isUploadingMedia) return;
     final cs = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context);
     showModalBottomSheet(
       context: context,
       backgroundColor: context.fitlek.card,
@@ -414,12 +421,14 @@ class _CoachChatState extends State<CoachChat> with LiveUpdates<CoachChat> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
-              _attachOption(Icons.camera_alt_rounded, 'Camera', cs.primary, () {
+              _attachOption(
+                  Icons.camera_alt_rounded, l10n.coachChatCamera, cs.primary,
+                  () {
                 Navigator.pop(context);
                 _pickAndSendSingleImage(ImageSource.camera);
               }),
-              _attachOption(Icons.photo_library_rounded, 'Gallery', cs.primary,
-                  () {
+              _attachOption(Icons.photo_library_rounded, l10n.coachChatGallery,
+                  cs.primary, () {
                 Navigator.pop(context);
                 _pickAndSendMultipleImages();
               }),
@@ -457,6 +466,7 @@ class _CoachChatState extends State<CoachChat> with LiveUpdates<CoachChat> {
 
   Future<String?> _showCaptionDialog(XFile file) async {
     final ctrl = TextEditingController();
+    final l10n = AppLocalizations.of(context);
     return showDialog<String>(
       context: context,
       builder: (ctx) => AppDialog(
@@ -477,7 +487,7 @@ class _CoachChatState extends State<CoachChat> with LiveUpdates<CoachChat> {
               controller: ctrl,
               style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
               decoration: InputDecoration(
-                hintText: 'Ajouter une lÃ©gende...',
+                hintText: l10n.coachChatCaptionHint,
                 hintStyle: TextStyle(color: context.fitlek.textMuted),
                 border: InputBorder.none,
               ),
@@ -487,11 +497,11 @@ class _CoachChatState extends State<CoachChat> with LiveUpdates<CoachChat> {
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: Text('Annuler',
+              child: Text(l10n.coachChatCancel,
                   style: TextStyle(color: context.fitlek.textMuted))),
           TextButton(
               onPressed: () => Navigator.pop(ctx, ctrl.text),
-              child: Text('Envoyer',
+              child: Text(l10n.coachChatSend,
                   style:
                       TextStyle(color: Theme.of(context).colorScheme.primary))),
         ],
@@ -525,12 +535,14 @@ class _CoachChatState extends State<CoachChat> with LiveUpdates<CoachChat> {
       } else {
         setState(() => _isUploadingMedia = false);
         ApiService.showError(
-            context, result['message']?.toString() ?? 'Image upload failed');
+            context,
+            result['message']?.toString() ??
+                AppLocalizations.of(context).coachChatImageUploadFailed);
       }
     } catch (_) {
       if (mounted) {
         ApiService.showError(
-            context, 'Could not send the photo. Please try again.');
+            context, AppLocalizations.of(context).coachChatPhotoSendError);
       }
     } finally {
       if (mounted) setState(() => _isUploadingMedia = false);
@@ -545,7 +557,8 @@ class _CoachChatState extends State<CoachChat> with LiveUpdates<CoachChat> {
         await AppMediaPicker(context).pickMultiImage(imageQuality: 85);
     if (!mounted || files.isEmpty) return;
     if (files.length > 30) {
-      ApiService.showError(context, 'Choose up to 30 photos per batch.');
+      ApiService.showError(
+          context, AppLocalizations.of(context).coachChatMaxBatchPhotos);
       return;
     }
     final caption = await previewChatImages(context, files);
@@ -584,8 +597,8 @@ class _CoachChatState extends State<CoachChat> with LiveUpdates<CoachChat> {
         }
       }
       if (mounted && failed > 0) {
-        ApiService.showError(
-            context, '$failed photos could not be sent. The others were sent.');
+        ApiService.showError(context,
+            AppLocalizations.of(context).coachChatBatchPartialFail(failed));
       }
     } finally {
       if (mounted) {
@@ -631,7 +644,8 @@ class _CoachChatState extends State<CoachChat> with LiveUpdates<CoachChat> {
             await _sendMediaMessage(result['url'], 'audio');
           } else {
             setState(() => _isUploadingMedia = false);
-            ApiService.showError(context, 'Audio upload failed');
+            ApiService.showError(context,
+                AppLocalizations.of(context).coachChatAudioUploadFailed);
           }
         }
       } else {
@@ -656,13 +670,13 @@ class _CoachChatState extends State<CoachChat> with LiveUpdates<CoachChat> {
           _activity.recording(true);
         } else if (mounted) {
           ApiService.showError(context,
-              'Allow microphone access for Sirvya in your phone Settings to record voice messages.');
+              AppLocalizations.of(context).coachChatMicrophonePermission);
         }
       }
     } catch (_) {
       if (mounted) {
         ApiService.showError(
-            context, 'Could not record or send audio. Please try again.');
+            context, AppLocalizations.of(context).coachChatAudioRecordError);
       }
     } finally {
       if (mounted) {
@@ -706,7 +720,8 @@ class _CoachChatState extends State<CoachChat> with LiveUpdates<CoachChat> {
     });
     if (result['ok'] != true) {
       setState(() => _messages.remove(tempMsg));
-      ApiService.showError(context, result['message'] ?? 'Send failed.');
+      ApiService.showError(context,
+          result['message'] ?? AppLocalizations.of(context).coachChatSendFailed);
     } else {
       setState(() => _messages.remove(tempMsg));
       await _loadMessages(silent: true);
@@ -723,7 +738,7 @@ class _CoachChatState extends State<CoachChat> with LiveUpdates<CoachChat> {
                 loading: _fetching && !_loading,
                 activity: _activity,
                 name: widget.conversation.clientName,
-                subtitle: 'Client · Private conversation',
+                subtitle: AppLocalizations.of(context).coachChatHeaderSubtitle,
                 avatar: widget.conversation.clientPhotoUrl,
                 onAvatar: () {
                   final avatar = widget.conversation.clientPhotoUrl;
@@ -794,54 +809,61 @@ class _CoachChatState extends State<CoachChat> with LiveUpdates<CoachChat> {
           _showBlockDialog();
         }
       },
-      itemBuilder: (context) => [
-        const PopupMenuItem(value: 'select', child: Text('Select messages')),
-        const PopupMenuItem(value: 'refresh', child: Text('Refresh messages')),
-        PopupMenuItem(
-          value: 'report',
-          child: Row(
-            children: [
-              Icon(Icons.flag_rounded,
-                  color: context.fitlek.textMuted, size: 18),
-              const SizedBox(width: 8),
-              Text('Report Client',
-                  style: TextStyle(
-                      color: Theme.of(context).colorScheme.onSurface,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600)),
-            ],
+      itemBuilder: (context) {
+        final l10n = AppLocalizations.of(context);
+        return [
+          PopupMenuItem(
+              value: 'select', child: Text(l10n.coachChatSelectMessages)),
+          PopupMenuItem(
+              value: 'refresh', child: Text(l10n.coachChatRefreshMessages)),
+          PopupMenuItem(
+            value: 'report',
+            child: Row(
+              children: [
+                Icon(Icons.flag_rounded,
+                    color: context.fitlek.textMuted, size: 18),
+                const SizedBox(width: 8),
+                Text(l10n.coachChatReportClient,
+                    style: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurface,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600)),
+              ],
+            ),
           ),
-        ),
-        PopupMenuItem(
-          value: 'block',
-          child: Row(
-            children: [
-              Icon(Icons.block_rounded, color: context.fitlek.error, size: 18),
-              const SizedBox(width: 8),
-              Text('Block Client',
-                  style: TextStyle(
-                      color: context.fitlek.error,
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600)),
-            ],
+          PopupMenuItem(
+            value: 'block',
+            child: Row(
+              children: [
+                Icon(Icons.block_rounded,
+                    color: context.fitlek.error, size: 18),
+                const SizedBox(width: 8),
+                Text(l10n.coachChatBlockClient,
+                    style: TextStyle(
+                        color: context.fitlek.error,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600)),
+              ],
+            ),
           ),
-        ),
-      ],
+        ];
+      },
     );
   }
 
   void _showReportDialog() {
     String? selectedReason;
+    final l10n = AppLocalizations.of(context);
     final reasons = [
-      'Spam',
-      'Harassment',
-      'Inappropriate content',
-      'Fraud / Scam',
-      'Other'
+      ('Spam', l10n.coachChatReasonSpam),
+      ('Harassment', l10n.coachChatReasonHarassment),
+      ('Inappropriate content', l10n.coachChatReasonInappropriate),
+      ('Fraud / Scam', l10n.coachChatReasonFraud),
+      ('Other', l10n.coachChatReasonOther)
     ];
     final name = widget.conversation.clientName.isNotEmpty
         ? widget.conversation.clientName
-        : 'this client';
+        : l10n.coachChatThisClient;
 
     showDialog(
       context: context,
@@ -850,24 +872,23 @@ class _CoachChatState extends State<CoachChat> with LiveUpdates<CoachChat> {
           backgroundColor: context.fitlek.card,
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: Text('Report $name',
+          title: Text(l10n.coachChatReportTitle(name),
               style: TextStyle(
                   color: Theme.of(context).colorScheme.onSurface,
                   fontSize: 16)),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(
-                  'Why are you reporting this user? We take these reports seriously.',
+              Text(l10n.coachChatReportPrompt,
                   style:
                       TextStyle(color: context.fitlek.textMuted, fontSize: 13)),
               const SizedBox(height: 16),
               ...reasons.map((r) => RadioListTile<String>(
-                    title: Text(r,
+                    title: Text(r.$2,
                         style: TextStyle(
                             color: Theme.of(context).colorScheme.onSurface,
                             fontSize: 13)),
-                    value: r,
+                    value: r.$1,
                     groupValue: selectedReason,
                     activeColor: Theme.of(context).colorScheme.primary,
                     contentPadding: EdgeInsets.zero,
@@ -880,7 +901,7 @@ class _CoachChatState extends State<CoachChat> with LiveUpdates<CoachChat> {
           actions: [
             TextButton(
                 onPressed: () => Navigator.pop(ctx),
-                child: Text('Cancel',
+                child: Text(l10n.coachChatCancel,
                     style: TextStyle(color: context.fitlek.textMuted))),
             TextButton(
               onPressed: selectedReason == null
@@ -889,7 +910,7 @@ class _CoachChatState extends State<CoachChat> with LiveUpdates<CoachChat> {
                       Navigator.pop(ctx);
                       _submitReport(selectedReason!);
                     },
-              child: Text('Submit',
+              child: Text(l10n.coachChatSubmit,
                   style: TextStyle(
                       color: selectedReason == null
                           ? context.fitlek.textMuted
@@ -903,9 +924,10 @@ class _CoachChatState extends State<CoachChat> with LiveUpdates<CoachChat> {
   }
 
   Future<void> _submitReport(String reason) async {
+    final l10n = AppLocalizations.of(context);
     final clientID = int.tryParse(widget.conversation.clientId) ?? 0;
     if (clientID <= 0) {
-      ApiService.showError(context, 'Unable to identify client to report');
+      ApiService.showError(context, l10n.coachChatReportIdentifyError);
       return;
     }
     try {
@@ -917,42 +939,46 @@ class _CoachChatState extends State<CoachChat> with LiveUpdates<CoachChat> {
       });
       if (!mounted) return;
       if (res['ok'] == true) {
-        ApiService.showSuccess(context, 'Report submitted successfully.');
+        ApiService.showSuccess(
+            context, AppLocalizations.of(context).coachChatReportSuccess);
       } else {
-        ApiService.showError(context, 'Failed to submit report');
+        ApiService.showError(
+            context, AppLocalizations.of(context).coachChatReportFailed);
       }
     } catch (_) {
       if (!mounted) return;
-      ApiService.showError(context, 'Network error');
+      ApiService.showError(
+          context, AppLocalizations.of(context).coachChatNetworkError);
     }
   }
 
   void _showBlockDialog() {
+    final l10n = AppLocalizations.of(context);
     final name = widget.conversation.clientName.isNotEmpty
         ? widget.conversation.clientName
-        : 'this client';
+        : l10n.coachChatThisClient;
     showDialog(
       context: context,
       builder: (ctx) => AppDialog(
         backgroundColor: context.fitlek.card,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text('Block $name?',
+        title: Text(l10n.coachChatBlockTitle(name),
             style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
         content: Text(
-          'They won\'t be able to find your profile or send you messages. They will not be notified that you blocked them.',
+          l10n.coachChatBlockContent,
           style: TextStyle(color: context.fitlek.textMuted),
         ),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: Text('Cancel',
+              child: Text(l10n.coachChatCancel,
                   style: TextStyle(color: context.fitlek.textMuted))),
           TextButton(
             onPressed: () async {
               Navigator.pop(ctx);
               _submitBlock();
             },
-            child: Text('Block',
+            child: Text(l10n.coachChatBlock,
                 style: TextStyle(
                     color: context.fitlek.error, fontWeight: FontWeight.bold)),
           ),
@@ -962,9 +988,10 @@ class _CoachChatState extends State<CoachChat> with LiveUpdates<CoachChat> {
   }
 
   Future<void> _submitBlock() async {
+    final l10n = AppLocalizations.of(context);
     final clientID = int.tryParse(widget.conversation.clientId) ?? 0;
     if (clientID <= 0) {
-      ApiService.showError(context, 'Unable to identify client to block');
+      ApiService.showError(context, l10n.coachChatBlockIdentifyError);
       return;
     }
     try {
@@ -973,14 +1000,17 @@ class _CoachChatState extends State<CoachChat> with LiveUpdates<CoachChat> {
       });
       if (!mounted) return;
       if (res['ok'] == true) {
-        ApiService.showSuccess(context, 'User blocked.');
+        ApiService.showSuccess(
+            context, AppLocalizations.of(context).coachChatBlockSuccess);
         if (mounted) Navigator.pop(context, true);
       } else {
-        ApiService.showError(context, 'Failed to block user');
+        ApiService.showError(
+            context, AppLocalizations.of(context).coachChatBlockFailed);
       }
     } catch (_) {
       if (!mounted) return;
-      ApiService.showError(context, 'Network error');
+      ApiService.showError(
+          context, AppLocalizations.of(context).coachChatNetworkError);
     }
   }
 }

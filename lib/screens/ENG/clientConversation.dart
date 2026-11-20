@@ -11,6 +11,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:fitlek1/constants/urls.dart';
+import 'package:fitlek1/l10n/app_localizations.dart';
 import '../../theme/fitlek_theme_extension.dart';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
@@ -50,11 +51,11 @@ class _Message {
     this.senderAvatar,
   });
 
-  _Message asDeleted() => _Message(
+  _Message asDeleted(String deletedText) => _Message(
       id: id,
       conversationID: conversationID,
       senderID: senderID,
-      body: 'This message was deleted',
+      body: deletedText,
       mediaType: 'text',
       deleted: true,
       isRead: isRead,
@@ -161,10 +162,12 @@ class _ClientConversationScreenState extends State<ClientConversationScreen>
           .where((m) => m['deletedAt'] != null)
           .map((m) => int.tryParse('${m['id']}'))
           .toSet();
+      final deletedText =
+          AppLocalizations.of(context).clientConversationDeletedMessage;
       setState(() {
         _messages.removeWhere((m) => ids.contains(m.id));
         _messages = _messages
-            .map((m) => deleted.contains(m.id) ? m.asDeleted() : m)
+            .map((m) => deleted.contains(m.id) ? m.asDeleted(deletedText) : m)
             .toList();
       });
     }
@@ -181,7 +184,8 @@ class _ClientConversationScreenState extends State<ClientConversationScreen>
   void _toggleSelected(int id) {
     if (id <= 0 || _deleting) return;
     if (!_selected.contains(id) && _selected.length >= 100) {
-      ApiService.showError(context, 'Select up to 100 messages at a time.');
+      ApiService.showError(
+          context, AppLocalizations.of(context).clientConversationSelectLimitError);
       return;
     }
     setState(() {
@@ -203,6 +207,7 @@ class _ClientConversationScreenState extends State<ClientConversationScreen>
       onDelete: _deleteSelected);
   Future<void> _deleteSelected() async {
     if (_deleting || _selected.isEmpty) return;
+    final l10n = AppLocalizations.of(context);
     final selected = _messages.where((m) => _selected.contains(m.id)).toList();
     final now = DateTime.now();
     final everyone = selected.isNotEmpty &&
@@ -213,20 +218,19 @@ class _ClientConversationScreenState extends State<ClientConversationScreen>
     final scope = await showDialog<String>(
         context: context,
         builder: (ctx) => AppDialog(
-                title: Text('Delete ${_selected.length} messages?'),
-                content: const Text(
-                    'Delete for everyone is available for your own messages during the first 30 minutes.'),
+                title: Text(l10n.clientConversationDeleteDialogTitle(_selected.length)),
+                content: Text(l10n.clientConversationDeleteDialogContent),
                 actions: [
                   TextButton(
                       onPressed: () => Navigator.pop(ctx),
-                      child: const Text('Cancel')),
+                      child: Text(l10n.clientConversationCancel)),
                   TextButton(
                       onPressed: () => Navigator.pop(ctx, 'me'),
-                      child: const Text('Delete for me')),
+                      child: Text(l10n.clientConversationDeleteForMe)),
                   if (everyone)
                     TextButton(
                         onPressed: () => Navigator.pop(ctx, 'everyone'),
-                        child: const Text('Delete for everyone'))
+                        child: Text(l10n.clientConversationDeleteForEveryone))
                 ]));
     if (scope == null || !mounted) return;
     _deleting = true;
@@ -238,7 +242,9 @@ class _ClientConversationScreenState extends State<ClientConversationScreen>
       if (!mounted) return;
       if (result['ok'] != true) {
         ApiService.showError(
-            context, result['message'] ?? 'Could not delete messages.');
+            context,
+            result['message'] ??
+                AppLocalizations.of(context).clientConversationDeleteFailed);
         return;
       }
       for (final id in ids) {
@@ -412,7 +418,7 @@ class _ClientConversationScreenState extends State<ClientConversationScreen>
       if (mounted) {
         setState(() {
           _loading = false;
-          _error = 'Could not refresh messages. Check your connection.';
+          _error = AppLocalizations.of(context).clientConversationRefreshError;
         });
       }
     } finally {
@@ -488,14 +494,14 @@ class _ClientConversationScreenState extends State<ClientConversationScreen>
       } else {
         if (mounted) {
           _msgCtrl.text = text;
-          _showSnack('Could not send. Your message is ready to retry.',
+          _showSnack(AppLocalizations.of(context).clientConversationSendRetryError,
               isError: true);
         }
       }
     } catch (_) {
       if (mounted) {
         _msgCtrl.text = text;
-        _showSnack('Could not send. Your message is ready to retry.',
+        _showSnack(AppLocalizations.of(context).clientConversationSendRetryError,
             isError: true);
       }
     } finally {
@@ -505,6 +511,7 @@ class _ClientConversationScreenState extends State<ClientConversationScreen>
 
   void _showAttachOptions() {
     if (_batchSending || _isUploadingMedia) return;
+    final l10n = AppLocalizations.of(context);
     final cs = Theme.of(context).colorScheme;
     showModalBottomSheet(
       context: context,
@@ -518,12 +525,13 @@ class _ClientConversationScreenState extends State<ClientConversationScreen>
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
-              _attachOption(Icons.camera_alt_rounded, 'Camera', cs.primary, () {
+              _attachOption(Icons.camera_alt_rounded,
+                  l10n.clientConversationAttachCamera, cs.primary, () {
                 Navigator.pop(context);
                 _pickAndSendSingleImage(ImageSource.camera);
               }),
-              _attachOption(Icons.photo_library_rounded, 'Gallery', cs.primary,
-                  () {
+              _attachOption(Icons.photo_library_rounded,
+                  l10n.clientConversationAttachGallery, cs.primary, () {
                 Navigator.pop(context);
                 _pickAndSendMultipleImages();
               }),
@@ -560,6 +568,7 @@ class _ClientConversationScreenState extends State<ClientConversationScreen>
   }
 
   Future<String?> _showCaptionDialog(XFile file) async {
+    final l10n = AppLocalizations.of(context);
     final ctrl = TextEditingController();
     return showDialog<String>(
       context: context,
@@ -581,7 +590,7 @@ class _ClientConversationScreenState extends State<ClientConversationScreen>
               controller: ctrl,
               style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
               decoration: InputDecoration(
-                hintText: 'Ajouter une lÃ©gende...',
+                hintText: l10n.clientConversationCaptionHint,
                 hintStyle: TextStyle(color: context.fitlek.textMuted),
                 border: InputBorder.none,
               ),
@@ -591,11 +600,11 @@ class _ClientConversationScreenState extends State<ClientConversationScreen>
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: Text('Annuler',
+              child: Text(l10n.clientConversationCancel,
                   style: TextStyle(color: context.fitlek.textMuted))),
           TextButton(
               onPressed: () => Navigator.pop(ctx, ctrl.text),
-              child: Text('Envoyer',
+              child: Text(l10n.clientConversationSend,
                   style:
                       TextStyle(color: Theme.of(context).colorScheme.primary))),
         ],
@@ -628,13 +637,15 @@ class _ClientConversationScreenState extends State<ClientConversationScreen>
         await _sendMediaMessage(result['url'], 'image', caption: caption);
       } else {
         setState(() => _isUploadingMedia = false);
-        _showSnack(result['message']?.toString() ?? 'Image upload failed',
+        _showSnack(
+            result['message']?.toString() ??
+                AppLocalizations.of(context).clientConversationImageUploadFailed,
             isError: true);
       }
     } catch (_) {
       if (mounted) {
         ApiService.showError(
-            context, 'Could not send the photo. Please try again.');
+            context, AppLocalizations.of(context).clientConversationSendPhotoError);
       }
     } finally {
       if (mounted) setState(() => _isUploadingMedia = false);
@@ -649,7 +660,8 @@ class _ClientConversationScreenState extends State<ClientConversationScreen>
         await AppMediaPicker(context).pickMultiImage(imageQuality: 85);
     if (!mounted || files.isEmpty) return;
     if (files.length > 30) {
-      ApiService.showError(context, 'Choose up to 30 photos per batch.');
+      ApiService.showError(
+          context, AppLocalizations.of(context).clientConversationBatchLimitError);
       return;
     }
     final caption = await previewChatImages(context, files);
@@ -688,8 +700,8 @@ class _ClientConversationScreenState extends State<ClientConversationScreen>
         }
       }
       if (mounted && failed > 0) {
-        ApiService.showError(
-            context, '$failed photos could not be sent. The others were sent.');
+        ApiService.showError(context,
+            AppLocalizations.of(context).clientConversationBatchFailedError(failed));
       }
     } finally {
       if (mounted) {
@@ -735,7 +747,9 @@ class _ClientConversationScreenState extends State<ClientConversationScreen>
             await _sendMediaMessage(result['url'], 'audio');
           } else {
             setState(() => _isUploadingMedia = false);
-            _showSnack('Audio upload failed', isError: true);
+            _showSnack(
+                AppLocalizations.of(context).clientConversationAudioUploadFailed,
+                isError: true);
           }
         }
       } else {
@@ -760,14 +774,14 @@ class _ClientConversationScreenState extends State<ClientConversationScreen>
           _activity.recording(true);
         } else if (mounted) {
           _showSnack(
-              'Allow microphone access for Sirvya in your phone Settings to record voice messages.',
+              AppLocalizations.of(context).clientConversationMicPermissionError,
               isError: true);
         }
       }
     } catch (_) {
       if (mounted) {
         ApiService.showError(
-            context, 'Could not record or send audio. Please try again.');
+            context, AppLocalizations.of(context).clientConversationAudioRecordError);
       }
     } finally {
       if (mounted) {
@@ -801,10 +815,17 @@ class _ClientConversationScreenState extends State<ClientConversationScreen>
         await _fetchMessages(silent: true);
         return true;
       } else {
-        _showSnack('Failed to send media message', isError: true);
+        if (mounted) {
+          _showSnack(
+              AppLocalizations.of(context).clientConversationMediaSendFailed,
+              isError: true);
+        }
       }
     } catch (_) {
-      _showSnack('Network error', isError: true);
+      if (mounted) {
+        _showSnack(AppLocalizations.of(context).clientConversationNetworkError,
+            isError: true);
+      }
     } finally {
       if (mounted) {
         setState(() {
@@ -829,68 +850,73 @@ class _ClientConversationScreenState extends State<ClientConversationScreen>
 
   bool _isMe(_Message m) => m.senderID == widget.clientID;
   @override
-  Widget build(BuildContext context) => Scaffold(
-        appBar: _selecting
-            ? _selectionBar() as PreferredSizeWidget
-            : ConversationHeader(
-                loading: _fetching && !_loading,
-                activity: _activity,
-                name: widget.coachName ?? 'Conversation',
-                subtitle: widget.coachSpeciality ?? 'Fitness coach',
-                avatar: widget.coachAvatar,
-                onAvatar: () {
-                  final avatar = widget.coachAvatar;
-                  if (avatar?.isNotEmpty == true) {
-                    Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (_) => ImagePreview(
-                                imageUrl: avatar!, tag: 'header_avatar')));
-                  }
-                },
-                actions: [_buildMoreMenu()]),
-        body: ConversationBody(
-            notice: _showStorageNotice,
-            loading: _loading,
-            error: _error,
-            uploading: _isUploadingMedia,
-            sending: _sending,
-            batch: _batchSending,
-            recording: _isRecording,
-            busy: _recordBusy,
-            loadingMore: _loadingMore,
-            selecting: _selecting,
-            selected: _selected,
-            onSelect: _toggleSelected,
-            batchCurrent: _batchCurrent,
-            batchTotal: _batchTotal,
-            unread: _unreadNew,
-            scroll: _scrollCtrl,
-            text: _msgCtrl,
-            focus: _focusNode,
-            messages: _messages
-                .map((m) => ChatEntry(
-                    id: '${m.id}',
-                    time: m.createdAt,
-                    mine: _isMe(m),
-                    read: m.isRead,
-                    deleted: m.deleted,
-                    expired: m.mediaExpired,
-                    body: m.body,
-                    url: m.mediaUrl,
-                    type: m.mediaType))
-                .toList(),
-            closeNotice: () => setState(() => _showStorageNotice = false),
-            retry: () => _fetchMessages(silent: true),
-            retryOlder: _olderFailed ? _loadMore : null,
-            bottom: _scrollToBottom,
-            attach: _showAttachOptions,
-            gallery: _pickAndSendMultipleImages,
-            record: _toggleRecording,
-            send: _sendMessage),
-      );
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return Scaffold(
+      appBar: _selecting
+          ? _selectionBar() as PreferredSizeWidget
+          : ConversationHeader(
+              loading: _fetching && !_loading,
+              activity: _activity,
+              name: widget.coachName ?? l10n.clientConversationTitleFallback,
+              subtitle: widget.coachSpeciality ??
+                  l10n.clientConversationSubtitleFallback,
+              avatar: widget.coachAvatar,
+              onAvatar: () {
+                final avatar = widget.coachAvatar;
+                if (avatar?.isNotEmpty == true) {
+                  Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => ImagePreview(
+                              imageUrl: avatar!, tag: 'header_avatar')));
+                }
+              },
+              actions: [_buildMoreMenu()]),
+      body: ConversationBody(
+          notice: _showStorageNotice,
+          loading: _loading,
+          error: _error,
+          uploading: _isUploadingMedia,
+          sending: _sending,
+          batch: _batchSending,
+          recording: _isRecording,
+          busy: _recordBusy,
+          loadingMore: _loadingMore,
+          selecting: _selecting,
+          selected: _selected,
+          onSelect: _toggleSelected,
+          batchCurrent: _batchCurrent,
+          batchTotal: _batchTotal,
+          unread: _unreadNew,
+          scroll: _scrollCtrl,
+          text: _msgCtrl,
+          focus: _focusNode,
+          messages: _messages
+              .map((m) => ChatEntry(
+                  id: '${m.id}',
+                  time: m.createdAt,
+                  mine: _isMe(m),
+                  read: m.isRead,
+                  deleted: m.deleted,
+                  expired: m.mediaExpired,
+                  body: m.body,
+                  url: m.mediaUrl,
+                  type: m.mediaType))
+              .toList(),
+          closeNotice: () => setState(() => _showStorageNotice = false),
+          retry: () => _fetchMessages(silent: true),
+          retryOlder: _olderFailed ? _loadMore : null,
+          bottom: _scrollToBottom,
+          attach: _showAttachOptions,
+          gallery: _pickAndSendMultipleImages,
+          record: _toggleRecording,
+          send: _sendMessage),
+    );
+  }
 
   Widget _buildMoreMenu() {
+    final l10n = AppLocalizations.of(context);
     return PopupMenuButton<String>(
       icon: Icon(Icons.more_vert_rounded,
           color: Theme.of(context).colorScheme.onSurface, size: 24),
@@ -909,8 +935,10 @@ class _ClientConversationScreenState extends State<ClientConversationScreen>
         }
       },
       itemBuilder: (context) => [
-        const PopupMenuItem(value: 'select', child: Text('Select messages')),
-        const PopupMenuItem(value: 'refresh', child: Text('Refresh messages')),
+        PopupMenuItem(
+            value: 'select', child: Text(l10n.clientConversationMenuSelect)),
+        PopupMenuItem(
+            value: 'refresh', child: Text(l10n.clientConversationMenuRefresh)),
         PopupMenuItem(
           value: 'report',
           child: Row(
@@ -918,7 +946,7 @@ class _ClientConversationScreenState extends State<ClientConversationScreen>
               Icon(Icons.flag_rounded,
                   color: context.fitlek.textMuted, size: 18),
               const SizedBox(width: 8),
-              Text('Report Coach',
+              Text(l10n.clientConversationMenuReport,
                   style: TextStyle(
                       color: Theme.of(context).colorScheme.onSurface,
                       fontSize: 13,
@@ -932,7 +960,7 @@ class _ClientConversationScreenState extends State<ClientConversationScreen>
             children: [
               Icon(Icons.block_rounded, color: context.fitlek.error, size: 18),
               const SizedBox(width: 8),
-              Text('Block Coach',
+              Text(l10n.clientConversationMenuBlock,
                   style: TextStyle(
                       color: context.fitlek.error,
                       fontSize: 13,
@@ -945,15 +973,22 @@ class _ClientConversationScreenState extends State<ClientConversationScreen>
   }
 
   void _showReportDialog() {
+    final l10n = AppLocalizations.of(context);
     String? selectedReason;
     final reasons = [
-      'Spam',
-      'Harassment',
-      'Inappropriate content',
-      'Fraud / Scam',
-      'Other'
+      (value: 'Spam', label: l10n.clientConversationReportReasonSpam),
+      (
+        value: 'Harassment',
+        label: l10n.clientConversationReportReasonHarassment
+      ),
+      (
+        value: 'Inappropriate content',
+        label: l10n.clientConversationReportReasonInappropriate
+      ),
+      (value: 'Fraud / Scam', label: l10n.clientConversationReportReasonFraud),
+      (value: 'Other', label: l10n.clientConversationReportReasonOther),
     ];
-    final name = widget.coachName ?? 'this coach';
+    final name = widget.coachName ?? l10n.clientConversationThisCoachFallback;
 
     showDialog(
       context: context,
@@ -962,24 +997,23 @@ class _ClientConversationScreenState extends State<ClientConversationScreen>
           backgroundColor: context.fitlek.card,
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: Text('Report $name',
+          title: Text(l10n.clientConversationReportTitle(name),
               style: TextStyle(
                   color: Theme.of(context).colorScheme.onSurface,
                   fontSize: 16)),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(
-                  'Why are you reporting this user? We take these reports seriously.',
+              Text(l10n.clientConversationReportPrompt,
                   style:
                       TextStyle(color: context.fitlek.textMuted, fontSize: 13)),
               const SizedBox(height: 16),
               ...reasons.map((r) => RadioListTile<String>(
-                    title: Text(r,
+                    title: Text(r.label,
                         style: TextStyle(
                             color: Theme.of(context).colorScheme.onSurface,
                             fontSize: 13)),
-                    value: r,
+                    value: r.value,
                     groupValue: selectedReason,
                     activeColor: Theme.of(context).colorScheme.primary,
                     contentPadding: EdgeInsets.zero,
@@ -992,7 +1026,7 @@ class _ClientConversationScreenState extends State<ClientConversationScreen>
           actions: [
             TextButton(
                 onPressed: () => Navigator.pop(ctx),
-                child: Text('Cancel',
+                child: Text(l10n.clientConversationCancel,
                     style: TextStyle(color: context.fitlek.textMuted))),
             TextButton(
               onPressed: selectedReason == null
@@ -1001,7 +1035,7 @@ class _ClientConversationScreenState extends State<ClientConversationScreen>
                       Navigator.pop(ctx);
                       _submitReport(selectedReason!);
                     },
-              child: Text('Submit',
+              child: Text(l10n.clientConversationSubmit,
                   style: TextStyle(
                       color: selectedReason == null
                           ? context.fitlek.textMuted
@@ -1033,8 +1067,10 @@ class _ClientConversationScreenState extends State<ClientConversationScreen>
 
   Future<void> _submitReport(String reason) async {
     final coachID = await _getCoachID();
+    if (!mounted) return;
+    final l10n = AppLocalizations.of(context);
     if (coachID == null || coachID <= 0) {
-      _showSnack('Unable to identify coach to report', isError: true);
+      _showSnack(l10n.clientConversationIdentifyCoachReportError, isError: true);
       return;
     }
     try {
@@ -1048,40 +1084,44 @@ class _ClientConversationScreenState extends State<ClientConversationScreen>
           'entityID': widget.conversationID,
         }),
       );
+      if (!mounted) return;
       if (res.statusCode == 200) {
-        _showSnack('Report submitted successfully.');
+        _showSnack(l10n.clientConversationReportSubmitted);
       } else {
-        _showSnack('Failed to submit report', isError: true);
+        _showSnack(l10n.clientConversationReportFailed, isError: true);
       }
     } catch (_) {
-      _showSnack('Network error', isError: true);
+      if (mounted) {
+        _showSnack(l10n.clientConversationNetworkError, isError: true);
+      }
     }
   }
 
   void _showBlockDialog() {
-    final name = widget.coachName ?? 'this coach';
+    final l10n = AppLocalizations.of(context);
+    final name = widget.coachName ?? l10n.clientConversationThisCoachFallback;
     showDialog(
       context: context,
       builder: (ctx) => AppDialog(
         backgroundColor: context.fitlek.card,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text('Block $name?',
+        title: Text(l10n.clientConversationBlockTitle(name),
             style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
         content: Text(
-          'They won\'t be able to find your profile or send you messages. They will not be notified that you blocked them.',
+          l10n.clientConversationBlockMessage,
           style: TextStyle(color: context.fitlek.textMuted),
         ),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: Text('Cancel',
+              child: Text(l10n.clientConversationCancel,
                   style: TextStyle(color: context.fitlek.textMuted))),
           TextButton(
             onPressed: () async {
               Navigator.pop(ctx);
               _submitBlock();
             },
-            child: Text('Block',
+            child: Text(l10n.clientConversationBlockConfirm,
                 style: TextStyle(
                     color: context.fitlek.error, fontWeight: FontWeight.bold)),
           ),
@@ -1092,8 +1132,10 @@ class _ClientConversationScreenState extends State<ClientConversationScreen>
 
   Future<void> _submitBlock() async {
     final coachID = await _getCoachID();
+    if (!mounted) return;
+    final l10n = AppLocalizations.of(context);
     if (coachID == null || coachID <= 0) {
-      _showSnack('Unable to identify coach to block', isError: true);
+      _showSnack(l10n.clientConversationIdentifyCoachBlockError, isError: true);
       return;
     }
     try {
@@ -1102,14 +1144,17 @@ class _ClientConversationScreenState extends State<ClientConversationScreen>
         headers: _headers,
         body: jsonEncode({'blockedID': coachID}),
       );
+      if (!mounted) return;
       if (res.statusCode == 200) {
-        _showSnack('User blocked.');
+        _showSnack(l10n.clientConversationUserBlocked);
         if (mounted) Navigator.pop(context, true);
       } else {
-        _showSnack('Failed to block user', isError: true);
+        _showSnack(l10n.clientConversationBlockFailed, isError: true);
       }
     } catch (_) {
-      _showSnack('Network error', isError: true);
+      if (mounted) {
+        _showSnack(l10n.clientConversationNetworkError, isError: true);
+      }
     }
   }
 }

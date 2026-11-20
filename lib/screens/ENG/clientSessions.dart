@@ -5,6 +5,8 @@ import '../../theme/fitlek_theme_extension.dart';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:intl/intl.dart';
+import 'package:fitlek1/l10n/app_localizations.dart';
 import 'package:fitlek1/models/anas/reservation.dart';
 import 'clientSessionDetail.dart';
 import 'clientConversation.dart';
@@ -123,17 +125,19 @@ class _SessionsScreenState extends State<SessionsScreen>
         });
       } else {
         setState(() {
-          _error = 'Server error (${res.statusCode})';
+          _error = AppLocalizations.of(context)
+              .clientSessionsServerError(res.statusCode);
           _loading = false;
         });
       }
     } catch (e) {
       if (mounted) {
         final connectionFailed = ConnectionRecovery.report(e);
+        final l10n = AppLocalizations.of(context);
         setState(() {
           _error = connectionFailed
-              ? 'Check your connection and try again.'
-              : 'Unable to load your sessions. Please try again.';
+              ? l10n.clientSessionsCheckConnectionError
+              : l10n.clientSessionsLoadError;
           _loading = false;
         });
       }
@@ -193,6 +197,7 @@ class _SessionsScreenState extends State<SessionsScreen>
   }
 
   Widget _buildHeader() {
+    final l10n = AppLocalizations.of(context);
     return Padding(
       padding: EdgeInsets.fromLTRB(24, 20, 24, 16),
       child: Column(
@@ -205,7 +210,7 @@ class _SessionsScreenState extends State<SessionsScreen>
                 SirvyaLogo(variant: SirvyaLogoVariant.wordmark, height: 20),
               Spacer(),
               IconButton(
-                tooltip: 'Refresh sessions',
+                tooltip: l10n.clientSessionsRefreshTooltip,
                 onPressed: _loading
                     ? null
                     : () => _fetchSessions(silent: _sessions.isNotEmpty),
@@ -223,7 +228,7 @@ class _SessionsScreenState extends State<SessionsScreen>
                     Icon(Icons.bolt_rounded,
                         color: Theme.of(context).colorScheme.primary, size: 14),
                     SizedBox(width: 6),
-                    Text('$_completedCount completed',
+                    Text(l10n.clientSessionsCompletedCount(_completedCount),
                         style: TextStyle(
                             color: Theme.of(context).colorScheme.onSurface,
                             fontSize: 13,
@@ -233,14 +238,14 @@ class _SessionsScreenState extends State<SessionsScreen>
             ],
           ),
           SizedBox(height: 24),
-          Text('My sessions',
+          Text(l10n.clientSessionsTitle,
               style: TextStyle(
                   color: Theme.of(context).colorScheme.onSurface,
                   fontSize: 32,
                   fontWeight: FontWeight.bold,
                   letterSpacing: -0.5)),
           SizedBox(height: 4),
-          Text('Manage your coaching appointments.',
+          Text(l10n.clientSessionsSubtitle,
               style:
                   TextStyle(color: context.fitlek.textSecondary, fontSize: 16)),
         ],
@@ -249,6 +254,7 @@ class _SessionsScreenState extends State<SessionsScreen>
   }
 
   Widget _buildTabBar() {
+    final l10n = AppLocalizations.of(context);
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: 24),
       child: Container(
@@ -279,7 +285,8 @@ class _SessionsScreenState extends State<SessionsScreen>
                 Flexible(
                     child: FittedBox(
                         fit: BoxFit.scaleDown,
-                        child: Text('Upcoming (${_upcoming.length})'))),
+                        child: Text(l10n
+                            .clientSessionsTabUpcoming(_upcoming.length)))),
               ]),
             ),
             Tab(
@@ -290,7 +297,7 @@ class _SessionsScreenState extends State<SessionsScreen>
                 Flexible(
                     child: FittedBox(
                         fit: BoxFit.scaleDown,
-                        child: Text('Past (${_past.length})'))),
+                        child: Text(l10n.clientSessionsTabPast(_past.length)))),
               ]),
             ),
           ],
@@ -300,6 +307,7 @@ class _SessionsScreenState extends State<SessionsScreen>
   }
 
   Widget _buildBody() {
+    final l10n = AppLocalizations.of(context);
     if (_loading) {
       return Center(
           child: CircularProgressIndicator(
@@ -320,7 +328,7 @@ class _SessionsScreenState extends State<SessionsScreen>
           FilledButton.icon(
               onPressed: () => _fetchSessions(),
               icon: const Icon(Icons.refresh_rounded),
-              label: const Text('Try again')),
+              label: Text(l10n.clientSessionsTryAgain)),
         ]),
       );
     }
@@ -329,8 +337,9 @@ class _SessionsScreenState extends State<SessionsScreen>
       controller: _tabController,
       children: [
         _buildSessionList(_upcoming,
-            emptyMsg: 'No upcoming sessions.', isPast: false),
-        _buildSessionList(_past, emptyMsg: 'No past sessions.', isPast: true),
+            emptyMsg: l10n.clientSessionsEmptyUpcoming, isPast: false),
+        _buildSessionList(_past,
+            emptyMsg: l10n.clientSessionsEmptyPast, isPast: true),
       ],
     );
   }
@@ -402,7 +411,8 @@ class _SessionsScreenState extends State<SessionsScreen>
                 SizedBox(width: 8),
                 Expanded(
                     child: Text(
-                        'Your session is confirmed once the coach accepts.',
+                        AppLocalizations.of(context)
+                            .clientSessionsConfirmedWhenAccepted,
                         style: TextStyle(
                             color: context.fitlek.textSecondary,
                             fontSize: 13))),
@@ -431,20 +441,25 @@ class _SessionsScreenState extends State<SessionsScreen>
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Need help with a booking?',
+                        Text(
+                            AppLocalizations.of(context)
+                                .clientSessionsHelpTitle,
                             style: TextStyle(
                                 color: Theme.of(context).colorScheme.onSurface,
                                 fontSize: 14,
                                 fontWeight: FontWeight.bold)),
                         SizedBox(height: 2),
-                        Text('Get in touch and we\'ll be happy to help.',
+                        Text(
+                            AppLocalizations.of(context)
+                                .clientSessionsHelpSubtitle,
                             style: TextStyle(
                                 color: context.fitlek.textSecondary,
                                 fontSize: 12)),
                       ],
                     ),
                   ),
-                  Text('Contact support',
+                  Text(
+                      AppLocalizations.of(context).clientSessionsContactSupport,
                       style: TextStyle(
                           color: Theme.of(context).colorScheme.primary,
                           fontSize: 13,
@@ -463,24 +478,10 @@ class _SessionsScreenState extends State<SessionsScreen>
     if (sessions.isEmpty) return [];
 
     final Map<String, List<ReservationModel>> grouped = {};
-    const monthsFull = [
-      'January',
-      'February',
-      'March',
-      'April',
-      'May',
-      'June',
-      'July',
-      'August',
-      'September',
-      'October',
-      'November',
-      'December'
-    ];
+    final locale = Localizations.localeOf(context).toString();
 
     for (var s in sessions) {
-      final key =
-          '${monthsFull[s.sessionStart.month - 1]} ${s.sessionStart.year}';
+      final key = DateFormat('MMMM yyyy', locale).format(s.sessionStart);
       if (!grouped.containsKey(key)) grouped[key] = [];
       grouped[key]!.add(s);
     }
@@ -512,21 +513,22 @@ class _SessionsScreenState extends State<SessionsScreen>
   }
 
   Widget _buildFiltersRow() {
+    final l10n = AppLocalizations.of(context);
     return Row(
       children: [
-        _buildFilterChip('All'),
+        _buildFilterChip('All', l10n.clientSessionsFilterAll),
         SizedBox(width: 8),
-        _buildFilterChip('Completed'),
+        _buildFilterChip('Completed', l10n.clientSessionsFilterCompleted),
         SizedBox(width: 8),
-        _buildFilterChip('Cancelled'),
+        _buildFilterChip('Cancelled', l10n.clientSessionsFilterCancelled),
       ],
     );
   }
 
-  Widget _buildFilterChip(String label) {
-    final isSelected = _selectedFilter == label;
+  Widget _buildFilterChip(String filterValue, String displayLabel) {
+    final isSelected = _selectedFilter == filterValue;
     return GestureDetector(
-      onTap: () => setState(() => _selectedFilter = label),
+      onTap: () => setState(() => _selectedFilter = filterValue),
       child: Container(
         padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
@@ -537,7 +539,7 @@ class _SessionsScreenState extends State<SessionsScreen>
                   ? Theme.of(context).colorScheme.primary
                   : context.fitlek.border),
         ),
-        child: Text(label,
+        child: Text(displayLabel,
             style: TextStyle(
                 color: isSelected
                     ? Theme.of(context).colorScheme.primary
@@ -576,50 +578,12 @@ class _SessionCard extends StatelessWidget {
   String get _effectiveStatus =>
       _isExpiredPending ? 'cancelled' : session.status;
 
-  String _formatDate(DateTime dt) {
-    const months = [
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'May',
-      'Jun',
-      'Jul',
-      'Aug',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Dec'
-    ];
-    const monthsFull = [
-      'January',
-      'February',
-      'March',
-      'April',
-      'May',
-      'June',
-      'July',
-      'August',
-      'September',
-      'October',
-      'November',
-      'December'
-    ];
-    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-    const daysFull = [
-      'Monday',
-      'Tuesday',
-      'Wednesday',
-      'Thursday',
-      'Friday',
-      'Saturday',
-      'Sunday'
-    ];
-
+  String _formatDate(BuildContext context, DateTime dt) {
+    final locale = Localizations.localeOf(context).toString();
     if (isPast) {
-      return '${days[dt.weekday - 1]}, ${dt.day} ${months[dt.month - 1]}';
+      return DateFormat('EEE, d MMM', locale).format(dt);
     } else {
-      return '${daysFull[dt.weekday - 1]}, ${dt.day} ${monthsFull[dt.month - 1]}';
+      return DateFormat('EEEE, d MMMM', locale).format(dt);
     }
   }
 
@@ -627,25 +591,26 @@ class _SessionCard extends StatelessWidget {
       '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
 
   Future<void> _cancel(BuildContext ctx) async {
+    final l10n = AppLocalizations.of(ctx);
     final confirm = await showDialog<bool>(
       context: ctx,
       builder: (_) => AppDialog(
         backgroundColor: ctx.fitlek.card,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text('Cancel session',
+        title: Text(l10n.clientSessionsCancelDialogTitle,
             style: TextStyle(
                 color: Theme.of(ctx).colorScheme.onSurface,
                 fontWeight: FontWeight.bold)),
-        content: Text('Are you sure you want to cancel this booking?',
+        content: Text(l10n.clientSessionsCancelDialogMessage,
             style: TextStyle(color: ctx.fitlek.textSecondary, fontSize: 14)),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx, false),
-              child: Text('NO',
+              child: Text(l10n.clientSessionsCancelDialogNo,
                   style: TextStyle(color: ctx.fitlek.textSecondary))),
           TextButton(
               onPressed: () => Navigator.pop(ctx, true),
-              child: Text('YES, CANCEL',
+              child: Text(l10n.clientSessionsCancelDialogYes,
                   style: TextStyle(
                       color: ctx.fitlek.error, fontWeight: FontWeight.bold))),
         ],
@@ -749,6 +714,7 @@ class _SessionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final bool canCancel = session.isPending &&
         !_isExpiredPending &&
         session.sessionStart.isAfter(DateTime.now());
@@ -760,22 +726,22 @@ class _SessionCard extends StatelessWidget {
       case 'confirmed':
         statusBorder = context.fitlek.success;
         statusText = context.fitlek.success;
-        statusLabel = 'Completed'; // Assuming past confirmed is completed
+        statusLabel = l10n.clientSessionsStatusCompleted; // Assuming past confirmed is completed
         break;
       case 'pending':
         statusBorder = context.fitlek.warning;
         statusText = context.fitlek.warning;
-        statusLabel = 'Pending';
+        statusLabel = l10n.clientSessionsStatusPending;
         break;
       case 'cancelled':
       default:
         statusBorder = context.fitlek.error;
         statusText = context.fitlek.error;
         statusLabel = session.isExpired
-            ? 'Expired'
+            ? l10n.clientSessionsStatusExpired
             : session.pricingStatus == 'declined'
-                ? 'Price declined'
-                : 'Cancelled';
+                ? l10n.clientSessionsStatusPriceDeclined
+                : l10n.clientSessionsStatusCancelled;
         break;
     }
 
@@ -862,10 +828,10 @@ class _SessionCard extends StatelessWidget {
                             Expanded(
                                 child: Text(
                                     session.pricingStatus == 'proposed'
-                                        ? 'Price offer ready — open details to approve.'
+                                        ? l10n.clientSessionsPriceOfferReady
                                         : session.pricingStatus == 'awaiting'
-                                            ? 'Awaiting coach’s price.'
-                                            : 'Awaiting coach confirmation.',
+                                            ? l10n.clientSessionsAwaitingPrice
+                                            : l10n.clientSessionsAwaitingConfirmation,
                                     style: TextStyle(
                                         color: context.fitlek.textSecondary,
                                         fontSize: 12))),
@@ -880,7 +846,7 @@ class _SessionCard extends StatelessWidget {
                                 color: context.fitlek.textSecondary, size: 14),
                             SizedBox(width: 4),
                             Expanded(
-                                child: Text('Cancelled by you',
+                                child: Text(l10n.clientSessionsCancelledByYou,
                                     style: TextStyle(
                                         color: context.fitlek.textSecondary,
                                         fontSize: 12))),
@@ -917,7 +883,7 @@ class _SessionCard extends StatelessWidget {
                     Icon(Icons.calendar_today_rounded,
                         color: context.fitlek.textSecondary, size: 16),
                     SizedBox(width: 6),
-                    Text(_formatDate(session.sessionStart),
+                    Text(_formatDate(context, session.sessionStart),
                         style: TextStyle(
                             color: Theme.of(context).colorScheme.onSurface,
                             fontSize: 13)),
@@ -937,7 +903,7 @@ class _SessionCard extends StatelessWidget {
                     Container(
                         width: 1, height: 12, color: context.fitlek.border),
                     SizedBox(width: 12),
-                    Text('${session.price.toInt()} MAD',
+                    Text(l10n.clientSessionsPriceMad(session.price.toInt()),
                         style: TextStyle(
                             color: Theme.of(context).colorScheme.onSurface,
                             fontSize: 13,
@@ -958,7 +924,8 @@ class _SessionCard extends StatelessWidget {
                           color: context.fitlek.textSecondary, size: 18),
                       SizedBox(width: 12),
                       Expanded(
-                          child: Text(_formatDate(session.sessionStart),
+                          child: Text(
+                              _formatDate(context, session.sessionStart),
                               style: TextStyle(
                                   color:
                                       Theme.of(context).colorScheme.onSurface,
@@ -982,7 +949,9 @@ class _SessionCard extends StatelessWidget {
                                       Theme.of(context).colorScheme.onSurface,
                                   fontSize: 15)),
                           SizedBox(height: 2),
-                          Text('${session.durationMin} min',
+                          Text(
+                              l10n.clientSessionsDurationMin(
+                                  session.durationMin),
                               style: TextStyle(
                                   color: context.fitlek.textSecondary,
                                   fontSize: 13)),
@@ -1000,7 +969,7 @@ class _SessionCard extends StatelessWidget {
                           child: Text(
                               session.location.isNotEmpty
                                   ? session.location
-                                  : 'Location to be confirmed',
+                                  : l10n.clientSessionsLocationTbc,
                               style: TextStyle(
                                   color:
                                       Theme.of(context).colorScheme.onSurface,
@@ -1014,12 +983,13 @@ class _SessionCard extends StatelessWidget {
                       Text(
                         session.packageName != null &&
                                 session.packageName!.isNotEmpty
-                            ? 'Session price (${session.packageName})'
-                            : 'Session total',
+                            ? l10n.clientSessionsSessionPriceWithPkg(
+                                session.packageName!)
+                            : l10n.clientSessionsSessionTotal,
                         style: TextStyle(
                             color: context.fitlek.textSecondary, fontSize: 14),
                       ),
-                      Text('${session.price.toInt()} MAD',
+                      Text(l10n.clientSessionsPriceMad(session.price.toInt()),
                           style: TextStyle(
                               color: Theme.of(context).colorScheme.onSurface,
                               fontSize: 16,
@@ -1037,7 +1007,7 @@ class _SessionCard extends StatelessWidget {
               children: [
                 if (isPast && _effectiveStatus == 'cancelled') Spacer(),
                 if (isPast && _effectiveStatus == 'cancelled')
-                  Text('View details >',
+                  Text(l10n.clientSessionsViewDetails,
                       style: TextStyle(
                           color: Theme.of(context).colorScheme.primary,
                           fontSize: 14,
@@ -1069,7 +1039,10 @@ class _SessionCard extends StatelessWidget {
                                         Theme.of(context).colorScheme.onPrimary,
                                     size: 18),
                               if (isPast) SizedBox(width: 8),
-                              Text(isPast ? 'Book again >' : 'View details >',
+                              Text(
+                                  isPast
+                                      ? l10n.clientSessionsBookAgain
+                                      : l10n.clientSessionsViewDetails,
                                   style: TextStyle(
                                       color: Theme.of(context)
                                           .colorScheme
@@ -1095,6 +1068,7 @@ class _SessionCard extends StatelessWidget {
                       },
                       child: Container(
                         height: 48,
+                        padding: const EdgeInsets.symmetric(horizontal: 10),
                         decoration: BoxDecoration(
                             color: Colors.transparent,
                             borderRadius: BorderRadius.circular(12),
@@ -1108,7 +1082,8 @@ class _SessionCard extends StatelessWidget {
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
                                     Text(
-                                        'Edit review: ${session.reviewRating}/5 ',
+                                        l10n.clientSessionsEditReviewRating(
+                                            session.reviewRating!),
                                         style: TextStyle(
                                             color: context.fitlek.textSecondary,
                                             fontSize: 12)),
@@ -1138,7 +1113,10 @@ class _SessionCard extends StatelessWidget {
                                             .onSurface,
                                         size: 18),
                                     SizedBox(width: 8),
-                                    Text(isPast ? 'Leave a review' : 'Message',
+                                    Text(
+                                        isPast
+                                            ? l10n.clientSessionsLeaveAReview
+                                            : l10n.clientSessionsMessageBtn,
                                         style: TextStyle(
                                             color: Theme.of(context)
                                                 .colorScheme
@@ -1169,7 +1147,7 @@ class _SessionCard extends StatelessWidget {
                     Icon(Icons.cancel_outlined,
                         color: context.fitlek.error, size: 18),
                     SizedBox(width: 8),
-                    Text('Cancel booking',
+                    Text(l10n.clientSessionsCancelBooking,
                         style: TextStyle(
                             color: context.fitlek.error,
                             fontSize: 14,

@@ -1,5 +1,6 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import 'package:fitlek1/l10n/app_localizations.dart';
 import '../models/weight_entry.dart';
 import '../theme/fitlek_theme_extension.dart';
 
@@ -63,6 +64,7 @@ class _WeightProgressViewState extends State<WeightProgressView>
   @override
   Widget build(BuildContext context) {
     super.build(context);
+    final l10n = AppLocalizations.of(context);
     final c = context.fitlek, scheme = Theme.of(context).colorScheme;
     final data =
         weightPeriod(widget.entries, _days, widget.now ?? DateTime.now());
@@ -84,14 +86,14 @@ class _WeightProgressViewState extends State<WeightProgressView>
                   child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                    Text('YOUR PROGRESS',
+                    Text(l10n.weightProgressHeaderTag,
                         style: TextStyle(
                             color: c.textMuted,
                             fontSize: 9,
                             fontWeight: FontWeight.w800,
                             letterSpacing: 1.8)),
                     const SizedBox(height: 6),
-                    Text('Every check-in counts.',
+                    Text(l10n.weightProgressHeaderTitle,
                         style: TextStyle(
                             color: scheme.onSurface,
                             fontSize: 22,
@@ -102,7 +104,7 @@ class _WeightProgressViewState extends State<WeightProgressView>
               const SizedBox(width: 10),
               IconButton.filled(
                   onPressed: _log,
-                  tooltip: 'Log weight',
+                  tooltip: l10n.weightProgressLogTooltip,
                   style: IconButton.styleFrom(
                       backgroundColor: scheme.primary,
                       foregroundColor: scheme.onPrimary),
@@ -120,7 +122,7 @@ class _WeightProgressViewState extends State<WeightProgressView>
                                 color: c.textSecondary, fontSize: 12)),
                         TextButton(
                             onPressed: widget.loading ? null : widget.onRefresh,
-                            child: const Text('Refresh history')),
+                            child: Text(l10n.weightProgressRefreshHistory)),
                       ]))),
             Container(
                 padding: const EdgeInsets.all(22),
@@ -144,7 +146,7 @@ class _WeightProgressViewState extends State<WeightProgressView>
                                 color: scheme.primary, size: 22)),
                         const SizedBox(width: 12),
                         Expanded(
-                            child: Text('Current weight',
+                            child: Text(l10n.weightProgressCurrentWeight,
                                 style: TextStyle(
                                     color: c.textSecondary, fontSize: 13))),
                         if (widget.loading)
@@ -177,8 +179,9 @@ class _WeightProgressViewState extends State<WeightProgressView>
                       const SizedBox(height: 12),
                       Text(
                           latest == null
-                              ? 'Your first weigh-in starts here.'
-                              : 'Latest weigh-in · ${latest.fullLabel}',
+                              ? l10n.weightProgressFirstWeighInHint
+                              : l10n.weightProgressLatestWeighIn(
+                                  latest.fullLabel),
                           style: TextStyle(color: c.textMuted, fontSize: 12)),
                       if (current != null && widget.start != null) ...[
                         Padding(
@@ -202,7 +205,7 @@ class _WeightProgressViewState extends State<WeightProgressView>
                                           color: scheme.primary,
                                           fontSize: 13,
                                           fontWeight: FontWeight.w800))),
-                              Text('since your first weigh-in',
+                              Text(l10n.weightProgressSinceFirst,
                                   style: TextStyle(
                                       color: c.textMuted, fontSize: 11)),
                             ]),
@@ -212,30 +215,34 @@ class _WeightProgressViewState extends State<WeightProgressView>
             Row(children: [
               Expanded(
                   child: _summary(
-                      'Starting weight',
+                      l10n.weightProgressStartingWeight,
                       widget.start == null
                           ? '—'
                           : '${widget.start!.toStringAsFixed(1)} kg',
                       Icons.flag_outlined)),
               const SizedBox(width: 12),
               Expanded(
-                  child: _summary('Weigh-ins logged', '${widget.total}',
-                      Icons.calendar_today_outlined))
+                  child: _summary(l10n.weightProgressWeighInsLogged,
+                      '${widget.total}', Icons.calendar_today_outlined))
             ]),
             const SizedBox(height: 20),
             _card(
                 Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text('Weight trend',
+              Text(l10n.weightProgressTrendTitle,
                   style: TextStyle(
                       color: scheme.onSurface,
                       fontSize: 18,
                       fontWeight: FontWeight.w800)),
               const SizedBox(height: 6),
-              Text('A little perspective on your journey.',
+              Text(l10n.weightProgressTrendSubtitle,
                   style: TextStyle(color: c.textMuted, fontSize: 12)),
               const SizedBox(height: 16),
               Row(
-                  children: [(7, '7 days'), (30, '30 days'), (null, 'Recent')]
+                  children: [
+                (7, l10n.weightProgressPeriod7Days),
+                (30, l10n.weightProgressPeriod30Days),
+                (null, l10n.weightProgressPeriodRecent)
+              ]
                       .map((period) => Expanded(
                           child: Padding(
                               padding:
@@ -277,8 +284,10 @@ class _WeightProgressViewState extends State<WeightProgressView>
                 ]),
                 const SizedBox(height: 12),
                 Semantics(
-                    label:
-                        'Weight trend, ${data.length} weigh-ins. Selected ${selected.weight.toStringAsFixed(1)} kilograms on ${selected.fullLabel}.',
+                    label: l10n.weightProgressChartSemantics(
+                        data.length,
+                        selected.weight.toStringAsFixed(1),
+                        selected.fullLabel),
                     child: LayoutBuilder(builder: (context, constraints) {
                       void select(double x) {
                         final index =
@@ -309,8 +318,8 @@ class _WeightProgressViewState extends State<WeightProgressView>
                 const SizedBox(height: 10),
                 Text(
                     data.length == 1
-                        ? 'Your first point is on the chart. Add another to see a trend. Dates in UTC.'
-                        : 'Tap or slide across the chart to explore your weigh-ins. Dates in UTC.',
+                        ? l10n.weightProgressChartSinglePointHint
+                        : l10n.weightProgressChartMultiPointHint,
                     style: TextStyle(
                         color: c.textMuted, fontSize: 10, height: 1.5)),
               ] else
@@ -324,8 +333,8 @@ class _WeightProgressViewState extends State<WeightProgressView>
                           const SizedBox(height: 12),
                           Text(
                               widget.total == 0
-                                  ? 'Your story starts with one log.'
-                                  : 'No weigh-ins in this period.',
+                                  ? l10n.weightProgressEmptyStoryTitle
+                                  : l10n.weightProgressEmptyPeriodTitle,
                               style: TextStyle(
                                   color: scheme.onSurface,
                                   fontSize: 15,
@@ -333,8 +342,8 @@ class _WeightProgressViewState extends State<WeightProgressView>
                           const SizedBox(height: 7),
                           Text(
                               widget.total == 0
-                                  ? 'Log a weight to start your personal trend.'
-                                  : 'Choose Recent to see your latest available records.',
+                                  ? l10n.weightProgressEmptyStorySubtitle
+                                  : l10n.weightProgressEmptyPeriodSubtitle,
                               style: TextStyle(
                                   color: c.textMuted,
                                   fontSize: 12,
@@ -344,18 +353,18 @@ class _WeightProgressViewState extends State<WeightProgressView>
             const SizedBox(height: 22),
             Row(children: [
               Expanded(
-                  child: Text('Recent weigh-ins',
+                  child: Text(l10n.weightProgressRecentTitle,
                       style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.w800,
                           color: scheme.onSurface))),
               if (data.isNotEmpty)
-                Text('${data.length} in view',
+                Text(l10n.weightProgressInViewCount(data.length),
                     style: TextStyle(color: c.textMuted, fontSize: 11))
             ]),
             const SizedBox(height: 12),
             if (data.isEmpty)
-              _card(Text('Your recorded weights will appear here.',
+              _card(Text(l10n.weightProgressEmptyRecords,
                   style: TextStyle(color: c.textMuted, fontSize: 12)))
             else
               _card(
@@ -390,8 +399,9 @@ class _WeightProgressViewState extends State<WeightProgressView>
                                     entry.note.isNotEmpty
                                         ? entry.note
                                         : change == null
-                                            ? 'First in this view'
-                                            : '${weightChange(change)} from previous',
+                                            ? l10n.weightProgressFirstInView
+                                            : l10n.weightProgressChangeFromPrevious(
+                                                weightChange(change)),
                                     style: TextStyle(
                                         color: c.textMuted,
                                         fontSize: 10,
@@ -410,20 +420,19 @@ class _WeightProgressViewState extends State<WeightProgressView>
             if (widget.entries.length >= 90 || data.length > 5)
               Padding(
                   padding: const EdgeInsets.only(top: 10),
-                  child: Text(
-                      'Chart: up to the latest 90 saved weigh-ins. List: latest 5 in this view.',
+                  child: Text(l10n.weightProgressChartLimitFooter,
                       style: TextStyle(
                           color: c.textMuted, fontSize: 10, height: 1.5))),
             const SizedBox(height: 20),
             _card(
                 Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text('Keep a record, at your pace.',
+              Text(l10n.weightProgressKeepRecordTitle,
                   style: TextStyle(
                       color: scheme.onSurface,
                       fontSize: 16,
                       fontWeight: FontWeight.w800)),
               const SizedBox(height: 7),
-              Text('A quick check-in adds another point to your story.',
+              Text(l10n.weightProgressKeepRecordSubtitle,
                   style:
                       TextStyle(color: c.textMuted, fontSize: 12, height: 1.5)),
               const SizedBox(height: 16),
@@ -432,7 +441,7 @@ class _WeightProgressViewState extends State<WeightProgressView>
                   child: FilledButton.icon(
                       onPressed: _log,
                       icon: const Icon(Icons.add_rounded, size: 18),
-                      label: const Text('Log a weigh-in'))),
+                      label: Text(l10n.weightProgressLogButton))),
             ])),
             if (widget.bmi != '—')
               Padding(
@@ -446,13 +455,13 @@ class _WeightProgressViewState extends State<WeightProgressView>
                             child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                              Text('BMI · ${widget.bmi}',
+                              Text(l10n.weightProgressBmiLabel(widget.bmi),
                                   style: TextStyle(
                                       color: scheme.onSurface,
                                       fontSize: 13,
                                       fontWeight: FontWeight.w700)),
                               const SizedBox(height: 4),
-                              Text('From your latest weight and saved height.',
+                              Text(l10n.weightProgressBmiSubtitle,
                                   style: TextStyle(
                                       color: c.textMuted,
                                       fontSize: 10,
@@ -643,9 +652,10 @@ class _WeightLogSheetState extends State<WeightLogSheet> {
 
   Future<void> _save() async {
     if (_saving) return;
+    final l10n = AppLocalizations.of(context);
     final weight = double.tryParse(_input.text.trim().replaceAll(',', '.'));
     if (weight == null || !weight.isFinite || weight <= 0 || weight > 500) {
-      setState(() => _error = 'Enter a valid weight between 0 and 500 kg.');
+      setState(() => _error = l10n.weightLogInvalidError);
       return;
     }
     setState(() {
@@ -659,7 +669,7 @@ class _WeightLogSheetState extends State<WeightLogSheet> {
       if (mounted) {
         setState(() {
           _saving = false;
-          _error = 'Could not save. Your entry is still here—please try again.';
+          _error = AppLocalizations.of(context).weightLogSaveError;
         });
       }
     }
@@ -667,6 +677,7 @@ class _WeightLogSheetState extends State<WeightLogSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final c = context.fitlek, scheme = Theme.of(context).colorScheme;
     return Padding(
         padding:
@@ -695,20 +706,20 @@ class _WeightLogSheetState extends State<WeightLogSheet> {
                         const SizedBox(height: 22),
                         Row(children: [
                           Expanded(
-                              child: Text('A moment for you.',
+                              child: Text(l10n.weightLogSheetTitle,
                                   style: TextStyle(
                                       fontSize: 25,
                                       letterSpacing: -.7,
                                       fontWeight: FontWeight.w800,
                                       color: scheme.onSurface))),
                           IconButton(
-                              tooltip: 'Close',
+                              tooltip: l10n.weightLogCloseTooltip,
                               onPressed:
                                   _saving ? null : () => Navigator.pop(context),
                               icon: const Icon(Icons.close_rounded, size: 20)),
                         ]),
                         const SizedBox(height: 8),
-                        Text('Log your weight and keep your journey in view.',
+                        Text(l10n.weightLogSheetSubtitle,
                             style: TextStyle(
                                 fontSize: 12, height: 1.5, color: c.textMuted)),
                         const SizedBox(height: 24),
@@ -726,7 +737,7 @@ class _WeightLogSheetState extends State<WeightLogSheet> {
                                 fontWeight: FontWeight.w800,
                                 color: scheme.onSurface),
                             decoration: InputDecoration(
-                                labelText: 'Weight (kg)',
+                                labelText: l10n.weightLogInputLabel,
                                 hintText: '00.0',
                                 suffixText: 'kg',
                                 errorText: _error,
@@ -743,8 +754,9 @@ class _WeightLogSheetState extends State<WeightLogSheet> {
                         const SizedBox(height: 12),
                         Text(
                             widget.lastWeight == null
-                                ? 'Recorded for today. You can use a dot or a comma.'
-                                : 'Last recorded: ${widget.lastWeight!.toStringAsFixed(1)} kg · Recorded for today.',
+                                ? l10n.weightLogRecordedTodayHint
+                                : l10n.weightLogLastRecordedHint(
+                                    widget.lastWeight!.toStringAsFixed(1)),
                             style: TextStyle(
                                 fontSize: 11, height: 1.5, color: c.textMuted)),
                         const SizedBox(height: 24),
@@ -764,8 +776,9 @@ class _WeightLogSheetState extends State<WeightLogSheet> {
                                         child: CircularProgressIndicator(
                                             strokeWidth: 2))
                                     : const Icon(Icons.check_rounded, size: 20),
-                                label: Text(
-                                    _saving ? 'Saving…' : 'Save weigh-in'))),
+                                label: Text(_saving
+                                    ? l10n.weightLogSaving
+                                    : l10n.weightLogSaveButton))),
                       ]))),
         ));
   }

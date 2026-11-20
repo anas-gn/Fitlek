@@ -1,3 +1,5 @@
+import 'package:fitlek1/l10n/app_localizations.dart';
+import 'package:intl/intl.dart';
 import '../../components/app_dialog.dart';
 import '../../services/live_updates.dart';
 import 'package:flutter/material.dart';
@@ -112,29 +114,29 @@ class _CoachCalendarState extends State<CoachCalendar>
       _unavailablePeriods.any((a) => a.blocksSlot(_selectedDate, hour));
 
   Future<void> _proposePrice(CoachReservation r) async {
+    final l10n = AppLocalizations.of(context);
     final controller = TextEditingController();
     final price = await showDialog<String>(
         context: context,
         builder: (ctx) => AppDialog(
-                title: const Text('Propose session price'),
+                title: Text(l10n.coachCalendarProposePriceTitle),
                 content: Column(mainAxisSize: MainAxisSize.min, children: [
-                  const Text(
-                      'The client must accept your price at least 2 hours before the session. Acceptance confirms the booking.'),
+                  Text(l10n.coachCalendarProposePriceBody),
                   const SizedBox(height: 12),
                   TextField(
                       controller: controller,
                       keyboardType:
                           const TextInputType.numberWithOptions(decimal: true),
                       decoration: InputDecoration(
-                          labelText: 'Price per session (MAD)'))
+                          labelText: l10n.coachCalendarPricePerSessionLabel))
                 ]),
                 actions: [
                   TextButton(
                       onPressed: () => Navigator.pop(ctx),
-                      child: const Text('Cancel')),
+                      child: Text(l10n.coachCalendarCancel)),
                   FilledButton(
                       onPressed: () => Navigator.pop(ctx, controller.text),
-                      child: const Text('Send offer'))
+                      child: Text(l10n.coachCalendarSendOffer))
                 ]));
     if (price == null || !mounted) return;
     final result =
@@ -143,8 +145,11 @@ class _CoachCalendarState extends State<CoachCalendar>
     if (result['ok'] == true) {
       await _load();
     } else {
-      ApiService.showError(context,
-          result['error'] ?? result['message'] ?? 'Could not send price.');
+      ApiService.showError(
+          context,
+          result['error'] ??
+              result['message'] ??
+              l10n.coachCalendarSendPriceError);
     }
   }
 
@@ -160,7 +165,8 @@ class _CoachCalendarState extends State<CoachCalendar>
         await _proposePrice(r);
         return;
       }
-      ApiService.showError(context, result['message'] ?? 'Failed.');
+      ApiService.showError(context,
+          result['message'] ?? AppLocalizations.of(context).coachCalendarFailed);
       await _load();
     }
   }
@@ -183,7 +189,8 @@ class _CoachCalendarState extends State<CoachCalendar>
     if (result['ok'] == true) {
       _load();
     } else {
-      ApiService.showError(context, result['message'] ?? 'Failed.');
+      ApiService.showError(context,
+          result['message'] ?? AppLocalizations.of(context).coachCalendarFailed);
     }
   }
 
@@ -194,7 +201,8 @@ class _CoachCalendarState extends State<CoachCalendar>
     if (result['ok'] == true) {
       _load();
     } else {
-      ApiService.showError(context, result['message'] ?? 'Failed.');
+      ApiService.showError(context,
+          result['message'] ?? AppLocalizations.of(context).coachCalendarFailed);
     }
   }
 
@@ -205,7 +213,8 @@ class _CoachCalendarState extends State<CoachCalendar>
     if (result['ok'] == true) {
       _load();
     } else {
-      ApiService.showError(context, result['message'] ?? 'Failed.');
+      ApiService.showError(context,
+          result['message'] ?? AppLocalizations.of(context).coachCalendarFailed);
     }
   }
 
@@ -226,7 +235,8 @@ class _CoachCalendarState extends State<CoachCalendar>
       _load();
       _tabController.animateTo(1);
     } else {
-      ApiService.showError(context, result['message'] ?? 'Failed.');
+      ApiService.showError(context,
+          result['message'] ?? AppLocalizations.of(context).coachCalendarFailed);
     }
   }
 
@@ -252,7 +262,27 @@ class _CoachCalendarState extends State<CoachCalendar>
     );
   }
 
+  String _localizedLocationLabel(CoachReservation r) {
+    final l10n = AppLocalizations.of(context);
+    if (r.companyName?.trim().isNotEmpty == true) {
+      return l10n.coachCalendarLocationArranged;
+    }
+    switch (r.location?.trim()) {
+      case 'home':
+        return l10n.coachCalendarLocationHome;
+      case 'gym':
+        return l10n.coachCalendarLocationGym;
+      case null:
+      case '':
+      case 'To be defined':
+        return l10n.coachCalendarLocationArranged;
+      default:
+        return r.location!.trim();
+    }
+  }
+
   Widget _buildReservationDetails() {
+    final l10n = AppLocalizations.of(context);
     final matches = _reservations.where((r) => r.id == widget.reservationId);
     final r = matches.isEmpty ? null : matches.first;
     return SafeArea(
@@ -261,7 +291,7 @@ class _CoachCalendarState extends State<CoachCalendar>
         leading: IconButton(
             icon: const Icon(Icons.arrow_back),
             onPressed: () => Navigator.pop(context)),
-        title: const Text('Reservation details'),
+        title: Text(l10n.coachCalendarReservationDetailsTitle),
       ),
       Expanded(
           child: RefreshIndicator(
@@ -270,7 +300,7 @@ class _CoachCalendarState extends State<CoachCalendar>
                 physics: const AlwaysScrollableScrollPhysics(),
                 padding: const EdgeInsets.all(20),
                 children: r == null
-                    ? [const Text('This reservation is no longer available.')]
+                    ? [Text(l10n.coachCalendarReservationUnavailable)]
                     : [
                         _buildReservationCard(r),
                         Card(
@@ -280,23 +310,25 @@ class _CoachCalendarState extends State<CoachCalendar>
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                        '${_monthName(r.date.month)} ${r.date.day}, ${r.date.year} · ${r.time}'),
+                                        '${DateFormat('MMMM d, y', Localizations.localeOf(context).toString()).format(r.date)} · ${r.time}'),
                                     const SizedBox(height: 14),
-                                    Text('${r.duration} minutes'),
+                                    Text(l10n.coachCalendarDurationMinutes(r.duration)),
                                     const SizedBox(height: 14),
-                                    Text(r.locationLabel),
+                                    Text(_localizedLocationLabel(r)),
                                     if (r.packageName?.isNotEmpty == true) ...[
                                       const SizedBox(height: 14),
                                       Text(r.packageName!)
                                     ],
                                     const SizedBox(height: 14),
                                     Text(r.pricingStatus == 'proposed'
-                                        ? '${r.proposedPrice ?? 0} MAD · awaiting client acceptance'
+                                        ? l10n.coachCalendarPriceAwaitingClient(
+                                            '${r.proposedPrice ?? 0}')
                                         : r.pricingStatus == 'awaiting'
-                                            ? 'Awaiting your price offer'
-                                            : '${r.price ?? 0} MAD per session'),
+                                            ? l10n.coachCalendarAwaitingYourPriceOffer
+                                            : l10n.coachCalendarPricePerSession(
+                                                '${r.price ?? 0}')),
                                     const SizedBox(height: 14),
-                                    Text('Reservation #${r.id}'),
+                                    Text(l10n.coachCalendarReservationNumber(r.id)),
                                   ],
                                 ))),
                       ],
@@ -306,36 +338,43 @@ class _CoachCalendarState extends State<CoachCalendar>
 
   Widget _buildHeader() {
     final cs = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context);
     return Padding(
-        padding: const EdgeInsets.fromLTRB(8, 16, 20, 0),
+        padding: const EdgeInsets.fromLTRB(8, 16, 16, 0),
         child: Row(children: [
           IconButton(
             icon: Icon(Icons.arrow_back, color: cs.onSurface),
             onPressed: () => Navigator.pop(context),
           ),
           const SizedBox(width: 4),
-          Text('Calendar',
+          Expanded(
+            child: Text(
+              l10n.coachCalendarTitle,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: TextStyle(
                   color: cs.onSurface,
-                  fontSize: 26,
+                  fontSize: 24,
                   fontWeight: FontWeight.w800,
-                  letterSpacing: -0.5)),
-          const Spacer(),
+                  letterSpacing: -0.5),
+            ),
+          ),
+          const SizedBox(width: 8),
           GestureDetector(
               onTap: _showAddUnavailabilityDialog,
               child: Container(
                   padding:
-                      const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                   decoration: BoxDecoration(
                       color: cs.primary,
                       borderRadius: BorderRadius.circular(12)),
                   child: Row(mainAxisSize: MainAxisSize.min, children: [
                     Icon(Icons.block_rounded, color: cs.onPrimary, size: 16),
-                    const SizedBox(width: 6),
-                    Text('Block Hours',
+                    const SizedBox(width: 5),
+                    Text(l10n.coachCalendarBlockAction,
                         style: TextStyle(
                             color: cs.onPrimary,
-                            fontSize: 13,
+                            fontSize: 12.5,
                             fontWeight: FontWeight.w700)),
                   ]))),
         ]));
@@ -344,6 +383,7 @@ class _CoachCalendarState extends State<CoachCalendar>
   Widget _buildTabBar() {
     final cs = Theme.of(context).colorScheme;
     final f = context.fitlek;
+    final l10n = AppLocalizations.of(context);
     return Container(
         margin: const EdgeInsets.fromLTRB(20, 16, 20, 0),
         decoration: BoxDecoration(
@@ -361,9 +401,9 @@ class _CoachCalendarState extends State<CoachCalendar>
             unselectedLabelStyle:
                 const TextStyle(fontWeight: FontWeight.w500, fontSize: 13),
             dividerColor: Colors.transparent,
-            tabs: const [
-              Tab(text: 'Reservations'),
-              Tab(text: 'Availability')
+            tabs: [
+              Tab(text: l10n.coachCalendarTabReservations),
+              Tab(text: l10n.coachCalendarTabAvailability)
             ]));
   }
 
@@ -383,6 +423,16 @@ class _CoachCalendarState extends State<CoachCalendar>
   Widget _buildMonthCalendar() {
     final cs = Theme.of(context).colorScheme;
     final f = context.fitlek;
+    final l10n = AppLocalizations.of(context);
+    final locale = Localizations.localeOf(context).toString();
+    final sunday = DateTime(2024, 1, 7);
+    final weekdays = List.generate(7, (i) {
+      final s = DateFormat.E(locale).format(sunday.add(Duration(days: i)));
+      final clean = s.replaceAll('.', '');
+      return clean.length >= 2
+          ? '${clean[0].toUpperCase()}${clean[1].toLowerCase()}'
+          : clean.toUpperCase();
+    });
     final firstDay = DateTime(_focusedMonth.year, _focusedMonth.month, 1);
     final lastDay = DateTime(_focusedMonth.year, _focusedMonth.month + 1, 0);
     final startPadding = firstDay.weekday % 7;
@@ -407,7 +457,7 @@ class _CoachCalendarState extends State<CoachCalendar>
           Expanded(
               child: Center(
                   child: Text(
-                      '${_monthName(_focusedMonth.month)} ${_focusedMonth.year}',
+                      DateFormat('MMMM y', locale).format(_focusedMonth),
                       style: TextStyle(
                           color: cs.onSurface,
                           fontSize: 16,
@@ -425,7 +475,7 @@ class _CoachCalendarState extends State<CoachCalendar>
         ]),
         const SizedBox(height: 16),
         Row(
-            children: ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa']
+            children: weekdays
                 .map((d) => Expanded(
                     child: Center(
                         child: Text(d,
@@ -501,9 +551,9 @@ class _CoachCalendarState extends State<CoachCalendar>
             }),
         const SizedBox(height: 10),
         Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-          _legendDot(cs.primary, 'Reservation'),
+          _legendDot(cs.primary, l10n.coachCalendarLegendReservation),
           const SizedBox(width: 16),
-          _legendDot(f.error, 'Blocked'),
+          _legendDot(f.error, l10n.coachCalendarLegendBlocked),
         ]),
       ]),
     );
@@ -524,9 +574,11 @@ class _CoachCalendarState extends State<CoachCalendar>
   Widget _buildDayView() {
     final cs = Theme.of(context).colorScheme;
     final f = context.fitlek;
+    final l10n = AppLocalizations.of(context);
+    final locale = Localizations.localeOf(context).toString();
     final reservations = _selectedDayReservations;
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Text('${_monthName(_selectedDate.month)} ${_selectedDate.day}',
+      Text(DateFormat('MMMM d', locale).format(_selectedDate),
           style: TextStyle(
               color: cs.onSurface, fontSize: 18, fontWeight: FontWeight.w700)),
       const SizedBox(height: 14),
@@ -540,7 +592,7 @@ class _CoachCalendarState extends State<CoachCalendar>
             child: Column(children: [
               Icon(Icons.event_available_rounded, color: f.textMuted, size: 40),
               const SizedBox(height: 8),
-              Text('No reservations this day',
+              Text(l10n.coachCalendarNoReservationsThisDay,
                   style: TextStyle(color: f.textMuted, fontSize: 14))
             ])),
       const SizedBox(height: 16),
@@ -551,6 +603,7 @@ class _CoachCalendarState extends State<CoachCalendar>
   Widget _buildReservationCard(CoachReservation reservation) {
     final cs = Theme.of(context).colorScheme;
     final f = context.fitlek;
+    final l10n = AppLocalizations.of(context);
     final isPending = reservation.status == ReservationStatus.pending;
     final isConfirmed = reservation.status == ReservationStatus.confirmed;
     return Container(
@@ -604,7 +657,7 @@ class _CoachCalendarState extends State<CoachCalendar>
                   Icon(Icons.location_on_rounded, size: 13, color: f.textMuted),
                   const SizedBox(width: 4),
                   Flexible(
-                      child: Text(reservation.locationLabel,
+                      child: Text(_localizedLocationLabel(reservation),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(color: f.textMuted, fontSize: 13)))
@@ -619,16 +672,16 @@ class _CoachCalendarState extends State<CoachCalendar>
                   borderRadius: BorderRadius.circular(8)),
               child: Text(
                   reservation.pricingStatus == 'expired'
-                      ? 'Expired'
+                      ? l10n.coachCalendarStatusExpired
                       : reservation.pricingStatus == 'declined'
-                          ? 'Price declined'
+                          ? l10n.coachCalendarStatusPriceDeclined
                           : isPending
                               ? (reservation.pricingStatus == 'proposed'
-                                  ? 'Price offered'
-                                  : 'Pending')
+                                  ? l10n.coachCalendarStatusPriceOffered
+                                  : l10n.coachCalendarStatusPending)
                               : isConfirmed
-                                  ? 'Confirmed'
-                                  : 'Cancelled',
+                                  ? l10n.coachCalendarStatusConfirmed
+                                  : l10n.coachCalendarStatusCancelled,
                   style: TextStyle(
                       color: isPending ? f.warning : cs.primary,
                       fontSize: 11,
@@ -652,10 +705,10 @@ class _CoachCalendarState extends State<CoachCalendar>
                         child: Center(
                             child: Text(
                                 reservation.pricingStatus == 'awaiting'
-                                    ? 'Propose price'
+                                    ? l10n.coachCalendarActionProposePrice
                                     : reservation.pricingStatus == 'proposed'
-                                        ? 'Awaiting client'
-                                        : 'Accept',
+                                        ? l10n.coachCalendarActionAwaitingClient
+                                        : l10n.coachCalendarActionAccept,
                                 style: TextStyle(
                                     color: cs.onPrimary,
                                     fontWeight: FontWeight.w700,
@@ -663,7 +716,8 @@ class _CoachCalendarState extends State<CoachCalendar>
             const SizedBox(width: 10),
             Expanded(
                 child: GestureDetector(
-                    onTap: () => _showReasonDialog('Reject Reservation',
+                    onTap: () => _showReasonDialog(
+                        l10n.coachCalendarRejectDialogTitle,
                         (reason) => _rejectReservation(reservation, reason)),
                     child: Container(
                         padding: const EdgeInsets.symmetric(vertical: 10),
@@ -673,7 +727,7 @@ class _CoachCalendarState extends State<CoachCalendar>
                             border: Border.all(
                                 color: f.error.withValues(alpha: 0.3))),
                         child: Center(
-                            child: Text('Reject',
+                            child: Text(l10n.coachCalendarActionReject,
                                 style: TextStyle(
                                     color: f.error,
                                     fontWeight: FontWeight.w700,
@@ -682,7 +736,8 @@ class _CoachCalendarState extends State<CoachCalendar>
         ] else if (isConfirmed && reservation.canCancel) ...[
           const SizedBox(height: 14),
           GestureDetector(
-              onTap: () => _showReasonDialog('Cancel Reservation',
+              onTap: () => _showReasonDialog(
+                  l10n.coachCalendarCancelDialogTitle,
                   (reason) => _cancelReservation(reservation, reason)),
               child: Container(
                   width: double.infinity,
@@ -693,7 +748,7 @@ class _CoachCalendarState extends State<CoachCalendar>
                       border:
                           Border.all(color: f.error.withValues(alpha: 0.2))),
                   child: Center(
-                      child: Text('Cancel Reservation',
+                      child: Text(l10n.coachCalendarActionCancelReservation,
                           style: TextStyle(
                               color: f.error,
                               fontWeight: FontWeight.w600,
@@ -706,10 +761,11 @@ class _CoachCalendarState extends State<CoachCalendar>
   Widget _buildHourTimeline() {
     final cs = Theme.of(context).colorScheme;
     final f = context.fitlek;
+    final l10n = AppLocalizations.of(context);
     final reservationTimes =
         _selectedDayReservations.map((r) => r.time).toSet();
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Text('Working Hours ($_workStart:00 – $_workEnd:00)',
+      Text(l10n.coachCalendarWorkingHours(_workStart, _workEnd),
           style: TextStyle(
               color: f.textSecondary,
               fontSize: 13,
@@ -743,7 +799,7 @@ class _CoachCalendarState extends State<CoachCalendar>
               decoration: BoxDecoration(
                   color: f.error.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(6)),
-              child: Text('Blocked',
+              child: Text(l10n.coachCalendarLegendBlocked,
                   style: TextStyle(
                       color: f.error,
                       fontSize: 10,
@@ -754,7 +810,7 @@ class _CoachCalendarState extends State<CoachCalendar>
               decoration: BoxDecoration(
                   color: cs.primary.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(6)),
-              child: Text('Booked',
+              child: Text(l10n.coachCalendarSlotBooked,
                   style: TextStyle(
                       color: cs.primary,
                       fontSize: 10,
@@ -789,6 +845,7 @@ class _CoachCalendarState extends State<CoachCalendar>
   Widget _buildAvailabilityTab() {
     final cs = Theme.of(context).colorScheme;
     final f = context.fitlek;
+    final l10n = AppLocalizations.of(context);
     return RefreshIndicator(
         color: cs.primary,
         backgroundColor: f.card,
@@ -798,13 +855,13 @@ class _CoachCalendarState extends State<CoachCalendar>
             padding: const EdgeInsets.all(20),
             child:
                 Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text('Blocked Periods',
+              Text(l10n.coachCalendarBlockedPeriodsTitle,
                   style: TextStyle(
                       color: cs.onSurface,
                       fontSize: 20,
                       fontWeight: FontWeight.w700)),
               const SizedBox(height: 6),
-              Text('Manage specific hours when you are unavailable.',
+              Text(l10n.coachCalendarBlockedPeriodsSubtitle,
                   style: TextStyle(color: f.textSecondary, fontSize: 13)),
               const SizedBox(height: 20),
               if (_unavailablePeriods.isEmpty)
@@ -817,7 +874,7 @@ class _CoachCalendarState extends State<CoachCalendar>
                       Icon(Icons.event_busy_rounded,
                           color: f.textMuted, size: 48),
                       const SizedBox(height: 12),
-                      Text('No blocked periods',
+                      Text(l10n.coachCalendarNoBlockedPeriods,
                           style:
                               TextStyle(color: f.textSecondary, fontSize: 14))
                     ]))
@@ -841,7 +898,7 @@ class _CoachCalendarState extends State<CoachCalendar>
                             Icon(Icons.add_rounded,
                                 color: cs.primary, size: 20),
                             const SizedBox(width: 8),
-                            Text('Add Blocked Period',
+                            Text(l10n.coachCalendarAddBlockedPeriod,
                                 style: TextStyle(
                                     color: cs.primary,
                                     fontSize: 14,
@@ -853,6 +910,7 @@ class _CoachCalendarState extends State<CoachCalendar>
   Widget _buildAvailabilityBlock(CoachAvailability availability) {
     final cs = Theme.of(context).colorScheme;
     final f = context.fitlek;
+    final l10n = AppLocalizations.of(context);
     return Container(
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.all(16),
@@ -873,7 +931,7 @@ class _CoachCalendarState extends State<CoachCalendar>
               child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                Text(availability.note ?? 'Blocked',
+                Text(availability.note ?? l10n.coachCalendarLegendBlocked,
                     style: TextStyle(
                         color: cs.onSurface,
                         fontSize: 14,
@@ -895,27 +953,13 @@ class _CoachCalendarState extends State<CoachCalendar>
         ]));
   }
 
-  String _monthName(int m) => const [
-        '',
-        'January',
-        'February',
-        'March',
-        'April',
-        'May',
-        'June',
-        'July',
-        'August',
-        'September',
-        'October',
-        'November',
-        'December'
-      ][m];
   String _formatDate(DateTime d) =>
-      '${_monthName(d.month).substring(0, 3)} ${d.day}, ${d.year}';
+      DateFormat('MMM d, y', Localizations.localeOf(context).toString()).format(d);
 
   void _showReasonDialog(String title, Function(String) onConfirm) {
     final cs = Theme.of(context).colorScheme;
     final f = context.fitlek;
+    final l10n = AppLocalizations.of(context);
     final ctrl = TextEditingController();
     showDialog(
         context: context,
@@ -940,7 +984,7 @@ class _CoachCalendarState extends State<CoachCalendar>
                           maxLines: 3,
                           style: TextStyle(color: cs.onSurface, fontSize: 14),
                           decoration: InputDecoration(
-                              hintText: 'Enter reason...',
+                              hintText: l10n.coachCalendarEnterReasonHint,
                               hintStyle: TextStyle(color: f.textMuted),
                               filled: true,
                               fillColor: f.inputFill,
@@ -961,7 +1005,7 @@ class _CoachCalendarState extends State<CoachCalendar>
                                         borderRadius:
                                             BorderRadius.circular(12)),
                                     child: Center(
-                                        child: Text('Cancel',
+                                        child: Text(l10n.coachCalendarCancel,
                                             style: TextStyle(
                                                 color: cs.onSurface,
                                                 fontWeight:
@@ -982,7 +1026,7 @@ class _CoachCalendarState extends State<CoachCalendar>
                                         borderRadius:
                                             BorderRadius.circular(12)),
                                     child: Center(
-                                        child: Text('Confirm',
+                                        child: Text(l10n.coachCalendarConfirm,
                                             style: TextStyle(
                                                 color: cs.onError,
                                                 fontWeight:
@@ -994,6 +1038,7 @@ class _CoachCalendarState extends State<CoachCalendar>
   void _showAddUnavailabilityDialog() {
     final cs = Theme.of(context).colorScheme;
     final f = context.fitlek;
+    final l10n = AppLocalizations.of(context);
     final noteCtrl = TextEditingController();
     DateTime selectedDay = _selectedDate;
     int startHour = 9, startMinute = 0, endHour = 11, endMinute = 0;
@@ -1010,13 +1055,13 @@ class _CoachCalendarState extends State<CoachCalendar>
                         mainAxisSize: MainAxisSize.min,
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('Block Hours',
+                          Text(l10n.coachCalendarBlockHours,
                               style: TextStyle(
                                   color: cs.onSurface,
                                   fontSize: 18,
                                   fontWeight: FontWeight.w700)),
                           const SizedBox(height: 6),
-                          Text('Block specific hours on a day.',
+                          Text(l10n.coachCalendarBlockSpecificHoursSubtitle,
                               style: TextStyle(
                                   color: f.textSecondary, fontSize: 13)),
                           const SizedBox(height: 20),
@@ -1057,7 +1102,7 @@ class _CoachCalendarState extends State<CoachCalendar>
                           Row(children: [
                             Expanded(
                                 child: _timeDropdown(
-                                    'Start',
+                                    l10n.coachCalendarTimeStart,
                                     startHour,
                                     startMinute,
                                     (h, m) => setS(() {
@@ -1072,7 +1117,7 @@ class _CoachCalendarState extends State<CoachCalendar>
                                         color: f.textMuted, fontSize: 20))),
                             Expanded(
                                 child: _timeDropdown(
-                                    'End',
+                                    l10n.coachCalendarTimeEnd,
                                     endHour,
                                     endMinute,
                                     (h, m) => setS(() {
@@ -1086,7 +1131,7 @@ class _CoachCalendarState extends State<CoachCalendar>
                               style:
                                   TextStyle(color: cs.onSurface, fontSize: 14),
                               decoration: InputDecoration(
-                                  hintText: 'Note (optional)',
+                                  hintText: l10n.coachCalendarNoteOptionalHint,
                                   hintStyle: TextStyle(color: f.textMuted),
                                   filled: true,
                                   fillColor: f.inputFill,
@@ -1120,7 +1165,7 @@ class _CoachCalendarState extends State<CoachCalendar>
                                       color: cs.primary,
                                       borderRadius: BorderRadius.circular(12)),
                                   child: Center(
-                                      child: Text('Block These Hours',
+                                      child: Text(l10n.coachCalendarBlockTheseHours,
                                           style: TextStyle(
                                               color: cs.onPrimary,
                                               fontWeight: FontWeight.w700,

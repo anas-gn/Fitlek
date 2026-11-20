@@ -1,0 +1,114 @@
+{
+  "clientChangeEmailInvalidEmail": "Please enter a valid email address.",
+  "clientChangeEmailInvalidCode": "Please enter the 6-digit verification code.",
+  "clientChangeEmailVerifyFailed": "Verification failed. Please try again.",
+  "clientChangeEmailCodeSent": "A new verification code has been sent.",
+  "clientChangeEmailTitle": "Change Email",
+  "clientChangeEmailStepOf": "Step {step} of {total}",
+  "@clientChangeEmailStepOf": {
+    "placeholders": {
+      "step": { "type": "int" },
+      "total": { "type": "int" }
+    }
+  },
+  "clientChangeEmailHeadingNew": "Enter your new email address",
+  "clientChangeEmailHeadingVerifyCurrent": "Verify your current email",
+  "clientChangeEmailHeadingVerifyNew": "Confirm your new email",
+  "clientChangeEmailIntroStart": "We will send a verification code to your current email ({email}) first.",
+  "@clientChangeEmailIntroStart": {
+    "placeholders": {
+      "email": { "type": "String" }
+    }
+  },
+  "clientChangeEmailIntroCode": "Enter the 6-digit code sent to {email}.",
+  "@clientChangeEmailIntroCode": {
+    "placeholders": {
+      "email": { "type": "String" }
+    }
+  },
+  "clientChangeEmailNewEmailLabel": "New email address",
+  "clientChangeEmailCodeLabel": "6-digit verification code",
+  "clientChangeEmailPleaseWait": "Please wait…",
+  "clientChangeEmailSendCodeButton": "Send verification code",
+  "clientChangeEmailVerifySendButton": "Verify & send to new email",
+  "clientChangeEmailConfirmButton": "Confirm email change",
+  "clientChangeEmailResend": "Resend code",
+  "clientChangeEmailStartAgain": "Start over",
+  "clientConversationListUnknown": "Unknown",
+  "clientConversationListError": "Error ({code})",
+  "@clientConversationListError": {
+    "placeholders": {
+      "code": { "type": "int" }
+    }
+  },
+  "clientConversationListServerUnreachable": "Unable to reach server. Check your connection.",
+  "clientConversationListTitle": "Messages",
+  "clientConversationListSubtitle": "Chat with your coaches",
+  "clientConversationListFilterAll": "All",
+  "clientConversationListFilterUnread": "Unread",
+  "clientConversationListSearchHint": "Search conversations...",
+  "clientConversationListRetry": "RETRY",
+  "clientConversationListEmptyTitle": "No conversations yet",
+  "clientConversationListEmptySubtitle": "Your messages with coaches will appear here.",
+  "clientConversationListNoResults": "No results for \"{query}\"",
+  "@clientConversationListNoResults": {
+    "placeholders": {
+      "query": { "type": "String" }
+    }
+  },
+  "clientConversationListFooter": "Your personal messages are end-to-end private",
+  "clientConversationListTapToOpen": "Tap to open conversation",
+  "clientConversationListYesterday": "Yesterday",
+  "clientQrScannerPrompt": "Align the coach's QR code within the frame",
+  "coachChangeEmailTitle": "Change Email",
+  "coachChangeEmailLoadRetry": "Unable to load email. Tap to retry.",
+  "coachConversationsYesterday": "Yesterday",
+  "coachConversationsEmpty": "No conversations yet",
+  "coachConversationsFooter": "Your client messages are private and secure",
+  "coachConversationsTitle": "Messages",
+  "coachConversationsSubtitle": "Conversations with your clients",
+  "coachConversationsFilterAll": "All",
+  "coachConversationsFilterUnread": "Unread",
+  "coachConversationsSearchHint": "Search clients...",
+  "coachConversationsTapToOpen": "Tap to open conversation",
+  "coachVisibilityUpdateFailed": "Failed to update visibility settings.",
+  "coachVisibilityNetworkError": "Network error. Please try again.",
+  "coachVisibilityTitle": "Profile Visibility",
+  "coachVisibilitySave": "Save",
+  "coachVisibilityProfileSection": "Search & Discovery",
+  "coachVisibilityProfileDesc": "Control whether clients can find your profile in search results and recommendations.",
+  "coachVisibilityPublicProfile": "Public Profile",
+  "coachVisibilityPublicProfileDesc": "Allow clients to discover and view your profile",
+  "coachVisibilityMessagingSection": "Messaging Preferences",
+  "coachVisibilityMessagingDesc": "Choose who can start a conversation with you directly.",
+  "coachVisibilityDirectMessaging": "Direct Messaging",
+  "coachVisibilityDirectMessagingDesc": "Allow clients to message you before booking",
+  "coachChangePhoneErrorMissing": "Please enter both country code and phone number.",
+  "coachChangePhoneErrorFailed": "Failed to update phone number.",
+  "coachChangePhoneErrorServer": "Server error. Please check your connection.",
+  "coachChangePhoneTitle": "Phone Number",
+  "coachChangePhoneSubtitle": "Update the phone number linked to your account.",
+  "coachChangePhoneSave": "Save Phone Number",
+  "splashTagline": "YOUR FITNESS JOURNEY",
+  "mainLayoutNavHome": "Home",
+  "mainLayoutNavExplore": "Explore",
+  "mainLayoutNavSessions": "Sessions",
+  "mainLayoutNavProfile": "Profile",
+  "mainLayoutPlaceholderItem": "{title} — Item #{index}",
+  "@mainLayoutPlaceholderItem": {
+    "placeholders": {
+      "title": { "type": "String" },
+      "index": { "type": "int" }
+    }
+  },
+  "mainLayoutPlaceholderHint": "Screen under construction",
+  "userLocationSettingsDetectPrompt": "Please detect or select a city and coordinates first.",
+  "userLocationSettingsTitle": "My Location",
+  "userLocationSettingsLoadError": "Unable to load your saved location.",
+  "userLocationSettingsBackgroundTitle": "Background Location Permission",
+  "userLocationSettingsBackgroundSubtitle": "Manage location access in system settings",
+  "userLocationSettingsSaving": "Saving…",
+  "userLocationSettingsContinue": "Continue",
+  "userLocationSettingsSave": "Save Location"
+}
+

@@ -1,3 +1,4 @@
+import 'package:fitlek1/l10n/app_localizations.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
@@ -289,7 +290,7 @@ class VoiceNoteControls extends StatelessWidget {
                                 painter: VoiceWavePainter(progress, accent,
                                     ink.withValues(alpha: .38)))))),
                 if (duration == Duration.zero || error != null)
-                  Text(error ?? (loading ? 'Loading…' : 'Voice note'),
+                  Text(error ?? (loading ? AppLocalizations.of(context).voiceNoteLoading : AppLocalizations.of(context).voiceNoteLabel),
                       maxLines: 1,
                       style: TextStyle(
                           color: ink.withValues(alpha: .65), fontSize: 10)),

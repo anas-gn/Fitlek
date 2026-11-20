@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:fitlek1/l10n/app_localizations.dart';
 import 'package:fitlek1/models/anas/reservation.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'clientCoachDetail.dart';
@@ -174,10 +175,14 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen>
             .cast<Map<String, dynamic>>()
             .where((e) => (e['id'] as int) == widget.advisorId)
             .toList();
-        if (found.isEmpty) throw Exception('Advisor not found');
+        if (found.isEmpty) {
+          throw Exception(
+              AppLocalizations.of(context).clientCompanyDetailNotFound);
+        }
         _advisor = _AdvisorDTO.fromJson(found.first);
       } else {
-        throw Exception('Error loading advisor (${results[0].statusCode})');
+        throw Exception(AppLocalizations.of(context)
+            .clientCompanyDetailLoadError(results[0].statusCode));
       }
 
       if (results[1].statusCode == 200) {
@@ -313,7 +318,7 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen>
                 child: Row(children: [
                   Icon(Icons.verified_rounded, color: Theme.of(context).colorScheme.onPrimary, size: 12),
                   const SizedBox(width: 5),
-                  Text('VERIFIED', style: TextStyle(
+                  Text(AppLocalizations.of(context).clientCompanyDetailVerifiedBadge, style: TextStyle(
                     color: Theme.of(context).colorScheme.onPrimary, fontSize: 9,
                     fontWeight: FontWeight.w900, letterSpacing: 1.2)),
                 ]),
@@ -382,16 +387,17 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen>
 
   // ── Stats ────────────────────────────────────────────────────────
   Widget _buildStats() {
+    final l10n = AppLocalizations.of(context);
     final totalInv = _coaches.fold<int>(0, (s, c) => s + c.totalInvitations);
     final totalPts = _coaches.fold<int>(0, (s, c) => s + c.earnedPoints);
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
       child: Row(children: [
-        _statBox('${_coaches.length}', 'Coachs',     Icons.people_rounded),
+        _statBox('${_coaches.length}', l10n.clientCompanyDetailStatCoaches,     Icons.people_rounded),
         const SizedBox(width: 10),
-        _statBox('$totalInv',          'Invitations', Icons.card_giftcard_rounded),
+        _statBox('$totalInv',          l10n.clientCompanyDetailStatInvitations, Icons.card_giftcard_rounded),
         const SizedBox(width: 10),
-        _statBox('$totalPts',          'Points',      Icons.bolt_rounded),
+        _statBox('$totalPts',          l10n.clientCompanyDetailStatPoints,      Icons.bolt_rounded),
       ]),
     );
   }
@@ -419,32 +425,35 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen>
   );
 
   // ── Tab Bar ──────────────────────────────────────────────────────
-  Widget _buildTabBar() => Container(
-    color: Theme.of(context).scaffoldBackgroundColor,
-    padding: const EdgeInsets.fromLTRB(20, 12, 20, 10),
-    child: Container(
-      height: 44,
-      decoration: BoxDecoration(color: context.fitlek.card,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: context.fitlek.border)),
-      child: TabBar(
-        controller: _tabController,
-        isScrollable: true,
-        indicator: BoxDecoration(color: Theme.of(context).colorScheme.primary, borderRadius: BorderRadius.circular(9)),
-        indicatorSize: TabBarIndicatorSize.tab,
-        dividerColor: Colors.transparent,
-        labelColor: Theme.of(context).colorScheme.onPrimary,
-        unselectedLabelColor: context.fitlek.textMuted,
-        labelStyle: const TextStyle(fontWeight: FontWeight.w800, fontSize: 10, letterSpacing: 0.8),
-        tabs: [
-          Tab(child: Text('COACHES (${_coaches.length})')),
-          const Tab(text: 'ABOUT'),
-          Tab(child: Text('GALLERY (${_images.length})')),
-          const Tab(text: 'LOCATION'),
-        ],
+  Widget _buildTabBar() {
+    final l10n = AppLocalizations.of(context);
+    return Container(
+      color: Theme.of(context).scaffoldBackgroundColor,
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 10),
+      child: Container(
+        height: 44,
+        decoration: BoxDecoration(color: context.fitlek.card,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: context.fitlek.border)),
+        child: TabBar(
+          controller: _tabController,
+          isScrollable: true,
+          indicator: BoxDecoration(color: Theme.of(context).colorScheme.primary, borderRadius: BorderRadius.circular(9)),
+          indicatorSize: TabBarIndicatorSize.tab,
+          dividerColor: Colors.transparent,
+          labelColor: Theme.of(context).colorScheme.onPrimary,
+          unselectedLabelColor: context.fitlek.textMuted,
+          labelStyle: const TextStyle(fontWeight: FontWeight.w800, fontSize: 10, letterSpacing: 0.8),
+          tabs: [
+            Tab(child: Text(l10n.clientCompanyDetailTabCoaches(_coaches.length))),
+            Tab(text: l10n.clientCompanyDetailTabAbout),
+            Tab(child: Text(l10n.clientCompanyDetailTabGallery(_images.length))),
+            Tab(text: l10n.clientCompanyDetailTabLocation),
+          ],
+        ),
       ),
-    ),
-  );
+    );
+  }
 
   // ── Coaches Tab ──────────────────────────────────────────────────
   Widget _buildCoachesTab() {
@@ -455,7 +464,7 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen>
           decoration: BoxDecoration(color: context.fitlek.card2, shape: BoxShape.circle),
           child: Icon(Icons.people_outline, color: context.fitlek.textMuted, size: 38)),
         const SizedBox(height: 16),
-        Text('No coaches linked yet',
+        Text(AppLocalizations.of(context).clientCompanyDetailNoCoaches,
           style: TextStyle(color: context.fitlek.textMuted, fontSize: 13)),
       ]));
     }
@@ -478,7 +487,7 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen>
       coachName:       coach.fullName,
       coachSpeciality: coach.bio.isNotEmpty
           ? (coach.bio.length > 40 ? '${coach.bio.substring(0, 40)}…' : coach.bio)
-          : 'Certified coach',
+          : AppLocalizations.of(context).clientCompanyDetailCertifiedCoach,
       coachImageUrl:   coach.avatarUrl ?? '',
       coachRating:     0.0,
       sessionStart:    DateTime.now(),
@@ -507,48 +516,51 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen>
   }
 
   // ── About Tab ────────────────────────────────────────────────────
-  Widget _buildAboutTab(_AdvisorDTO a) => ListView(
-    padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
-    children: [
-      _sectionLabel('PROFILE', Icons.person_rounded),
-      const SizedBox(height: 12),
-      _infoTile(Icons.badge_rounded,          'Full name', a.fullName),
-      const SizedBox(height: 8),
-      _infoTile(Icons.email_rounded,          'Email',       a.email),
-      const SizedBox(height: 8),
-      _infoTile(Icons.fitness_center_rounded, 'Specialty',  a.specialty),
-       if (a.ville != null && a.ville!.isNotEmpty) ...[
-      const SizedBox(height: 8),
-      _infoTile(Icons.location_city_rounded, 'City', a.ville!),
-    ],
-      if (a.companyName != null && a.companyName!.isNotEmpty) ...[
+  Widget _buildAboutTab(_AdvisorDTO a) {
+    final l10n = AppLocalizations.of(context);
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+      children: [
+        _sectionLabel(l10n.clientCompanyDetailSectionProfile, Icons.person_rounded),
+        const SizedBox(height: 12),
+        _infoTile(Icons.badge_rounded,          l10n.clientCompanyDetailFullName, a.fullName),
         const SizedBox(height: 8),
-        _infoTile(Icons.business_rounded, 'Gym name', a.companyName!),
-      ],
-      if (a.location != null && a.location!.isNotEmpty) ...[
+        _infoTile(Icons.email_rounded,          l10n.clientCompanyDetailEmail,       a.email),
         const SizedBox(height: 8),
-        _infoTile(Icons.location_on_rounded, 'Address', a.location!),
+        _infoTile(Icons.fitness_center_rounded, l10n.clientCompanyDetailSpecialty,  a.specialty),
+         if (a.ville != null && a.ville!.isNotEmpty) ...[
+        const SizedBox(height: 8),
+        _infoTile(Icons.location_city_rounded, l10n.clientCompanyDetailCity, a.ville!),
       ],
-      const SizedBox(height: 24),
-      _sectionLabel('STATISTICS', Icons.bar_chart_rounded),
-      const SizedBox(height: 12),
-      Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(color: context.fitlek.card,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: context.fitlek.border)),
-        child: Column(children: [
-          _statRow('Coaches on the team', '${_coaches.length}'),
-          _divider(),
-          _statRow('Total invitations',
-            _coaches.fold<int>(0, (s, c) => s + c.totalInvitations).toString()),
-          _divider(),
-          _statRow('Total points',
-            _coaches.fold<int>(0, (s, c) => s + c.earnedPoints).toString()),
-        ]),
-      ),
-    ],
-  );
+        if (a.companyName != null && a.companyName!.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          _infoTile(Icons.business_rounded, l10n.clientCompanyDetailGymName, a.companyName!),
+        ],
+        if (a.location != null && a.location!.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          _infoTile(Icons.location_on_rounded, l10n.clientCompanyDetailAddress, a.location!),
+        ],
+        const SizedBox(height: 24),
+        _sectionLabel(l10n.clientCompanyDetailSectionStatistics, Icons.bar_chart_rounded),
+        const SizedBox(height: 12),
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(color: context.fitlek.card,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: context.fitlek.border)),
+          child: Column(children: [
+            _statRow(l10n.clientCompanyDetailStatTeamCoaches, '${_coaches.length}'),
+            _divider(),
+            _statRow(l10n.clientCompanyDetailStatTotalInvitations,
+              _coaches.fold<int>(0, (s, c) => s + c.totalInvitations).toString()),
+            _divider(),
+            _statRow(l10n.clientCompanyDetailStatTotalPoints,
+              _coaches.fold<int>(0, (s, c) => s + c.earnedPoints).toString()),
+          ]),
+        ),
+      ],
+    );
+  }
 
   Widget _statRow(String label, String value) => Padding(
     padding: const EdgeInsets.symmetric(vertical: 10),
@@ -571,7 +583,7 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen>
           decoration: BoxDecoration(color: context.fitlek.card2, shape: BoxShape.circle),
           child: Icon(Icons.photo_library_outlined, color: context.fitlek.textMuted, size: 38)),
         const SizedBox(height: 16),
-        Text('No gym images yet',
+        Text(AppLocalizations.of(context).clientCompanyDetailNoGalleryImages,
           style: TextStyle(color: context.fitlek.textMuted, fontSize: 13)),
       ]));
     }
@@ -632,10 +644,11 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen>
 
   // ── Location Tab (Carte + Adresse) ──────────────────────────────
   Widget _buildLocationTab(_AdvisorDTO a) {
+    final l10n = AppLocalizations.of(context);
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
       children: [
-        _sectionLabel('ADDRESS', Icons.location_on_rounded),
+        _sectionLabel(l10n.clientCompanyDetailSectionAddress, Icons.location_on_rounded),
         const SizedBox(height: 12),
         Container(
           padding: const EdgeInsets.all(16),
@@ -653,7 +666,7 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen>
                 const SizedBox(height: 4),
               ],
               Text(
-                a.location ?? 'Address not provided',
+                a.location ?? l10n.clientCompanyDetailAddressNotProvided,
                 style: TextStyle(
                   color: a.location != null && a.location!.isNotEmpty
                       ? context.fitlek.textSecondary : context.fitlek.textMuted,
@@ -665,7 +678,7 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen>
           ),
         ),
         const SizedBox(height: 24),
-        _sectionLabel('MAP', Icons.map_rounded),
+        _sectionLabel(l10n.clientCompanyDetailSectionMap, Icons.map_rounded),
         const SizedBox(height: 12),
         Container(
           height: 280,
@@ -683,7 +696,7 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen>
                     color: context.fitlek.card2,
                     child: Center(
                       child: Text(
-                        'Location not available',
+                        l10n.clientCompanyDetailLocationNotAvailable,
                         style: TextStyle(color: context.fitlek.textMuted, fontSize: 13),
                       ),
                     ),
@@ -696,6 +709,7 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen>
 
   // Mini carte stylisée (sans clé API requise)
   Widget _buildMiniMap(String address) {
+    final l10n = AppLocalizations.of(context);
     return Container(
       color: context.fitlek.card2,
       child: Stack(
@@ -723,7 +737,7 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen>
                     ],
                   ),
                   child: Text(
-                    _advisor?.companyName ?? 'Gym',
+                    _advisor?.companyName ?? l10n.clientCompanyDetailGymDefault,
                     style: TextStyle(
                       color: Theme.of(context).colorScheme.onPrimary,
                       fontSize: 11,
@@ -777,7 +791,7 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen>
                   children: [
                     Icon(Icons.open_in_new_rounded, color: Theme.of(context).colorScheme.onPrimary, size: 14),
                     const SizedBox(width: 6),
-                    Text('OPEN', style: TextStyle(
+                    Text(l10n.clientCompanyDetailOpenMap, style: TextStyle(
                       color: Theme.of(context).colorScheme.onPrimary, fontSize: 10,
                       fontWeight: FontWeight.w800, letterSpacing: 0.5)),
                   ],
@@ -855,31 +869,34 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen>
     ])),
   );
 
-  Widget _buildError() => Scaffold(
-    backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-    body: SafeArea(child: Center(child: Padding(
-      padding: const EdgeInsets.all(32),
-      child: Column(mainAxisSize: MainAxisSize.min, children: [
-        Icon(Icons.wifi_off_rounded, color: context.fitlek.textMuted, size: 52),
-        const SizedBox(height: 16),
-        Text('Loading error',
-          style: TextStyle(color: context.fitlek.textSecondary, fontSize: 15, fontWeight: FontWeight.w700)),
-        const SizedBox(height: 8),
-        Text(_error ?? '', style: TextStyle(color: context.fitlek.textMuted, fontSize: 12),
-          textAlign: TextAlign.center),
-        const SizedBox(height: 24),
-        GestureDetector(
-          onTap: _loadData,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 13),
-            decoration: BoxDecoration(color: Theme.of(context).colorScheme.primary, borderRadius: BorderRadius.circular(12)),
-            child: Text('RETRY', style: TextStyle(
-              color: Theme.of(context).colorScheme.onPrimary, fontWeight: FontWeight.w900, letterSpacing: 1.5)),
+  Widget _buildError() {
+    final l10n = AppLocalizations.of(context);
+    return Scaffold(
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      body: SafeArea(child: Center(child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(mainAxisSize: MainAxisSize.min, children: [
+          Icon(Icons.wifi_off_rounded, color: context.fitlek.textMuted, size: 52),
+          const SizedBox(height: 16),
+          Text(l10n.clientCompanyDetailLoadingErrorTitle,
+            style: TextStyle(color: context.fitlek.textSecondary, fontSize: 15, fontWeight: FontWeight.w700)),
+          const SizedBox(height: 8),
+          Text(_error ?? '', style: TextStyle(color: context.fitlek.textMuted, fontSize: 12),
+            textAlign: TextAlign.center),
+          const SizedBox(height: 24),
+          GestureDetector(
+            onTap: _loadData,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 13),
+              decoration: BoxDecoration(color: Theme.of(context).colorScheme.primary, borderRadius: BorderRadius.circular(12)),
+              child: Text(l10n.clientCompanyDetailRetry, style: TextStyle(
+                color: Theme.of(context).colorScheme.onPrimary, fontWeight: FontWeight.w900, letterSpacing: 1.5)),
+            ),
           ),
-        ),
-      ])),
-    )),
-  );
+        ])),
+      )),
+    );
+  }
 
   Widget _shimBox(double w, double h, {double radius = 0}) => AnimatedBuilder(
     animation: _shimmerCtrl,
@@ -972,6 +989,7 @@ class _CoachCardState extends State<_CoachCard> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return GestureDetector(
       onTap: widget.onTap,
       onTapDown: (_) => setState(() => _pressed = true),
@@ -1022,12 +1040,12 @@ class _CoachCardState extends State<_CoachCard> {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(color: Theme.of(context).colorScheme.primary, borderRadius: BorderRadius.circular(8)),
-                      child: Text('VIEW PROFILE', style: TextStyle(
+                      child: Text(l10n.clientCompanyDetailViewProfile, style: TextStyle(
                         color: Theme.of(context).colorScheme.onPrimary, fontWeight: FontWeight.w900, fontSize: 9, letterSpacing: 1))),
                   ]),
                   const SizedBox(height: 6),
                   Text(
-                    "${coach.speciality ?? 'Coach'} • ${coach.ville?.isNotEmpty == true ? coach.ville : 'Anywhere'}",
+                    "${coach.speciality ?? l10n.clientCompanyDetailCoachDefault} • ${coach.ville?.isNotEmpty == true ? coach.ville : l10n.clientCompanyDetailAnywhere}",
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(color: context.fitlek.textMuted, fontSize: 11),
@@ -1036,22 +1054,22 @@ class _CoachCardState extends State<_CoachCard> {
                   Row(
                     children: [
                       Text(
-                        '⭐ ${coach.rating != null ? coach.rating!.toStringAsFixed(1) : 'New'}',
+                        '⭐ ${coach.rating != null ? coach.rating!.toStringAsFixed(1) : l10n.clientCompanyDetailNewBadge}',
                         style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 11, fontWeight: FontWeight.w800),
                       ),
                       if (coach.totalSessions != null && coach.totalSessions! > 0) ...[
                         const SizedBox(width: 4),
                         Text('·', style: TextStyle(color: context.fitlek.textMuted, fontSize: 11, fontWeight: FontWeight.w900)),
                         const SizedBox(width: 4),
-                        Text('${coach.totalSessions} reviews', style: TextStyle(color: context.fitlek.textMuted, fontSize: 11)),
+                        Text(l10n.clientCompanyDetailReviewsCount(coach.totalSessions!), style: TextStyle(color: context.fitlek.textMuted, fontSize: 11)),
                       ],
                     ],
                   ),
                   const SizedBox(height: 10),
                   Row(children: [
-                    _chip(context, Icons.card_giftcard_rounded, '${coach.totalInvitations} inv.'),
+                    _chip(context, Icons.card_giftcard_rounded, l10n.clientCompanyDetailInvitationsShort(coach.totalInvitations)),
                     const SizedBox(width: 8),
-                    _chip(context, Icons.bolt_rounded, '${coach.earnedPoints} pts'),
+                    _chip(context, Icons.bolt_rounded, l10n.clientCompanyDetailPointsShort(coach.earnedPoints)),
                   ]),
                 ]),
               )),

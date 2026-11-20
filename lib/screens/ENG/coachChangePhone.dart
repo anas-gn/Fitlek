@@ -1,3 +1,4 @@
+import 'package:fitlek1/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -64,12 +65,13 @@ class _CoachChangePhoneState extends State<CoachChangePhone> {
   }
 
   Future<void> _save() async {
+    final l10n = AppLocalizations.of(context);
     final country = _countryCodeCtrl.text.trim();
     String number = _phoneCtrl.text.trim();
 
     if (country.isEmpty || number.isEmpty) {
       setState(
-          () => _errorMsg = 'Please enter both country code and phone number.');
+          () => _errorMsg = l10n.coachChangePhoneErrorMissing);
       return;
     }
 
@@ -100,10 +102,10 @@ class _CoachChangePhoneState extends State<CoachChangePhone> {
             context, newPhone); // return the new phone string to update UI
       } else {
         setState(() =>
-            _errorMsg = body['error'] ?? 'Failed to update phone number.');
+            _errorMsg = body['error'] ?? l10n.coachChangePhoneErrorFailed);
       }
     } catch (e) {
-      setState(() => _errorMsg = 'Server error. Please check your connection.');
+      setState(() => _errorMsg = l10n.coachChangePhoneErrorServer);
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -118,7 +120,7 @@ class _CoachChangePhoneState extends State<CoachChangePhone> {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        title: Text('Update Phone',
+        title: Text(AppLocalizations.of(context).coachChangePhoneTitle,
             style: TextStyle(
                 color: Theme.of(context).colorScheme.onSurface,
                 fontSize: 18,
@@ -135,7 +137,7 @@ class _CoachChangePhoneState extends State<CoachChangePhone> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Enter your new phone number.',
+            Text(AppLocalizations.of(context).coachChangePhoneSubtitle,
                 style: TextStyle(color: f.textMuted, fontSize: 14)),
             SizedBox(height: 24),
             Row(
@@ -223,7 +225,7 @@ class _CoachChangePhoneState extends State<CoachChangePhone> {
                         height: 20,
                         child: CircularProgressIndicator(
                             color: cs.onPrimary, strokeWidth: 2))
-                    : Text('Save Changes',
+                    : Text(AppLocalizations.of(context).coachChangePhoneSave,
                         style: TextStyle(
                             color: cs.onPrimary,
                             fontSize: 15,

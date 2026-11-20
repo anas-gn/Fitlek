@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:fitlek1/l10n/app_localizations.dart';
 import '../theme/fitlek_theme_extension.dart';
 
 class NotificationCard extends StatelessWidget {
@@ -16,33 +17,50 @@ class NotificationCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final cs = Theme.of(context).colorScheme;
     final f = context.fitlek;
     final fresh = unread(item);
     final type = '${item['type'] ?? ''}';
     final (icon, label, accent) = type.startsWith('nutrition_')
-        ? (Icons.restaurant_outlined, 'YOUR NUTRITION', f.success)
+        ? (
+            Icons.restaurant_outlined,
+            l10n.notificationCardCatNutrition,
+            f.success
+          )
         : type.startsWith('price_')
-            ? (Icons.payments_outlined, 'PRICING', f.warning)
+            ? (
+                Icons.payments_outlined,
+                l10n.notificationCardCatPricing,
+                f.warning
+              )
             : type.contains('message')
-                ? (Icons.chat_bubble_outline_rounded, 'MESSAGE', f.info)
+                ? (
+                    Icons.chat_bubble_outline_rounded,
+                    l10n.notificationCardCatMessage,
+                    f.info
+                  )
                 : type.contains('review')
-                    ? (Icons.star_outline_rounded, 'FEEDBACK', f.warning)
+                    ? (
+                        Icons.star_outline_rounded,
+                        l10n.notificationCardCatFeedback,
+                        f.warning
+                      )
                     : type.contains('reservation') || type.contains('session')
                         ? (
                             Icons.calendar_today_outlined,
-                            'YOUR SESSIONS',
+                            l10n.notificationCardCatSessions,
                             f.success
                           )
                         : type.contains('invitation')
                             ? (
                                 Icons.people_outline_rounded,
-                                'CONNECTIONS',
+                                l10n.notificationCardCatConnections,
                                 f.violet
                               )
                             : (
                                 Icons.auto_awesome_outlined,
-                                'SIRVYA UPDATE',
+                                l10n.notificationCardCatUpdate,
                                 cs.primary
                               );
     return Padding(
@@ -126,11 +144,12 @@ class NotificationCard extends StatelessWidget {
                                   const SizedBox(height: 13),
                                   Row(children: [
                                     Expanded(
-                                        child: Text(_time(item['createdAt']),
+                                        child: Text(
+                                            _time(l10n, item['createdAt']),
                                             style: TextStyle(
                                                 color: f.textMuted,
                                                 fontSize: 10))),
-                                    Text('View',
+                                    Text(l10n.notificationCardView,
                                         style: TextStyle(
                                             color: cs.primary,
                                             fontSize: 11,
@@ -144,14 +163,14 @@ class NotificationCard extends StatelessWidget {
                         ])))));
   }
 
-  String _time(dynamic value) {
+  String _time(AppLocalizations l10n, dynamic value) {
     final date = DateTime.tryParse('$value')?.toLocal();
     if (date == null) return '';
     final age = DateTime.now().difference(date);
-    if (age.inMinutes < 1) return 'Just now';
-    if (age.inMinutes < 60) return '${age.inMinutes} min ago';
-    if (age.inHours < 24) return '${age.inHours} hours ago';
-    if (age.inDays == 1) return 'Yesterday';
+    if (age.inMinutes < 1) return l10n.notificationCardJustNow;
+    if (age.inMinutes < 60) return l10n.notificationCardMinutesAgo(age.inMinutes);
+    if (age.inHours < 24) return l10n.notificationCardHoursAgo(age.inHours);
+    if (age.inDays == 1) return l10n.notificationCardYesterday;
     return '${date.day}/${date.month}/${date.year}';
   }
 }
@@ -160,24 +179,29 @@ class NotificationInboxIntro extends StatelessWidget {
   final int unreadCount;
   const NotificationInboxIntro({super.key, required this.unreadCount});
   @override
-  Widget build(BuildContext context) => Padding(
-      padding: const EdgeInsets.fromLTRB(4, 8, 4, 24),
-      child: Row(children: [
-        Expanded(
-            child:
-                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text('Your latest updates',
-              style: TextStyle(
-                  color: Theme.of(context).colorScheme.onSurface,
-                  fontSize: 24,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: -.6)),
-          const SizedBox(height: 5),
-          Text(
-              unreadCount == 0
-                  ? 'You’re all caught up.'
-                  : '$unreadCount unread · Keep your journey moving.',
-              style: TextStyle(color: context.fitlek.textMuted, fontSize: 12)),
-        ])),
-      ]));
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return Padding(
+        padding: const EdgeInsets.fromLTRB(4, 8, 4, 24),
+        child: Row(children: [
+          Expanded(
+              child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                Text(l10n.notificationInboxTitle,
+                    style: TextStyle(
+                        color: Theme.of(context).colorScheme.onSurface,
+                        fontSize: 24,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: -.6)),
+                const SizedBox(height: 5),
+                Text(
+                    unreadCount == 0
+                        ? l10n.notificationInboxAllCaughtUp
+                        : l10n.notificationInboxUnreadCount(unreadCount),
+                    style: TextStyle(
+                        color: context.fitlek.textMuted, fontSize: 12)),
+              ])),
+        ]));
+  }
 }

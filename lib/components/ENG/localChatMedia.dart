@@ -1,3 +1,4 @@
+import 'package:fitlek1/l10n/app_localizations.dart';
 import '../app_dialog.dart';
 import 'dart:async';
 import 'dart:io';
@@ -66,16 +67,16 @@ class _LocalChatMediaState extends State<LocalChatMedia> {
     final confirmed = await showDialog<bool>(
         context: context,
         builder: (ctx) => AppDialog(
-                title: const Text('Delete from this phone?'),
+                title: Text(AppLocalizations.of(context).localChatMediaDeleteTitle),
                 content: const Text(
                     'The message stays in your history. Once the server copy is removed, this file cannot be downloaded again.'),
                 actions: [
                   TextButton(
                       onPressed: () => Navigator.pop(ctx, false),
-                      child: const Text('Cancel')),
+                      child: Text(AppLocalizations.of(context).localChatMediaCancel)),
                   TextButton(
                       onPressed: () => Navigator.pop(ctx, true),
-                      child: const Text('Delete file'))
+                      child: Text(AppLocalizations.of(context).localChatMediaDeleteFile))
                 ]));
     if (confirmed == true) await _store.deleteLocal(widget.messageID);
   }
@@ -111,7 +112,7 @@ class _LocalChatMediaState extends State<LocalChatMedia> {
                       size: 24,
                       color: _ink),
                   const SizedBox(height: 6),
-                  Text("Not on this device",
+                  Text(AppLocalizations.of(context).localChatMediaNotOnDevice,
                       style: TextStyle(
                           fontSize: 12,
                           fontWeight: FontWeight.w600,
@@ -138,7 +139,7 @@ class _LocalChatMediaState extends State<LocalChatMedia> {
                     onPressed: _refresh,
                     style: TextButton.styleFrom(foregroundColor: _ink),
                     icon: const Icon(Icons.download_rounded),
-                    label: const Text('Retry download')));
+                    label: Text(AppLocalizations.of(context).localChatMediaRetryDownload)));
           } else if (saved == null) {
             media = _waiting('Downloading…');
           } else if (saved.filePath == null) {

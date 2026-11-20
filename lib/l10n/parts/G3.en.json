@@ -1,0 +1,20 @@
+{
+  "coachChangePasswordAllRequired": "All fields are required.",
+  "coachChangePasswordMismatch": "New passwords do not match.",
+  "coachChangePasswordTooShort": "New password must be at least 8 characters.",
+  "coachChangePasswordFailed": "Failed to update password.",
+  "coachChangePasswordServerError": "Server error. Please check your connection.",
+  "coachChangePasswordTitle": "Password & Security",
+  "coachChangePasswordSubtitle": "Change your account password.",
+  "coachChangePasswordCurrent": "Current Password",
+  "coachChangePasswordNew": "New Password",
+  "coachChangePasswordConfirm": "Confirm New Password",
+  "coachChangePasswordUpdate": "Update Password",
+  "coachNotificationsUpdateFailed": "Could not update notifications",
+  "coachNotificationsTitle": "Notifications",
+  "coachNotificationsMarkAllRead": "Mark all read",
+  "coachNotificationsLoadError": "Unable to load notifications",
+  "coachNotificationsRetry": "Retry",
+  "coachNotificationsEmptyTitle": "No notifications yet.",
+  "coachNotificationsEmptyBody": "Messages, reservations and session reminders will appear here."
+}

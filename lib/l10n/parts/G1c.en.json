@@ -1,0 +1,106 @@
+{
+  "coachClientsInviteAccepted": "Invitation accepted: +20 points. The client is now available in Chats.",
+  "coachClientsInviteDeclined": "Invitation declined.",
+  "coachClientsInviteUpdateFailed": "Unable to update invitation.",
+  "coachClientsYourClients": "YOUR CLIENTS",
+  "coachClientsTitle": "My Clients",
+  "coachClientsLoading": "Loading…",
+  "coachClientsEmptySubtitle": "Bookings and invitations bring your clients here",
+  "coachClientsCountSubtitle": "{count, plural, =1{1 client • Sessions and conversations} other{{count} clients • Sessions and conversations}}",
+  "@coachClientsCountSubtitle": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "coachClientsInvite": "Invite",
+  "coachClientsStatTotal": "Total",
+  "coachClientsStatPending": "Pending",
+  "coachClientsStatUpcoming": "Upcoming",
+  "coachClientsFilterAll": "All",
+  "coachClientsSearchHint": "Search clients...",
+  "coachClientsSort": "Sort",
+  "coachClientsSortAz": "Name A–Z",
+  "coachClientsSortZa": "Name Z–A",
+  "coachClientsSortNewest": "Newest connected",
+  "coachClientsInvitations": "CLIENT INVITATIONS",
+  "coachClientsPendingCount": "{count} pending",
+  "@coachClientsPendingCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "coachClientsClientFallback": "Client",
+  "coachClientsStatusPending": "Pending",
+  "coachClientsStatusAccepted": "Accepted · +{points} pts",
+  "@coachClientsStatusAccepted": {
+    "placeholders": {
+      "points": {
+        "type": "String"
+      }
+    }
+  },
+  "coachClientsStatusDeclined": "Declined",
+  "coachClientsDecline": "Decline",
+  "coachClientsAccept": "Accept",
+  "coachClientsJustNow": "Just now",
+  "coachClientsMinutesAgo": "{count}m ago",
+  "@coachClientsMinutesAgo": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "coachClientsHoursAgo": "{count}h ago",
+  "@coachClientsHoursAgo": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "coachClientsDaysAgo": "{count}d ago",
+  "@coachClientsDaysAgo": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "coachClientsEmptyTitle": "Your coaching clients will appear here",
+  "coachClientsEmptyBody": "Clients appear when they book with you or when you accept their invitation.",
+  "coachClientsUpcomingSession": "Upcoming session",
+  "coachClientsNextSession": "Next: {date} at {time}",
+  "@coachClientsNextSession": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      },
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "coachClientsSessionSummary": "{sessions, plural, =1{1 session} other{{sessions} sessions}} • {upcoming} upcoming • {pending} pending",
+  "@coachClientsSessionSummary": {
+    "placeholders": {
+      "sessions": {
+        "type": "int"
+      },
+      "upcoming": {
+        "type": "int"
+      },
+      "pending": {
+        "type": "int"
+      }
+    }
+  },
+  "coachClientsLoadError": "Unable to load clients",
+  "coachClientsRetry": "Retry",
+  "coachClientsNoMatchSearch": "No clients match your search.",
+  "coachClientsNoMatchFilter": "No clients match this filter."
+}

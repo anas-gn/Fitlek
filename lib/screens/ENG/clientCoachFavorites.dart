@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:fitlek1/l10n/app_localizations.dart';
 import 'package:fitlek1/constants/urls.dart';
 import 'package:fitlek1/models/anas/coach.dart';
 import 'package:fitlek1/models/anas/reservation.dart';
@@ -94,14 +95,16 @@ class _ClientCoachFavoriteScreenState extends State<ClientCoachFavoriteScreen> {
         _fetchRatings();
       } else {
         setState(() {
-          _error = 'Server error (${res.statusCode})';
+          _error = AppLocalizations.of(context)
+              .clientCoachFavoritesServerError(res.statusCode);
           _loading = false;
         });
       }
     } catch (_) {
       if (!mounted) return;
       setState(() {
-        _error = 'Server unreachable';
+        _error =
+            AppLocalizations.of(context).clientCoachFavoritesServerUnreachable;
         _loading = false;
       });
     }
@@ -170,7 +173,9 @@ class _ClientCoachFavoriteScreenState extends State<ClientCoachFavoriteScreen> {
             );
           }
         });
-        _showSnack('Unable to update favorites', isError: true);
+        _showSnack(
+            AppLocalizations.of(context).clientCoachFavoritesUpdateFailed,
+            isError: true);
       }
     } finally {
       _removing.remove(coach.id);
@@ -178,6 +183,7 @@ class _ClientCoachFavoriteScreenState extends State<ClientCoachFavoriteScreen> {
   }
 
   void _openCoach(CoachModel coach) {
+    final l10n = AppLocalizations.of(context);
     final session = ReservationModel(
       id: 0,
       clientID: widget.clientID,
@@ -188,10 +194,10 @@ class _ClientCoachFavoriteScreenState extends State<ClientCoachFavoriteScreen> {
       coachRating: _ratings[coach.id] ?? coach.rating ?? 0.0,
       sessionStart: DateTime.now(),
       sessionEnd: DateTime.now().add(const Duration(hours: 1)),
-      location: 'To be defined',
+      location: l10n.clientCoachFavoritesLocationToBeDefined,
       status: 'pending',
       price: 0.0,
-      companyName: 'Independent',
+      companyName: l10n.clientCoachFavoritesCompanyIndependent,
     );
 
     Navigator.push(
@@ -276,6 +282,7 @@ class _ClientCoachFavoriteScreenState extends State<ClientCoachFavoriteScreen> {
   Widget _buildHeader() {
     final cs = Theme.of(context).colorScheme;
     final f = context.fitlek;
+    final l10n = AppLocalizations.of(context);
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
       child: Row(
@@ -299,7 +306,7 @@ class _ClientCoachFavoriteScreenState extends State<ClientCoachFavoriteScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'My Favorites',
+                  l10n.clientCoachFavoritesTitle,
                   style: TextStyle(
                     color: cs.onSurface,
                     fontSize: 24,
@@ -310,10 +317,11 @@ class _ClientCoachFavoriteScreenState extends State<ClientCoachFavoriteScreen> {
                 const SizedBox(height: 2),
                 Text(
                   _loading
-                      ? 'Loading…'
+                      ? l10n.clientCoachFavoritesLoading
                       : _coaches.isEmpty
-                          ? 'Coaches you like will appear here'
-                          : '${_coaches.length} coach${_coaches.length == 1 ? '' : 'es'} saved',
+                          ? l10n.clientCoachFavoritesEmptySubtitle
+                          : l10n.clientCoachFavoritesSavedCount(
+                              _coaches.length),
                   style: TextStyle(
                     color: f.textMuted,
                     fontSize: 12.5,
@@ -343,6 +351,7 @@ class _ClientCoachFavoriteScreenState extends State<ClientCoachFavoriteScreen> {
   Widget _buildSearchBar() {
     final cs = Theme.of(context).colorScheme;
     final f = context.fitlek;
+    final l10n = AppLocalizations.of(context);
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
       child: Container(
@@ -362,7 +371,7 @@ class _ClientCoachFavoriteScreenState extends State<ClientCoachFavoriteScreen> {
                 controller: _searchCtrl,
                 style: TextStyle(color: cs.onSurface, fontSize: 14),
                 decoration: InputDecoration(
-                  hintText: 'Search your favorite coaches...',
+                  hintText: l10n.clientCoachFavoritesSearchHint,
                   hintStyle: TextStyle(color: f.textSecondary, fontSize: 14),
                   border: InputBorder.none,
                   enabledBorder: InputBorder.none,
@@ -460,7 +469,7 @@ class _ClientCoachFavoriteScreenState extends State<ClientCoachFavoriteScreen> {
                   border: Border.all(color: cs.primary.withValues(alpha: 0.4)),
                 ),
                 child: Text(
-                  'Retry',
+                  AppLocalizations.of(context).clientCoachFavoritesRetry,
                   style: TextStyle(
                     color: cs.primary,
                     fontWeight: FontWeight.w700,
@@ -478,6 +487,7 @@ class _ClientCoachFavoriteScreenState extends State<ClientCoachFavoriteScreen> {
   Widget _buildEmpty() {
     final cs = Theme.of(context).colorScheme;
     final f = context.fitlek;
+    final l10n = AppLocalizations.of(context);
     return RefreshIndicator(
       color: cs.primary,
       backgroundColor: f.card,
@@ -505,7 +515,7 @@ class _ClientCoachFavoriteScreenState extends State<ClientCoachFavoriteScreen> {
                     ),
                     const SizedBox(height: 18),
                     Text(
-                      'No favorite coaches yet',
+                      l10n.clientCoachFavoritesEmptyTitle,
                       style: TextStyle(
                         color: cs.onSurface,
                         fontSize: 16,
@@ -514,7 +524,7 @@ class _ClientCoachFavoriteScreenState extends State<ClientCoachFavoriteScreen> {
                     ),
                     const SizedBox(height: 6),
                     Text(
-                      'Tap the heart on a coach to save them here.',
+                      l10n.clientCoachFavoritesEmptyMessage,
                       textAlign: TextAlign.center,
                       style: TextStyle(color: f.textMuted, fontSize: 13),
                     ),
@@ -529,7 +539,7 @@ class _ClientCoachFavoriteScreenState extends State<ClientCoachFavoriteScreen> {
                           borderRadius: BorderRadius.circular(14),
                         ),
                         child: Text(
-                          'Find a coach',
+                          l10n.clientCoachFavoritesFindACoach,
                           style: TextStyle(
                             color: cs.onPrimary,
                             fontWeight: FontWeight.w800,
@@ -551,6 +561,7 @@ class _ClientCoachFavoriteScreenState extends State<ClientCoachFavoriteScreen> {
   Widget _buildNoResults() {
     final cs = Theme.of(context).colorScheme;
     final f = context.fitlek;
+    final l10n = AppLocalizations.of(context);
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -558,7 +569,7 @@ class _ClientCoachFavoriteScreenState extends State<ClientCoachFavoriteScreen> {
           Icon(Icons.search_off_rounded, color: f.textMuted, size: 52),
           const SizedBox(height: 14),
           Text(
-            'No coach matches your search',
+            l10n.clientCoachFavoritesNoResults,
             style: TextStyle(color: f.textMuted, fontSize: 14),
           ),
           const SizedBox(height: 8),
@@ -568,7 +579,7 @@ class _ClientCoachFavoriteScreenState extends State<ClientCoachFavoriteScreen> {
               setState(() => _query = '');
             },
             child: Text(
-              'Reset',
+              l10n.clientCoachFavoritesReset,
               style: TextStyle(
                 color: cs.primary,
                 fontSize: 12,
@@ -737,7 +748,8 @@ class _FavoriteCoachTileState extends State<_FavoriteCoachTile> {
                           Text(
                             hasRating
                                 ? widget.rating.toStringAsFixed(1)
-                                : 'New',
+                                : AppLocalizations.of(context)
+                                    .clientCoachFavoritesNewBadge,
                             style: TextStyle(
                               color: cs.onSurface,
                               fontSize: 12,
@@ -776,7 +788,8 @@ class _FavoriteCoachTileState extends State<_FavoriteCoachTile> {
                               color: cs.primary.withValues(alpha: 0.25)),
                         ),
                         child: Text(
-                          'VIEW PROFILE',
+                          AppLocalizations.of(context)
+                              .clientCoachFavoritesViewProfile,
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             color: cs.primary,

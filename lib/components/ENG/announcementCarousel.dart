@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:fitlek1/l10n/app_localizations.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -133,7 +134,7 @@ class AnnouncementCarouselState extends State<AnnouncementCarousel> {
             const SizedBox(height: 16),
             TextButton(
                 onPressed: () => Navigator.pop(ctx),
-                child: const Text('Close')),
+                child: Text(AppLocalizations.of(ctx).announcementClose)),
           ],
         )),
       )),
@@ -143,6 +144,7 @@ class AnnouncementCarouselState extends State<AnnouncementCarousel> {
   @override
   Widget build(BuildContext context) {
     if (_items.isEmpty) return const SizedBox.shrink();
+    final l10n = AppLocalizations.of(context);
     final primary = Theme.of(context).colorScheme.primary;
     return Padding(
       padding: const EdgeInsets.only(top: 18),
@@ -154,14 +156,14 @@ class AnnouncementCarouselState extends State<AnnouncementCarousel> {
                   color: Theme.of(context).colorScheme.onSurface, size: 22),
               const SizedBox(width: 8),
               Expanded(
-                  child: Text('What’s new at Sirvya',
+                  child: Text(l10n.announcementWhatsNewTitle,
                       style: TextStyle(
                           color: Theme.of(context).colorScheme.onSurface,
                           fontSize: 17,
                           fontWeight: FontWeight.w800))),
               IconButton(
                   onPressed: _dismiss,
-                  tooltip: 'Dismiss announcements',
+                  tooltip: l10n.announcementDismissTooltip,
                   icon: const Icon(Icons.close_rounded, size: 20)),
             ])),
         SizedBox(
@@ -211,7 +213,7 @@ class AnnouncementCarouselState extends State<AnnouncementCarousel> {
                                         crossAxisAlignment:
                                             CrossAxisAlignment.start,
                                         children: [
-                                          Text('SIRVYA UPDATE',
+                                          Text(l10n.announcementSirvyaUpdate,
                                               maxLines: 1,
                                               overflow: TextOverflow.ellipsis,
                                               style: TextStyle(
@@ -276,11 +278,14 @@ class AnnouncementCarouselState extends State<AnnouncementCarousel> {
                                                                     : link == '/coaches' ||
                                                                             link ==
                                                                                 '/explore'
-                                                                        ? 'Explore coaches'
+                                                                        ? l10n
+                                                                            .announcementExploreCoaches
                                                                         : link
                                                                                 .isNotEmpty
-                                                                            ? 'Learn more'
-                                                                            : 'Read more',
+                                                                            ? l10n
+                                                                                .announcementLearnMore
+                                                                            : l10n
+                                                                                .announcementReadMore,
                                                                 maxLines: 1,
                                                                 overflow:
                                                                     TextOverflow

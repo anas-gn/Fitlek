@@ -1,3 +1,4 @@
+import 'package:fitlek1/l10n/app_localizations.dart';
 import '../../components/notification_card.dart';
 import '../../services/live_updates.dart';
 import '../../services/notification_navigation.dart';
@@ -113,7 +114,7 @@ class _CoachNotificationsState extends State<CoachNotifications>
         }
       });
     } else {
-      _snack(res['message']?.toString() ?? 'Could not update notifications');
+      _snack(res['message']?.toString() ?? AppLocalizations.of(context).coachNotificationsUpdateFailed);
     }
   }
 
@@ -143,7 +144,7 @@ class _CoachNotificationsState extends State<CoachNotifications>
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         iconTheme: IconThemeData(color: cs.onSurface),
-        title: Text('Notifications',
+        title: Text(AppLocalizations.of(context).coachNotificationsTitle,
             style: TextStyle(
                 color: cs.onSurface,
                 fontSize: 18,
@@ -154,7 +155,7 @@ class _CoachNotificationsState extends State<CoachNotifications>
               padding: const EdgeInsets.only(right: 8),
               child: TextButton(
                 onPressed: _markAllRead,
-                child: Text('Mark all read',
+                child: Text(AppLocalizations.of(context).coachNotificationsMarkAllRead,
                     style: TextStyle(
                         color: cs.primary,
                         fontSize: 13,
@@ -264,7 +265,7 @@ class _CoachNotificationsState extends State<CoachNotifications>
       child: Column(mainAxisSize: MainAxisSize.min, children: [
         Icon(Icons.wifi_off_rounded, color: f.textMuted, size: 52),
         const SizedBox(height: 12),
-        Text('Unable to load notifications',
+        Text(AppLocalizations.of(context).coachNotificationsLoadError,
             style: TextStyle(color: f.textMuted, fontSize: 15)),
         const SizedBox(height: 20),
         GestureDetector(
@@ -273,7 +274,7 @@ class _CoachNotificationsState extends State<CoachNotifications>
             padding: const EdgeInsets.symmetric(horizontal: 26, vertical: 12),
             decoration: BoxDecoration(
                 color: cs.primary, borderRadius: BorderRadius.circular(14)),
-            child: Text('Retry',
+            child: Text(AppLocalizations.of(context).coachNotificationsRetry,
                 style: TextStyle(
                     color: cs.onPrimary,
                     fontWeight: FontWeight.w800,
@@ -299,14 +300,14 @@ class _CoachNotificationsState extends State<CoachNotifications>
                 Icon(Icons.notifications_none_rounded,
                     color: f.textMuted, size: 60),
                 const SizedBox(height: 14),
-                Text('No notifications yet.',
+                Text(AppLocalizations.of(context).coachNotificationsEmptyTitle,
                     style: TextStyle(
                         color: cs.onSurface,
                         fontSize: 16,
                         fontWeight: FontWeight.w700)),
                 const SizedBox(height: 6),
                 Text(
-                    'Messages, reservations and session reminders will appear here.',
+                    AppLocalizations.of(context).coachNotificationsEmptyBody,
                     textAlign: TextAlign.center,
                     style: TextStyle(color: f.textMuted, fontSize: 13)),
               ]),

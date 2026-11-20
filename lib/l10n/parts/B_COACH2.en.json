@@ -1,0 +1,727 @@
+{
+  "coachChatAudioRecordError": "Could not record voice note. Check permissions.",
+  "coachChatAudioUploadFailed": "Failed to send audio message.",
+  "coachChatBatchPartialFail": "{failed} images could not be sent.",
+  "@coachChatBatchPartialFail": {
+    "placeholders": {
+      "failed": {
+        "type": "int"
+      }
+    }
+  },
+  "coachChatBlock": "Block",
+  "coachChatBlockClient": "Block Client",
+  "coachChatBlockContent": "Are you sure you want to block this client? They will not be able to message you or book sessions.",
+  "coachChatBlockFailed": "Failed to block client.",
+  "coachChatBlockIdentifyError": "Could not identify client to block.",
+  "coachChatBlockSuccess": "Client blocked successfully.",
+  "coachChatBlockTitle": "Block {name}?",
+  "@coachChatBlockTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "coachChatCamera": "Camera",
+  "coachChatCancel": "Cancel",
+  "coachChatCaptionHint": "Add a caption...",
+  "coachChatDeleteFailed": "Failed to delete message.",
+  "coachChatDeleteForEveryone": "Delete for everyone",
+  "coachChatDeleteForMe": "Delete for me",
+  "coachChatDeleteMessagesContent": "Delete selected messages?",
+  "coachChatDeleteMessagesTitle": "Delete {count, plural, =1{1 message} other{{count} messages}}?",
+  "@coachChatDeleteMessagesTitle": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "coachChatGallery": "Gallery",
+  "coachChatHeaderSubtitle": "Active client",
+  "coachChatImageUploadFailed": "Failed to upload image.",
+  "coachChatMaxBatchPhotos": "Maximum 10 photos per message.",
+  "coachChatMaxSelection": "Maximum 20 messages can be selected.",
+  "coachChatMicrophonePermission": "Microphone access is required to record voice notes.",
+  "coachChatNetworkError": "Network error. Please try again.",
+  "coachChatPhotoSendError": "Could not send photo.",
+  "coachChatReasonFraud": "Fraud or scam",
+  "coachChatReasonHarassment": "Harassment or abuse",
+  "coachChatReasonInappropriate": "Inappropriate content",
+  "coachChatReasonOther": "Other reason",
+  "coachChatReasonSpam": "Spam or advertising",
+  "coachChatRefreshError": "Could not refresh messages.",
+  "coachChatRefreshMessages": "Refresh messages",
+  "coachChatReportClient": "Report Client",
+  "coachChatReportFailed": "Failed to submit report.",
+  "coachChatReportIdentifyError": "Could not identify client to report.",
+  "coachChatReportPrompt": "Select a reason for reporting this user:",
+  "coachChatReportSuccess": "Report submitted. Thank you for keeping SIRVYA safe.",
+  "coachChatReportTitle": "Report {name}",
+  "@coachChatReportTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "coachChatSelectMessages": "Select messages",
+  "coachChatSend": "Send",
+  "coachChatSendFailed": "Failed to send message.",
+  "coachChatSubmit": "Submit",
+  "coachChatThisClient": "this client",
+  "coachExpertiseAdd": "Add",
+  "coachExpertiseAddCertTitle": "Add Certification",
+  "coachExpertiseAddSpecialtyTitle": "Add Specialty",
+  "coachExpertiseAttachedDocument": "Document attached",
+  "coachExpertiseCancel": "Cancel",
+  "coachExpertiseCertDetailsTitle": "Certification Details",
+  "coachExpertiseCertNameHint": "Certification Name",
+  "coachExpertiseCertProviderHint": "Issuing Organization",
+  "coachExpertiseCertYearHint": "Year Obtained",
+  "coachExpertiseCertificationsSubtitle": "Display your verified credentials to clients.",
+  "coachExpertiseCertificationsTitle": "Certifications",
+  "coachExpertiseCoachingSince": "Coaching since",
+  "coachExpertiseDetailName": "Name",
+  "coachExpertiseDetailProvider": "Organization",
+  "coachExpertiseDetailYear": "Year",
+  "coachExpertiseErrorGeneric": "Error: {error}",
+  "@coachExpertiseErrorGeneric": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "coachExpertiseExperienceSubtitle": "Your total coaching and training experience.",
+  "coachExpertiseExperienceTitle": "Experience",
+  "coachExpertiseExperienceYears": "{years, plural, =1{1 year} other{{years} years}}",
+  "@coachExpertiseExperienceYears": {
+    "placeholders": {
+      "years": {
+        "type": "int"
+      }
+    }
+  },
+  "coachExpertiseFileAttached": "File attached",
+  "coachExpertiseLevelsSubtitle": "Experience levels of clients you work with.",
+  "coachExpertiseLevelsTitle": "Client Levels",
+  "coachExpertiseNoCerts": "No certifications added yet.",
+  "coachExpertiseNoSpecialties": "No specialties selected yet.",
+  "coachExpertiseRetry": "Retry",
+  "coachExpertiseSave": "Save",
+  "coachExpertiseSaveSuccess": "Expertise updated successfully.",
+  "coachExpertiseSaving": "Saving…",
+  "coachExpertiseSelectDoc": "Upload certificate document",
+  "coachExpertiseSpecialtiesSubtitle": "Select areas of training you specialize in.",
+  "coachExpertiseSpecialtiesTitle": "Specialties",
+  "coachExpertiseTitle": "Expertise & Credentials",
+  "coachExpertiseUploadFailed": "Failed to upload document.",
+  "coachExpertiseYearsLabel": "Years of Experience",
+  "coachLocationsAddressHint": "Street address or landmark",
+  "coachLocationsAddressLabel": "Address",
+  "coachLocationsCancel": "Cancel",
+  "coachLocationsCityTitle": "Primary City",
+  "coachLocationsDetectCityHint": "Tap to detect your city",
+  "coachLocationsEditGymDialogTitle": "Edit Gym Location",
+  "coachLocationsEditLocation": "Edit Location",
+  "coachLocationsFormatGym": "At the Gym",
+  "coachLocationsFormatHome": "At Client's Home",
+  "coachLocationsFormatOnline": "Online Coaching",
+  "coachLocationsFormatsSubtitle": "Where do you provide your coaching sessions?",
+  "coachLocationsFormatsTitle": "Coaching Formats",
+  "coachLocationsGymAddressHint": "Gym address",
+  "coachLocationsGymAddressLabel": "Gym Address",
+  "coachLocationsGymNameHint": "e.g., City Club",
+  "coachLocationsGymNameLabel": "Gym Name",
+  "coachLocationsGymSubtitle": "Your primary affiliated gym or studio.",
+  "coachLocationsGymTitle": "Partner Gym",
+  "coachLocationsRadiusHint": "Service radius (km)",
+  "coachLocationsRadiusLabel": "Travel Radius (km)",
+  "coachLocationsSave": "Save Locations",
+  "coachLocationsSaveSuccess": "Locations updated successfully.",
+  "coachLocationsSaving": "Saving…",
+  "coachLocationsTitle": "Coaching Locations",
+  "coachPackagesAddPackage": "Add Package",
+  "coachPackagesAgreeOnPrice": "Price agreed with client",
+  "coachPackagesCancel": "Cancel",
+  "coachPackagesDelete": "Delete",
+  "coachPackagesDeleteContent": "Are you sure you want to delete this package?",
+  "coachPackagesDeleteError": "Failed to delete package.",
+  "coachPackagesDeleteTitle": "Delete Package",
+  "coachPackagesDeleted": "Package deleted.",
+  "coachPackagesDurationLabel": "Duration",
+  "coachPackagesEdit": "Edit",
+  "coachPackagesEditPackage": "Edit Package",
+  "coachPackagesEmptySubtitle": "Create packs to encourage repeat sessions and long-term commitment.",
+  "coachPackagesEmptyTitle": "No Packages Yet",
+  "coachPackagesNameHint": "e.g., 10-Session Transformation Pack",
+  "coachPackagesNameLabel": "Package Name",
+  "coachPackagesPriceHint": "Price in MAD",
+  "coachPackagesPriceLabel": "Price (MAD)",
+  "coachPackagesProgress": "{current} of {max} packages",
+  "@coachPackagesProgress": {
+    "placeholders": {
+      "current": {
+        "type": "int"
+      },
+      "max": {
+        "type": "int"
+      }
+    }
+  },
+  "coachPackagesSave": "Save Package",
+  "coachPackagesSaveError": "Failed to save package.",
+  "coachPackagesSaved": "Package saved successfully.",
+  "coachPackagesSaving": "Saving…",
+  "coachPackagesSessionsCount": "{count, plural, =1{1 session} other{{count} sessions}}",
+  "@coachPackagesSessionsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "coachPackagesSessionsHint": "Number of sessions included",
+  "coachPackagesSessionsLabel": "Sessions Included",
+  "coachPackagesTitle": "Packages & Rates",
+  "coachPhotosAddPhoto": "Add Photo",
+  "coachPhotosAddressHint": "Gym address",
+  "coachPhotosAddressLabel": "Address",
+  "coachPhotosCancel": "Cancel",
+  "coachPhotosCaptionHint": "Caption (optional)",
+  "coachPhotosCaptionTitle": "Photo Caption",
+  "coachPhotosCover": "Cover",
+  "coachPhotosDelete": "Delete",
+  "coachPhotosEditCaption": "Edit Caption",
+  "coachPhotosEditGymDialogTitle": "Edit Gym Photo",
+  "coachPhotosErrorGeneric": "Error: {error}",
+  "@coachPhotosErrorGeneric": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "coachPhotosGallerySubtitle": "Show your coaching environment and workouts.",
+  "coachPhotosGalleryTitle": "Gallery Photos",
+  "coachPhotosGymTitle": "Gym / Studio Photos",
+  "coachPhotosNoPhotos": "No photos in your gallery yet.",
+  "coachPhotosPartialSlots": "{slots} slots remaining in gallery.",
+  "@coachPhotosPartialSlots": {
+    "placeholders": {
+      "slots": {
+        "type": "int"
+      }
+    }
+  },
+  "coachPhotosSaveFailed": "Failed to save photo: {error}",
+  "@coachPhotosSaveFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "coachPhotosSaveSuccess": "Photos updated successfully.",
+  "coachPhotosSaving": "Saving…",
+  "coachPhotosTitle": "Coaching Photos",
+  "coachPhotosUploadFailed": "Failed to upload photo.",
+  "mealScannerAddFoodItem": "Add food item",
+  "mealScannerAddToMeal": "Add to meal",
+  "mealScannerAdjustPortion": "Adjust portion",
+  "mealScannerApply": "Apply",
+  "mealScannerCalculatedNutrition": "Calculated Nutrition",
+  "mealScannerCaloriesKcalLabel": "Calories (kcal)",
+  "mealScannerCarbsGLabel": "Carbs (g)",
+  "mealScannerCategoryAll": "All",
+  "mealScannerCategoryDairy": "Dairy & Eggs",
+  "mealScannerCategoryDrinks": "Drinks",
+  "mealScannerCategoryFish": "Fish & Seafood",
+  "mealScannerCategoryGrains": "Grains & Bread",
+  "mealScannerCategoryMeals": "Prepared Meals",
+  "mealScannerCategoryMeat": "Meat & Poultry",
+  "mealScannerCategoryNuts": "Nuts & Seeds",
+  "mealScannerCategoryProduce": "Fruits & Veggies",
+  "mealScannerCategorySnacks": "Snacks & Sweets",
+  "mealScannerChangesNotSynced": "Changes saved locally · Not synced yet",
+  "mealScannerChooseCategoryHint": "Choose food category",
+  "mealScannerChooseDifferentFood": "Choose a different food",
+  "mealScannerCustomFoodDefaultName": "Custom Food",
+  "mealScannerCustomFoodNameLabel": "Food Name",
+  "mealScannerCustomItemFallback": "Item",
+  "mealScannerDeleteMeal": "Delete meal",
+  "mealScannerEditMacrosManually": "Edit macros manually",
+  "mealScannerEnterFoodNameError": "Please enter a food name.",
+  "mealScannerEnterValidWeightError": "Please enter a valid weight in grams.",
+  "mealScannerFatGLabel": "Fat (g)",
+  "mealScannerFoodMacrosPer100g": "{calories} kcal · P {protein}g · C {carbs}g · F {fat}g",
+  "mealScannerFoodNameLabel": "Food Name",
+  "mealScannerMacroCarbs": "Carbs",
+  "mealScannerMacroFat": "Fat",
+  "mealScannerMacroProtein": "Protein",
+  "mealScannerManualValuesActive": "Manual values active",
+  "mealScannerMealBreakfast": "Breakfast",
+  "mealScannerMealDate": "Meal date: {date}",
+  "@mealScannerMealDate": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
+  "mealScannerMealDinner": "Dinner",
+  "mealScannerMealLunch": "Lunch",
+  "mealScannerMealMovedTo": "Meal moved to {meal}",
+  "@mealScannerMealMovedTo": {
+    "placeholders": {
+      "meal": {
+        "type": "String"
+      }
+    }
+  },
+  "mealScannerMealSavedTo": "Meal saved to {meal}",
+  "@mealScannerMealSavedTo": {
+    "placeholders": {
+      "meal": {
+        "type": "String"
+      }
+    }
+  },
+  "mealScannerMealSnack": "Snack",
+  "mealScannerMoveMeal": "Move meal",
+  "mealScannerNoFoodsFound": "No food found for \"{query}\"",
+  "@mealScannerNoFoodsFound": {
+    "placeholders": {
+      "query": {
+        "type": "String"
+      }
+    }
+  },
+  "mealScannerNotSynced": "Not synced ({meal})",
+  "@mealScannerNotSynced": {
+    "placeholders": {
+      "meal": {
+        "type": "String"
+      }
+    }
+  },
+  "mealScannerOneServing": "1 serving",
+  "mealScannerOnlineBadge": "Online",
+  "mealScannerOrEnterCustomMacros": "Or enter custom macros",
+  "mealScannerProteinGLabel": "Protein (g)",
+  "mealScannerQuantityLabel": "Quantity ({unit})",
+  "@mealScannerQuantityLabel": {
+    "placeholders": {
+      "unit": {
+        "type": "String"
+      }
+    }
+  },
+  "mealScannerQueryingGlobalDb": "Querying food database…",
+  "mealScannerResetToAuto": "Reset to auto calculation",
+  "mealScannerSavedIn": "Saved in {meal}",
+  "@mealScannerSavedIn": {
+    "placeholders": {
+      "meal": {
+        "type": "String"
+      }
+    }
+  },
+  "mealScannerSearchHint": "Search food or scan barcode…",
+  "mealScannerSearchMoreOnline": "Search more foods online",
+  "mealScannerSearchOpenFoodFacts": "Open Food Facts search",
+  "mealScannerSearchingFor": "Searching for \"{query}\"…",
+  "@mealScannerSearchingFor": {
+    "placeholders": {
+      "query": {
+        "type": "String"
+      }
+    }
+  },
+  "mealScannerSearchingOnlineBanner": "Searching online database…",
+  "mealScannerSearchingOnlineShort": "Searching…",
+  "mealScannerSelectedFoodBase": "{calories} kcal · P {protein}g · C {carbs}g · F {fat}g (per 100g)",
+  "mealScannerValuesAutoCalculated": "Values calculated automatically based on weight.",
+  "nutritionGoalAboutMaintenanceKcal": "{kcal} kcal/day estimated maintenance",
+  "@nutritionGoalAboutMaintenanceKcal": {
+    "placeholders": {
+      "kcal": {
+        "type": "int"
+      }
+    }
+  },
+  "nutritionGoalActivityHigh": "High (daily intense exercise)",
+  "nutritionGoalActivityLight": "Light (1-2 workouts/week)",
+  "nutritionGoalActivityLow": "Sedentary (little to no exercise)",
+  "nutritionGoalActivityModerate": "Moderate (3-5 workouts/week)",
+  "nutritionGoalAdultWeightError": "Please enter a realistic target weight.",
+  "nutritionGoalAgeLabel": "Age",
+  "nutritionGoalAppliedToast": "Applied targets: {calories} kcal · P {protein}g · C {carbs}g · F {fat}g",
+  "nutritionGoalApplyRecommendedBtn": "Apply Recommended Targets",
+  "nutritionGoalBreakfastCheckin": "Breakfast check-in",
+  "nutritionGoalCalorieCheckinsSub": "Receive daily prompts to log meals.",
+  "nutritionGoalCalorieCheckinsTitle": "Meal Check-in Reminders",
+  "nutritionGoalCaptionDailyEnergy": "Daily caloric intake target",
+  "nutritionGoalCaptionHormoneHealth": "Essential for hormone balance and joints",
+  "nutritionGoalCaptionMuscleRecovery": "Target for muscle repair and satiety",
+  "nutritionGoalCompleteProfilePrompt": "Complete your profile to personalize nutrition targets.",
+  "nutritionGoalDeficitBadge": "{diff} kcal deficit",
+  "@nutritionGoalDeficitBadge": {
+    "placeholders": {
+      "diff": {
+        "type": "int"
+      }
+    }
+  },
+  "nutritionGoalDietBalanced": "Balanced",
+  "nutritionGoalDietHalal": "Halal",
+  "nutritionGoalDietVegan": "Vegan",
+  "nutritionGoalDietVegetarian": "Vegetarian",
+  "nutritionGoalDietaryStyleLabel": "Dietary Preference",
+  "nutritionGoalDinnerCheckin": "Dinner check-in",
+  "nutritionGoalEstimateMaintenanceSub": "Based on your height, weight, age and activity.",
+  "nutritionGoalEstimateMaintenanceTitle": "Maintenance Calories",
+  "nutritionGoalEstimatePrompt": "Calculate personalized calorie and macro targets.",
+  "nutritionGoalFieldInvalid": "Please enter a valid value for {field}",
+  "@nutritionGoalFieldInvalid": {
+    "placeholders": {
+      "field": {
+        "type": "String"
+      }
+    }
+  },
+  "nutritionGoalFieldRequired": "{field} is required",
+  "@nutritionGoalFieldRequired": {
+    "placeholders": {
+      "field": {
+        "type": "String"
+      }
+    }
+  },
+  "nutritionGoalFoodPreferenceLabel": "Food Preference",
+  "nutritionGoalGeneralEstimatesSuitable": "These estimates provide a science-backed starting point for your journey.",
+  "nutritionGoalHeaderSubtitle": "Set your daily calorie and macro goals.",
+  "nutritionGoalHeaderTitle": "Nutrition Targets",
+  "nutritionGoalHeightLabel": "Height (cm)",
+  "nutritionGoalLunchCheckin": "Lunch check-in",
+  "nutritionGoalMacroCalories": "Calories",
+  "nutritionGoalMacroCarbs": "Carbs",
+  "nutritionGoalMacroFat": "Fat",
+  "nutritionGoalMacroProtein": "Protein",
+  "nutritionGoalMaintenanceBadge": "Maintenance",
+  "nutritionGoalMealIdeasSub": "Get smart recipe and meal suggestions.",
+  "nutritionGoalMealIdeasTitle": "Meal Ideas & Inspiration",
+  "nutritionGoalMinorSectionSub": "Preferences and schedule",
+  "nutritionGoalMinorSectionTitle": "Preferences",
+  "nutritionGoalMonthlyReview": "Monthly Progress Review",
+  "nutritionGoalMyGoalLabel": "Primary Goal",
+  "nutritionGoalNoteGain": "Targeting lean muscle growth with a clean caloric surplus.",
+  "nutritionGoalNoteLose": "Targeting safe, sustainable fat loss with a moderate deficit.",
+  "nutritionGoalNoteMaintain": "Targeting weight stability, performance and energy.",
+  "nutritionGoalQuietHoursEnd": "Quiet hours end",
+  "nutritionGoalQuietHoursNote": "Notifications are silenced during your quiet hours.",
+  "nutritionGoalQuietHoursStart": "Quiet hours start",
+  "nutritionGoalRecommendedTitle": "Recommended Targets",
+  "nutritionGoalRemindersSub": "Manage daily reminders and quiet hours.",
+  "nutritionGoalRemindersTitle": "Reminders & Notifications",
+  "nutritionGoalSaveMyGoal": "Save Nutrition Goal",
+  "nutritionGoalSaving": "Saving…",
+  "nutritionGoalSectionDailyTargetsSub": "Customize your daily macronutrient breakdown.",
+  "nutritionGoalSectionDailyTargetsTitle": "Daily Targets",
+  "nutritionGoalSectionStatusSub": "Current status of this nutrition goal.",
+  "nutritionGoalSectionStatusTitle": "Goal Status",
+  "nutritionGoalSectionSupportSub": "Reminders and coaching recommendations.",
+  "nutritionGoalSectionSupportTitle": "Support & Reminders",
+  "nutritionGoalSectionWhatMattersSub": "Key nutritional focus for your journey.",
+  "nutritionGoalSectionWhatMattersTitle": "Nutrition Focus",
+  "nutritionGoalSetupLaterInProfile": "You can update these targets anytime in your profile.",
+  "nutritionGoalSexFemale": "Female",
+  "nutritionGoalSexMale": "Male",
+  "nutritionGoalSkipForNow": "Skip for now",
+  "nutritionGoalStartFreshSub": "Reset targets to default recommendations.",
+  "nutritionGoalStartFreshTitle": "Reset Targets",
+  "nutritionGoalStartingWeightLabel": "Starting Weight (kg)",
+  "nutritionGoalStatusAchieved": "Achieved",
+  "nutritionGoalStatusActive": "Active",
+  "nutritionGoalStatusPaused": "Paused",
+  "nutritionGoalStyleBalanced": "Balanced",
+  "nutritionGoalStyleHighProtein": "High Protein",
+  "nutritionGoalStyleLowCarb": "Low Carb",
+  "nutritionGoalSurplusBadge": "{diff} kcal surplus",
+  "@nutritionGoalSurplusBadge": {
+    "placeholders": {
+      "diff": {
+        "type": "int"
+      }
+    }
+  },
+  "nutritionGoalTargetDirectionError": "Target weight direction does not match goal type.",
+  "nutritionGoalTargetWeightLabel": "Target Weight (kg)",
+  "nutritionGoalTimeZoneLabel": "Timezone",
+  "nutritionGoalTitle": "Nutrition Goal",
+  "nutritionGoalTitleSignup": "Set Up Nutrition Goal",
+  "nutritionGoalTypeBalanced": "General Fitness",
+  "nutritionGoalTypeGain": "Muscle Gain",
+  "nutritionGoalTypeLose": "Fat Loss",
+  "nutritionGoalTypeMaintain": "Maintenance",
+  "nutritionGoalUnitKcalPerDay": "kcal / day",
+  "nutritionGoalUseThisGoal": "Use This Goal",
+  "nutritionGoalUsualActivityLabel": "Usual Activity Level",
+  "nutritionGoalWeeklyWeightCheckin": "Weekly Weight Check-in",
+  "nutritionGoalYearlyReview": "Yearly Review",
+  "nutritionTrackerGoalLoadError": "Could not load your goal. Please try again.",
+  "nutritionTrackerMealRemoveError": "Could not remove this meal. Try again.",
+  "nutritionTrackerDailyDiary": "YOUR DAILY DIARY",
+  "nutritionTrackerFuelDay": "Fuel your day.",
+  "nutritionTrackerBackToToday": "Back to today",
+  "nutritionTrackerRetrySync": "Retry sync",
+  "nutritionTrackerEnergyLogged": "ENERGY LOGGED",
+  "nutritionTrackerMealsLogged": "{count, plural, =1{1 meal logged} other{{count} meals logged}}",
+  "@nutritionTrackerMealsLogged": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "nutritionTrackerSetDailyTargets": "Set your own daily targets →",
+  "nutritionTrackerScanMeal": "Scan a meal",
+  "nutritionTrackerAddManually": "Add manually",
+  "nutritionTrackerMealsMoments": "Meals & moments",
+  "nutritionTrackerDiaryTitle": "Nutrition diary",
+  "nutritionTrackerNothingLogged": "Nothing logged yet",
+  "nutritionTrackerAddMealTitle": "Add a meal",
+  "nutritionTrackerAddMealSubtitle": "Use the nutrition on a label or in your recipe.",
+  "nutritionTrackerMealNameLabel": "Meal name",
+  "nutritionTrackerSaving": "Saving…",
+  "nutritionTrackerSaveMeal": "Save meal",
+  "nutritionTrackerDailyTargetsTitle": "Your daily targets",
+  "nutritionTrackerSaveTargets": "Save targets",
+  "coachExpertiseDetailStatus": "Verification Status",
+  "coachExpertiseErrorPickingFile": "Could not select file. Please try again.",
+  "coachExpertiseErrorUpdating": "Failed to update credentials.",
+  "coachExpertiseFailedLoadDoc": "Could not load certificate document.",
+  "coachExpertiseFileUploaded": "Certificate document uploaded.",
+  "coachExpertiseLevelAdvanced": "Advanced athletes",
+  "coachExpertiseLevelBeginners": "Beginners",
+  "coachExpertiseLevelIntermediate": "Intermediate",
+  "coachExpertiseMaxSpecialties": "Maximum 8 specialties allowed.",
+  "coachExpertisePreview": "Preview",
+  "coachExpertisePrimaryCategory": "Primary Discipline",
+  "coachExpertiseProfileUpdated": "Credentials updated successfully.",
+  "coachExpertiseResubmit": "Resubmit Document",
+  "coachExpertiseReviewInProgress": "Under review by SIRVYA team",
+  "coachExpertiseReviewNotice": "Certificates are verified by our team within 24-48 hours.",
+  "coachExpertiseSaveChanges": "Save",
+  "coachExpertiseSelectCategory": "Select primary category",
+  "coachExpertiseSelectYear": "Select year",
+  "coachExpertiseSpecialtyHint": "e.g., Kettlebell Training",
+  "coachExpertiseStatusApproved": "Verified",
+  "coachExpertiseStatusRejected": "Rejected",
+  "coachExpertiseStatusReviewing": "In Review",
+  "coachExpertiseStatusSelfReported": "Self-Reported",
+  "coachExpertiseSubmitVerification": "Submit for Verification",
+  "coachExpertiseSuggestedBodybuilding": "Bodybuilding & Hypertrophy",
+  "coachExpertiseSuggestedConditioning": "Cardio & Conditioning",
+  "coachExpertiseSuggestedForYou": "Suggested for your discipline",
+  "coachExpertiseSuggestedFunctional": "Functional Fitness",
+  "coachExpertiseSuggestedNutrition": "Nutrition & Dietetics",
+  "coachExpertiseSuggestedPilates": "Pilates & Core Stability",
+  "coachExpertiseSuggestedPowerlifting": "Powerlifting & Strength",
+  "coachExpertiseSuggestedRehabilitation": "Post-Rehabilitation",
+  "coachExpertiseSuggestedYoga": "Yoga & Flexibility",
+  "coachExpertiseTapToPreview": "Tap to preview certificate",
+  "coachExpertiseUploadCertificate": "Upload Certificate (PDF / Image)",
+  "coachExpertiseVerifiedBadgeInfo": "Verified credentials receive a badge on your public profile.",
+  "coachExpertiseVerifiedCertificate": "Verified Certificate",
+  "coachExpertiseViewDetails": "View Details",
+  "coachExpertiseWhoYouCoach": "Who do you typically coach?",
+  "coachLocationsFormatOutdoors": "Outdoors / Parks",
+  "coachLocationsGymLocationTitle": "Gym Location",
+  "coachLocationsManageAvailability": "Manage your daily coaching calendar",
+  "coachLocationsOpenCalendar": "Working Hours & Calendar",
+  "coachLocationsPreview": "Preview",
+  "coachLocationsSaveChanges": "Save",
+  "coachLocationsSaveFailed": "Failed to save location: {error}",
+  "@coachLocationsSaveFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "coachLocationsSelectGym": "Select partner gym",
+  "coachLocationsServiceAreaHint": "e.g., Greater Casablanca Area",
+  "coachLocationsServiceAreaSubtitle": "Areas where you are available to travel for clients.",
+  "coachLocationsServiceAreaTitle": "Service Area",
+  "coachLocationsUpdateLocation": "Update Map Coordinates",
+  "coachLocationsUploadImage": "Upload Gym Photo",
+  "coachLocationsUploading": "Uploading photo…",
+  "coachPackagesFixedPrice": "Fixed Session Price",
+  "coachPackagesFixedPriceSub": "Standard rate applied per coaching session.",
+  "coachPackagesIncludedHint": "e.g., Custom diet plan + 24/7 WhatsApp support",
+  "coachPackagesIncludedLabel": "What's Included",
+  "coachPackagesIndividualSession": "Single session",
+  "coachPackagesLocationGym": "Gym",
+  "coachPackagesLocationOnline": "Online",
+  "coachPackagesLocationsLabel": "Available Locations",
+  "coachPackagesMinutesUnit": "min",
+  "coachPackagesMultipleSessions": "{sessions, plural, =1{1 session} other{{sessions} sessions}} · {duration} min each",
+  "@coachPackagesMultipleSessions": {
+    "placeholders": {
+      "sessions": {
+        "type": "int"
+      },
+      "duration": {
+        "type": "int"
+      }
+    }
+  },
+  "coachPackagesOnRequest": "On request",
+  "coachPackagesPerSession": "MAD / session",
+  "coachPackagesPreview": "Preview",
+  "coachPackagesPriceOnRequest": "Price on Request",
+  "coachPackagesPricingLabel": "Pricing Model",
+  "coachPackagesSaveChanges": "Save",
+  "coachPhotosFormatGym": "Gym",
+  "coachPhotosFormatHome": "Home",
+  "coachPhotosFormatOnline": "Online",
+  "coachPhotosFormatOutdoors": "Outdoors",
+  "coachPhotosGymNameHint": "Gym Name",
+  "coachPhotosGymNameLabel": "Gym Name",
+  "coachPhotosMaxPhotos": "Maximum 12 photos reached.",
+  "coachPhotosPortfolioSubtitle": "High quality training photos build trust with prospective clients.",
+  "coachPhotosPortfolioTitle": "Coaching Portfolio",
+  "coachPhotosPreview": "Preview",
+  "coachPhotosSave": "Save",
+  "coachPhotosSaveChanges": "Save",
+  "coachPhotosUploadImage": "Upload Photo",
+  "coachPhotosUploading": "Uploading…",
+  "coachLocationsErrorGeneric": "Error: {error}",
+  "@coachLocationsErrorGeneric": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "@mealScannerFoodMacrosPer100g": {
+    "placeholders": {
+      "calories": {
+        "type": "int"
+      },
+      "protein": {
+        "type": "String"
+      },
+      "carbs": {
+        "type": "String"
+      },
+      "fat": {
+        "type": "String"
+      }
+    }
+  },
+  "@mealScannerSelectedFoodBase": {
+    "placeholders": {
+      "calories": {
+        "type": "int"
+      },
+      "protein": {
+        "type": "String"
+      },
+      "carbs": {
+        "type": "String"
+      },
+      "fat": {
+        "type": "String"
+      }
+    }
+  },
+  "@nutritionGoalAppliedToast": {
+    "placeholders": {
+      "calories": {
+        "type": "int"
+      },
+      "protein": {
+        "type": "int"
+      },
+      "carbs": {
+        "type": "int"
+      },
+      "fat": {
+        "type": "int"
+      }
+    }
+  },
+  "nutritionGoalBiologicalSexLabel": "Biological sex",
+  "nutritionGoalSexEstimateLabel": "Used for basal metabolic rate calculation",
+  "nutritionGoalGeneralEstimatesSub": "Standard nutritional equations based on your profile",
+  "nutritionGoalUseMaintenanceBtn": "Use Maintenance Targets",
+  "nutritionGoalAboutCaloriePlanning": "About Calorie & Macro Planning",
+  "nutritionTrackerDailyTargetsTooltip": "Daily targets",
+  "nutritionTrackerPrevDayTooltip": "Previous day",
+  "nutritionTrackerNextDayTooltip": "Next day",
+  "nutritionTrackerToday": "Today",
+  "nutritionTrackerTargetSummary": "{goal} kcal daily target",
+  "@nutritionTrackerTargetSummary": {
+    "placeholders": {
+      "goal": {
+        "type": "int"
+      }
+    }
+  },
+  "nutritionTrackerRemaining": "{diff} remaining",
+  "@nutritionTrackerRemaining": {
+    "placeholders": {
+      "diff": {
+        "type": "int"
+      }
+    }
+  },
+  "nutritionTrackerAboveTarget": "{diff} above target",
+  "@nutritionTrackerAboveTarget": {
+    "placeholders": {
+      "diff": {
+        "type": "int"
+      }
+    }
+  },
+  "nutritionTrackerOfGrams": "of {goal} g",
+  "@nutritionTrackerOfGrams": {
+    "placeholders": {
+      "goal": {
+        "type": "int"
+      }
+    }
+  },
+  "nutritionTrackerNoTargetSet": "No target set",
+  "nutritionTrackerEstimatesNotice": "Nutrition estimates are based on your saved portions. Meal details sync to your account; photos stay on this device and may be unavailable on another phone. Your diary follows the calendar dates you choose.",
+  "nutritionTrackerShareMealTooltip": "Share {name}",
+  "@nutritionTrackerShareMealTooltip": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "nutritionTrackerRemoveMealTooltip": "Remove {name}",
+  "@nutritionTrackerRemoveMealTooltip": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "nutritionTrackerManualNotes": "Nutrition entered manually.",
+  "nutritionTrackerOneServing": "1 serving",
+  "nutritionTrackerSyncError": "Could not sync your diary. Check your connection and try again.",
+  "nutritionTrackerSyncMealError": "Could not sync this meal. Your input is still here; retry to save it.",
+  "nutritionTrackerEnterMealName": "Enter a meal name",
+  "nutritionTrackerChooseMealTypeNotice": "Choose Breakfast, Lunch, Dinner or Snack after tapping Save meal.",
+  "nutritionTrackerEnterValidNumber": "Enter a valid number, including 0",
+  "nutritionTrackerSaveTargetsError": "Could not save targets. Your input is still here.",
+  "nutritionTrackerSetTargetsSubtitle": "Set the targets that suit your plan. Leave a field empty to track without a target.",
+  "nutritionTrackerEnterValidDailyTarget": "Enter a valid daily target"
+}

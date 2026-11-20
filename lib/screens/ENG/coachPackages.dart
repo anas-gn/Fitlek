@@ -6,6 +6,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:fitlek1/l10n/app_localizations.dart';
 import '../../services/apiService.dart';
 import '../../theme/fitlek_theme_extension.dart';
 import '../../constants/app_colors.dart';
@@ -131,25 +132,26 @@ class _CoachPackagesState extends State<CoachPackages> {
   }
 
   Future<void> _deletePackage(int id) async {
+    final l10n = AppLocalizations.of(context);
     final confirm = await showDialog<bool>(
         context: context,
         builder: (ctx) => AppDialog(
               backgroundColor: context.fitlek.card,
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16)),
-              title: Text('Delete Package',
+              title: Text(l10n.coachPackagesDeleteTitle,
                   style: TextStyle(
                       color: Theme.of(context).colorScheme.onSurface)),
-              content: Text('Are you sure you want to delete this package?',
+              content: Text(l10n.coachPackagesDeleteContent,
                   style: TextStyle(color: context.fitlek.textSecondary)),
               actions: [
                 TextButton(
                     onPressed: () => Navigator.pop(ctx, false),
-                    child: Text('Cancel',
+                    child: Text(l10n.coachPackagesCancel,
                         style: TextStyle(color: context.fitlek.textMuted))),
                 TextButton(
                     onPressed: () => Navigator.pop(ctx, true),
-                    child: Text('Delete',
+                    child: Text(l10n.coachPackagesDelete,
                         style: TextStyle(color: AppColors.error))),
               ],
             ));
@@ -158,9 +160,9 @@ class _CoachPackagesState extends State<CoachPackages> {
     try {
       await ApiService.delete('/packages/$id?coachID=${widget.profile.id}');
       _loadPackages();
-      _showSnack('Package deleted');
+      if (mounted) _showSnack(AppLocalizations.of(context).coachPackagesDeleted);
     } catch (e) {
-      _showSnack('Error deleting package');
+      if (mounted) _showSnack(AppLocalizations.of(context).coachPackagesDeleteError);
     }
   }
 
@@ -182,11 +184,12 @@ class _CoachPackagesState extends State<CoachPackages> {
   }
 
   Widget _buildProgressHeader() {
+    final l10n = AppLocalizations.of(context);
     return Padding(
       padding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       child: Row(
         children: [
-          Text('${_packages.length} of $_maxPackages packages',
+          Text(l10n.coachPackagesProgress(_packages.length, _maxPackages),
               style: TextStyle(
                   color: context.fitlek.textSecondary,
                   fontSize: 13,
@@ -219,7 +222,19 @@ class _CoachPackagesState extends State<CoachPackages> {
     );
   }
 
+  String _localizeLocation(AppLocalizations l10n, String loc) {
+    switch (loc.toLowerCase()) {
+      case 'gym':
+        return l10n.coachPackagesLocationGym;
+      case 'online':
+        return l10n.coachPackagesLocationOnline;
+      default:
+        return loc;
+    }
+  }
+
   Widget _buildPackageCard(CoachPackage pkg) {
+    final l10n = AppLocalizations.of(context);
     return Container(
       margin: EdgeInsets.fromLTRB(16, 0, 16, 16),
       padding: EdgeInsets.all(16),
@@ -266,7 +281,7 @@ class _CoachPackagesState extends State<CoachPackages> {
                       itemBuilder: (ctx) => [
                         PopupMenuItem(
                             value: 'delete',
-                            child: Text('Delete',
+                            child: Text(l10n.coachPackagesDelete,
                                 style: TextStyle(color: AppColors.error))),
                       ],
                       onSelected: (val) {
@@ -278,8 +293,9 @@ class _CoachPackagesState extends State<CoachPackages> {
                 ),
                 Text(
                   (pkg.sessions == null || pkg.sessions == 1)
-                      ? 'Individual session'
-                      : '${pkg.sessions} sessions · ${pkg.duration} min each',
+                      ? l10n.coachPackagesIndividualSession
+                      : l10n.coachPackagesMultipleSessions(
+                          pkg.sessions!, pkg.duration ?? 60),
                   style: TextStyle(
                       color: context.fitlek.textSecondary, fontSize: 13),
                 ),
@@ -317,7 +333,7 @@ class _CoachPackagesState extends State<CoachPackages> {
                                       color: context.fitlek.textSecondary,
                                       size: 12),
                                   SizedBox(width: 4),
-                                  Text(loc,
+                                  Text(_localizeLocation(l10n, loc),
                                       style: TextStyle(
                                           color: context.fitlek.textSecondary,
                                           fontSize: 11)),
@@ -337,7 +353,7 @@ class _CoachPackagesState extends State<CoachPackages> {
                           ? Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text('Price on request',
+                                Text(l10n.coachPackagesPriceOnRequest,
                                     style: TextStyle(
                                         color: Theme.of(context)
                                             .colorScheme
@@ -353,7 +369,7 @@ class _CoachPackagesState extends State<CoachPackages> {
                                     SizedBox(width: 4),
                                     Expanded(
                                         child: Text(
-                                            'Agree on price before confirming a booking.',
+                                            l10n.coachPackagesAgreeOnPrice,
                                             style: TextStyle(
                                                 color: context
                                                     .fitlek.textSecondary,
@@ -373,7 +389,7 @@ class _CoachPackagesState extends State<CoachPackages> {
                                     fontWeight: FontWeight.bold),
                                 children: [
                                   TextSpan(
-                                      text: ' / session',
+                                      text: l10n.coachPackagesPerSession,
                                       style: TextStyle(
                                           color: context.fitlek.textSecondary,
                                           fontSize: 13,
@@ -388,7 +404,7 @@ class _CoachPackagesState extends State<CoachPackages> {
                       icon: Icon(Icons.edit,
                           size: 14,
                           color: Theme.of(context).colorScheme.onSurface),
-                      label: Text('Edit',
+                      label: Text(l10n.coachPackagesEdit,
                           style: TextStyle(
                               color: Theme.of(context).colorScheme.onSurface)),
                       style: OutlinedButton.styleFrom(
@@ -424,6 +440,7 @@ class _CoachPackagesState extends State<CoachPackages> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
@@ -435,7 +452,7 @@ class _CoachPackagesState extends State<CoachPackages> {
               color: Theme.of(context).colorScheme.onSurface),
           onPressed: () => Navigator.pop(context, true),
         ),
-        title: Text('Services & packages',
+        title: Text(l10n.coachPackagesTitle,
             style: TextStyle(
                 color: Theme.of(context).colorScheme.onSurface,
                 fontSize: 18,
@@ -448,7 +465,7 @@ class _CoachPackagesState extends State<CoachPackages> {
                 onPressed: () {},
                 icon: Icon(Icons.visibility_outlined,
                     size: 14, color: Theme.of(context).colorScheme.onSurface),
-                label: Text('Preview',
+                label: Text(l10n.coachPackagesPreview,
                     style: TextStyle(
                         color: Theme.of(context).colorScheme.onSurface,
                         fontSize: 12)),
@@ -491,7 +508,7 @@ class _CoachPackagesState extends State<CoachPackages> {
                           children: [
                             Icon(Icons.add, color: AppColors.success, size: 18),
                             SizedBox(width: 8),
-                            Text('Add package',
+                            Text(l10n.coachPackagesAddPackage,
                                 style: TextStyle(
                                     color: AppColors.success,
                                     fontSize: 14,
@@ -629,7 +646,7 @@ final bytes = image.bytes;
       setState(() => _saving = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text('Error saving package'),
+            content: Text(AppLocalizations.of(context).coachPackagesSaveError),
             backgroundColor: context.fitlek.card));
       }
     }
@@ -704,6 +721,7 @@ final bytes = image.bytes;
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Container(
       decoration: BoxDecoration(
         color: context.fitlek.card,
@@ -721,7 +739,10 @@ final bytes = image.bytes;
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(widget.package == null ? 'Add package' : 'Edit package',
+                  Text(
+                      widget.package == null
+                          ? l10n.coachPackagesAddPackage
+                          : l10n.coachPackagesEditPackage,
                       style: TextStyle(
                           color: Theme.of(context).colorScheme.onSurface,
                           fontSize: 18,
@@ -764,7 +785,7 @@ final bytes = image.bytes;
                     ),
                     SizedBox(height: 24),
 
-                    Text('Name',
+                    Text(l10n.coachPackagesNameLabel,
                         style: TextStyle(
                             color: Theme.of(context).colorScheme.onSurface,
                             fontSize: 13,
@@ -776,7 +797,7 @@ final bytes = image.bytes;
                           color: Theme.of(context).colorScheme.onSurface,
                           fontSize: 14),
                       decoration: InputDecoration(
-                        hintText: 'e.g. Strength starter',
+                        hintText: l10n.coachPackagesNameHint,
                         hintStyle: TextStyle(
                             color: context.fitlek.textMuted, fontSize: 14),
                         filled: true,
@@ -798,19 +819,22 @@ final bytes = image.bytes;
                     Row(
                       children: [
                         Expanded(
-                            child: _buildCounter('Sessions', _sessions, () {
+                            child: _buildCounter(
+                                l10n.coachPackagesSessionsLabel, _sessions, () {
                           if (_sessions > 1) setState(() => _sessions--);
                         }, () => setState(() => _sessions++), '')),
                         SizedBox(width: 16),
                         Expanded(
-                            child: _buildCounter('Duration', _duration, () {
+                            child: _buildCounter(
+                                l10n.coachPackagesDurationLabel, _duration, () {
                           if (_duration > 15) setState(() => _duration -= 15);
-                        }, () => setState(() => _duration += 15), 'min')),
+                        }, () => setState(() => _duration += 15),
+                                l10n.coachPackagesMinutesUnit)),
                       ],
                     ),
                     SizedBox(height: 20),
 
-                    Text('Pricing',
+                    Text(l10n.coachPackagesPricingLabel,
                         style: TextStyle(
                             color: Theme.of(context).colorScheme.onSurface,
                             fontSize: 13,
@@ -848,7 +872,7 @@ final bytes = image.bytes;
                                               : context.fitlek.textMuted,
                                           size: 16),
                                       SizedBox(width: 8),
-                                      Text('Fixed price',
+                                      Text(l10n.coachPackagesFixedPrice,
                                           style: TextStyle(
                                               color: Theme.of(context)
                                                   .colorScheme
@@ -858,7 +882,7 @@ final bytes = image.bytes;
                                     ],
                                   ),
                                   SizedBox(height: 4),
-                                  Text('Set a specific price',
+                                  Text(l10n.coachPackagesFixedPriceSub,
                                       style: TextStyle(
                                           color: context.fitlek.textMuted,
                                           fontSize: 11)),
@@ -898,7 +922,7 @@ final bytes = image.bytes;
                                               : context.fitlek.textMuted,
                                           size: 16),
                                       SizedBox(width: 8),
-                                      Text('On request',
+                                      Text(l10n.coachPackagesOnRequest,
                                           style: TextStyle(
                                               color: Theme.of(context)
                                                   .colorScheme
@@ -909,7 +933,7 @@ final bytes = image.bytes;
                                   ),
                                   SizedBox(height: 4),
                                   Text(
-                                      'Agree on price before confirming a booking.',
+                                      l10n.coachPackagesAgreeOnPrice,
                                       style: TextStyle(
                                           color: context.fitlek.textMuted,
                                           fontSize: 11)),
@@ -929,7 +953,7 @@ final bytes = image.bytes;
                             color: Theme.of(context).colorScheme.onSurface,
                             fontSize: 14),
                         decoration: InputDecoration(
-                          hintText: 'Price (MAD)',
+                          hintText: l10n.coachPackagesPriceHint,
                           hintStyle: TextStyle(
                               color: context.fitlek.textMuted, fontSize: 14),
                           filled: true,
@@ -949,7 +973,7 @@ final bytes = image.bytes;
                     ],
                     SizedBox(height: 20),
 
-                    Text('Locations',
+                    Text(l10n.coachPackagesLocationsLabel,
                         style: TextStyle(
                             color: Theme.of(context).colorScheme.onSurface,
                             fontSize: 13,
@@ -957,14 +981,14 @@ final bytes = image.bytes;
                     SizedBox(height: 8),
                     Row(
                       children: [
-                        _buildLocToggle('Gym'),
+                        _buildLocToggle('Gym', l10n.coachPackagesLocationGym),
                         SizedBox(width: 12),
-                        _buildLocToggle('Online'),
+                        _buildLocToggle('Online', l10n.coachPackagesLocationOnline),
                       ],
                     ),
                     SizedBox(height: 20),
 
-                    Text('What\'s included',
+                    Text(l10n.coachPackagesIncludedLabel,
                         style: TextStyle(
                             color: Theme.of(context).colorScheme.onSurface,
                             fontSize: 13,
@@ -978,7 +1002,7 @@ final bytes = image.bytes;
                           color: Theme.of(context).colorScheme.onSurface,
                           fontSize: 14),
                       decoration: InputDecoration(
-                        hintText: 'Describe what the package includes...',
+                        hintText: l10n.coachPackagesIncludedHint,
                         hintStyle: TextStyle(
                             color: context.fitlek.textMuted, fontSize: 14),
                         filled: true,
@@ -1019,7 +1043,7 @@ final bytes = image.bytes;
                           height: 20,
                           child: CircularProgressIndicator(
                               color: Colors.black, strokeWidth: 2))
-                      : Text('Save changes',
+                      : Text(l10n.coachPackagesSaveChanges,
                           style: TextStyle(
                               fontSize: 16, fontWeight: FontWeight.bold)),
                 ),
@@ -1031,7 +1055,7 @@ final bytes = image.bytes;
     );
   }
 
-  Widget _buildLocToggle(String loc) {
+  Widget _buildLocToggle(String loc, String displayLabel) {
     final sel = _locations.contains(loc);
     return GestureDetector(
       onTap: () => _toggleLoc(loc),
@@ -1051,7 +1075,7 @@ final bytes = image.bytes;
                     : Theme.of(context).colorScheme.onSurface,
                 size: 14),
             SizedBox(width: 6),
-            Text(loc,
+            Text(displayLabel,
                 style: TextStyle(
                     color: sel
                         ? AppColors.success

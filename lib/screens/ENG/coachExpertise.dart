@@ -1,4 +1,5 @@
 import '../../components/category_icon.dart';
+import 'package:fitlek1/l10n/app_localizations.dart';
 import '../../components/app_dialog.dart';
 import '../../services/media_picker_service.dart';
 import 'package:flutter/material.dart';
@@ -48,11 +49,16 @@ class _CoachExpertiseState extends State<CoachExpertise> {
   }
 
   String _getStatusLabel(String? status) {
+    final l10n = AppLocalizations.of(context);
     switch (status) {
-      case 'approved': return 'Approved';
-      case 'rejected': return 'Rejected';
-      case 'reviewing': return 'Reviewing';
-      default: return 'Self-reported';
+      case 'approved':
+        return l10n.coachExpertiseStatusApproved;
+      case 'rejected':
+        return l10n.coachExpertiseStatusRejected;
+      case 'reviewing':
+        return l10n.coachExpertiseStatusReviewing;
+      default:
+        return l10n.coachExpertiseStatusSelfReported;
     }
   }
 
@@ -122,43 +128,56 @@ class _CoachExpertiseState extends State<CoachExpertise> {
 
       final res = await ApiService.put('/coach/profile/edit', body);
       if (!mounted) return;
+      final l10n = AppLocalizations.of(context);
 
       if (res['ok'] == true) {
-        _showSnack('Profile updated');
+        _showSnack(l10n.coachExpertiseProfileUpdated);
         Navigator.of(context).pop(true);
       } else {
-        _showSnack(res['message']?.toString() ?? 'Error while updating', isError: true);
+        _showSnack(
+            res['message']?.toString() ?? l10n.coachExpertiseErrorUpdating,
+            isError: true);
       }
     } catch (e) {
-      if (mounted) _showSnack('Error: $e', isError: true);
+      if (mounted) {
+        _showSnack(
+            AppLocalizations.of(context).coachExpertiseErrorGeneric('$e'),
+            isError: true);
+      }
     } finally {
       if (mounted) setState(() => _saving = false);
     }
   }
 
   void _addSpecialty() async {
+    final l10n = AppLocalizations.of(context);
     if (_specialties.length >= 5) {
-      _showSnack('You can add up to 5 specialties', isError: true);
+      _showSnack(l10n.coachExpertiseMaxSpecialties, isError: true);
       return;
     }
     // simple dialog to add specialty
     final textCtrl = TextEditingController();
     final result = await showDialog<String>(
-      context: context,
-      builder: (ctx) => AppDialog(
-        backgroundColor: context.fitlek.card,
-        title: Text('Add specialty', style: TextStyle(color: Theme.of(ctx).colorScheme.onSurface)),
-        content: TextField(
-          controller: textCtrl,
-          style: TextStyle(color: Theme.of(ctx).colorScheme.onSurface),
-          decoration: InputDecoration(hintText: 'e.g. Strength building'),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
-          TextButton(onPressed: () => Navigator.pop(ctx, textCtrl.text), child: const Text('Add')),
-        ],
-      )
-    );
+        context: context,
+        builder: (ctx) => AppDialog(
+              backgroundColor: context.fitlek.card,
+              title: Text(l10n.coachExpertiseAddSpecialtyTitle,
+                  style: TextStyle(color: Theme.of(ctx).colorScheme.onSurface)),
+              content: TextField(
+                controller: textCtrl,
+                style: TextStyle(color: Theme.of(ctx).colorScheme.onSurface),
+                decoration: InputDecoration(
+                    hintText: l10n.coachExpertiseSpecialtyHint),
+              ),
+              actions: [
+                TextButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    child: Text(l10n.coachExpertiseCancel)),
+                TextButton(
+                    onPressed: () => Navigator.pop(ctx, textCtrl.text),
+                    child: Text(l10n.coachExpertiseAdd)),
+              ],
+            ));
     if (result != null && result.trim().isNotEmpty) {
       if (!_specialties.contains(result.trim())) {
         setState(() => _specialties.add(result.trim()));
@@ -167,6 +186,7 @@ class _CoachExpertiseState extends State<CoachExpertise> {
   }
 
   void _addCertification() async {
+    final l10n = AppLocalizations.of(context);
     final nameCtrl = TextEditingController();
     final providerCtrl = TextEditingController();
     final yearCtrl = TextEditingController();
@@ -175,115 +195,153 @@ class _CoachExpertiseState extends State<CoachExpertise> {
     final picker = AppMediaPicker(context);
 
     final result = await showDialog<Map<String, dynamic>>(
-      context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setDialogState) {
-          return AppDialog(
-            backgroundColor: context.fitlek.card,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-            title: Text('Add certification', style: TextStyle(color: Theme.of(ctx).colorScheme.onSurface, fontWeight: FontWeight.w600)),
-            content: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  _buildDialogTextField(nameCtrl, 'Certificate Name', ctx),
-                  const SizedBox(height: 12),
-                  _buildDialogTextField(providerCtrl, 'Provider / Academy', ctx),
-                  const SizedBox(height: 12),
-                  _buildDialogTextField(yearCtrl, 'Year', ctx, isNumber: true),
-                  const SizedBox(height: 16),
-                  if (fileUrl != null)
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.05),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(Icons.check_circle, color: Theme.of(context).colorScheme.primary, size: 20),
-                          const SizedBox(width: 8),
-                          const Expanded(child: Text('File uploaded', style: TextStyle(color: Colors.white, fontSize: 13))),
-                          GestureDetector(
-                            onTap: () => setDialogState(() => fileUrl = null),
-                            child: const Icon(Icons.cancel, color: Colors.white54, size: 16),
+        context: context,
+        builder: (ctx) => StatefulBuilder(builder: (ctx, setDialogState) {
+              return AppDialog(
+                backgroundColor: context.fitlek.card,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16)),
+                title: Text(l10n.coachExpertiseAddCertTitle,
+                    style: TextStyle(
+                        color: Theme.of(ctx).colorScheme.onSurface,
+                        fontWeight: FontWeight.w600)),
+                content: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      _buildDialogTextField(
+                          nameCtrl, l10n.coachExpertiseCertNameHint, ctx),
+                      const SizedBox(height: 12),
+                      _buildDialogTextField(providerCtrl,
+                          l10n.coachExpertiseCertProviderHint, ctx),
+                      const SizedBox(height: 12),
+                      _buildDialogTextField(
+                          yearCtrl, l10n.coachExpertiseCertYearHint, ctx,
+                          isNumber: true),
+                      const SizedBox(height: 16),
+                      if (fileUrl != null)
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.05),
+                            borderRadius: BorderRadius.circular(8),
                           ),
-                        ],
-                      ),
-                    )
-                  else
-                    GestureDetector(
-                      onTap: () async {
-                        try {
-                          final XFile? image = await picker.pickImage(source: ImageSource.gallery);
-                          if (image != null) {
-                            setDialogState(() => isUploading = true);
-                            final bytes = await image.readAsBytes();
-                            final uploadRes = await ApiService.uploadMultipart(
-                              '/upload/certification',
-                              fields: {},
-                              fileBytes: bytes,
-                              fileField: 'certificate',
-                              fileName: image.name,
-                              mimeType: image.mimeType ?? 'image/jpeg',
-                            );
-                            if (uploadRes['ok'] == true && uploadRes['url'] != null) {
-                              setDialogState(() {
-                                fileUrl = uploadRes['url'];
-                                isUploading = false;
-                              });
-                            } else {
+                          child: Row(
+                            children: [
+                              Icon(Icons.check_circle,
+                                  color: Theme.of(context).colorScheme.primary,
+                                  size: 20),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                  child: Text(
+                                      l10n.coachExpertiseFileUploaded,
+                                      style: const TextStyle(
+                                          color: Colors.white, fontSize: 13))),
+                              GestureDetector(
+                                onTap: () =>
+                                    setDialogState(() => fileUrl = null),
+                                child: const Icon(Icons.cancel,
+                                    color: Colors.white54, size: 16),
+                              ),
+                            ],
+                          ),
+                        )
+                      else
+                        GestureDetector(
+                          onTap: () async {
+                            try {
+                              final XFile? image = await picker.pickImage(
+                                  source: ImageSource.gallery);
+                              if (image != null) {
+                                setDialogState(() => isUploading = true);
+                                final bytes = await image.readAsBytes();
+                                final uploadRes =
+                                    await ApiService.uploadMultipart(
+                                  '/upload/certification',
+                                  fields: {},
+                                  fileBytes: bytes,
+                                  fileField: 'certificate',
+                                  fileName: image.name,
+                                  mimeType: image.mimeType ?? 'image/jpeg',
+                                );
+                                if (uploadRes['ok'] == true &&
+                                    uploadRes['url'] != null) {
+                                  setDialogState(() {
+                                    fileUrl = uploadRes['url'];
+                                    isUploading = false;
+                                  });
+                                } else {
+                                  setDialogState(() => isUploading = false);
+                                  _showSnack(
+                                      uploadRes['error']?.toString() ??
+                                          uploadRes['message']?.toString() ??
+                                          l10n.coachExpertiseUploadFailed,
+                                      isError: true);
+                                }
+                              }
+                            } catch (e) {
                               setDialogState(() => isUploading = false);
-                              _showSnack(uploadRes['error']?.toString() ?? uploadRes['message']?.toString() ?? 'Upload failed', isError: true);
+                              _showSnack(l10n.coachExpertiseErrorPickingFile,
+                                  isError: true);
                             }
-                          }
-                        } catch (e) {
-                          setDialogState(() => isUploading = false);
-                          _showSnack('Error picking file', isError: true);
-                        }
-                      },
-                      child: Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        decoration: BoxDecoration(
-                          border: Border.all(color: context.fitlek.border, style: BorderStyle.solid),
-                          borderRadius: BorderRadius.circular(12),
-                          color: const Color(0xFF0F261F),
-                        ),
-                        child: isUploading 
-                          ? const Center(child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2)))
-                          : Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(Icons.upload_file, color: Theme.of(context).colorScheme.primary, size: 20),
-                                const SizedBox(width: 8),
-                                const Text('Upload certificate', style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600)),
-                              ],
+                          },
+                          child: Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            decoration: BoxDecoration(
+                              border: Border.all(
+                                  color: context.fitlek.border,
+                                  style: BorderStyle.solid),
+                              borderRadius: BorderRadius.circular(12),
+                              color: const Color(0xFF0F261F),
                             ),
-                      ),
-                    ),
+                            child: isUploading
+                                ? const Center(
+                                    child: SizedBox(
+                                        width: 20,
+                                        height: 20,
+                                        child: CircularProgressIndicator(
+                                            strokeWidth: 2)))
+                                : Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(Icons.upload_file,
+                                          color: Theme.of(context)
+                                              .colorScheme
+                                              .primary,
+                                          size: 20),
+                                      const SizedBox(width: 8),
+                                      Text(l10n.coachExpertiseUploadCertificate,
+                                          style: const TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.w600)),
+                                    ],
+                                  ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                actions: [
+                  TextButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      child: Text(l10n.coachExpertiseCancel)),
+                  TextButton(
+                    onPressed: () {
+                      if (nameCtrl.text.trim().isEmpty) return;
+                      Navigator.pop(ctx, {
+                        'name': nameCtrl.text.trim(),
+                        'provider': providerCtrl.text.trim(),
+                        'year': yearCtrl.text.trim(),
+                        if (fileUrl != null) 'fileUrl': fileUrl,
+                      });
+                    },
+                    child: Text(l10n.coachExpertiseAdd),
+                  ),
                 ],
-              ),
-            ),
-            actions: [
-              TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
-              TextButton(
-                onPressed: () {
-                  if (nameCtrl.text.trim().isEmpty) return;
-                  Navigator.pop(ctx, {
-                    'name': nameCtrl.text.trim(),
-                    'provider': providerCtrl.text.trim(),
-                    'year': yearCtrl.text.trim(),
-                    if (fileUrl != null) 'fileUrl': fileUrl,
-                  });
-                },
-                child: const Text('Add'),
-              ),
-            ],
-          );
-        }
-      )
-    );
+              );
+            }));
 
     if (result != null) {
       setState(() => _certifications.add(result));
@@ -318,6 +376,7 @@ class _CoachExpertiseState extends State<CoachExpertise> {
   }
 
   void _viewDetails(Map cert) {
+    final l10n = AppLocalizations.of(context);
     showDialog(
       context: context,
       builder: (ctx) => Dialog(
@@ -334,30 +393,46 @@ class _CoachExpertiseState extends State<CoachExpertise> {
             children: [
               // Header
               Container(
-                padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 20),
+                padding:
+                    const EdgeInsets.symmetric(vertical: 20, horizontal: 20),
                 decoration: BoxDecoration(
                   color: const Color(0xFF0F261F),
-                  borderRadius: const BorderRadius.only(topLeft: Radius.circular(20), topRight: Radius.circular(20)),
-                  border: Border(bottom: BorderSide(color: context.fitlek.border)),
+                  borderRadius: const BorderRadius.only(
+                      topLeft: Radius.circular(20),
+                      topRight: Radius.circular(20)),
+                  border:
+                      Border(bottom: BorderSide(color: context.fitlek.border)),
                 ),
                 child: Row(
                   children: [
                     Container(
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
-                        color: Theme.of(ctx).colorScheme.primary.withOpacity(0.1),
+                        color:
+                            Theme.of(ctx).colorScheme.primary.withOpacity(0.1),
                         shape: BoxShape.circle,
                       ),
-                      child: Icon(Icons.workspace_premium_rounded, color: Theme.of(ctx).colorScheme.primary, size: 24),
+                      child: Icon(Icons.workspace_premium_rounded,
+                          color: Theme.of(ctx).colorScheme.primary, size: 24),
                     ),
                     const SizedBox(width: 16),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text('Certification Details', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                          Text(l10n.coachExpertiseCertDetailsTitle,
+                              style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold)),
                           const SizedBox(height: 2),
-                          Text(cert['status'] == 'approved' ? 'Verified Certificate' : 'Review in progress', style: TextStyle(color: context.fitlek.textSecondary, fontSize: 12)),
+                          Text(
+                              cert['status'] == 'approved'
+                                  ? l10n.coachExpertiseVerifiedCertificate
+                                  : l10n.coachExpertiseReviewInProgress,
+                              style: TextStyle(
+                                  color: context.fitlek.textSecondary,
+                                  fontSize: 12)),
                         ],
                       ),
                     ),
@@ -370,7 +445,7 @@ class _CoachExpertiseState extends State<CoachExpertise> {
                   ],
                 ),
               ),
-              
+
               // Body
               Padding(
                 padding: const EdgeInsets.all(24),
@@ -378,27 +453,42 @@ class _CoachExpertiseState extends State<CoachExpertise> {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _buildDetailRow('Name', cert['name'] ?? ''),
+                    _buildDetailRow(
+                        l10n.coachExpertiseDetailName, cert['name'] ?? ''),
                     const SizedBox(height: 16),
-                    _buildDetailRow('Provider / Academy', cert['provider'] ?? ''),
+                    _buildDetailRow(l10n.coachExpertiseDetailProvider,
+                        cert['provider'] ?? ''),
                     const SizedBox(height: 16),
                     Row(
                       children: [
-                        Expanded(child: _buildDetailRow('Year', cert['year'] ?? '')),
+                        Expanded(
+                            child: _buildDetailRow(
+                                l10n.coachExpertiseDetailYear,
+                                cert['year'] ?? '')),
                         const SizedBox(width: 16),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text('Status', style: TextStyle(color: context.fitlek.textMuted, fontSize: 12, fontWeight: FontWeight.w500)),
+                              Text(l10n.coachExpertiseDetailStatus,
+                                  style: TextStyle(
+                                      color: context.fitlek.textMuted,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w500)),
                               const SizedBox(height: 4),
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 10, vertical: 4),
                                 decoration: BoxDecoration(
-                                  color: _getStatusColor(cert['status']).withOpacity(0.15),
+                                  color: _getStatusColor(cert['status'])
+                                      .withOpacity(0.15),
                                   borderRadius: BorderRadius.circular(20),
                                 ),
-                                child: Text(_getStatusLabel(cert['status']), style: TextStyle(color: _getStatusColor(cert['status']), fontSize: 12, fontWeight: FontWeight.w600)),
+                                child: Text(_getStatusLabel(cert['status']),
+                                    style: TextStyle(
+                                        color: _getStatusColor(cert['status']),
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w600)),
                               ),
                             ],
                           ),
@@ -407,7 +497,11 @@ class _CoachExpertiseState extends State<CoachExpertise> {
                     ),
                     if (cert['fileUrl'] != null) ...[
                       const SizedBox(height: 24),
-                      const Text('Attached Document', style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600)),
+                      Text(l10n.coachExpertiseAttachedDocument,
+                          style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600)),
                       const SizedBox(height: 12),
                       GestureDetector(
                         onTap: () {
@@ -430,19 +524,31 @@ class _CoachExpertiseState extends State<CoachExpertise> {
                                           if (progress == null) return child;
                                           return const SizedBox(
                                             height: 300,
-                                            child: Center(child: CircularProgressIndicator()),
+                                            child: Center(
+                                                child:
+                                                    CircularProgressIndicator()),
                                           );
                                         },
-                                        errorBuilder: (ctx, err, stack) => Container(
+                                        errorBuilder: (ctx, err, stack) =>
+                                            Container(
                                           height: 200,
                                           width: double.infinity,
-                                          decoration: BoxDecoration(color: context.fitlek.card, borderRadius: BorderRadius.circular(12)),
-                                          child: const Column(
-                                            mainAxisAlignment: MainAxisAlignment.center,
+                                          decoration: BoxDecoration(
+                                              color: context.fitlek.card,
+                                              borderRadius:
+                                                  BorderRadius.circular(12)),
+                                          child: Column(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.center,
                                             children: [
-                                              Icon(Icons.broken_image, color: Colors.white54, size: 40),
-                                              SizedBox(height: 8),
-                                              Text('Failed to load document', style: TextStyle(color: Colors.white54)),
+                                              const Icon(Icons.broken_image,
+                                                  color: Colors.white54,
+                                                  size: 40),
+                                              const SizedBox(height: 8),
+                                              Text(
+                                                  l10n.coachExpertiseFailedLoadDoc,
+                                                  style: const TextStyle(
+                                                      color: Colors.white54)),
                                             ],
                                           ),
                                         ),
@@ -458,8 +564,10 @@ class _CoachExpertiseState extends State<CoachExpertise> {
                                         shape: BoxShape.circle,
                                       ),
                                       child: IconButton(
-                                        icon: const Icon(Icons.close, color: Colors.white),
-                                        onPressed: () => Navigator.pop(context),
+                                        icon: const Icon(Icons.close,
+                                            color: Colors.white),
+                                        onPressed: () =>
+                                            Navigator.pop(context),
                                       ),
                                     ),
                                   ),
@@ -485,13 +593,17 @@ class _CoachExpertiseState extends State<CoachExpertise> {
                               color: Colors.black.withOpacity(0.4),
                               borderRadius: BorderRadius.circular(12),
                             ),
-                            child: const Center(
+                            child: Center(
                               child: Column(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Icon(Icons.zoom_in, color: Colors.white, size: 32),
-                                  SizedBox(height: 4),
-                                  Text('Tap to preview', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                                  const Icon(Icons.zoom_in,
+                                      color: Colors.white, size: 32),
+                                  const SizedBox(height: 4),
+                                  Text(l10n.coachExpertiseTapToPreview,
+                                      style: const TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.w600)),
                                 ],
                               ),
                             ),
@@ -535,11 +647,12 @@ class _CoachExpertiseState extends State<CoachExpertise> {
   }
 
   Widget _buildPrimaryCategory() {
+    final l10n = AppLocalizations.of(context);
     return _buildCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Primary category', style: TextStyle(color: context.fitlek.textSecondary, fontSize: 13, fontWeight: FontWeight.w600)),
+          Text(l10n.coachExpertisePrimaryCategory, style: TextStyle(color: context.fitlek.textSecondary, fontSize: 13, fontWeight: FontWeight.w600)),
           const SizedBox(height: 12),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
@@ -551,7 +664,7 @@ class _CoachExpertiseState extends State<CoachExpertise> {
             child: DropdownButtonHideUnderline(
               child: DropdownButton<int>(
                 value: _categoryID,
-                hint: Text('Select category', style: TextStyle(color: context.fitlek.textMuted)),
+                hint: Text(l10n.coachExpertiseSelectCategory, style: TextStyle(color: context.fitlek.textMuted)),
                 isDense: false,
                 isExpanded: true,
                 dropdownColor: context.fitlek.card,
@@ -578,6 +691,7 @@ class _CoachExpertiseState extends State<CoachExpertise> {
   }
 
   Widget _buildCoachingSince() {
+    final l10n = AppLocalizations.of(context);
     final currentYear = DateTime.now().year;
     final years = List.generate(40, (i) => (currentYear - i).toString());
 
@@ -585,7 +699,7 @@ class _CoachExpertiseState extends State<CoachExpertise> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Coaching since', style: TextStyle(color: context.fitlek.textSecondary, fontSize: 13, fontWeight: FontWeight.w600)),
+          Text(l10n.coachExpertiseCoachingSince, style: TextStyle(color: context.fitlek.textSecondary, fontSize: 13, fontWeight: FontWeight.w600)),
           const SizedBox(height: 12),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
@@ -597,7 +711,7 @@ class _CoachExpertiseState extends State<CoachExpertise> {
             child: DropdownButtonHideUnderline(
               child: DropdownButton<String>(
                 value: _experience,
-                hint: Text('Select year', style: TextStyle(color: context.fitlek.textMuted)),
+                hint: Text(l10n.coachExpertiseSelectYear, style: TextStyle(color: context.fitlek.textMuted)),
                 isDense: false,
                 isExpanded: true,
                 dropdownColor: context.fitlek.card,
@@ -624,19 +738,20 @@ class _CoachExpertiseState extends State<CoachExpertise> {
   }
 
   Widget _buildWhoYouCoach() {
+    final l10n = AppLocalizations.of(context);
     return _buildCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Who you coach', style: TextStyle(color: context.fitlek.textSecondary, fontSize: 13, fontWeight: FontWeight.w600)),
+          Text(l10n.coachExpertiseWhoYouCoach, style: TextStyle(color: context.fitlek.textSecondary, fontSize: 13, fontWeight: FontWeight.w600)),
           const SizedBox(height: 12),
           Row(
             children: [
-              _buildLevelBtn('Beginners', Icons.person_outline),
+              _buildLevelBtn('Beginners', l10n.coachExpertiseLevelBeginners, Icons.person_outline),
               const SizedBox(width: 8),
-              _buildLevelBtn('Intermediate', Icons.bar_chart_rounded),
+              _buildLevelBtn('Intermediate', l10n.coachExpertiseLevelIntermediate, Icons.bar_chart_rounded),
               const SizedBox(width: 8),
-              _buildLevelBtn('Advanced', Icons.directions_run_rounded),
+              _buildLevelBtn('Advanced', l10n.coachExpertiseLevelAdvanced, Icons.directions_run_rounded),
             ],
           ),
         ],
@@ -644,14 +759,14 @@ class _CoachExpertiseState extends State<CoachExpertise> {
     );
   }
 
-  Widget _buildLevelBtn(String label, IconData icon) {
-    final isSelected = _clientLevels.contains(label);
+  Widget _buildLevelBtn(String value, String displayLabel, IconData icon) {
+    final isSelected = _clientLevels.contains(value);
     return Expanded(
       child: GestureDetector(
         onTap: () {
           setState(() {
-            if (isSelected) _clientLevels.remove(label);
-            else _clientLevels.add(label);
+            if (isSelected) _clientLevels.remove(value);
+            else _clientLevels.add(value);
           });
         },
         child: Container(
@@ -667,7 +782,7 @@ class _CoachExpertiseState extends State<CoachExpertise> {
               Icon(icon, color: isSelected ? Colors.white : context.fitlek.textSecondary, size: 16),
               const SizedBox(width: 6),
               Expanded(
-                child: Text(label, overflow: TextOverflow.ellipsis, style: TextStyle(color: isSelected ? Colors.white : context.fitlek.textSecondary, fontSize: 12, fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600)),
+                child: Text(displayLabel, overflow: TextOverflow.ellipsis, style: TextStyle(color: isSelected ? Colors.white : context.fitlek.textSecondary, fontSize: 12, fontWeight: isSelected ? FontWeight.w700 : FontWeight.w600)),
               ),
               const SizedBox(width: 4),
               Icon(isSelected ? Icons.check_circle_rounded : Icons.radio_button_unchecked, color: isSelected ? Theme.of(context).colorScheme.primary : context.fitlek.textMuted, size: 16),
@@ -678,14 +793,39 @@ class _CoachExpertiseState extends State<CoachExpertise> {
     );
   }
 
+  String _localizeSpecialty(String s) {
+    final l10n = AppLocalizations.of(context);
+    switch (s) {
+      case 'Functional Training':
+        return l10n.coachExpertiseSuggestedFunctional;
+      case 'Strength & Conditioning':
+        return l10n.coachExpertiseSuggestedConditioning;
+      case 'Powerlifting':
+        return l10n.coachExpertiseSuggestedPowerlifting;
+      case 'Bodybuilding':
+        return l10n.coachExpertiseSuggestedBodybuilding;
+      case 'Rehabilitation':
+        return l10n.coachExpertiseSuggestedRehabilitation;
+      case 'Nutrition':
+        return l10n.coachExpertiseSuggestedNutrition;
+      case 'Yoga':
+        return l10n.coachExpertiseSuggestedYoga;
+      case 'Pilates':
+        return l10n.coachExpertiseSuggestedPilates;
+      default:
+        return s;
+    }
+  }
+
   Widget _buildSpecialties() {
+    final l10n = AppLocalizations.of(context);
     return _buildCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Specialties', style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w700)),
+          Text(l10n.coachExpertiseSpecialtiesTitle, style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w700)),
           const SizedBox(height: 6),
-          Text('Add up to 5 specialties that best match your coaching.', style: TextStyle(color: context.fitlek.textSecondary, fontSize: 13)),
+          Text(l10n.coachExpertiseSpecialtiesSubtitle, style: TextStyle(color: context.fitlek.textSecondary, fontSize: 13)),
           const SizedBox(height: 16),
           if (_specialties.isNotEmpty) ...[
             Wrap(
@@ -701,7 +841,7 @@ class _CoachExpertiseState extends State<CoachExpertise> {
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(s, style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600)),
+                    Text(_localizeSpecialty(s), style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600)),
                     const SizedBox(width: 6),
                     GestureDetector(
                       onTap: () => setState(() => _specialties.remove(s)),
@@ -728,13 +868,13 @@ class _CoachExpertiseState extends State<CoachExpertise> {
                 children: [
                   Icon(Icons.add_circle_outline_rounded, color: Theme.of(context).colorScheme.primary, size: 20),
                   const SizedBox(width: 8),
-                  const Text('Add specialty', style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600)),
+                  Text(l10n.coachExpertiseAddSpecialtyTitle, style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600)),
                 ],
               ),
             ),
           ),
           const SizedBox(height: 20),
-          Text('Suggested for you', style: TextStyle(color: context.fitlek.textSecondary, fontSize: 13)),
+          Text(l10n.coachExpertiseSuggestedForYou, style: TextStyle(color: context.fitlek.textSecondary, fontSize: 13)),
           const SizedBox(height: 12),
           Wrap(
             spacing: 8,
@@ -755,7 +895,7 @@ class _CoachExpertiseState extends State<CoachExpertise> {
                   children: [
                     Icon(Icons.add_circle_rounded, color: Theme.of(context).colorScheme.primary, size: 16),
                     const SizedBox(width: 6),
-                    Text(s, style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600)),
+                    Text(_localizeSpecialty(s), style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600)),
                   ],
                 ),
               ),
@@ -767,13 +907,14 @@ class _CoachExpertiseState extends State<CoachExpertise> {
   }
 
   Widget _buildCertifications() {
+    final l10n = AppLocalizations.of(context);
     return _buildCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Certifications', style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w700)),
+          Text(l10n.coachExpertiseCertificationsTitle, style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w700)),
           const SizedBox(height: 6),
-          Text('Add your relevant certifications and credentials.', style: TextStyle(color: context.fitlek.textSecondary, fontSize: 13)),
+          Text(l10n.coachExpertiseCertificationsSubtitle, style: TextStyle(color: context.fitlek.textSecondary, fontSize: 13)),
           const SizedBox(height: 16),
           ..._certifications.map((cert) {
             if (cert is! Map) return const SizedBox();
@@ -875,7 +1016,7 @@ class _CoachExpertiseState extends State<CoachExpertise> {
                         child: TextButton.icon(
                           onPressed: () => _viewDetails(cert),
                           icon: Icon(Icons.visibility_outlined, color: context.fitlek.textSecondary, size: 16),
-                          label: const Text('View details', style: TextStyle(color: Colors.white, fontSize: 13)),
+                          label: Text(l10n.coachExpertiseViewDetails, style: const TextStyle(color: Colors.white, fontSize: 13)),
                         ),
                       ),
                       if (cert['status'] != 'approved' && cert['status'] != 'reviewing') ...[
@@ -884,10 +1025,10 @@ class _CoachExpertiseState extends State<CoachExpertise> {
                           child: TextButton.icon(
                             onPressed: () {
                               setState(() => cert['status'] = 'reviewing');
-                              _showSnack('The review process will take up to 48 hours.');
+                              _showSnack(l10n.coachExpertiseReviewNotice);
                             },
                             icon: Icon(Icons.description_outlined, color: context.fitlek.textSecondary, size: 16),
-                            label: Text(cert['status'] == 'rejected' ? 'Resubmit' : 'Submit for verification', style: const TextStyle(color: Colors.white, fontSize: 13)),
+                            label: Text(cert['status'] == 'rejected' ? l10n.coachExpertiseResubmit : l10n.coachExpertiseSubmitVerification, style: const TextStyle(color: Colors.white, fontSize: 13)),
                           ),
                         ),
                       ]
@@ -912,7 +1053,7 @@ class _CoachExpertiseState extends State<CoachExpertise> {
                 children: [
                   Icon(Icons.add_circle_outline_rounded, color: Theme.of(context).colorScheme.primary, size: 20),
                   const SizedBox(width: 8),
-                  const Text('Add certification', style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600)),
+                  Text(l10n.coachExpertiseAddCertTitle, style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600)),
                 ],
               ),
             ),
@@ -922,7 +1063,7 @@ class _CoachExpertiseState extends State<CoachExpertise> {
             children: [
               Icon(Icons.info_outline_rounded, color: context.fitlek.textSecondary, size: 14),
               const SizedBox(width: 6),
-              Text('Only reviewed credentials receive a verified badge.', style: TextStyle(color: context.fitlek.textSecondary, fontSize: 12)),
+              Text(l10n.coachExpertiseVerifiedBadgeInfo, style: TextStyle(color: context.fitlek.textSecondary, fontSize: 12)),
             ],
           ),
         ],
@@ -932,6 +1073,7 @@ class _CoachExpertiseState extends State<CoachExpertise> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final bgDark = const Color(0xFF0A1817);
 
     return Scaffold(
@@ -945,7 +1087,7 @@ class _CoachExpertiseState extends State<CoachExpertise> {
           icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text('Expertise', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w800)),
+        title: Text(l10n.coachExpertiseTitle, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w800)),
         actions: [
           Padding(
             padding: const EdgeInsets.only(right: 16),
@@ -960,7 +1102,7 @@ class _CoachExpertiseState extends State<CoachExpertise> {
                   children: [
                     Icon(Icons.visibility_outlined, color: Theme.of(context).colorScheme.primary, size: 16),
                     const SizedBox(width: 6),
-                    const Text('Preview', style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600)),
+                    Text(l10n.coachExpertisePreview, style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600)),
                   ],
                 ),
               ),
@@ -998,7 +1140,7 @@ class _CoachExpertiseState extends State<CoachExpertise> {
           ),
           child: _saving
               ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation<Color>(Colors.black)))
-              : const Text('Save changes', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800)),
+              : Text(l10n.coachExpertiseSaveChanges, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800)),
         ),
       ),
     );

@@ -1,3 +1,4 @@
+import 'package:fitlek1/services/svc_l10n.dart';
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
@@ -7,8 +8,7 @@ class ConnectionRecovery {
   static final failure = ValueNotifier<String?>(null);
   static final _refreshes = StreamController<void>.broadcast();
   static Stream<void> get refreshes => _refreshes.stream;
-  static const message =
-      'Your connection may be weak or interrupted, or the server may be temporarily unavailable. Check your Wi-Fi or mobile data, then try again.';
+  static String get message => svcL10n.connectionRecoveryMessage;
 
   static bool report(Object error) {
     if (error is! http.ClientException && error is! TimeoutException) {

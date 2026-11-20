@@ -1,3 +1,4 @@
+import 'package:fitlek1/l10n/app_localizations.dart';
 import '../../components/app_dialog.dart';
 import 'dart:convert';
 import 'package:flutter/material.dart';
@@ -51,13 +52,13 @@ class _BlockedUsersListState extends State<BlockedUsersList> {
         });
       } else {
         setState(() {
-          _error = 'Failed to load blocked users';
+          _error = AppLocalizations.of(context).blockedUsersListLoadFailed;
           _loading = false;
         });
       }
     } catch (e) {
       setState(() {
-        _error = 'Network error: $e';
+        _error = AppLocalizations.of(context).blockedUsersListNetworkError(e.toString());
         _loading = false;
       });
     }
@@ -69,19 +70,19 @@ class _BlockedUsersListState extends State<BlockedUsersList> {
       builder: (ctx) => AppDialog(
         backgroundColor: context.fitlek.card,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text('Unblock $name?', style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
+        title: Text(AppLocalizations.of(context).blockedUsersListUnblockTitle(name), style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
         content: Text(
-          'They will be able to see your profile and send you messages again.',
+          AppLocalizations.of(context).blockedUsersListUnblockMessage,
           style: TextStyle(color: context.fitlek.textMuted),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: Text('Cancel', style: TextStyle(color: context.fitlek.textMuted)),
+            child: Text(AppLocalizations.of(context).blockedUsersListCancel, style: TextStyle(color: context.fitlek.textMuted)),
           ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: Text('Unblock', style: TextStyle(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.bold)),
+            child: Text(AppLocalizations.of(context).blockedUsersListUnblock, style: TextStyle(color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -103,7 +104,7 @@ class _BlockedUsersListState extends State<BlockedUsersList> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('$name has been unblocked'),
+              content: Text(AppLocalizations.of(context).blockedUsersListUnblocked(name)),
               backgroundColor: Theme.of(context).colorScheme.primary,
               behavior: SnackBarBehavior.floating,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -115,7 +116,7 @@ class _BlockedUsersListState extends State<BlockedUsersList> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: const Text('Failed to unblock user'),
+              content: Text(AppLocalizations.of(context).blockedUsersListUnblockFailed),
               backgroundColor: context.fitlek.error,
               behavior: SnackBarBehavior.floating,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -127,7 +128,7 @@ class _BlockedUsersListState extends State<BlockedUsersList> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Network error: $e'),
+            content: Text(AppLocalizations.of(context).blockedUsersListNetworkError(e.toString())),
             backgroundColor: context.fitlek.error,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -149,7 +150,7 @@ class _BlockedUsersListState extends State<BlockedUsersList> {
         elevation: 0,
         centerTitle: true,
         title: Text(
-          'Blocked Users',
+          AppLocalizations.of(context).blockedUsersListTitle,
           style: TextStyle(color: cs.onSurface, fontWeight: FontWeight.w800, fontSize: 16, letterSpacing: 0.5),
         ),
         leading: IconButton(
@@ -175,7 +176,7 @@ class _BlockedUsersListState extends State<BlockedUsersList> {
                           foregroundColor: cs.onPrimary,
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                         ),
-                        child: const Text('Retry'),
+                        child: Text(AppLocalizations.of(context).blockedUsersListRetry),
                       ),
                     ],
                   ),
@@ -188,12 +189,12 @@ class _BlockedUsersListState extends State<BlockedUsersList> {
                           Icon(Icons.block_rounded, color: f.border, size: 64),
                           const SizedBox(height: 16),
                           Text(
-                            'No blocked users',
+                            AppLocalizations.of(context).blockedUsersListEmptyTitle,
                             style: TextStyle(color: cs.onSurface, fontSize: 18, fontWeight: FontWeight.w700),
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            'When you block someone, they will appear here.',
+                            AppLocalizations.of(context).blockedUsersListEmptyMessage,
                             style: TextStyle(color: f.textMuted, fontSize: 14),
                             textAlign: TextAlign.center,
                           ),
@@ -228,7 +229,7 @@ class _BlockedUsersListState extends State<BlockedUsersList> {
                               style: TextStyle(color: cs.onSurface, fontWeight: FontWeight.w700, fontSize: 15),
                             ),
                             subtitle: Text(
-                              'Blocked',
+                              AppLocalizations.of(context).blockedUsersListBlockedLabel,
                               style: TextStyle(color: f.error, fontSize: 12, fontWeight: FontWeight.w500),
                             ),
                             trailing: TextButton(
@@ -239,7 +240,7 @@ class _BlockedUsersListState extends State<BlockedUsersList> {
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                                 padding: const EdgeInsets.symmetric(horizontal: 16),
                               ),
-                              child: const Text('Unblock', style: TextStyle(fontWeight: FontWeight.w700)),
+                              child: Text(AppLocalizations.of(context).blockedUsersListUnblock, style: const TextStyle(fontWeight: FontWeight.w700)),
                             ),
                           ),
                         );

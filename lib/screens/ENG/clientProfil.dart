@@ -24,6 +24,8 @@ import 'clientCoachFavorites.dart';
 import 'clientChangeEmail.dart';
 import 'userLocationSettings.dart';
 import 'clientNotifications.dart';
+import 'package:fitlek1/l10n/app_localizations.dart';
+import '../../services/locale_service.dart';
 import '../../components/theme_selector.dart';
 import '../../theme/fitlek_theme_extension.dart';
 import 'package:http_parser/http_parser.dart';
@@ -186,7 +188,9 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
         final body = jsonDecode(res.body);
         if (mounted) {
           setState(() {
-            _loadError = body['error'] ?? 'Server error (${res.statusCode})';
+            _loadError = body['error'] ??
+                AppLocalizations.of(context)
+                    .clientProfilServerError(res.statusCode);
             _loadingProfile = false;
           });
         }
@@ -194,10 +198,11 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
     } catch (e) {
       if (mounted) {
         final connectionFailed = ConnectionRecovery.report(e);
+        final l10n = AppLocalizations.of(context);
         setState(() {
           _loadError = connectionFailed
-              ? 'Check your connection and try again.'
-              : 'Unable to load your profile. Please try again.';
+              ? l10n.clientProfilCheckConnection
+              : l10n.clientProfilLoadFailed;
           _loadingProfile = false;
         });
       }
@@ -369,7 +374,7 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
     } catch (_) {
       if (mounted) {
         setState(() => _weightError =
-            'Could not load your latest records. Tap Refresh history to try again.');
+            AppLocalizations.of(context).clientProfilWeightLoadFailed);
       }
     } finally {
       if (mounted) setState(() => _loadingWeight = false);
@@ -382,9 +387,12 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
             headers: _headers,
             body: jsonEncode({'clientID': widget.clientID, 'weight': weight}))
         .timeout(const Duration(seconds: 10));
-    if (response.statusCode != 201) throw Exception('Could not save weight.');
+    if (response.statusCode != 201) {
+      throw Exception(
+          AppLocalizations.of(context).clientProfilWeightSaveFailed);
+    }
     if (!mounted) return;
-    _showSnack('Weight saved ✓');
+    _showSnack(AppLocalizations.of(context).clientProfilWeightSaved);
     await _fetchWeightData();
   }
 
@@ -434,7 +442,8 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
             .timeout(const Duration(seconds: 10));
 
         if (update.statusCode != 200) {
-          throw Exception('Could not save your photo. Please try again.');
+          throw Exception(
+              AppLocalizations.of(context).clientProfilPhotoSaveFailed);
         }
         if (mounted) {
           setState(() {
@@ -442,14 +451,22 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
             _savedProfile['avatarUrl'] = newUrl;
           });
         }
-        _showSnack('Profile photo updated ✓');
+        _showSnack(AppLocalizations.of(context).clientProfilPhotoUpdated);
       } else {
         final body = jsonDecode(res.body);
-        _showSnack(body['error'] ?? 'Upload error', color: errorColor);
+        _showSnack(
+            body['error'] ??
+                AppLocalizations.of(context).clientProfilUploadError,
+            color: errorColor);
       }
     } catch (e) {
       ConnectionRecovery.report(e);
-      _showSnack('Error: $e', color: errorColor);
+      if (mounted) {
+        _showSnack(
+            AppLocalizations.of(context)
+                .clientProfilGenericError(e.toString()),
+            color: errorColor);
+      }
     } finally {
       if (mounted) setState(() => _uploadingAvatar = false);
     }
@@ -457,17 +474,18 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
 
   Future<void> _saveProfile() async {
     final errorColor = context.fitlek.error;
+    final l10n = AppLocalizations.of(context);
     if (_saving) return;
     if (_firstNameCtrl.text.trim().isEmpty ||
         _lastNameCtrl.text.trim().isEmpty) {
-      _showSnack('Please add your first and last name.', color: errorColor);
+      _showSnack(l10n.clientProfilNameRequired, color: errorColor);
       return;
     }
     final heightText = _heightCtrl.text.trim().replaceAll(',', '.');
     final height = heightText.isEmpty ? null : double.tryParse(heightText);
     if (heightText.isNotEmpty &&
         (height == null || !height.isFinite || height <= 0 || height > 300)) {
-      _showSnack('Enter a valid height in centimetres.', color: errorColor);
+      _showSnack(l10n.clientProfilInvalidHeight, color: errorColor);
       return;
     }
     setState(() => _saving = true);
@@ -508,14 +526,15 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
         final data = jsonDecode(res.body);
         if (mounted) setState(() => _saving = false);
         _showSnack(
-          data['error'] ?? 'Error while saving.',
+          data['error'] ?? AppLocalizations.of(context).clientProfilSaveFailed,
           color: errorColor,
         );
       }
     } catch (e) {
       ConnectionRecovery.report(e);
       if (mounted) setState(() => _saving = false);
-      _showSnack('Unable to reach the server.', color: errorColor);
+      _showSnack(AppLocalizations.of(context).clientProfilServerUnreachable,
+          color: errorColor);
     }
   }
 
@@ -582,14 +601,15 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                 setSheet(() {
                   loading = false;
                   errorMsg = body['reason'] as String? ??
-                      'Cannot delete account right now.';
+                      AppLocalizations.of(ctx).clientProfilDeleteBlockedDefault;
                 });
                 return;
               }
               if (res.statusCode != 200) {
                 setSheet(() {
                   loading = false;
-                  errorMsg = body['error'] as String? ?? 'Failed to send code.';
+                  errorMsg = body['error'] as String? ??
+                      AppLocalizations.of(ctx).clientProfilSendCodeFailed;
                 });
                 return;
               }
@@ -603,14 +623,16 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
             } catch (_) {
               setSheet(() {
                 loading = false;
-                errorMsg = 'Unable to reach the server.';
+                errorMsg =
+                    AppLocalizations.of(ctx).clientProfilServerUnreachable;
               });
             }
           }
 
           Future<void> confirmDelete() async {
             if (otpValue.length != 6) {
-              setSheet(() => errorMsg = 'Please enter the full 6-digit code.');
+              setSheet(() => errorMsg =
+                  AppLocalizations.of(ctx).clientProfilEnterFullCode);
               return;
             }
             setSheet(() {
@@ -634,12 +656,14 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
               }
               setSheet(() {
                 loading = false;
-                errorMsg = body['error'] as String? ?? 'Verification failed.';
+                errorMsg = body['error'] as String? ??
+                    AppLocalizations.of(ctx).clientProfilVerificationFailed;
               });
             } catch (_) {
               setSheet(() {
                 loading = false;
-                errorMsg = 'Unable to reach the server.';
+                errorMsg =
+                    AppLocalizations.of(ctx).clientProfilServerUnreachable;
               });
             }
           }
@@ -649,6 +673,7 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
           final borderColor = context.fitlek.border;
           final textMuted = context.fitlek.textMuted;
           final cs = Theme.of(context).colorScheme;
+          final l10n = AppLocalizations.of(ctx);
 
           Widget buildStep1() => Column(
                 mainAxisSize: MainAxisSize.min,
@@ -680,12 +705,12 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text('Delete Account',
+                          Text(l10n.clientProfilDeleteAccountTitle,
                               style: TextStyle(
                                   color: cs.onSurface,
                                   fontSize: 17,
                                   fontWeight: FontWeight.w800)),
-                          Text('This action is permanent',
+                          Text(l10n.clientProfilDeletePermanentSubtitle,
                               style: TextStyle(color: textMuted, fontSize: 12)),
                         ],
                       ),
@@ -703,17 +728,17 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('What will be deleted:',
+                        Text(l10n.clientProfilDeleteWhatWillBeDeleted,
                             style: TextStyle(
                                 color: errorColor,
                                 fontSize: 12,
                                 fontWeight: FontWeight.w700)),
                         const SizedBox(height: 8),
                         ...[
-                          'Your profile and personal information',
-                          'All sessions and booking history',
-                          'Messages and conversations',
-                          'Weight progress and fitness data',
+                          l10n.clientProfilDeleteItemProfile,
+                          l10n.clientProfilDeleteItemSessions,
+                          l10n.clientProfilDeleteItemMessages,
+                          l10n.clientProfilDeleteItemWeight,
                         ].map((item) => Padding(
                               padding: const EdgeInsets.only(bottom: 5),
                               child: Row(
@@ -756,7 +781,7 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                         const SizedBox(width: 12),
                         Expanded(
                           child: Text(
-                            'I understand this action is irreversible and all my data will be permanently deleted.',
+                            l10n.clientProfilDeleteUnderstandCheckbox,
                             style: TextStyle(
                                 color: cs.onSurface,
                                 fontSize: 12.5,
@@ -801,7 +826,7 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                               border: Border.all(color: borderColor),
                             ),
                             child: Center(
-                              child: Text('Cancel',
+                              child: Text(l10n.clientProfilCancel,
                                   style: TextStyle(
                                       color: cs.onSurface,
                                       fontWeight: FontWeight.w700,
@@ -831,8 +856,8 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                                       child: CircularProgressIndicator(
                                           color: Colors.white, strokeWidth: 2),
                                     )
-                                  : const Text('SEND CODE',
-                                      style: TextStyle(
+                                  : Text(l10n.clientProfilSendCode,
+                                      style: const TextStyle(
                                           color: Colors.white,
                                           fontWeight: FontWeight.w800,
                                           fontSize: 13,
@@ -879,12 +904,12 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Verify your identity',
+                        Text(l10n.clientProfilVerifyIdentityTitle,
                             style: TextStyle(
                                 color: cs.onSurface,
                                 fontSize: 17,
                                 fontWeight: FontWeight.w800)),
-                        Text('Check your email for the code',
+                        Text(l10n.clientProfilVerifyCheckEmailSubtitle,
                             style: TextStyle(color: textMuted, fontSize: 12)),
                       ],
                     ),
@@ -892,7 +917,7 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                 ),
                 const SizedBox(height: 20),
                 Text(
-                  'Enter the 6-digit code sent to your email address to confirm account deletion.',
+                  l10n.clientProfilVerifyInstructions,
                   style: TextStyle(color: textMuted, fontSize: 13, height: 1.5),
                 ),
                 const SizedBox(height: 16),
@@ -933,10 +958,10 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     if (!canResend)
-                      Text('Code expires in $mins:$secs',
+                      Text(l10n.clientProfilCodeExpiresIn(mins, secs),
                           style: TextStyle(color: textMuted, fontSize: 12))
                     else
-                      Text('Code expired',
+                      Text(l10n.clientProfilCodeExpired,
                           style: TextStyle(
                               color: errorColor,
                               fontSize: 12,
@@ -944,7 +969,7 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                     GestureDetector(
                       onTap: canResend && !loading ? requestOtp : null,
                       child: Text(
-                        'Resend code',
+                        l10n.clientProfilResendCode,
                         style: TextStyle(
                           color: canResend ? errorColor : textMuted,
                           fontSize: 12,
@@ -996,7 +1021,7 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                             border: Border.all(color: borderColor),
                           ),
                           child: Center(
-                            child: Text('Back',
+                            child: Text(l10n.clientProfilBack,
                                 style: TextStyle(
                                     color: cs.onSurface,
                                     fontWeight: FontWeight.w700,
@@ -1028,8 +1053,8 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                                     child: CircularProgressIndicator(
                                         color: Colors.white, strokeWidth: 2),
                                   )
-                                : const Text('DELETE ACCOUNT',
-                                    style: TextStyle(
+                                : Text(l10n.clientProfilDeleteAccountBtn,
+                                    style: const TextStyle(
                                         color: Colors.white,
                                         fontWeight: FontWeight.w800,
                                         fontSize: 12,
@@ -1099,13 +1124,14 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
   }
 
   String _genderDisplay(String g) {
+    final l10n = AppLocalizations.of(context);
     switch (g) {
       case 'Male':
-        return 'Male';
+        return l10n.clientProfilGenderMale;
       case 'Female':
-        return 'Female';
+        return l10n.clientProfilGenderFemale;
       default:
-        return 'Other';
+        return l10n.clientProfilGenderOther;
     }
   }
 
@@ -1124,7 +1150,9 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
       useSafeArea: true,
       builder: (_) => AccountPasswordSheet(token: widget.token),
     );
-    if (mounted && updated == true) _showSnack('Password updated ✓');
+    if (mounted && updated == true) {
+      _showSnack(AppLocalizations.of(context).clientProfilPasswordUpdated);
+    }
   }
 
   @override
@@ -1149,7 +1177,7 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
               ),
               const SizedBox(height: 16),
               Text(
-                'Loading profile...',
+                AppLocalizations.of(context).clientProfilLoadingProfile,
                 style: TextStyle(color: context.fitlek.textMuted, fontSize: 13),
               ),
             ],
@@ -1189,7 +1217,7 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                             .withValues(alpha: 0.4)),
                   ),
                   child: Text(
-                    'Retry',
+                    AppLocalizations.of(context).clientProfilRetry,
                     style: TextStyle(
                       color: Theme.of(context).colorScheme.primary,
                       fontWeight: FontWeight.w700,
@@ -1203,133 +1231,149 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
         ),
       );
 
-  Widget _buildContent() => Scaffold(
-        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-        bottomNavigationBar: !_isEditing
-            ? null
-            : SafeArea(
-                top: false,
-                child: Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 10, 20, 12),
-                    child: Row(children: [
-                      OutlinedButton(
-                          onPressed: _saving ? null : _cancelEditing,
-                          child: const Text('Cancel')),
-                      const SizedBox(width: 12),
-                      Expanded(
-                          child: FilledButton.icon(
-                              onPressed: _saving ? null : _saveProfile,
-                              icon: _saving
-                                  ? const SizedBox(
-                                      width: 16,
-                                      height: 16,
-                                      child: CircularProgressIndicator(
-                                          strokeWidth: 2))
-                                  : const Icon(Icons.check_rounded, size: 18),
-                              label:
-                                  Text(_saving ? 'Saving…' : 'Save changes'))),
-                    ]))),
-        body: SafeArea(
-            child: NestedScrollView(
-          controller: _profileScroll,
-          headerSliverBuilder: (_, __) => [
-            SliverToBoxAdapter(child: _buildHeader()),
-            SliverPadding(
-                padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
-                sliver: SliverToBoxAdapter(
-                    child: ClientProfileIdentityCard(
-                        profile: _savedProfile,
-                        uploading: _uploadingAvatar,
-                        onAvatar: () {
-                          if (_avatarUrl == null || _avatarUrl!.isEmpty) {
-                            _pickAndUploadAvatar();
-                            return;
-                          }
-                          Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                  builder: (_) => ImagePreview(
-                                      imageUrl: _avatarUrl!,
-                                      tag:
-                                          'client_avatar_${widget.clientID}')));
-                        },
-                        onChangePhoto: _pickAndUploadAvatar))),
-            SliverPadding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                sliver: SliverToBoxAdapter(
-                    child: ClientProfileCompletionCard(
-                        completion: ClientProfileCompletion(_savedProfile),
-                        onComplete: _completeProfile))),
-            SliverToBoxAdapter(child: _buildStatsRow()),
-            SliverPersistentHeader(
-                pinned: true,
-                delegate: _ClientProfileTabs(
-                    background: Theme.of(context).scaffoldBackgroundColor,
-                    child: _buildTabBar())),
-          ],
-          body: TabBarView(controller: _tabController, children: [
-            _buildProfileTab(),
-            _buildProgressTab(),
-            NutritionTrackerScreen(
-                clientID: widget.clientID, token: widget.token, embedded: true)
-          ]),
-        )),
-      );
+  Widget _buildContent() {
+    final l10n = AppLocalizations.of(context);
+    return Scaffold(
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      bottomNavigationBar: !_isEditing
+          ? null
+          : SafeArea(
+              top: false,
+              child: Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 10, 20, 12),
+                  child: Row(children: [
+                    OutlinedButton(
+                        onPressed: _saving ? null : _cancelEditing,
+                        child: Text(l10n.clientProfilCancel)),
+                    const SizedBox(width: 12),
+                    Expanded(
+                        child: FilledButton.icon(
+                            onPressed: _saving ? null : _saveProfile,
+                            icon: _saving
+                                ? const SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(
+                                        strokeWidth: 2))
+                                : const Icon(Icons.check_rounded, size: 18),
+                            label: Text(_saving
+                                ? l10n.clientProfilSaving
+                                : l10n.clientProfilSaveChanges))),
+                  ]))),
+      body: SafeArea(
+          child: NestedScrollView(
+        controller: _profileScroll,
+        headerSliverBuilder: (_, __) => [
+          SliverToBoxAdapter(child: _buildHeader()),
+          SliverPadding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+              sliver: SliverToBoxAdapter(
+                  child: ClientProfileIdentityCard(
+                      profile: _savedProfile,
+                      uploading: _uploadingAvatar,
+                      onAvatar: () {
+                        if (_avatarUrl == null || _avatarUrl!.isEmpty) {
+                          _pickAndUploadAvatar();
+                          return;
+                        }
+                        Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                                builder: (_) => ImagePreview(
+                                    imageUrl: _avatarUrl!,
+                                    tag: 'client_avatar_${widget.clientID}')));
+                      },
+                      onChangePhoto: _pickAndUploadAvatar))),
+          SliverPadding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              sliver: SliverToBoxAdapter(
+                  child: ClientProfileCompletionCard(
+                      completion: ClientProfileCompletion(_savedProfile),
+                      onComplete: _completeProfile))),
+          SliverToBoxAdapter(child: _buildStatsRow()),
+          SliverPersistentHeader(
+              pinned: true,
+              delegate: _ClientProfileTabs(
+                  background: Theme.of(context).scaffoldBackgroundColor,
+                  child: _buildTabBar())),
+        ],
+        body: TabBarView(controller: _tabController, children: [
+          _buildProfileTab(),
+          _buildProgressTab(),
+          NutritionTrackerScreen(
+              clientID: widget.clientID, token: widget.token, embedded: true)
+        ]),
+      )),
+    );
+  }
 
-  Widget _buildHeader() => Padding(
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
-      child: Row(children: [
-        Expanded(
-            child:
-                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text('My profile',
-              style: TextStyle(
-                  fontSize: 32,
-                  height: 1.15,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: -1,
-                  color: Theme.of(context).colorScheme.onSurface)),
-          const SizedBox(height: 6),
-          Text(
-              _saveSuccess
-                  ? 'Your changes are saved.'
-                  : 'A little more you. A stronger journey.',
-              style: TextStyle(
-                  fontSize: 12,
-                  height: 1.4,
-                  color: _saveSuccess
-                      ? context.fitlek.success
-                      : context.fitlek.textMuted)),
-        ])),
-        const SizedBox(width: 12),
-        IconButton.outlined(
-            tooltip: _isEditing ? 'Cancel editing' : 'Edit profile',
-            onPressed: _saving
-                ? null
-                : _isEditing
-                    ? _cancelEditing
-                    : _toggleEdit,
-            icon: Icon(_isEditing ? Icons.close_rounded : Icons.edit_outlined,
-                size: 20)),
-      ]));
+  Widget _buildHeader() {
+    final l10n = AppLocalizations.of(context);
+    return Padding(
+        padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
+        child: Row(children: [
+          Expanded(
+              child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                Text(l10n.clientProfilHeaderTitle,
+                    style: TextStyle(
+                        fontSize: 32,
+                        height: 1.15,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: -1,
+                        color: Theme.of(context).colorScheme.onSurface)),
+                const SizedBox(height: 6),
+                Text(
+                    _saveSuccess
+                        ? l10n.clientProfilHeaderSavedSubtitle
+                        : l10n.clientProfilHeaderDefaultSubtitle,
+                    style: TextStyle(
+                        fontSize: 12,
+                        height: 1.4,
+                        color: _saveSuccess
+                            ? context.fitlek.success
+                            : context.fitlek.textMuted)),
+              ])),
+          const SizedBox(width: 12),
+          IconButton.outlined(
+              tooltip: _isEditing
+                  ? l10n.clientProfilCancelEditingTooltip
+                  : l10n.clientProfilEditProfileTooltip,
+              onPressed: _saving
+                  ? null
+                  : _isEditing
+                      ? _cancelEditing
+                      : _toggleEdit,
+              icon: Icon(_isEditing ? Icons.close_rounded : Icons.edit_outlined,
+                  size: 20)),
+        ]));
+  }
 
   Widget _buildStatsRow() {
+    final l10n = AppLocalizations.of(context);
     final height = _parseDouble(_savedProfile['height']);
     final values = [
-      (Icons.calendar_today_outlined, 'Sessions', '$_sessionsCount'),
+      (
+        Icons.calendar_today_outlined,
+        l10n.clientProfilStatSessions,
+        '$_sessionsCount'
+      ),
       (
         Icons.monitor_weight_outlined,
-        'Current weight',
+        l10n.clientProfilStatCurrentWeight,
         _weightStats.current == null
             ? '—'
-            : '${_weightStats.current!.toStringAsFixed(1)} kg'
+            : l10n
+                .clientProfilWeightValueKg(_weightStats.current!.toStringAsFixed(1))
       ),
       (
         Icons.height_rounded,
-        'Height',
+        l10n.clientProfilStatHeight,
         height == null
             ? '—'
-            : '${height.toStringAsFixed(height % 1 == 0 ? 0 : 1)} cm'
+            : l10n.clientProfilHeightValueCm(
+                height.toStringAsFixed(height % 1 == 0 ? 0 : 1))
       ),
     ];
     return Padding(
@@ -1372,144 +1416,363 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                 .toList()));
   }
 
-  Widget _buildTabBar() => Padding(
-        padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
-        child: Container(
-          height: 44,
-          decoration: BoxDecoration(
-            color: context.fitlek.card,
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: context.fitlek.border),
-          ),
-          child: TabBar(
-            controller: _tabController,
-            indicator: BoxDecoration(
-              color: Theme.of(context).colorScheme.primary,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            indicatorSize: TabBarIndicatorSize.tab,
-            dividerColor: Colors.transparent,
-            labelColor: Theme.of(context).colorScheme.onPrimary,
-            unselectedLabelColor: context.fitlek.textMuted,
-            labelStyle: const TextStyle(
-              fontWeight: FontWeight.w800,
-              fontSize: 10,
-              letterSpacing: 0.8,
-            ),
-            unselectedLabelStyle: const TextStyle(
-              fontWeight: FontWeight.w500,
-              fontSize: 10,
-            ),
-            tabs: const [
-              Tab(text: 'My details'),
-              Tab(text: 'My progress'),
-              Tab(text: 'Nutrition'),
-            ],
-          ),
+  Widget _buildTabBar() {
+    final l10n = AppLocalizations.of(context);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 12),
+      child: Container(
+        height: 44,
+        decoration: BoxDecoration(
+          color: context.fitlek.card,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: context.fitlek.border),
         ),
-      );
+        child: TabBar(
+          controller: _tabController,
+          indicator: BoxDecoration(
+            color: Theme.of(context).colorScheme.primary,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          indicatorSize: TabBarIndicatorSize.tab,
+          dividerColor: Colors.transparent,
+          labelColor: Theme.of(context).colorScheme.onPrimary,
+          unselectedLabelColor: context.fitlek.textMuted,
+          labelStyle: const TextStyle(
+            fontWeight: FontWeight.w800,
+            fontSize: 10,
+            letterSpacing: 0.8,
+          ),
+          unselectedLabelStyle: const TextStyle(
+            fontWeight: FontWeight.w500,
+            fontSize: 10,
+          ),
+          tabs: [
+            Tab(text: l10n.clientProfilTabMyDetails),
+            Tab(text: l10n.clientProfilTabMyProgress),
+            Tab(text: l10n.clientProfilTabNutrition),
+          ],
+        ),
+      ),
+    );
+  }
 
-  Widget _buildProfileTab() => RefreshIndicator(
-        onRefresh: () async {
-          if (!_isEditing) {
-            await Future.wait(
-                [_fetchProfile(silent: true), _fetchWeightData()]);
-          }
-        },
-        child: ListView(
-            padding: const EdgeInsets.fromLTRB(20, 10, 20, 28),
-            children: [
-              NutritionGoalCard(clientID: widget.clientID, token: widget.token),
-              if (_isEditing)
-                Padding(
-                    padding: const EdgeInsets.only(bottom: 14),
-                    child: Text(
-                        'Make your changes below, then tap Save changes.',
-                        style: TextStyle(
-                            color: context.fitlek.textSecondary,
-                            fontSize: 12))),
-              _profileGroup(
-                  'About you', 'The details that make this space yours.', [
-                _formRow(
-                    'First name', _firstNameCtrl, Icons.person_outline_rounded),
-                _formRow(
-                    'Last name', _lastNameCtrl, Icons.person_outline_rounded),
-                _buildGenderSelector(),
-                _formRow('Height (cm)', _heightCtrl, Icons.height_rounded,
-                    keyboardType:
-                        const TextInputType.numberWithOptions(decimal: true)),
-              ]),
-              const SizedBox(height: 16),
-              _profileGroup(
-                  'Your fitness interests',
-                  'Choose up to 5 things you enjoy. We’ll use them to help you discover coaches.',
-                  [_buildInterests()]),
-              const SizedBox(height: 16),
-              _profileGroup('Account & location',
-                  'Keep your contact details up to date.', [
-                _settingsRow(
-                    Icons.mail_outline_rounded,
-                    'Email address',
-                    _emailCtrl.text.isEmpty
-                        ? 'Add your email'
-                        : _emailCtrl.text,
-                    _changeEmail),
-                _settingsRow(
-                    Icons.phone_outlined,
-                    'Phone number',
-                    _phone.isEmpty ? 'Add your phone number' : _phone,
-                    _changePhone),
-                _settingsRow(Icons.location_on_outlined, 'My location',
-                    _city.isEmpty ? 'Set your city' : _city, _changeLocation),
-              ]),
-              const SizedBox(height: 16),
-              _profileGroup('Your Sirvya',
-                  'Your people, your preferences, your peace of mind.', [
-                _settingsRow(Icons.favorite_border_rounded, 'Favorite coaches',
-                    'Keep your favorites close', _openFavorites),
-                _settingsRow(
-                    Icons.notifications_none_rounded,
-                    'Notifications',
-                    'Updates about your activity',
-                    () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (_) =>
-                                const ClientNotificationsScreen()))),
-                _settingsRow(Icons.lock_outline_rounded, 'Password & security',
-                    'Manage your password', _showChangePasswordSheet),
-                _settingsRow(
-                    Icons.block_outlined,
-                    'Blocked accounts',
-                    'Manage who can contact you',
-                    () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (_) =>
-                                BlockedUsersList(token: widget.token)))),
-                const SizedBox(height: 10),
-                ThemeSelectorTile(controller: ThemeControllerScope.of(context)),
-              ]),
-              const SizedBox(height: 22),
-              OutlinedButton.icon(
-                  onPressed: _goToLogin,
-                  icon: Icon(Icons.logout_rounded,
-                      color: context.fitlek.error, size: 18),
-                  label: Text('Log out',
-                      style: TextStyle(color: context.fitlek.error)),
-                  style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      side: BorderSide(
-                          color: context.fitlek.error.withValues(alpha: .3)),
-                      shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16)))),
-              TextButton(
-                  onPressed: _showDeleteAccountSheet,
-                  child: Text('Delete my account',
+  Widget _buildProfileTab() {
+    final l10n = AppLocalizations.of(context);
+    return RefreshIndicator(
+      onRefresh: () async {
+        if (!_isEditing) {
+          await Future.wait(
+              [_fetchProfile(silent: true), _fetchWeightData()]);
+        }
+      },
+      child: ListView(
+          padding: const EdgeInsets.fromLTRB(20, 10, 20, 28),
+          children: [
+            NutritionGoalCard(clientID: widget.clientID, token: widget.token),
+            if (_isEditing)
+              Padding(
+                  padding: const EdgeInsets.only(bottom: 14),
+                  child: Text(
+                      l10n.clientProfilEditInstructions,
                       style: TextStyle(
-                          color: context.fitlek.textMuted, fontSize: 12))),
-            ]),
-      );
+                          color: context.fitlek.textSecondary,
+                          fontSize: 12))),
+            _profileGroup(
+                l10n.clientProfilGroupAboutTitle,
+                l10n.clientProfilGroupAboutSubtitle,
+                [
+                  _formRow(l10n.clientProfilFirstName, _firstNameCtrl,
+                      Icons.person_outline_rounded,
+                      fieldKey: 'First name'),
+                  _formRow(l10n.clientProfilLastName, _lastNameCtrl,
+                      Icons.person_outline_rounded,
+                      fieldKey: 'Last name'),
+                  _buildGenderSelector(),
+                  _formRow(l10n.clientProfilHeightCm, _heightCtrl,
+                      Icons.height_rounded,
+                      fieldKey: 'Height (cm)',
+                      keyboardType:
+                          const TextInputType.numberWithOptions(decimal: true)),
+                ]),
+            const SizedBox(height: 16),
+            _profileGroup(
+                l10n.clientProfilGroupInterestsTitle,
+                l10n.clientProfilGroupInterestsSubtitle,
+                [_buildInterests()]),
+            const SizedBox(height: 16),
+            _profileGroup(
+                l10n.clientProfilGroupAccountTitle,
+                l10n.clientProfilGroupAccountSubtitle,
+                [
+                  _settingsRow(
+                      Icons.mail_outline_rounded,
+                      l10n.clientProfilEmailAddress,
+                      _emailCtrl.text.isEmpty
+                          ? l10n.clientProfilAddEmail
+                          : _emailCtrl.text,
+                      _changeEmail),
+                  _settingsRow(
+                      Icons.phone_outlined,
+                      l10n.clientProfilPhoneNumber,
+                      _phone.isEmpty ? l10n.clientProfilAddPhone : _phone,
+                      _changePhone),
+                  _settingsRow(
+                      Icons.location_on_outlined,
+                      l10n.clientProfilMyLocation,
+                      _city.isEmpty ? l10n.clientProfilSetCity : _city,
+                      _changeLocation),
+                ]),
+            const SizedBox(height: 16),
+            _profileGroup(
+                l10n.clientProfilGroupSirvyaTitle,
+                l10n.clientProfilGroupSirvyaSubtitle,
+                [
+                  _settingsRow(
+                      Icons.favorite_border_rounded,
+                      l10n.clientProfilFavoriteCoaches,
+                      l10n.clientProfilFavoriteCoachesSubtitle,
+                      _openFavorites),
+                  _settingsRow(
+                      Icons.notifications_none_rounded,
+                      l10n.clientProfilNotifications,
+                      l10n.clientProfilNotificationsSubtitle,
+                      () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) =>
+                                  const ClientNotificationsScreen()))),
+                  _settingsRow(
+                      Icons.lock_outline_rounded,
+                      l10n.clientProfilPasswordSecurity,
+                      l10n.clientProfilPasswordSecuritySubtitle,
+                      _showChangePasswordSheet),
+                  _settingsRow(
+                      Icons.block_outlined,
+                      l10n.clientProfilBlockedAccounts,
+                      l10n.clientProfilBlockedAccountsSubtitle,
+                      () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) =>
+                                  BlockedUsersList(token: widget.token)))),
+                  const SizedBox(height: 10),
+                  ThemeSelectorTile(
+                      controller: ThemeControllerScope.of(context)),
+                  _buildLanguageSelectorTile(),
+                ]),
+            const SizedBox(height: 22),
+            OutlinedButton.icon(
+                onPressed: _goToLogin,
+                icon: Icon(Icons.logout_rounded,
+                    color: context.fitlek.error, size: 18),
+                label: Text(l10n.clientProfilLogOut,
+                    style: TextStyle(color: context.fitlek.error)),
+                style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    side: BorderSide(
+                        color: context.fitlek.error.withValues(alpha: .3)),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16)))),
+            TextButton(
+                onPressed: _showDeleteAccountSheet,
+                child: Text(l10n.clientProfilDeleteMyAccount,
+                    style: TextStyle(
+                        color: context.fitlek.textMuted, fontSize: 12))),
+          ]),
+    );
+  }
+
+  String _localeLabel(AppLocalizations l10n, Locale? loc) {
+    if (loc == null) return l10n.languageSystem;
+    switch (loc.languageCode) {
+      case 'fr':
+        return l10n.languageFrench;
+      case 'en':
+      default:
+        return l10n.languageEnglish;
+    }
+  }
+
+  Widget _buildLanguageSelectorTile() {
+    final cs = Theme.of(context).colorScheme;
+    final fitlek = context.fitlek;
+    return ValueListenableBuilder<Locale?>(
+      valueListenable: LocaleService.locale,
+      builder: (context, currentLocale, _) {
+        final l10n = AppLocalizations.of(context);
+        return GestureDetector(
+          onTap: () => _showLanguageSheet(context),
+          child: Container(
+            margin: const EdgeInsets.only(bottom: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            decoration: BoxDecoration(
+              color: fitlek.card,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: fitlek.border),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    color: cs.primary.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(Icons.language_rounded,
+                      color: cs.primary, size: 15),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        l10n.language,
+                        style: TextStyle(
+                          color: cs.onSurface.withValues(alpha: 0.85),
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        _localeLabel(l10n, currentLocale),
+                        style: TextStyle(color: fitlek.textMuted, fontSize: 11),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(Icons.chevron_right_rounded,
+                    color: fitlek.textMuted, size: 18),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _showLanguageSheet(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    final fitlek = context.fitlek;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => ValueListenableBuilder<Locale?>(
+        valueListenable: LocaleService.locale,
+        builder: (ctx, currentLocale, _) {
+          final l10n = AppLocalizations.of(ctx);
+          final options = <({Locale? locale, String label, IconData icon})>[
+            (
+              locale: null,
+              label: l10n.languageSystem,
+              icon: Icons.brightness_auto_rounded
+            ),
+            (
+              locale: const Locale('en'),
+              label: l10n.languageEnglish,
+              icon: Icons.language_rounded
+            ),
+            (
+              locale: const Locale('fr'),
+              label: l10n.languageFrench,
+              icon: Icons.translate_rounded
+            ),
+          ];
+
+          return Container(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
+            decoration: BoxDecoration(
+              color: fitlek.card,
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(20)),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: fitlek.border,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 18),
+                Text(
+                  l10n.language,
+                  style: TextStyle(
+                    color: cs.onSurface,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 14),
+                ...options.map((opt) {
+                  final selected =
+                      currentLocale?.languageCode == opt.locale?.languageCode;
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: GestureDetector(
+                      onTap: () {
+                        LocaleService.set(opt.locale);
+                        Navigator.pop(ctx);
+                      },
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 180),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 14, vertical: 12),
+                        decoration: BoxDecoration(
+                          color: selected
+                              ? cs.primary.withValues(alpha: 0.1)
+                              : Colors.transparent,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: selected ? cs.primary : fitlek.border,
+                            width: selected ? 1.5 : 1,
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              opt.icon,
+                              size: 18,
+                              color: selected ? cs.primary : fitlek.textMuted,
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                opt.label,
+                                style: TextStyle(
+                                  color: cs.onSurface,
+                                  fontSize: 13,
+                                  fontWeight: selected
+                                      ? FontWeight.w800
+                                      : FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                            if (selected)
+                              Icon(Icons.check_circle_rounded,
+                                  color: cs.primary, size: 18),
+                          ],
+                        ),
+                      ),
+                    ),
+                  );
+                }),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
 
   Widget _profileGroup(String title, String subtitle, List<Widget> children) =>
       Container(
@@ -1569,6 +1832,7 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
       );
 
   Widget _buildInterests() {
+    final l10n = AppLocalizations.of(context);
     final catalog = <String, String>{
       for (final category in _categories)
         '${category['name']}': '${category['icon'] ?? 'fitness_center'}'
@@ -1580,14 +1844,15 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
       return TextButton.icon(
           onPressed: () => _completeProfile('interests'),
           icon: const Icon(Icons.add_rounded, size: 18),
-          label: const Text('Choose your interests'));
+          label: Text(l10n.clientProfilChooseInterests));
     }
     if (_isEditing && catalog.isEmpty) {
       return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Text(
-            'Interests could not be loaded. Try again to choose from the catalog.',
+            l10n.clientProfilInterestsLoadFailed,
             style: TextStyle(color: context.fitlek.textMuted, fontSize: 12)),
-        TextButton(onPressed: _fetchCategories, child: const Text('Try again'))
+        TextButton(
+            onPressed: _fetchCategories, child: Text(l10n.clientProfilTryAgain))
       ]);
     }
     return Wrap(
@@ -1627,7 +1892,7 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                   ? null
                   : (value) {
                       if (value && _interests.length >= 5) {
-                        _showSnack('Choose up to 5 interests.');
+                        _showSnack(l10n.clientProfilMaxInterests);
                         return;
                       }
                       setState(() {
@@ -1642,9 +1907,10 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
   }
 
   Widget _buildGenderSelector() {
+    final l10n = AppLocalizations.of(context);
     if (!_isEditing) {
-      return _settingsRow(
-          Icons.wc_outlined, 'Gender', _genderDisplay(_selectedGender), null);
+      return _settingsRow(Icons.wc_outlined, l10n.clientProfilGender,
+          _genderDisplay(_selectedGender), null);
     }
     return Padding(
         padding: const EdgeInsets.only(bottom: 10),
@@ -1653,10 +1919,11 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
               ? _selectedGender
               : 'Other',
           decoration: InputDecoration(
-              labelText: 'Gender', prefixIcon: Icon(Icons.wc_outlined)),
+              labelText: l10n.clientProfilGender,
+              prefixIcon: const Icon(Icons.wc_outlined)),
           items: ['Male', 'Female', 'Other']
-              .map((gender) =>
-                  DropdownMenuItem(value: gender, child: Text(gender)))
+              .map((gender) => DropdownMenuItem(
+                  value: gender, child: Text(_genderDisplay(gender))))
               .toList(),
           onChanged: (value) {
             if (value != null) setState(() => _selectedGender = value);
@@ -1668,13 +1935,18 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
     String label,
     TextEditingController ctrl,
     IconData icon, {
+    String? fieldKey,
     TextInputType keyboardType = TextInputType.text,
     int maxLines = 1,
     bool readOnly = false,
   }) {
+    final l10n = AppLocalizations.of(context);
     if (!_isEditing) {
       return _settingsRow(
-          icon, label, ctrl.text.isEmpty ? 'Not added yet' : ctrl.text, null);
+          icon,
+          label,
+          ctrl.text.isEmpty ? l10n.clientProfilNotAddedYet : ctrl.text,
+          null);
     }
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
@@ -1715,7 +1987,7 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                 const SizedBox(height: 2),
                 _isEditing
                     ? TextField(
-                        key: ValueKey('client-profile-$label'),
+                        key: ValueKey('client-profile-${fieldKey ?? label}'),
                         controller: ctrl,
                         keyboardType: keyboardType,
                         maxLines: maxLines,
@@ -1738,7 +2010,9 @@ class _ClientProfileScreenState extends State<ClientProfileScreen>
                         ),
                       )
                     : Text(
-                        ctrl.text.isEmpty ? 'Not added yet' : ctrl.text,
+                        ctrl.text.isEmpty
+                            ? l10n.clientProfilNotAddedYet
+                            : ctrl.text,
                         style: TextStyle(
                           color: Theme.of(context).colorScheme.onSurface,
                           fontSize: 13,

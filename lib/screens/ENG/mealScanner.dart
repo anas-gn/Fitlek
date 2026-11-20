@@ -6,12 +6,28 @@ import '../../components/meal_visuals.dart';
 import '../../components/meal_scanner_view.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:fitlek1/l10n/app_localizations.dart';
 import '../../services/media_picker_service.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../services/food_nutrition_service.dart';
 import '../../services/meal_scan_service.dart';
 import '../../services/nutrition_diary_service.dart';
 import 'nutritionTracker.dart';
+
+String _localizedMealType(AppLocalizations l10n, String type) {
+  switch (type) {
+    case 'breakfast':
+      return l10n.mealScannerMealBreakfast;
+    case 'lunch':
+      return l10n.mealScannerMealLunch;
+    case 'dinner':
+      return l10n.mealScannerMealDinner;
+    case 'snack':
+      return l10n.mealScannerMealSnack;
+    default:
+      return mealTypeLabel(type);
+  }
+}
 
 const _background = Color(0xFF031713);
 const _card = Color(0xFF102E2A);
@@ -102,8 +118,10 @@ class _MealScannerScreenState extends State<MealScannerScreen> {
     if (_photo == null || _busy) return;
     setState(() => _busy = true);
     try {
+      final lang = Localizations.localeOf(context).languageCode;
       final meal = await MealScanService.analyze(
-          _photo!, widget.token, _portion, _notes.text.trim());
+          _photo!, widget.token, _portion, _notes.text.trim(),
+          language: lang);
       if (widget.diaryDate != null) {
         meal.mealDate = ScannedMeal.dayKey(widget.diaryDate!);
       }
@@ -282,13 +300,16 @@ class _MealResultScreenState extends State<MealResultScreen> {
     try {
       await _service.save(meal);
       if (mounted) {
+        final l10n = AppLocalizations.of(context);
+        final mealLabel = _localizedMealType(l10n, type);
         setState(() {
           _saved = true;
           _pending = false;
         });
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-            content: Text(
-                '${moving ? 'Meal moved' : 'Meal saved'} to ${mealTypeLabel(type)}.')));
+            content: Text(moving
+                ? l10n.mealScannerMealMovedTo(mealLabel)
+                : l10n.mealScannerMealSavedTo(mealLabel))));
       }
     } catch (e) {
       if (mounted) _error(context, e);
@@ -313,61 +334,66 @@ class _MealResultScreenState extends State<MealResultScreen> {
   }
 
   @override
-  Widget build(BuildContext context) => Theme(
-      data: _mealTheme(),
-      child: MealResultView(
-        meal: meal,
-        saving: _saving,
-        saved: _saved,
-        onSave: () => _save(),
-        onEdit: _edit,
-        diaryControls: Column(children: [
-          if (_saved)
-            Row(children: [
-              Expanded(
-                  child: Text(
-                      '${_pending ? 'Not synced ·' : 'Saved in'} ${mealTypeLabel(meal.mealType)}',
-                      style: const TextStyle(
-                          color: _cream, fontWeight: FontWeight.w700))),
-              TextButton.icon(
-                  onPressed: _busy ? null : () => _save(moving: true),
-                  icon: const Icon(Icons.swap_horiz_rounded, size: 18),
-                  label: const Text('Move meal')),
-            ])
-          else
-            const Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                    'Choose Breakfast, Lunch, Dinner or Snack when you save.',
-                    style: TextStyle(color: _muted, fontSize: 12))),
-          const SizedBox(height: 8),
-          if (_pending && !_saving)
-            const Text('Changes have not synced. Save again to retry.',
-                style: TextStyle(color: _muted, fontSize: 12)),
-          TextButton.icon(
-              onPressed: _busy
-                  ? null
-                  : () async {
-                      final date = await showDatePicker(
-                          context: context,
-                          initialDate: DateTime.parse(meal.mealDate),
-                          firstDate: DateTime(2000),
-                          lastDate: DateTime.now());
-                      if (date != null && mounted) {
-                        setState(
-                            () => meal.mealDate = ScannedMeal.dayKey(date));
-                      }
-                    },
-              icon: const Icon(Icons.calendar_today_outlined, size: 16),
-              label: Text('Meal date · ${meal.mealDate}')),
-          if (_saved)
-            OutlinedButton.icon(
-                onPressed: _busy ? null : _delete,
-                icon: const Icon(Icons.delete_outline_rounded),
-                label: const Text('Delete meal')),
-        ]),
-        onRemove: (index) => setState(() => meal.ingredients.removeAt(index)),
-      ));
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final mealLabel = _localizedMealType(l10n, meal.mealType);
+    return Theme(
+        data: _mealTheme(),
+        child: MealResultView(
+          meal: meal,
+          saving: _saving,
+          saved: _saved,
+          onSave: () => _save(),
+          onEdit: _edit,
+          diaryControls: Column(children: [
+            if (_saved)
+              Row(children: [
+                Expanded(
+                    child: Text(
+                        _pending
+                            ? l10n.mealScannerNotSynced(mealLabel)
+                            : l10n.mealScannerSavedIn(mealLabel),
+                        style: const TextStyle(
+                            color: _cream, fontWeight: FontWeight.w700))),
+                TextButton.icon(
+                    onPressed: _busy ? null : () => _save(moving: true),
+                    icon: const Icon(Icons.swap_horiz_rounded, size: 18),
+                    label: Text(l10n.mealScannerMoveMeal)),
+              ])
+            else
+              Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(l10n.mealScannerChooseCategoryHint,
+                      style: const TextStyle(color: _muted, fontSize: 12))),
+            const SizedBox(height: 8),
+            if (_pending && !_saving)
+              Text(l10n.mealScannerChangesNotSynced,
+                  style: const TextStyle(color: _muted, fontSize: 12)),
+            TextButton.icon(
+                onPressed: _busy
+                    ? null
+                    : () async {
+                        final date = await showDatePicker(
+                            context: context,
+                            initialDate: DateTime.parse(meal.mealDate),
+                            firstDate: DateTime(2000),
+                            lastDate: DateTime.now());
+                        if (date != null && mounted) {
+                          setState(
+                              () => meal.mealDate = ScannedMeal.dayKey(date));
+                        }
+                      },
+                icon: const Icon(Icons.calendar_today_outlined, size: 16),
+                label: Text(l10n.mealScannerMealDate(meal.mealDate))),
+            if (_saved)
+              OutlinedButton.icon(
+                  onPressed: _busy ? null : _delete,
+                  icon: const Icon(Icons.delete_outline_rounded),
+                  label: Text(l10n.mealScannerDeleteMeal)),
+          ]),
+          onRemove: (index) => setState(() => meal.ingredients.removeAt(index)),
+        ));
+  }
 }
 
 class _IngredientEditor extends StatefulWidget {
@@ -393,6 +419,13 @@ class _IngredientEditorState extends State<_IngredientEditor> {
   Timer? _debounceTimer;
   String _lastSearchedOnlineQuery = '';
 
+  // Baseline values for proportional scaling when item is not in local DB
+  double _baseGrams = 100.0;
+  double _baseCalories = 0.0;
+  double _baseProtein = 0.0;
+  double _baseCarbs = 0.0;
+  double _baseFat = 0.0;
+
   bool get _isEditMode => widget.ingredient != null;
   bool get _manual => widget.ingredient?.grams == 0;
 
@@ -416,6 +449,12 @@ class _IngredientEditorState extends State<_IngredientEditor> {
 
     if (widget.ingredient != null) {
       final grams = widget.ingredient!.grams;
+      _baseGrams = grams > 0 ? grams : 100.0;
+      _baseCalories = widget.ingredient!.calories;
+      _baseProtein = widget.ingredient!.protein;
+      _baseCarbs = widget.ingredient!.carbs;
+      _baseFat = widget.ingredient!.fat;
+
       _gramsCtrl.text = grams > 0 ? grams.toStringAsFixed(0) : '100';
       // Attempt to link to known food item
       _initExistingFood();
@@ -427,7 +466,7 @@ class _IngredientEditorState extends State<_IngredientEditor> {
   }
 
   void _onWeightChanged() {
-    if (_selectedFood != null && !_manualOverride) {
+    if (!_manualOverride) {
       _recalcMacros();
     }
   }
@@ -435,27 +474,39 @@ class _IngredientEditorState extends State<_IngredientEditor> {
   Future<void> _initExistingFood() async {
     await FoodNutritionService.instance.init();
     if (!mounted) return;
-    final name = widget.ingredient?.name ?? '';
-    final results = FoodNutritionService.instance.searchLocal(name, limit: 5);
+    final lang = Localizations.localeOf(context).languageCode;
+    final rawName = widget.ingredient?.name ?? '';
+    final cleanedName = rawName.replaceAll(RegExp(r'\(.*?\)'), '').trim();
+    var results = FoodNutritionService.instance
+        .searchLocal(rawName, limit: 5, languageCode: lang);
+    if (results.isEmpty && cleanedName.isNotEmpty && cleanedName != rawName) {
+      results = FoodNutritionService.instance
+          .searchLocal(cleanedName, limit: 5, languageCode: lang);
+    }
     if (results.isNotEmpty) {
-      setState(() => _selectedFood = results.first);
+      setState(() {
+        _selectedFood = results.first;
+        _recalcMacros();
+      });
     }
   }
 
   Future<void> _loadInitialFoods() async {
     await FoodNutritionService.instance.init();
     if (!mounted) return;
+    final lang = Localizations.localeOf(context).languageCode;
     setState(() {
       _searchResults = FoodNutritionService.instance
-          .searchLocal('', category: _selectedCategory, limit: 12);
+          .searchLocal('', category: _selectedCategory, limit: 12, languageCode: lang);
     });
   }
 
   void _onSearch(String query) {
     _debounceTimer?.cancel();
     final q = query.trim();
+    final lang = Localizations.localeOf(context).languageCode;
     final local = FoodNutritionService.instance
-        .searchLocal(q, category: _selectedCategory, limit: 15);
+        .searchLocal(q, category: _selectedCategory, limit: 15, languageCode: lang);
     setState(() {
       _searchResults = local;
     });
@@ -482,8 +533,9 @@ class _IngredientEditorState extends State<_IngredientEditor> {
     _lastSearchedOnlineQuery = q;
     setState(() => _searchingOnline = true);
     try {
+      final lang = Localizations.localeOf(context).languageCode;
       final online =
-          await FoodNutritionService.instance.searchOnline(q, limit: 12);
+          await FoodNutritionService.instance.searchOnline(q, limit: 12, languageCode: lang);
       if (!mounted) return;
       setState(() {
         final existingNames =
@@ -502,25 +554,34 @@ class _IngredientEditorState extends State<_IngredientEditor> {
   }
 
   void _selectFood(FoodItem food) {
+    final lang = Localizations.localeOf(context).languageCode;
     setState(() {
       _selectedFood = food;
-      _nameCtrl.text = food.name;
+      _nameCtrl.text = food.displayName(lang);
       _manualOverride = false;
       _recalcMacros();
     });
   }
 
   void _recalcMacros() {
-    if (_selectedFood == null) return;
-    final factor = _currentGrams / 100.0;
-    _macrosCtrl[0].text =
-        (_selectedFood!.calories * factor).toStringAsFixed(1);
-    _macrosCtrl[1].text =
-        (_selectedFood!.protein * factor).toStringAsFixed(1);
-    _macrosCtrl[2].text =
-        (_selectedFood!.carbs * factor).toStringAsFixed(1);
-    _macrosCtrl[3].text =
-        (_selectedFood!.fat * factor).toStringAsFixed(1);
+    if (_manualOverride) return;
+    if (_selectedFood != null) {
+      final factor = _currentGrams / 100.0;
+      _macrosCtrl[0].text =
+          (_selectedFood!.calories * factor).toStringAsFixed(1);
+      _macrosCtrl[1].text =
+          (_selectedFood!.protein * factor).toStringAsFixed(1);
+      _macrosCtrl[2].text =
+          (_selectedFood!.carbs * factor).toStringAsFixed(1);
+      _macrosCtrl[3].text =
+          (_selectedFood!.fat * factor).toStringAsFixed(1);
+    } else if (widget.ingredient != null && _baseGrams > 0) {
+      final factor = _currentGrams / _baseGrams;
+      _macrosCtrl[0].text = (_baseCalories * factor).toStringAsFixed(1);
+      _macrosCtrl[1].text = (_baseProtein * factor).toStringAsFixed(1);
+      _macrosCtrl[2].text = (_baseCarbs * factor).toStringAsFixed(1);
+      _macrosCtrl[3].text = (_baseFat * factor).toStringAsFixed(1);
+    }
     setState(() {});
   }
 
@@ -530,6 +591,7 @@ class _IngredientEditorState extends State<_IngredientEditor> {
     } else {
       _gramsCtrl.text = grams.toStringAsFixed(0);
     }
+    _onWeightChanged();
   }
 
   @override
@@ -636,17 +698,18 @@ class _IngredientEditorState extends State<_IngredientEditor> {
   }
 
   Widget _buildSearchSection() {
+    final l10n = AppLocalizations.of(context);
     final categories = [
-      ('all', 'All'),
-      ('meat', 'Meat'),
-      ('produce', 'Produce'),
-      ('dairy', 'Dairy'),
-      ('grains', 'Grains'),
-      ('seafood', 'Fish'),
-      ('nuts', 'Nuts'),
-      ('dishes', 'Meals'),
-      ('snacks', 'Snacks'),
-      ('beverage', 'Drinks'),
+      ('all', l10n.mealScannerCategoryAll),
+      ('meat', l10n.mealScannerCategoryMeat),
+      ('produce', l10n.mealScannerCategoryProduce),
+      ('dairy', l10n.mealScannerCategoryDairy),
+      ('grains', l10n.mealScannerCategoryGrains),
+      ('seafood', l10n.mealScannerCategoryFish),
+      ('nuts', l10n.mealScannerCategoryNuts),
+      ('dishes', l10n.mealScannerCategoryMeals),
+      ('snacks', l10n.mealScannerCategorySnacks),
+      ('beverage', l10n.mealScannerCategoryDrinks),
     ];
 
     return Column(
@@ -659,7 +722,7 @@ class _IngredientEditorState extends State<_IngredientEditor> {
           textInputAction: TextInputAction.search,
           onSubmitted: (_) => _searchOnline(force: true),
           decoration: InputDecoration(
-            hintText: 'Search food (e.g. Chicken, Apple, Rice)...',
+            hintText: l10n.mealScannerSearchHint,
             prefixIcon: const Icon(Icons.search_rounded, color: _muted),
             suffixIcon: _searchingOnline
                 ? const Padding(
@@ -739,7 +802,7 @@ class _IngredientEditorState extends State<_IngredientEditor> {
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  'Searching Open Food Facts online...',
+                  l10n.mealScannerSearchingOnlineBanner,
                   style: TextStyle(
                     color: Colors.lightBlueAccent.withValues(alpha: 0.9),
                     fontSize: 12,
@@ -769,22 +832,22 @@ class _IngredientEditorState extends State<_IngredientEditor> {
                           ),
                           const SizedBox(height: 12),
                           Text(
-                            'Searching Open Food Facts for "${_searchCtrl.text}"...',
+                            l10n.mealScannerSearchingFor(_searchCtrl.text),
                             style: const TextStyle(
                                 color: _cream,
                                 fontSize: 13,
                                 fontWeight: FontWeight.w600),
                           ),
                           const SizedBox(height: 4),
-                          const Text(
-                            'Querying Open Food Facts global database',
-                            style: TextStyle(color: _muted, fontSize: 11),
+                          Text(
+                            l10n.mealScannerQueryingGlobalDb,
+                            style: const TextStyle(color: _muted, fontSize: 11),
                           ),
                         ] else ...[
                           const Icon(Icons.search_off_rounded,
                               color: _muted, size: 36),
                           const SizedBox(height: 8),
-                          Text('No foods found for "${_searchCtrl.text}"',
+                          Text(l10n.mealScannerNoFoodsFound(_searchCtrl.text),
                               style:
                                   const TextStyle(color: _muted, fontSize: 13)),
                           const SizedBox(height: 10),
@@ -792,7 +855,7 @@ class _IngredientEditorState extends State<_IngredientEditor> {
                             onPressed: () => _searchOnline(force: true),
                             icon: const Icon(Icons.travel_explore_rounded,
                                 size: 16),
-                            label: const Text('Search Open Food Facts'),
+                            label: Text(l10n.mealScannerSearchOpenFoodFacts),
                           ),
                         ],
                       ],
@@ -821,8 +884,8 @@ class _IngredientEditorState extends State<_IngredientEditor> {
                               : const Icon(Icons.travel_explore_rounded,
                                   size: 18),
                           label: Text(_searchingOnline
-                              ? 'Searching Open Food Facts...'
-                              : 'Search more online (Open Food Facts)'),
+                              ? l10n.mealScannerSearchingOnlineShort
+                              : l10n.mealScannerSearchMoreOnline),
                         ),
                       );
                     }
@@ -836,7 +899,8 @@ class _IngredientEditorState extends State<_IngredientEditor> {
                         children: [
                           Expanded(
                             child: Text(
-                              food.name,
+                              food.displayName(
+                                  Localizations.localeOf(context).languageCode),
                               style: const TextStyle(
                                   fontWeight: FontWeight.w600, fontSize: 14),
                               overflow: TextOverflow.ellipsis,
@@ -851,8 +915,8 @@ class _IngredientEditorState extends State<_IngredientEditor> {
                                 color: Colors.blue.withValues(alpha: 0.2),
                                 borderRadius: BorderRadius.circular(4),
                               ),
-                              child: const Text('Online',
-                                  style: TextStyle(
+                              child: Text(l10n.mealScannerOnlineBadge,
+                                  style: const TextStyle(
                                       color: Colors.lightBlueAccent,
                                       fontSize: 10,
                                       fontWeight: FontWeight.w600)),
@@ -860,7 +924,11 @@ class _IngredientEditorState extends State<_IngredientEditor> {
                         ],
                       ),
                       subtitle: Text(
-                        '${food.calories.round()} kcal · ${food.protein}g P · ${food.carbs}g C · ${food.fat}g F (per 100g)',
+                        l10n.mealScannerFoodMacrosPer100g(
+                            food.calories.round(),
+                            '${food.protein}',
+                            '${food.carbs}',
+                            '${food.fat}'),
                         style: const TextStyle(color: _muted, fontSize: 11),
                       ),
                       trailing: const Icon(Icons.add_circle_outline_rounded,
@@ -875,6 +943,7 @@ class _IngredientEditorState extends State<_IngredientEditor> {
   }
 
   Widget _buildSelectedFoodCard() {
+    final l10n = AppLocalizations.of(context);
     final food = _selectedFood!;
     return Container(
       padding: const EdgeInsets.all(12),
@@ -892,14 +961,19 @@ class _IngredientEditorState extends State<_IngredientEditor> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  food.name,
+                  food.displayName(
+                      Localizations.localeOf(context).languageCode),
                   style: const TextStyle(
                       fontWeight: FontWeight.w700, fontSize: 16),
                   overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  'Base: ${food.calories.round()} kcal · ${food.protein}g P · ${food.carbs}g C · ${food.fat}g F / 100g',
+                  l10n.mealScannerSelectedFoodBase(
+                      food.calories.round(),
+                      '${food.protein}',
+                      '${food.carbs}',
+                      '${food.fat}'),
                   style: const TextStyle(color: _muted, fontSize: 11),
                 ),
               ],
@@ -908,7 +982,7 @@ class _IngredientEditorState extends State<_IngredientEditor> {
           if (!_isEditMode)
             IconButton(
               icon: const Icon(Icons.swap_horiz_rounded, color: _cream),
-              tooltip: 'Choose different food',
+              tooltip: l10n.mealScannerChooseDifferentFood,
               onPressed: () => setState(() => _selectedFood = null),
             ),
         ],
@@ -943,6 +1017,7 @@ class _IngredientEditorState extends State<_IngredientEditor> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final hasSelectedFood = _selectedFood != null;
 
     return Padding(
@@ -961,7 +1036,9 @@ class _IngredientEditorState extends State<_IngredientEditor> {
                 children: [
                   Expanded(
                     child: Text(
-                      _isEditMode ? 'Adjust portion' : 'Add food item',
+                      _isEditMode
+                          ? l10n.mealScannerAdjustPortion
+                          : l10n.mealScannerAddFoodItem,
                       style: const TextStyle(
                           fontSize: 20, fontWeight: FontWeight.w800),
                     ),
@@ -977,9 +1054,11 @@ class _IngredientEditorState extends State<_IngredientEditor> {
               if (_manual) ...[
                 TextFormField(
                   controller: _nameCtrl,
-                  decoration: const InputDecoration(labelText: 'Food name'),
-                  validator: (v) =>
-                      (v ?? '').trim().isEmpty ? 'Enter a food name' : null,
+                  decoration:
+                      InputDecoration(labelText: l10n.mealScannerFoodNameLabel),
+                  validator: (v) => (v ?? '').trim().isEmpty
+                      ? l10n.mealScannerEnterFoodNameError
+                      : null,
                 ),
                 const SizedBox(height: 10),
                 Row(
@@ -989,8 +1068,8 @@ class _IngredientEditorState extends State<_IngredientEditor> {
                         controller: _macrosCtrl[0],
                         keyboardType: const TextInputType.numberWithOptions(
                             decimal: true),
-                        decoration:
-                            const InputDecoration(labelText: 'Calories (kcal)'),
+                        decoration: InputDecoration(
+                            labelText: l10n.mealScannerCaloriesKcalLabel),
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -999,8 +1078,8 @@ class _IngredientEditorState extends State<_IngredientEditor> {
                         controller: _macrosCtrl[1],
                         keyboardType: const TextInputType.numberWithOptions(
                             decimal: true),
-                        decoration:
-                            const InputDecoration(labelText: 'Protein (g)'),
+                        decoration: InputDecoration(
+                            labelText: l10n.mealScannerProteinGLabel),
                       ),
                     ),
                   ],
@@ -1013,8 +1092,8 @@ class _IngredientEditorState extends State<_IngredientEditor> {
                         controller: _macrosCtrl[2],
                         keyboardType: const TextInputType.numberWithOptions(
                             decimal: true),
-                        decoration:
-                            const InputDecoration(labelText: 'Carbs (g)'),
+                        decoration: InputDecoration(
+                            labelText: l10n.mealScannerCarbsGLabel),
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -1023,21 +1102,21 @@ class _IngredientEditorState extends State<_IngredientEditor> {
                         controller: _macrosCtrl[3],
                         keyboardType: const TextInputType.numberWithOptions(
                             decimal: true),
-                        decoration:
-                            const InputDecoration(labelText: 'Fat (g)'),
+                        decoration: InputDecoration(
+                            labelText: l10n.mealScannerFatGLabel),
                       ),
                     ),
                   ],
                 ),
                 const SizedBox(height: 16),
-                _primary('Apply', () {
+                _primary(l10n.mealScannerApply, () {
                   if (!_form.currentState!.validate()) return;
                   final double Function(TextEditingController) parseVal = (c) =>
                       double.tryParse(c.text.replaceAll(',', '.')) ?? 0.0;
                   final ingredient = MealIngredient(
                     name: _nameCtrl.text.trim(),
                     grams: 0,
-                    quantity: '1 serving',
+                    quantity: l10n.mealScannerOneServing,
                     calories: parseVal(_macrosCtrl[0]),
                     protein: parseVal(_macrosCtrl[1]),
                     carbs: parseVal(_macrosCtrl[2]),
@@ -1053,17 +1132,17 @@ class _IngredientEditorState extends State<_IngredientEditor> {
                   Center(
                     child: TextButton(
                       onPressed: () => setState(() {
-                        _selectedFood = const FoodItem(
+                        _selectedFood = FoodItem(
                             id: 'custom',
-                            name: 'Custom food',
+                            name: l10n.mealScannerCustomFoodDefaultName,
                             calories: 0,
                             protein: 0,
                             carbs: 0,
                             fat: 0);
                         _manualOverride = true;
                       }),
-                      child: const Text('Or enter custom macros manually',
-                          style: TextStyle(color: _muted, fontSize: 12)),
+                      child: Text(l10n.mealScannerOrEnterCustomMacros,
+                          style: const TextStyle(color: _muted, fontSize: 12)),
                     ),
                   ),
                 ],
@@ -1075,9 +1154,11 @@ class _IngredientEditorState extends State<_IngredientEditor> {
 
                   TextFormField(
                     controller: _nameCtrl,
-                    decoration: const InputDecoration(labelText: 'Food name'),
-                    validator: (v) =>
-                        (v ?? '').trim().isEmpty ? 'Enter a food name' : null,
+                    decoration: InputDecoration(
+                        labelText: l10n.mealScannerFoodNameLabel),
+                    validator: (v) => (v ?? '').trim().isEmpty
+                        ? l10n.mealScannerEnterFoodNameError
+                        : null,
                   ),
                   const SizedBox(height: 12),
 
@@ -1092,14 +1173,14 @@ class _IngredientEditorState extends State<_IngredientEditor> {
                         keyboardType: const TextInputType.numberWithOptions(
                             decimal: true),
                         decoration: InputDecoration(
-                          labelText: 'Quantity ($_unit)',
+                          labelText: l10n.mealScannerQuantityLabel(_unit),
                           prefixIcon: const Icon(Icons.scale_rounded, size: 20),
                         ),
                         validator: (value) {
                           final n = double.tryParse(
                               (value ?? '').replaceAll(',', '.'));
                           return n == null || !n.isFinite || n <= 0 || n > 50000
-                              ? 'Enter a valid weight'
+                              ? l10n.mealScannerEnterValidWeightError
                               : null;
                         },
                       ),
@@ -1192,10 +1273,10 @@ class _IngredientEditorState extends State<_IngredientEditor> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Expanded(
+                          Expanded(
                             child: Text(
-                              'Calculated Nutrition',
-                              style: TextStyle(
+                              l10n.mealScannerCalculatedNutrition,
+                              style: const TextStyle(
                                   fontSize: 13,
                                   fontWeight: FontWeight.w700,
                                   color: _muted),
@@ -1217,14 +1298,14 @@ class _IngredientEditorState extends State<_IngredientEditor> {
                       const SizedBox(height: 10),
                       Row(
                         children: [
-                          _buildMacroChip('Protein', '${_macrosCtrl[1].text}g',
-                              const Color(0xFF64B5F6)),
+                          _buildMacroChip(l10n.mealScannerMacroProtein,
+                              '${_macrosCtrl[1].text}g', const Color(0xFF64B5F6)),
                           const SizedBox(width: 8),
-                          _buildMacroChip('Carbs', '${_macrosCtrl[2].text}g',
-                              const Color(0xFFFFB74D)),
+                          _buildMacroChip(l10n.mealScannerMacroCarbs,
+                              '${_macrosCtrl[2].text}g', const Color(0xFFFFB74D)),
                           const SizedBox(width: 8),
-                          _buildMacroChip('Fat', '${_macrosCtrl[3].text}g',
-                              const Color(0xFFE57373)),
+                          _buildMacroChip(l10n.mealScannerMacroFat,
+                              '${_macrosCtrl[3].text}g', const Color(0xFFE57373)),
                         ],
                       ),
                     ],
@@ -1239,8 +1320,8 @@ class _IngredientEditorState extends State<_IngredientEditor> {
                     Expanded(
                       child: Text(
                         _manualOverride
-                            ? 'Manual values active'
-                            : 'Values auto-calculated',
+                            ? l10n.mealScannerManualValuesActive
+                            : l10n.mealScannerValuesAutoCalculated,
                         style: const TextStyle(color: _muted, fontSize: 12),
                       ),
                     ),
@@ -1248,15 +1329,15 @@ class _IngredientEditorState extends State<_IngredientEditor> {
                       onPressed: () {
                         setState(() {
                           _manualOverride = !_manualOverride;
-                          if (!_manualOverride && _selectedFood != null) {
+                          if (!_manualOverride) {
                             _recalcMacros();
                           }
                         });
                       },
                       child: Text(
                         _manualOverride
-                            ? 'Reset to Auto'
-                            : 'Edit macros manually',
+                            ? l10n.mealScannerResetToAuto
+                            : l10n.mealScannerEditMacrosManually,
                         style: const TextStyle(fontSize: 12),
                       ),
                     ),
@@ -1267,10 +1348,10 @@ class _IngredientEditorState extends State<_IngredientEditor> {
                   const SizedBox(height: 6),
                   TextFormField(
                     controller: _nameCtrl,
-                    decoration:
-                        const InputDecoration(labelText: 'Custom Food Name'),
+                    decoration: InputDecoration(
+                        labelText: l10n.mealScannerCustomFoodNameLabel),
                     validator: (v) => v == null || v.trim().isEmpty
-                        ? 'Enter a food name'
+                        ? l10n.mealScannerEnterFoodNameError
                         : null,
                   ),
                   const SizedBox(height: 10),
@@ -1282,8 +1363,9 @@ class _IngredientEditorState extends State<_IngredientEditor> {
                               keyboardType:
                                   const TextInputType.numberWithOptions(
                                       decimal: true),
-                              decoration: const InputDecoration(
-                                  labelText: 'Calories (kcal)'))),
+                              decoration: InputDecoration(
+                                  labelText:
+                                      l10n.mealScannerCaloriesKcalLabel))),
                       const SizedBox(width: 8),
                       Expanded(
                           child: TextFormField(
@@ -1291,8 +1373,8 @@ class _IngredientEditorState extends State<_IngredientEditor> {
                               keyboardType:
                                   const TextInputType.numberWithOptions(
                                       decimal: true),
-                              decoration: const InputDecoration(
-                                  labelText: 'Protein (g)'))),
+                              decoration: InputDecoration(
+                                  labelText: l10n.mealScannerProteinGLabel))),
                     ],
                   ),
                   const SizedBox(height: 10),
@@ -1304,8 +1386,8 @@ class _IngredientEditorState extends State<_IngredientEditor> {
                               keyboardType:
                                   const TextInputType.numberWithOptions(
                                       decimal: true),
-                              decoration: const InputDecoration(
-                                  labelText: 'Carbs (g)'))),
+                              decoration: InputDecoration(
+                                  labelText: l10n.mealScannerCarbsGLabel))),
                       const SizedBox(width: 8),
                       Expanded(
                           child: TextFormField(
@@ -1313,27 +1395,62 @@ class _IngredientEditorState extends State<_IngredientEditor> {
                               keyboardType:
                                   const TextInputType.numberWithOptions(
                                       decimal: true),
-                              decoration: const InputDecoration(
-                                  labelText: 'Fat (g)'))),
+                              decoration: InputDecoration(
+                                  labelText: l10n.mealScannerFatGLabel))),
                     ],
                   ),
                 ],
                 const SizedBox(height: 16),
 
                 // Apply Button
-                _primary(_isEditMode ? 'Apply' : 'Add to meal', () {
+                _primary(
+                    _isEditMode
+                        ? l10n.mealScannerApply
+                        : l10n.mealScannerAddToMeal, () {
                   if (!_form.currentState!.validate()) return;
                   final grams = _currentGrams;
+                  final lang = Localizations.localeOf(context).languageCode;
 
                   MealIngredient result;
                   if (_selectedFood != null && !_manualOverride) {
-                    result = _selectedFood!.toIngredient(grams: grams);
+                    final base =
+                        _selectedFood!.toIngredient(grams: grams, languageCode: lang);
+                    result = MealIngredient(
+                      name: _nameCtrl.text.trim().isNotEmpty
+                          ? _nameCtrl.text.trim()
+                          : base.name,
+                      grams: base.grams,
+                      quantity: base.quantity,
+                      calories: base.calories,
+                      protein: base.protein,
+                      carbs: base.carbs,
+                      fat: base.fat,
+                      imageKey: base.imageKey,
+                      imageUrl: base.imageUrl,
+                      preparation: widget.ingredient?.preparation ?? 'unknown',
+                    );
                   } else if (widget.ingredient != null && !_manualOverride) {
-                    result = widget.ingredient!.withGrams(grams);
+                    final base = widget.ingredient!.withGrams(grams);
+                    result = MealIngredient(
+                      name: _nameCtrl.text.trim().isNotEmpty
+                          ? _nameCtrl.text.trim()
+                          : base.name,
+                      grams: base.grams,
+                      quantity: base.quantity,
+                      calories: base.calories,
+                      protein: base.protein,
+                      carbs: base.carbs,
+                      fat: base.fat,
+                      imageKey: base.imageKey,
+                      imageUrl: base.imageUrl,
+                      preparation: base.preparation,
+                    );
                   } else {
                     result = MealIngredient(
                       name: _nameCtrl.text.trim().isEmpty
-                          ? (_selectedFood?.name ?? 'Custom item')
+                          ? (_selectedFood?.displayName(lang) ??
+                              widget.ingredient?.name ??
+                              l10n.mealScannerCustomItemFallback)
                           : _nameCtrl.text.trim(),
                       grams: grams,
                       quantity: '${grams.round()} g',
@@ -1343,8 +1460,10 @@ class _IngredientEditorState extends State<_IngredientEditor> {
                       fat: double.tryParse(_macrosCtrl[3].text) ?? 0.0,
                       imageKey: _selectedFood?.localImage != null
                           ? _selectedFood!.localImage!.replaceAll('.webp', '')
-                          : 'generic',
-                      imageUrl: _selectedFood?.remoteImageUrl ?? '',
+                          : (widget.ingredient?.imageKey ?? 'generic'),
+                      imageUrl: _selectedFood?.remoteImageUrl ??
+                          (widget.ingredient?.imageUrl ?? ''),
+                      preparation: widget.ingredient?.preparation ?? 'unknown',
                     );
                   }
 

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:fitlek1/l10n/app_localizations.dart';
 import 'app_dialog.dart';
 
 class MealScanLimitDialog extends StatelessWidget {
@@ -11,12 +12,13 @@ class MealScanLimitDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final total = dailyLimit + bonus;
     return AppDialog(
       icon: const Icon(Icons.hourglass_bottom_rounded),
       title: Text(total == 0
-          ? 'Meal scans are paused'
-          : 'You’re all scanned for today'),
+          ? l10n.mealScanLimitPausedTitle
+          : l10n.mealScanLimitReachedTitle),
       content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -33,23 +35,24 @@ class MealScanLimitDialog extends StatelessWidget {
               child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('$used / $total scans used today',
+                    Text(l10n.mealScanLimitUsedToday(used, total),
                         style: const TextStyle(
                             fontSize: 20, fontWeight: FontWeight.w800)),
                     const SizedBox(height: 6),
-                    Text(
-                        '$dailyLimit ${dailyLimit == 1 ? 'scan' : 'scans'} per day${bonus > 0 ? ' + $bonus extra today' : ''}'),
+                    Text(bonus > 0
+                        ? l10n.mealScanLimitPerDayWithBonus(dailyLimit, bonus)
+                        : l10n.mealScanLimitPerDay(dailyLimit)),
                   ]),
             ),
             const SizedBox(height: 18),
             Text(total == 0
-                ? 'Meal scanning is currently disabled for your account. Your admin can update your allowance.'
-                : 'You’ve reached your allowance for today. Come back after midnight UTC for your next daily scans, or ask your admin for extra scans.'),
+                ? l10n.mealScanLimitPausedBody
+                : l10n.mealScanLimitReachedBody),
           ]),
       actions: [
         FilledButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Got it'))
+            child: Text(l10n.mealScanLimitGotIt))
       ],
     );
   }

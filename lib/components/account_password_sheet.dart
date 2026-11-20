@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:fitlek1/l10n/app_localizations.dart';
 import '../services/account_security.dart';
 import '../theme/fitlek_theme_extension.dart';
 
@@ -49,12 +50,14 @@ class _AccountPasswordSheetState extends State<AccountPasswordSheet> {
         _saving = false;
         _error = error is PasswordUpdateException
             ? error.message
-            : 'Unable to reach the server. Please try again.';
+            : AppLocalizations.of(context)
+                .accountPasswordSheetServerUnreachable;
       });
     }
   }
 
   Widget _field(String label, TextEditingController controller, int index) {
+    final l10n = AppLocalizations.of(context);
     return Padding(
         padding: const EdgeInsets.only(bottom: 16),
         child: TextFormField(
@@ -71,18 +74,22 @@ class _AccountPasswordSheetState extends State<AccountPasswordSheet> {
           onFieldSubmitted: index == 2 ? (_) => _submit() : null,
           validator: (value) {
             if (value == null || value.isEmpty)
-              return 'Enter $label'.toLowerCase();
+              return l10n
+                  .accountPasswordSheetEnterField(label.toLowerCase())
+                  .toLowerCase();
             if (index == 1 && value.length < 8)
-              return 'Use at least 8 characters.';
+              return l10n.accountPasswordSheetMinLength;
             if (index == 2 && value != _password.text)
-              return 'Passwords do not match.';
+              return l10n.accountPasswordSheetPasswordsMismatch;
             return null;
           },
           decoration: InputDecoration(
               labelText: label,
               prefixIcon: const Icon(Icons.lock_outline_rounded, size: 20),
               suffixIcon: IconButton(
-                  tooltip: _hidden[index] ? 'Show password' : 'Hide password',
+                  tooltip: _hidden[index]
+                      ? l10n.accountPasswordSheetShowPassword
+                      : l10n.accountPasswordSheetHidePassword,
                   onPressed: _saving
                       ? null
                       : () => setState(() => _hidden[index] = !_hidden[index]),
@@ -98,6 +105,7 @@ class _AccountPasswordSheetState extends State<AccountPasswordSheet> {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final f = context.fitlek;
+    final l10n = AppLocalizations.of(context);
     return Padding(
       padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
       child: SafeArea(
@@ -132,28 +140,28 @@ class _AccountPasswordSheetState extends State<AccountPasswordSheet> {
                                 Icon(Icons.shield_outlined, color: cs.primary)),
                         const Spacer(),
                         IconButton(
-                            tooltip: 'Close',
+                            tooltip: l10n.accountPasswordSheetClose,
                             onPressed: () => Navigator.pop(context, false),
                             icon: const Icon(Icons.close_rounded)),
                       ]),
                       const SizedBox(height: 16),
-                      Text('Secure your account',
+                      Text(l10n.accountPasswordSheetTitle,
                           style: TextStyle(
                               color: cs.onSurface,
                               fontSize: 24,
                               fontWeight: FontWeight.w800,
                               letterSpacing: -0.5)),
                       const SizedBox(height: 8),
-                      Text(
-                          'Choose a password with at least 8 characters that you don’t use elsewhere.',
+                      Text(l10n.accountPasswordSheetSubtitle,
                           style: TextStyle(
                               color: f.textSecondary,
                               height: 1.5,
                               fontSize: 14)),
                       const SizedBox(height: 24),
-                      _field('Current password', _current, 0),
-                      _field('New password', _password, 1),
-                      _field('Confirm password', _confirmation, 2),
+                      _field(l10n.accountPasswordSheetCurrentLabel, _current, 0),
+                      _field(l10n.accountPasswordSheetNewLabel, _password, 1),
+                      _field(
+                          l10n.accountPasswordSheetConfirmLabel, _confirmation, 2),
                       if (_error != null) ...[
                         Container(
                             width: double.infinity,
@@ -184,8 +192,8 @@ class _AccountPasswordSheetState extends State<AccountPasswordSheet> {
                                           strokeWidth: 2))
                                   : const Icon(Icons.check_rounded, size: 20),
                               label: Text(_saving
-                                  ? 'Updating password…'
-                                  : 'Update password'))),
+                                  ? l10n.accountPasswordSheetUpdating
+                                  : l10n.accountPasswordSheetUpdate))),
                     ])),
           ),
         ),

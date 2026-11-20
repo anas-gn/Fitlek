@@ -1,0 +1,490 @@
+{
+  "clientHomeSessionFallback": "Session",
+  "clientHomeUpdateFavoritesFailed": "Unable to update favorites",
+  "clientHomeErrorCode": "Error ({statusCode})",
+  "@clientHomeErrorCode": {
+    "placeholders": {
+      "statusCode": {
+        "type": "int"
+      }
+    }
+  },
+  "clientHomeLoadRecommendationsFailed": "Could not load recommendations. Please try again.",
+  "clientHomeConnectFailed": "Unable to connect. Please try again.",
+  "clientHomeServerUnreachable": "Server unreachable",
+  "clientHomeNutritionDiaryTitle": "Your nutrition diary",
+  "clientHomeNutritionDiarySubtitle": "Calories, macros & every meal",
+  "clientHomeSectionMyFavorites": "My Favorites",
+  "clientHomeSectionRecommended": "Recommended for You",
+  "clientHomeSetLocationDistances": "Set location to see distances",
+  "clientHomeSectionUpcomingSessions": "Upcoming Sessions",
+  "clientHomeSectionCoachingCompanies": "Coaching companies",
+  "clientHomeHeroTitle": "Your\nGoals.\nOur Coaches.",
+  "clientHomeHeroSubtitle": "Find the right coach, book a\nsession and start your journey.",
+  "clientHomeFindYourCoach": "Find your coach",
+  "clientHomeTagline": "TRAIN • CONNECT • PROGRESS",
+  "clientHomeSetLocation": "Set Location",
+  "clientHomeActionBookSession": "Book a\nSession",
+  "clientHomeActionFindCoach": "Find a\nCoach",
+  "clientHomeActionScanQr": "Scan\nQR",
+  "clientHomeActionScanMeal": "Sirvya AI\nScan meal",
+  "clientHomeSeeAll": "See all",
+  "clientHomeCategoryAll": "All",
+  "clientHomeNoCoachesAvailable": "No coaches available",
+  "clientHomeRetry": "Retry",
+  "clientHomeSessionTodayAt": "Today • {time}",
+  "@clientHomeSessionTodayAt": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "clientHomeSessionTomorrowAt": "Tomorrow • {time}",
+  "@clientHomeSessionTomorrowAt": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "clientHomeSessionDateAt": "{date} • {time}",
+  "@clientHomeSessionDateAt": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      },
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "clientHomeWithCoach": "With {coachName}",
+  "@clientHomeWithCoach": {
+    "placeholders": {
+      "coachName": {
+        "type": "String"
+      }
+    }
+  },
+  "clientHomeNoCompaniesAvailable": "No companies available",
+  "clientHomeNewBadge": "New",
+  "clientHomeCoachCount": "{count, plural, =1{1 coach} other{{count} coaches}}",
+  "@clientHomeCoachCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "clientHomeCoachingDefault": "Coaching",
+  "clientHomeCountryDefault": "Morocco",
+  "clientHomeCompanyReviewsCount": " ({count, plural, =1{1 review} other{{count} reviews}})",
+  "@clientHomeCompanyReviewsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "clientHomeViewCoaches": "VIEW COACHES",
+
+  "clientListLocationServicesDisabled": "Location services are disabled.",
+  "clientListLocationPermissionDenied": "Location permissions are denied",
+  "clientListLocationPermissionDeniedForever": "Location permissions are permanently denied.",
+  "clientListFetchingLocation": "Fetching location...",
+  "clientListGetLocationFailed": "Failed to get location: {error}",
+  "@clientListGetLocationFailed": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "clientListServerError": "Server error ({statusCode})",
+  "@clientListServerError": {
+    "placeholders": {
+      "statusCode": {
+        "type": "int"
+      }
+    }
+  },
+  "clientListLoadRecommendationsFailed": "Could not load recommendations. Please try again.",
+  "clientListConnectFailed": "Unable to connect. Please try again.",
+  "clientListServerUnreachable": "Server unreachable.",
+  "clientListFiltersButton": "Filters",
+  "clientListAllSpecialties": "All specialties",
+  "clientListFindACoach": "Find a coach",
+  "clientListMapToggle": "Map",
+  "clientListListToggle": "List",
+  "clientListSearchHint": "Search coaches, specialties...",
+  "clientListVerifiedOnly": "Verified only",
+  "clientListMinRatingChip": "{rating}+ Stars",
+  "@clientListMinRatingChip": {
+    "placeholders": {
+      "rating": {
+        "type": "String"
+      }
+    }
+  },
+  "clientListFilterCoachesTitle": "Filter coaches",
+  "clientListDone": "Done",
+  "clientListVerifiedOnlySubtitle": "Show coaches verified by Sirvya",
+  "clientListSortByLabel": "SORT BY",
+  "clientListSortRecommended": "Recommended for you",
+  "clientListSortPoints": "Points",
+  "clientListSortAlphabetical": "Alphabetical",
+  "clientListSortTopRated": "Top rated",
+  "clientListMinRatingLabel": "MINIMUM RATING",
+  "clientListClear": "Clear",
+  "clientListAll": "All",
+  "clientListCityLabel": "CITY",
+  "clientListLocationToBeDefined": "To be defined",
+  "clientListCompanyIndependent": "Independent",
+  "clientListNoCoachesInCity": "No coaches found in {city}",
+  "@clientListNoCoachesInCity": {
+    "placeholders": {
+      "city": {
+        "type": "String"
+      }
+    }
+  },
+  "clientListNoCoachesFound": "No coaches found",
+  "clientListCoachesFoundCount": "{count, plural, =1{1 coach found} other{{count} coaches found}}",
+  "@clientListCoachesFoundCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "clientListListViewTooltip": "List view",
+  "clientListGridViewTooltip": "Grid view",
+  "clientListSortAction": "Sort",
+  "clientListNoCompaniesInCity": "No companies found in {city}",
+  "@clientListNoCompaniesInCity": {
+    "placeholders": {
+      "city": {
+        "type": "String"
+      }
+    }
+  },
+  "clientListNoCompaniesFound": "No companies found",
+  "clientListRetry": "Retry",
+  "clientListReset": "Reset",
+  "clientListPremiumBadge": "PREMIUM",
+  "clientListNewBadge": "New",
+  "clientListAvailableToday": "Available today",
+  "clientListPriceFrom": "From",
+  "clientListPriceCurrency": "{price} MAD",
+  "@clientListPriceCurrency": {
+    "placeholders": {
+      "price": {
+        "type": "int"
+      }
+    }
+  },
+  "clientListPriceLabel": "Price",
+  "clientListPriceOnRequest": "Price on request",
+  "clientListViewAndBook": "View & book",
+  "clientListCodeCopied": "Code copied",
+  "clientListNumberCopied": "Number copied",
+  "clientListViewCoachesBadge": "View coaches",
+  "clientListViewProfile": "VIEW PROFILE",
+
+  "clientCoachFavoritesServerError": "Server error ({statusCode})",
+  "@clientCoachFavoritesServerError": {
+    "placeholders": {
+      "statusCode": {
+        "type": "int"
+      }
+    }
+  },
+  "clientCoachFavoritesServerUnreachable": "Server unreachable",
+  "clientCoachFavoritesUpdateFailed": "Unable to update favorites",
+  "clientCoachFavoritesLocationToBeDefined": "To be defined",
+  "clientCoachFavoritesCompanyIndependent": "Independent",
+  "clientCoachFavoritesTitle": "My Favorites",
+  "clientCoachFavoritesLoading": "Loading…",
+  "clientCoachFavoritesEmptySubtitle": "Coaches you like will appear here",
+  "clientCoachFavoritesSavedCount": "{count, plural, =1{1 coach saved} other{{count} coaches saved}}",
+  "@clientCoachFavoritesSavedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "clientCoachFavoritesSearchHint": "Search your favorite coaches...",
+  "clientCoachFavoritesRetry": "Retry",
+  "clientCoachFavoritesEmptyTitle": "No favorite coaches yet",
+  "clientCoachFavoritesEmptyMessage": "Tap the heart on a coach to save them here.",
+  "clientCoachFavoritesFindACoach": "Find a coach",
+  "clientCoachFavoritesNoResults": "No coach matches your search",
+  "clientCoachFavoritesReset": "Reset",
+  "clientCoachFavoritesNewBadge": "New",
+  "clientCoachFavoritesViewProfile": "VIEW PROFILE",
+
+  "clientCoachReviewsLoadFailed": "Could not load feedback. Pull down to retry.",
+  "clientCoachReviewsMyFeedbackTitle": "My feedback",
+  "clientCoachReviewsTitle": "Reviews & Ratings",
+  "clientCoachReviewsAllCount": "All Reviews ({count})",
+  "@clientCoachReviewsAllCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "clientCoachReviewsStarCount": "{stars} Star Reviews ({count})",
+  "@clientCoachReviewsStarCount": {
+    "placeholders": {
+      "stars": {
+        "type": "int"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "clientCoachReviewsClearFilter": "Clear filter",
+  "clientCoachReviewsTotalCount": "{count, plural, =1{1 review} other{{count} reviews}}",
+  "@clientCoachReviewsTotalCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "clientCoachReviewsFilterAll": "All ({count})",
+  "@clientCoachReviewsFilterAll": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "clientCoachReviewsEmptyStarFilter": "No reviews with {stars} stars yet",
+  "@clientCoachReviewsEmptyStarFilter": {
+    "placeholders": {
+      "stars": {
+        "type": "int"
+      }
+    }
+  },
+  "clientCoachReviewsEmptyCoachView": "Your client feedback will appear here",
+  "clientCoachReviewsEmptyClientView": "No reviews found",
+  "clientCoachReviewsMyReviewBadge": "My review",
+
+  "clientCompanyDetailNotFound": "Advisor not found",
+  "clientCompanyDetailLoadError": "Error loading advisor ({statusCode})",
+  "@clientCompanyDetailLoadError": {
+    "placeholders": {
+      "statusCode": {
+        "type": "int"
+      }
+    }
+  },
+  "clientCompanyDetailVerifiedBadge": "VERIFIED",
+  "clientCompanyDetailStatCoaches": "Coaches",
+  "clientCompanyDetailStatInvitations": "Invitations",
+  "clientCompanyDetailStatPoints": "Points",
+  "clientCompanyDetailTabCoaches": "COACHES ({count})",
+  "@clientCompanyDetailTabCoaches": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "clientCompanyDetailTabAbout": "ABOUT",
+  "clientCompanyDetailTabGallery": "GALLERY ({count})",
+  "@clientCompanyDetailTabGallery": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "clientCompanyDetailTabLocation": "LOCATION",
+  "clientCompanyDetailNoCoaches": "No coaches linked yet",
+  "clientCompanyDetailCertifiedCoach": "Certified coach",
+  "clientCompanyDetailSectionProfile": "PROFILE",
+  "clientCompanyDetailFullName": "Full name",
+  "clientCompanyDetailEmail": "Email",
+  "clientCompanyDetailSpecialty": "Specialty",
+  "clientCompanyDetailCity": "City",
+  "clientCompanyDetailGymName": "Gym name",
+  "clientCompanyDetailAddress": "Address",
+  "clientCompanyDetailSectionStatistics": "STATISTICS",
+  "clientCompanyDetailStatTeamCoaches": "Coaches on the team",
+  "clientCompanyDetailStatTotalInvitations": "Total invitations",
+  "clientCompanyDetailStatTotalPoints": "Total points",
+  "clientCompanyDetailNoGalleryImages": "No gym images yet",
+  "clientCompanyDetailSectionAddress": "ADDRESS",
+  "clientCompanyDetailAddressNotProvided": "Address not provided",
+  "clientCompanyDetailSectionMap": "MAP",
+  "clientCompanyDetailLocationNotAvailable": "Location not available",
+  "clientCompanyDetailGymDefault": "Gym",
+  "clientCompanyDetailOpenMap": "OPEN",
+  "clientCompanyDetailLoadingErrorTitle": "Loading error",
+  "clientCompanyDetailRetry": "RETRY",
+  "clientCompanyDetailViewProfile": "VIEW PROFILE",
+  "clientCompanyDetailCoachDefault": "Coach",
+  "clientCompanyDetailAnywhere": "Anywhere",
+  "clientCompanyDetailNewBadge": "New",
+  "clientCompanyDetailReviewsCount": "{count, plural, =1{1 review} other{{count} reviews}}",
+  "@clientCompanyDetailReviewsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "clientCompanyDetailInvitationsShort": "{count} inv.",
+  "@clientCompanyDetailInvitationsShort": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "clientCompanyDetailPointsShort": "{count} pts",
+  "@clientCompanyDetailPointsShort": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+
+  "clientProfilServerError": "Server error ({statusCode})",
+  "@clientProfilServerError": {
+    "placeholders": {
+      "statusCode": {
+        "type": "int"
+      }
+    }
+  },
+  "clientProfilCheckConnection": "Check your connection and try again.",
+  "clientProfilLoadFailed": "Unable to load your profile. Please try again.",
+  "clientProfilWeightLoadFailed": "Could not load your latest records. Tap Refresh history to try again.",
+  "clientProfilWeightSaveFailed": "Could not save weight.",
+  "clientProfilWeightSaved": "Weight saved ✓",
+  "clientProfilPhotoSaveFailed": "Could not save your photo. Please try again.",
+  "clientProfilPhotoUpdated": "Profile photo updated ✓",
+  "clientProfilUploadError": "Upload error",
+  "clientProfilGenericError": "Error: {error}",
+  "@clientProfilGenericError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "clientProfilNameRequired": "Please add your first and last name.",
+  "clientProfilInvalidHeight": "Enter a valid height in centimetres.",
+  "clientProfilSaveFailed": "Error while saving.",
+  "clientProfilServerUnreachable": "Unable to reach the server.",
+  "clientProfilDeleteBlockedDefault": "Cannot delete account right now.",
+  "clientProfilSendCodeFailed": "Failed to send code.",
+  "clientProfilEnterFullCode": "Please enter the full 6-digit code.",
+  "clientProfilVerificationFailed": "Verification failed.",
+  "clientProfilDeleteAccountTitle": "Delete Account",
+  "clientProfilDeletePermanentSubtitle": "This action is permanent",
+  "clientProfilDeleteWhatWillBeDeleted": "What will be deleted:",
+  "clientProfilDeleteItemProfile": "Your profile and personal information",
+  "clientProfilDeleteItemSessions": "All sessions and booking history",
+  "clientProfilDeleteItemMessages": "Messages and conversations",
+  "clientProfilDeleteItemWeight": "Weight progress and fitness data",
+  "clientProfilDeleteUnderstandCheckbox": "I understand this action is irreversible and all my data will be permanently deleted.",
+  "clientProfilCancel": "Cancel",
+  "clientProfilSendCode": "SEND CODE",
+  "clientProfilVerifyIdentityTitle": "Verify your identity",
+  "clientProfilVerifyCheckEmailSubtitle": "Check your email for the code",
+  "clientProfilVerifyInstructions": "Enter the 6-digit code sent to your email address to confirm account deletion.",
+  "clientProfilCodeExpiresIn": "Code expires in {minutes}:{seconds}",
+  "@clientProfilCodeExpiresIn": {
+    "placeholders": {
+      "minutes": {
+        "type": "String"
+      },
+      "seconds": {
+        "type": "String"
+      }
+    }
+  },
+  "clientProfilCodeExpired": "Code expired",
+  "clientProfilResendCode": "Resend code",
+  "clientProfilBack": "Back",
+  "clientProfilDeleteAccountBtn": "DELETE ACCOUNT",
+  "clientProfilGenderMale": "Male",
+  "clientProfilGenderFemale": "Female",
+  "clientProfilGenderOther": "Other",
+  "clientProfilPasswordUpdated": "Password updated ✓",
+  "clientProfilLoadingProfile": "Loading profile...",
+  "clientProfilRetry": "Retry",
+  "clientProfilSaving": "Saving…",
+  "clientProfilSaveChanges": "Save changes",
+  "clientProfilHeaderTitle": "My profile",
+  "clientProfilHeaderSavedSubtitle": "Your changes are saved.",
+  "clientProfilHeaderDefaultSubtitle": "A little more you. A stronger journey.",
+  "clientProfilCancelEditingTooltip": "Cancel editing",
+  "clientProfilEditProfileTooltip": "Edit profile",
+  "clientProfilStatSessions": "Sessions",
+  "clientProfilStatCurrentWeight": "Current weight",
+  "clientProfilWeightValueKg": "{weight} kg",
+  "@clientProfilWeightValueKg": {
+    "placeholders": {
+      "weight": {
+        "type": "String"
+      }
+    }
+  },
+  "clientProfilStatHeight": "Height",
+  "clientProfilHeightValueCm": "{height} cm",
+  "@clientProfilHeightValueCm": {
+    "placeholders": {
+      "height": {
+        "type": "String"
+      }
+    }
+  },
+  "clientProfilTabMyDetails": "My details",
+  "clientProfilTabMyProgress": "My progress",
+  "clientProfilTabNutrition": "Nutrition",
+  "clientProfilEditInstructions": "Make your changes below, then tap Save changes.",
+  "clientProfilGroupAboutTitle": "About you",
+  "clientProfilGroupAboutSubtitle": "The details that make this space yours.",
+  "clientProfilFirstName": "First name",
+  "clientProfilLastName": "Last name",
+  "clientProfilHeightCm": "Height (cm)",
+  "clientProfilGroupInterestsTitle": "Your fitness interests",
+  "clientProfilGroupInterestsSubtitle": "Choose up to 5 things you enjoy. We’ll use them to help you discover coaches.",
+  "clientProfilGroupAccountTitle": "Account & location",
+  "clientProfilGroupAccountSubtitle": "Keep your contact details up to date.",
+  "clientProfilEmailAddress": "Email address",
+  "clientProfilAddEmail": "Add your email",
+  "clientProfilPhoneNumber": "Phone number",
+  "clientProfilAddPhone": "Add your phone number",
+  "clientProfilMyLocation": "My location",
+  "clientProfilSetCity": "Set your city",
+  "clientProfilGroupSirvyaTitle": "Your Sirvya",
+  "clientProfilGroupSirvyaSubtitle": "Your people, your preferences, your peace of mind.",
+  "clientProfilFavoriteCoaches": "Favorite coaches",
+  "clientProfilFavoriteCoachesSubtitle": "Keep your favorites close",
+  "clientProfilNotifications": "Notifications",
+  "clientProfilNotificationsSubtitle": "Updates about your activity",
+  "clientProfilPasswordSecurity": "Password & security",
+  "clientProfilPasswordSecuritySubtitle": "Manage your password",
+  "clientProfilBlockedAccounts": "Blocked accounts",
+  "clientProfilBlockedAccountsSubtitle": "Manage who can contact you",
+  "clientProfilLogOut": "Log out",
+  "clientProfilDeleteMyAccount": "Delete my account",
+  "clientProfilChooseInterests": "Choose your interests",
+  "clientProfilInterestsLoadFailed": "Interests could not be loaded. Try again to choose from the catalog.",
+  "clientProfilTryAgain": "Try again",
+  "clientProfilMaxInterests": "Choose up to 5 interests.",
+  "clientProfilGender": "Gender",
+  "clientProfilNotAddedYet": "Not added yet"
+}

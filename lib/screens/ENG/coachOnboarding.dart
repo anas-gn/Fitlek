@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:ui';
+import 'package:fitlek1/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -143,9 +144,10 @@ class _CoachOnboardingState extends State<CoachOnboarding>
     final scanned = await Navigator.of(context).push<String>(
         MaterialPageRoute(builder: (_) => const ClientQrScannerScreen()));
     if (scanned == null || !mounted) return;
+    final l = AppLocalizations.of(context);
     final code = ReferralLinkService.codeFromQr(scanned);
     if (code == null) {
-      setState(() => _error = 'This QR code is not a valid coach invitation.');
+      setState(() => _error = l.coachOnboardingErrorInvalidQr);
       return;
     }
     setState(() {
@@ -161,7 +163,7 @@ class _CoachOnboardingState extends State<CoachOnboarding>
     } else {
       setState(() {
         _busy = false;
-        _error = 'This invitation code is not recognized.';
+        _error = l.coachOnboardingErrorInvalidCode;
       });
     }
   }
@@ -196,7 +198,8 @@ class _CoachOnboardingState extends State<CoachOnboarding>
     } else {
       setState(() {
         _busy = false;
-        _error = r['message']?.toString() ?? 'Upload failed.';
+        _error = r['message']?.toString() ??
+            AppLocalizations.of(context).coachOnboardingErrorUploadFailed;
       });
     }
   }
@@ -330,7 +333,7 @@ class _CoachOnboardingState extends State<CoachOnboarding>
             onPressed: _logout,
             icon: Icon(Icons.logout_rounded,
                 size: 16, color: Colors.white.withValues(alpha: 0.6)),
-            label: Text('Log out',
+            label: Text(AppLocalizations.of(context).coachOnboardingLogOut,
                 style: TextStyle(
                     color: Colors.white.withValues(alpha: 0.6),
                     fontSize: 12,
@@ -353,240 +356,247 @@ class _CoachOnboardingState extends State<CoachOnboarding>
       );
 
   // ── Impossible de vérifier (réseau) ──
-  Widget _offlineView() => Column(children: [
-        const SizedBox(height: 60),
-        Icon(Icons.wifi_off_rounded,
-            color: Colors.white.withValues(alpha: 0.5), size: 52),
-        const SizedBox(height: 16),
-        const Text('Unable to verify your account',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-                color: Colors.white, fontSize: 18, fontWeight: FontWeight.w800)),
-        const SizedBox(height: 8),
-        Text('Check your connection and try again.',
-            style: TextStyle(color: Colors.white.withValues(alpha: 0.6))),
-        const SizedBox(height: 24),
-        _PressableScale(
-          onTap: _retry,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
-            decoration: BoxDecoration(
-                color: AppColors.sand, borderRadius: BorderRadius.circular(14)),
-            child: const Text('RETRY',
-                style: TextStyle(
-                    color: AppColors.cyprus,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 1.5)),
-          ),
+  Widget _offlineView() {
+    final l = AppLocalizations.of(context);
+    return Column(children: [
+      const SizedBox(height: 60),
+      Icon(Icons.wifi_off_rounded,
+          color: Colors.white.withValues(alpha: 0.5), size: 52),
+      const SizedBox(height: 16),
+      Text(l.coachOnboardingOfflineTitle,
+          textAlign: TextAlign.center,
+          style: const TextStyle(
+              color: Colors.white, fontSize: 18, fontWeight: FontWeight.w800)),
+      const SizedBox(height: 8),
+      Text(l.coachOnboardingOfflineSubtitle,
+          style: TextStyle(color: Colors.white.withValues(alpha: 0.6))),
+      const SizedBox(height: 24),
+      _PressableScale(
+        onTap: _retry,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
+          decoration: BoxDecoration(
+              color: AppColors.sand, borderRadius: BorderRadius.circular(14)),
+          child: Text(l.coachOnboardingRetry,
+              style: const TextStyle(
+                  color: AppColors.cyprus,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 1.5)),
         ),
-      ]);
+      ),
+    ]);
+  }
 
   // ── Écran 1 : les deux choix ──
-  Widget _choices() => Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const SizedBox(height: 24),
-          _badge('VERIFICATION'),
-          const SizedBox(height: 16),
-          const Text('Verify your\ncoach account',
-              style: TextStyle(
-                  fontSize: 34,
-                  fontWeight: FontWeight.w900,
-                  color: Colors.white,
-                  height: 1.08,
-                  letterSpacing: -1)),
-          const SizedBox(height: 10),
-          Text('This step is required to access SIRVYA as a coach.',
-              style: TextStyle(
-                  fontSize: 14,
-                  height: 1.5,
-                  color: Colors.white.withValues(alpha: 0.65))),
-          const SizedBox(height: 28),
-          AnimatedOpacity(
-            duration: const Duration(milliseconds: 200),
-            opacity: _busy ? 0.45 : 1,
-            child: Column(children: [
-              _OptionCard(
-                icon: Icons.qr_code_scanner_rounded,
-                tag: 'INSTANT ACCESS',
-                title: 'Scan an invitation QR code',
-                description:
-                    'Scan the QR code of the coach who invited you and enter right away.',
-                highlighted: true,
-                onTap: _busy ? null : _scanQr,
-              ),
-              const SizedBox(height: 18),
-              _orDivider(),
-              const SizedBox(height: 18),
-              _OptionCard(
-                icon: Icons.photo_camera_rounded,
-                tag: 'REVIEW · UP TO 48H',
-                title: 'Take a photo of your certificate',
-                description:
-                    'Our team checks your credentials. You enter once your request is approved.',
-                highlighted: false,
-                onTap: _busy ? null : _takePhoto,
-              ),
-            ]),
-          ),
-          if (_busy) ...[
-            const SizedBox(height: 24),
-            const Center(
-              child: SizedBox(
-                width: 24,
-                height: 24,
-                child: CircularProgressIndicator(
-                    color: AppColors.sand, strokeWidth: 2.5),
-              ),
+  Widget _choices() {
+    final l = AppLocalizations.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 24),
+        _badge(l.coachOnboardingBadgeVerification),
+        const SizedBox(height: 16),
+        Text(l.coachOnboardingChoicesTitle,
+            style: const TextStyle(
+                fontSize: 34,
+                fontWeight: FontWeight.w900,
+                color: Colors.white,
+                height: 1.08,
+                letterSpacing: -1)),
+        const SizedBox(height: 10),
+        Text(l.coachOnboardingChoicesSubtitle,
+            style: TextStyle(
+                fontSize: 14,
+                height: 1.5,
+                color: Colors.white.withValues(alpha: 0.65))),
+        const SizedBox(height: 28),
+        AnimatedOpacity(
+          duration: const Duration(milliseconds: 200),
+          opacity: _busy ? 0.45 : 1,
+          child: Column(children: [
+            _OptionCard(
+              icon: Icons.qr_code_scanner_rounded,
+              tag: l.coachOnboardingQrTag,
+              title: l.coachOnboardingQrTitle,
+              description: l.coachOnboardingQrDesc,
+              highlighted: true,
+              onTap: _busy ? null : _scanQr,
             ),
-          ],
-          if (_error != null) ...[
             const SizedBox(height: 18),
-            _errorBanner(_error!),
-          ],
-          const SizedBox(height: 28),
-          Row(children: [
-            Icon(Icons.lock_outline_rounded,
-                size: 14, color: Colors.white.withValues(alpha: 0.45)),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Text(
-                'Your documents are only used to verify your identity as a coach.',
-                style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.45),
-                    fontSize: 11.5,
-                    height: 1.4),
-              ),
+            _orDivider(),
+            const SizedBox(height: 18),
+            _OptionCard(
+              icon: Icons.photo_camera_rounded,
+              tag: l.coachOnboardingCertTag,
+              title: l.coachOnboardingCertTitle,
+              description: l.coachOnboardingCertDesc,
+              highlighted: false,
+              onTap: _busy ? null : _takePhoto,
             ),
           ]),
+        ),
+        if (_busy) ...[
           const SizedBox(height: 24),
+          const Center(
+            child: SizedBox(
+              width: 24,
+              height: 24,
+              child: CircularProgressIndicator(
+                  color: AppColors.sand, strokeWidth: 2.5),
+            ),
+          ),
         ],
-      );
+        if (_error != null) ...[
+          const SizedBox(height: 18),
+          _errorBanner(_error!),
+        ],
+        const SizedBox(height: 28),
+        Row(children: [
+          Icon(Icons.lock_outline_rounded,
+              size: 14, color: Colors.white.withValues(alpha: 0.45)),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              l.coachOnboardingPrivacyNotice,
+              style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.45),
+                  fontSize: 11.5,
+                  height: 1.4),
+            ),
+          ),
+        ]),
+        const SizedBox(height: 24),
+      ],
+    );
+  }
 
   // ── Écran 2 : en attente d'approbation ──
-  Widget _waiting() => Column(
-        children: [
-          const SizedBox(height: 36),
-          AnimatedBuilder(
-            animation: _pulse,
-            builder: (_, __) => Container(
-              width: 110,
-              height: 110,
+  Widget _waiting() {
+    final l = AppLocalizations.of(context);
+    return Column(
+      children: [
+        const SizedBox(height: 36),
+        AnimatedBuilder(
+          animation: _pulse,
+          builder: (_, __) => Container(
+            width: 110,
+            height: 110,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: AppColors.sand.withValues(alpha: 0.10),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.sand
+                      .withValues(alpha: 0.10 + 0.18 * _pulse.value),
+                  blurRadius: 24 + 30 * _pulse.value,
+                  spreadRadius: 2 + 8 * _pulse.value,
+                ),
+              ],
+            ),
+            child: Container(
+              margin: const EdgeInsets.all(14),
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: AppColors.sand.withValues(alpha: 0.10),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.sand
-                        .withValues(alpha: 0.10 + 0.18 * _pulse.value),
-                    blurRadius: 24 + 30 * _pulse.value,
-                    spreadRadius: 2 + 8 * _pulse.value,
-                  ),
-                ],
+                color: AppColors.sand.withValues(alpha: 0.16),
+                border: Border.all(
+                    color: AppColors.sand.withValues(alpha: 0.45),
+                    width: 1.5),
               ),
-              child: Container(
-                margin: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: AppColors.sand.withValues(alpha: 0.16),
-                  border: Border.all(
-                      color: AppColors.sand.withValues(alpha: 0.45),
-                      width: 1.5),
-                ),
-                child: const Icon(Icons.hourglass_top_rounded,
-                    color: AppColors.sand, size: 38),
-              ),
+              child: const Icon(Icons.hourglass_top_rounded,
+                  color: AppColors.sand, size: 38),
             ),
           ),
-          const SizedBox(height: 28),
-          _badge('PENDING REVIEW'),
-          const SizedBox(height: 16),
-          const Text('Waiting for\napproval',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                  fontSize: 32,
-                  fontWeight: FontWeight.w900,
-                  color: Colors.white,
-                  height: 1.08,
-                  letterSpacing: -1)),
-          const SizedBox(height: 12),
-          Text(
-              'Your certificate was sent. You will get access as soon as our team approves it.',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                  fontSize: 14,
-                  height: 1.55,
-                  color: Colors.white.withValues(alpha: 0.65))),
-          const SizedBox(height: 28),
-          _glass(
-            child: Column(children: [
-              _timelineStep(Icons.check_rounded, 'Certificate sent',
-                  'We received your photo.', _StepState.done),
-              _timelineStep(Icons.manage_search_rounded, 'Under review',
-                  'Usually within 48 hours.', _StepState.active),
-              _timelineStep(Icons.verified_rounded, 'Approved',
-                  'You get full access to SIRVYA.', _StepState.todo,
-                  last: true),
-            ]),
-          ),
-          const SizedBox(height: 24),
-          _PressableScale(
-            onTap: _checkApproved,
-            child: Container(
-              width: double.infinity,
-              height: 56,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    AppColors.sand,
-                    AppColors.sand.withValues(alpha: 0.85)
-                  ],
+        ),
+        const SizedBox(height: 28),
+        _badge(l.coachOnboardingBadgePending),
+        const SizedBox(height: 16),
+        Text(l.coachOnboardingWaitingTitle,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+                fontSize: 32,
+                fontWeight: FontWeight.w900,
+                color: Colors.white,
+                height: 1.08,
+                letterSpacing: -1)),
+        const SizedBox(height: 12),
+        Text(
+            l.coachOnboardingWaitingSubtitle,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+                fontSize: 14,
+                height: 1.55,
+                color: Colors.white.withValues(alpha: 0.65))),
+        const SizedBox(height: 28),
+        _glass(
+          child: Column(children: [
+            _timelineStep(Icons.check_rounded, l.coachOnboardingStepSentTitle,
+                l.coachOnboardingStepSentSub, _StepState.done),
+            _timelineStep(Icons.manage_search_rounded, l.coachOnboardingStepReviewTitle,
+                l.coachOnboardingStepReviewSub, _StepState.active),
+            _timelineStep(Icons.verified_rounded, l.coachOnboardingStepApprovedTitle,
+                l.coachOnboardingStepApprovedSub, _StepState.todo,
+                last: true),
+          ]),
+        ),
+        const SizedBox(height: 24),
+        _PressableScale(
+          onTap: _checkApproved,
+          child: Container(
+            width: double.infinity,
+            height: 56,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  AppColors.sand,
+                  AppColors.sand.withValues(alpha: 0.85)
+                ],
+              ),
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.sand.withValues(alpha: 0.35),
+                  blurRadius: 28,
+                  offset: const Offset(0, 10),
                 ),
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppColors.sand.withValues(alpha: 0.35),
-                    blurRadius: 28,
-                    offset: const Offset(0, 10),
-                  ),
-                ],
-              ),
-              child: const Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.refresh_rounded,
-                      color: AppColors.cyprus, size: 18),
-                  SizedBox(width: 10),
-                  Text('CHECK STATUS',
-                      style: TextStyle(
-                          color: AppColors.cyprus,
-                          fontWeight: FontWeight.w900,
-                          fontSize: 14,
-                          letterSpacing: 1.5)),
-                ],
-              ),
+              ],
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.refresh_rounded,
+                    color: AppColors.cyprus, size: 18),
+                const SizedBox(width: 10),
+                Text(l.coachOnboardingCheckStatus,
+                    style: const TextStyle(
+                        color: AppColors.cyprus,
+                        fontWeight: FontWeight.w900,
+                        fontSize: 14,
+                        letterSpacing: 1.5)),
+              ],
             ),
           ),
+        ),
+        const SizedBox(height: 12),
+        if (_error != null) ...[
+          _errorBanner(_error!),
           const SizedBox(height: 12),
-          if (_error != null) ...[
-            _errorBanner(_error!),
-            const SizedBox(height: 12),
-          ],
-          TextButton.icon(
-            onPressed: _busy ? null : _takePhoto,
-            icon: const Icon(Icons.photo_camera_outlined,
-                color: AppColors.sand, size: 16),
-            label: const Text('Send another photo',
-                style: TextStyle(
-                    color: AppColors.sand,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700)),
-          ),
-          const SizedBox(height: 24),
         ],
-      );
+        TextButton.icon(
+          onPressed: _busy ? null : _takePhoto,
+          icon: const Icon(Icons.photo_camera_outlined,
+              color: AppColors.sand, size: 16),
+          label: Text(l.coachOnboardingSendAnotherPhoto,
+              style: const TextStyle(
+                  color: AppColors.sand,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700)),
+        ),
+        const SizedBox(height: 24),
+      ],
+    );
+  }
 
   // ───────────────────────── Petits composants ─────────────────────────
 
@@ -610,7 +620,7 @@ class _CoachOnboardingState extends State<CoachOnboarding>
                 color: Colors.white.withValues(alpha: 0.15), thickness: 1)),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 14),
-          child: Text('OR',
+          child: Text(AppLocalizations.of(context).coachOnboardingOr,
               style: TextStyle(
                   color: Colors.white.withValues(alpha: 0.4),
                   fontSize: 11,

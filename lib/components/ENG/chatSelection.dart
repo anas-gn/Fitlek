@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:fitlek1/l10n/app_localizations.dart';
 
 class ChatSelectionBar extends StatelessWidget implements PreferredSizeWidget {
   final int count;
@@ -12,20 +13,22 @@ class ChatSelectionBar extends StatelessWidget implements PreferredSizeWidget {
   @override
   Size get preferredSize => const Size.fromHeight(64);
   @override
-  Widget build(BuildContext context) => AppBar(
-          leading:
-              IconButton(onPressed: onClose, icon: const Icon(Icons.close)),
-          title: Text('$count selected'),
-          actions: [
-            IconButton(
-                tooltip: 'Select all loaded messages',
-                onPressed: onSelectAll,
-                icon: const Icon(Icons.select_all)),
-            IconButton(
-                tooltip: 'Delete messages',
-                onPressed: count == 0 ? null : onDelete,
-                icon: const Icon(Icons.delete_outline))
-          ]);
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return AppBar(
+        leading: IconButton(onPressed: onClose, icon: const Icon(Icons.close)),
+        title: Text(l10n.chatSelectionSelectedCount(count)),
+        actions: [
+          IconButton(
+              tooltip: l10n.chatSelectionSelectAllTooltip,
+              onPressed: onSelectAll,
+              icon: const Icon(Icons.select_all)),
+          IconButton(
+              tooltip: l10n.chatSelectionDeleteTooltip,
+              onPressed: count == 0 ? null : onDelete,
+              icon: const Icon(Icons.delete_outline))
+        ]);
+  }
 }
 
 class SelectableChatMessage extends StatelessWidget {

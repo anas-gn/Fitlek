@@ -2,6 +2,7 @@ import '../app_dialog.dart';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:fitlek1/l10n/app_localizations.dart';
 import 'package:image_picker/image_picker.dart';
 
 Future<String?> previewChatImages(BuildContext context, List<XFile> files) =>
@@ -25,9 +26,10 @@ class _BatchPreviewState extends State<_BatchPreview> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final files = widget.files;
     return AppDialog(
-        title: Text('Send ${files.length} photos'),
+        title: Text(l10n.chatImageBatchSendPhotos(files.length)),
         content: SizedBox(
             width: 360,
             child: SingleChildScrollView(
@@ -51,15 +53,15 @@ class _BatchPreviewState extends State<_BatchPreview> {
                   controller: caption,
                   maxLength: 1000,
                   decoration: InputDecoration(
-                      hintText: 'Caption for the first photo (optional)'))
+                      hintText: l10n.chatImageBatchCaptionHint))
             ]))),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel')),
+              child: Text(l10n.chatImageBatchCancel)),
           FilledButton(
               onPressed: () => Navigator.pop(context, caption.text.trim()),
-              child: Text('Send ${files.length} photos'))
+              child: Text(l10n.chatImageBatchSendPhotos(files.length)))
         ]);
   }
 }

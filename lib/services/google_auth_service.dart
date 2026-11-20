@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:http/http.dart' as http;
 import 'package:fitlek1/constants/urls.dart';
+import 'package:fitlek1/services/svc_l10n.dart';
 import 'dart:io' show Platform;
 import 'social_auth_errors.dart';
 
@@ -77,12 +78,12 @@ class GoogleAuthService {
 
       final User? firebaseUser = userCredential.user;
       if (firebaseUser == null) {
-        throw Exception('Firebase authentication failed.');
+        throw Exception(svcL10n.googleAuthFirebaseFailed);
       }
 
       final String? firebaseIdToken = await firebaseUser.getIdToken();
       if (firebaseIdToken == null) {
-        throw Exception('Could not retrieve Firebase ID token.');
+        throw Exception(svcL10n.googleAuthIdTokenFailed);
       }
 
       if (kDebugMode) {
@@ -123,7 +124,7 @@ class GoogleAuthService {
             body['user'] as Map<String, dynamic>?;
 
         if (accessToken == null || accessToken.isEmpty || user == null) {
-          throw Exception('Invalid response from server.');
+          throw Exception(svcL10n.googleAuthInvalidResponse);
         }
 
         return GoogleAuthResult(
@@ -134,12 +135,13 @@ class GoogleAuthService {
           isApproved: body['isApproved'] == true || user['isApproved'] == true,
         );
       } else if (response.statusCode == 403) {
-        throw Exception(body['error'] as String? ?? 'Account suspended.');
+        throw Exception(
+            body['error'] as String? ?? svcL10n.googleAuthAccountSuspended);
       } else {
         throw Exception(
           body['error'] as String? ??
               body['message'] as String? ??
-              'Google sign-in error (${response.statusCode})',
+              svcL10n.googleAuthSignInError(response.statusCode),
         );
       }
     } catch (e) {

@@ -1,4 +1,5 @@
 
+import 'package:fitlek1/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import '../../components/sirvya_logo.dart';
 import '../../constants/app_colors.dart';
@@ -322,26 +323,26 @@ class _MainScreenState extends State<MainScreen>
 
   late final List<Widget> _screens;
 
-  static const _navItems = [
+  List<NavItem> _navItems(AppLocalizations l) => [
     NavItem(
       icon: Icons.home_outlined,
       activeIcon: Icons.home_rounded,
-      label: 'Home',
+      label: l.headerFooterNavHome,
     ),
     NavItem(
       icon: Icons.explore_outlined,
       activeIcon: Icons.explore_rounded,
-      label: 'Explore',
+      label: l.headerFooterNavExplore,
     ),
     NavItem(
       icon: Icons.calendar_today_outlined,
       activeIcon: Icons.calendar_month_rounded,
-      label: 'Sessions',
+      label: l.headerFooterNavSessions,
     ),
     NavItem(
       icon: Icons.person_outline,
       activeIcon: Icons.person_rounded,
-      label: 'Profile',
+      label: l.headerFooterNavProfile,
     ),
   ];
 
@@ -403,7 +404,7 @@ class _MainScreenState extends State<MainScreen>
       bottomNavigationBar: AppFooter(
         currentIndex: _currentIndex,
         onTap: _onNavTap,
-        items: _navItems,
+        items: _navItems(AppLocalizations.of(context)),
       ),
     );
   }
@@ -413,6 +414,7 @@ class _HomePlaceholder extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final f = context.fitlek;
+    final l = AppLocalizations.of(context);
 
     return ListView.builder(
       padding: const EdgeInsets.all(20),
@@ -426,7 +428,7 @@ class _HomePlaceholder extends StatelessWidget {
         ),
         child: Center(
           child: Text(
-            'Home Content $i',
+            l.headerFooterHomeContent(i),
             style: TextStyle(color: f.textSecondary),
           ),
         ),
@@ -440,7 +442,7 @@ class _ExplorePlaceholder extends StatelessWidget {
   Widget build(BuildContext context) {
     return Center(
       child: Text(
-        'Explore',
+        AppLocalizations.of(context).headerFooterNavExplore,
         style: TextStyle(
           color: Theme.of(context).colorScheme.onSurface,
           fontSize: 24,
@@ -455,7 +457,7 @@ class _SessionsPlaceholder extends StatelessWidget {
   Widget build(BuildContext context) {
     return Center(
       child: Text(
-        'Sessions',
+        AppLocalizations.of(context).headerFooterNavSessions,
         style: TextStyle(
           color: Theme.of(context).colorScheme.onSurface,
           fontSize: 24,
@@ -470,7 +472,7 @@ class _ProfilePlaceholder extends StatelessWidget {
   Widget build(BuildContext context) {
     return Center(
       child: Text(
-        'Profile',
+        AppLocalizations.of(context).headerFooterNavProfile,
         style: TextStyle(
           color: Theme.of(context).colorScheme.onSurface,
           fontSize: 24,

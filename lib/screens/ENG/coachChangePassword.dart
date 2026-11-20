@@ -1,3 +1,4 @@
+import 'package:fitlek1/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -35,15 +36,15 @@ class _CoachChangePasswordState extends State<CoachChangePassword> {
     final newP = _newCtrl.text;
     final conf = _confirmCtrl.text;
     if (cur.isEmpty || newP.isEmpty || conf.isEmpty) {
-      setState(() => _errorMsg = 'All fields are required.');
+      setState(() => _errorMsg = AppLocalizations.of(context).coachChangePasswordAllRequired);
       return;
     }
     if (newP != conf) {
-      setState(() => _errorMsg = 'New passwords do not match.');
+      setState(() => _errorMsg = AppLocalizations.of(context).coachChangePasswordMismatch);
       return;
     }
     if (newP.length < 8) {
-      setState(() => _errorMsg = 'New password must be at least 8 characters.');
+      setState(() => _errorMsg = AppLocalizations.of(context).coachChangePasswordTooShort);
       return;
     }
 
@@ -67,10 +68,10 @@ class _CoachChangePasswordState extends State<CoachChangePassword> {
         Navigator.pop(context, true); // return true to indicate success
       } else {
         setState(
-            () => _errorMsg = body['error'] ?? 'Failed to update password.');
+            () => _errorMsg = body['error'] ?? AppLocalizations.of(context).coachChangePasswordFailed);
       }
     } catch (e) {
-      setState(() => _errorMsg = 'Server error. Please check your connection.');
+      setState(() => _errorMsg = AppLocalizations.of(context).coachChangePasswordServerError);
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -124,7 +125,7 @@ class _CoachChangePasswordState extends State<CoachChangePassword> {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        title: Text('Password & Security',
+        title: Text(AppLocalizations.of(context).coachChangePasswordTitle,
             style: TextStyle(
                 color: Theme.of(context).colorScheme.onSurface,
                 fontSize: 18,
@@ -141,25 +142,25 @@ class _CoachChangePasswordState extends State<CoachChangePassword> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Change your account password.',
+            Text(AppLocalizations.of(context).coachChangePasswordSubtitle,
                 style: TextStyle(color: f.textMuted, fontSize: 14)),
             SizedBox(height: 24),
             _buildField(
               controller: _currentCtrl,
-              hint: 'Current Password',
+              hint: AppLocalizations.of(context).coachChangePasswordCurrent,
               obscure: _obscureCurrent,
               toggleObscure: () =>
                   setState(() => _obscureCurrent = !_obscureCurrent),
             ),
             _buildField(
               controller: _newCtrl,
-              hint: 'New Password',
+              hint: AppLocalizations.of(context).coachChangePasswordNew,
               obscure: _obscureNew,
               toggleObscure: () => setState(() => _obscureNew = !_obscureNew),
             ),
             _buildField(
               controller: _confirmCtrl,
-              hint: 'Confirm New Password',
+              hint: AppLocalizations.of(context).coachChangePasswordConfirm,
               obscure: _obscureConfirm,
               toggleObscure: () =>
                   setState(() => _obscureConfirm = !_obscureConfirm),
@@ -199,7 +200,7 @@ class _CoachChangePasswordState extends State<CoachChangePassword> {
                         height: 20,
                         child: CircularProgressIndicator(
                             color: cs.onPrimary, strokeWidth: 2))
-                    : Text('Update Password',
+                    : Text(AppLocalizations.of(context).coachChangePasswordUpdate,
                         style: TextStyle(
                             color: cs.onPrimary,
                             fontSize: 15,

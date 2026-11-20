@@ -1,6 +1,7 @@
 import 'package:camera/camera.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:fitlek1/l10n/app_localizations.dart';
 import 'meal_visuals.dart';
 
 /// Owns the camera only while the scanner is visible and in the foreground.
@@ -68,8 +69,8 @@ class MealLiveCameraState extends State<MealLiveCamera>
       final cameras = await availableCameras();
       if (!mounted || generation != _generation) return;
       if (cameras.isEmpty) {
-        setState(() =>
-            _error = 'No camera found. Choose a photo from your gallery.');
+        setState(
+            () => _error = AppLocalizations.of(context).mealLiveCameraNoCamera);
         return;
       }
       final rear =
@@ -85,10 +86,11 @@ class MealLiveCameraState extends State<MealLiveCamera>
       if (!mounted || generation != _generation) return;
       await _release();
       if (!mounted || generation != _generation) return;
+      final l10n = AppLocalizations.of(context);
       setState(() => _error = error is CameraException &&
               error.code.toLowerCase().contains('denied')
-          ? 'Allow camera access in your device or browser settings, then retry.'
-          : 'Camera unavailable. Retry or choose a photo from your gallery.');
+          ? l10n.mealLiveCameraPermissionDenied
+          : l10n.mealLiveCameraUnavailable);
     }
   }
 
@@ -105,8 +107,9 @@ class MealLiveCameraState extends State<MealLiveCamera>
       if (mounted && generation == _generation) widget.onCaptured(photo);
     } catch (_) {
       if (mounted && generation == _generation) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text('Could not capture the photo. Try again.')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(
+                AppLocalizations.of(context).mealLiveCameraCaptureFailed)));
       }
     } finally {
       _capturing = false;
@@ -124,6 +127,7 @@ class MealLiveCameraState extends State<MealLiveCamera>
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final controller = _controller;
     if (_visible && controller != null && controller.value.isInitialized) {
       return LayoutBuilder(builder: (context, constraints) {
@@ -153,8 +157,8 @@ class MealLiveCameraState extends State<MealLiveCamera>
                     const CircularProgressIndicator(
                         color: mealLime, strokeWidth: 2),
                     const SizedBox(height: 16),
-                    const Text('Starting camera…',
-                        style: TextStyle(color: mealCream)),
+                    Text(l10n.mealLiveCameraStarting,
+                        style: const TextStyle(color: mealCream)),
                   ] else ...[
                     const Icon(Icons.videocam_off_outlined,
                         color: mealLime, size: 32),
@@ -163,7 +167,7 @@ class MealLiveCameraState extends State<MealLiveCamera>
                         textAlign: TextAlign.center,
                         style: const TextStyle(color: mealCream, fontSize: 12)),
                     TextButton(
-                        onPressed: _open, child: const Text('Retry camera')),
+                        onPressed: _open, child: Text(l10n.mealLiveCameraRetry)),
                   ],
                 ]))));
   }

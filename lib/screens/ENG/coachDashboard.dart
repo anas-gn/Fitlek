@@ -1,3 +1,5 @@
+import 'package:fitlek1/l10n/app_localizations.dart';
+import 'package:intl/intl.dart';
 import '../../services/live_updates.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
@@ -71,8 +73,11 @@ class _CoachDashboardState extends State<CoachDashboard>
   int _loadVersion = 0;
   final Map<String, Map<String, dynamic>> _periodCache = {};
 
-  String _percentage(int count) =>
-      '${(_totalReservations == 0 ? 0 : count * 100 / _totalReservations).toStringAsFixed(1)}% of total';
+  String _percentage(int count) => AppLocalizations.of(context)
+      .coachDashboardPercentOfTotal((_totalReservations == 0
+              ? 0
+              : count * 100 / _totalReservations)
+          .toStringAsFixed(1));
   List<Map<String, dynamic>> _recentReservations = [];
   List<Map<String, dynamic>> _notifications = [];
   List<Map<String, dynamic>> _recentClientInvitations = [];
@@ -86,72 +91,36 @@ class _CoachDashboardState extends State<CoachDashboard>
   }
 
   String get _periodLabel {
-    if (_selectedFilterIndex == 0) return 'today';
-    if (_selectedFilterIndex == 1) return 'this week';
-    return 'this month';
+    final l10n = AppLocalizations.of(context);
+    if (_selectedFilterIndex == 0) return l10n.coachDashboardPeriodToday;
+    if (_selectedFilterIndex == 1) return l10n.coachDashboardPeriodThisWeek;
+    return l10n.coachDashboardPeriodThisMonth;
   }
 
   String _getTodaySubtitle() {
     final now = DateTime.now();
-    const m = [
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'May',
-      'Jun',
-      'Jul',
-      'Aug',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Dec'
-    ];
-    return '${m[now.month - 1]} ${now.day}, ${now.year}';
+    final locale = Localizations.localeOf(context).toString();
+    return DateFormat('MMM d, y', locale).format(now);
   }
 
   String _getWeekSubtitle() {
     final now = DateTime.now();
+    final locale = Localizations.localeOf(context).toString();
     final startOfWeek = now.subtract(Duration(days: now.weekday - 1));
     final endOfWeek = startOfWeek.add(const Duration(days: 6));
-    const m = [
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'May',
-      'Jun',
-      'Jul',
-      'Aug',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Dec'
-    ];
+    final startMonth = DateFormat('MMM', locale).format(startOfWeek);
+    final endMonth = DateFormat('MMM', locale).format(endOfWeek);
     if (startOfWeek.month == endOfWeek.month) {
-      return '${m[startOfWeek.month - 1]} ${startOfWeek.day} - ${endOfWeek.day}';
+      return '$startMonth ${startOfWeek.day} - ${endOfWeek.day}';
     } else {
-      return '${m[startOfWeek.month - 1]} ${startOfWeek.day} - ${m[endOfWeek.month - 1]} ${endOfWeek.day}';
+      return '$startMonth ${startOfWeek.day} - $endMonth ${endOfWeek.day}';
     }
   }
 
   String _getMonthSubtitle() {
     final now = DateTime.now();
-    const m = [
-      'January',
-      'February',
-      'March',
-      'April',
-      'May',
-      'June',
-      'July',
-      'August',
-      'September',
-      'October',
-      'November',
-      'December'
-    ];
-    return '${m[now.month - 1]} ${now.year}';
+    final locale = Localizations.localeOf(context).toString();
+    return DateFormat('MMMM y', locale).format(now);
   }
 
   @override
@@ -318,13 +287,16 @@ class _CoachDashboardState extends State<CoachDashboard>
                                     crossAxisAlignment:
                                         CrossAxisAlignment.start,
                                     children: [
-                                  Text('Verification pending',
+                                  Text(
+                                      AppLocalizations.of(context)
+                                          .coachDashboardVerificationPendingTitle,
                                       style: TextStyle(
                                           color: cs.onSurface,
                                           fontWeight: FontWeight.w800)),
                                   const SizedBox(height: 5),
                                   Text(
-                                      'We’re reviewing your profile for the Sirvya verified badge. Verification can take up to 48 hours. Your badge will appear once verification is complete.',
+                                      AppLocalizations.of(context)
+                                          .coachDashboardVerificationPendingBody,
                                       style: TextStyle(
                                           color: f.textMuted,
                                           fontSize: 13,
@@ -355,6 +327,7 @@ class _CoachDashboardState extends State<CoachDashboard>
   }
 
   Widget _buildDateFilters(ColorScheme cs, FitlekColors f) {
+    final l10n = AppLocalizations.of(context);
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: Row(
@@ -363,7 +336,7 @@ class _CoachDashboardState extends State<CoachDashboard>
             cs,
             f,
             icon: Icons.calendar_today_rounded,
-            title: 'Today',
+            title: l10n.coachDashboardFilterToday,
             subtitle: _getTodaySubtitle(),
             isSelected: _selectedFilterIndex == 0,
             onTap: () {
@@ -377,7 +350,7 @@ class _CoachDashboardState extends State<CoachDashboard>
             cs,
             f,
             icon: Icons.date_range_rounded,
-            title: 'This Week',
+            title: l10n.coachDashboardFilterThisWeek,
             subtitle: _getWeekSubtitle(),
             isSelected: _selectedFilterIndex == 1,
             onTap: () {
@@ -391,7 +364,7 @@ class _CoachDashboardState extends State<CoachDashboard>
             cs,
             f,
             icon: Icons.calendar_month_rounded,
-            title: 'This Month',
+            title: l10n.coachDashboardFilterThisMonth,
             subtitle: _getMonthSubtitle(),
             isSelected: _selectedFilterIndex == 2,
             onTap: () {
@@ -462,13 +435,15 @@ class _CoachDashboardState extends State<CoachDashboard>
   }
 
   Widget _buildIntro(ColorScheme cs, FitlekColors f) {
-    final name =
-        widget.coachName.isNotEmpty ? widget.coachName.toUpperCase() : 'COACH';
+    final l10n = AppLocalizations.of(context);
+    final name = widget.coachName.isNotEmpty
+        ? widget.coachName.toUpperCase()
+        : l10n.coachDashboardCoachFallback;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Good morning,',
+          l10n.coachDashboardGoodMorning,
           style: TextStyle(color: cs.onSurface, fontSize: 14),
         ),
         const SizedBox(height: 4),
@@ -483,7 +458,7 @@ class _CoachDashboardState extends State<CoachDashboard>
         ),
         const SizedBox(height: 4),
         Text(
-          'Here\'s your coaching activity today.',
+          l10n.coachDashboardActivitySubtitle,
           style: TextStyle(color: f.textSecondary, fontSize: 12),
         ),
       ],
@@ -491,6 +466,7 @@ class _CoachDashboardState extends State<CoachDashboard>
   }
 
   Widget _buildClientsOverviewCard(ColorScheme cs, FitlekColors f) {
+    final l10n = AppLocalizations.of(context);
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -516,7 +492,7 @@ class _CoachDashboardState extends State<CoachDashboard>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Total Clients',
+                  l10n.coachDashboardTotalClients,
                   style: TextStyle(
                       color: cs.onSurface,
                       fontSize: 13,
@@ -562,7 +538,7 @@ class _CoachDashboardState extends State<CoachDashboard>
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  '+$_periodClients $_periodLabel',
+                  l10n.coachDashboardPeriodClients(_periodClients, _periodLabel),
                   style: TextStyle(color: f.textSecondary, fontSize: 11),
                 ),
               ],
@@ -575,7 +551,9 @@ class _CoachDashboardState extends State<CoachDashboard>
   }
 
   Widget _buildBarChart(ColorScheme cs, FitlekColors f) {
-    final days = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+    final locale = Localizations.localeOf(context).toString();
+    final monday = DateTime(2024, 1, 1);
+    final days = List.generate(7, (i) => DateFormat.E(locale).format(monday.add(Duration(days: i))).substring(0, 1).toUpperCase());
     final heights = [10.0, 20.0, 40.0, 10.0, 10.0, 10.0, 10.0];
     return Row(
       crossAxisAlignment: CrossAxisAlignment.end,
@@ -612,6 +590,7 @@ class _CoachDashboardState extends State<CoachDashboard>
   }
 
   Widget _buildStatsGrid(ColorScheme cs, FitlekColors f) {
+    final l10n = AppLocalizations.of(context);
     return GridView.count(
       crossAxisCount: 2,
       crossAxisSpacing: 12,
@@ -626,9 +605,9 @@ class _CoachDashboardState extends State<CoachDashboard>
           icon: Icons.calendar_today_rounded,
           iconColor: cs.primary,
           iconBg: cs.primary.withValues(alpha: 0.15),
-          title: 'Reservations',
+          title: l10n.coachDashboardStatReservations,
           value: '$_totalReservations',
-          subtitle: '$_periodLabel',
+          subtitle: _periodLabel,
           subtitleColor: cs.primary,
           subtitleIcon: Icons.arrow_upward_rounded,
         ),
@@ -638,7 +617,7 @@ class _CoachDashboardState extends State<CoachDashboard>
           icon: Icons.check_circle_rounded,
           iconColor: f.success,
           iconBg: f.success.withValues(alpha: 0.15),
-          title: 'Confirmed',
+          title: l10n.coachDashboardStatConfirmed,
           value: '$_confirmedReservations',
           subtitle: _percentage(_confirmedReservations),
           subtitleColor: f.textSecondary,
@@ -649,7 +628,7 @@ class _CoachDashboardState extends State<CoachDashboard>
           icon: Icons.access_time_rounded,
           iconColor: f.warning,
           iconBg: f.warning.withValues(alpha: 0.15),
-          title: 'Pending',
+          title: l10n.coachDashboardStatPending,
           value: '$_pendingReservations',
           subtitle: _percentage(_pendingReservations),
           subtitleColor: f.warning,
@@ -660,9 +639,9 @@ class _CoachDashboardState extends State<CoachDashboard>
           icon: Icons.attach_money_rounded,
           iconColor: f.textSecondary,
           iconBg: f.textSecondary.withValues(alpha: 0.15),
-          title: 'Confirmed value',
+          title: l10n.coachDashboardStatConfirmedValue,
           value: '${_confirmedValue.toStringAsFixed(2)} MAD',
-          subtitle: 'Agreed prices · $_periodLabel',
+          subtitle: l10n.coachDashboardAgreedPrices(_periodLabel),
           subtitleColor: f.textSecondary,
         ),
       ],
@@ -745,6 +724,7 @@ class _CoachDashboardState extends State<CoachDashboard>
   }
 
   Widget _buildRewardCards(ColorScheme cs, FitlekColors f) {
+    final l10n = AppLocalizations.of(context);
     return IntrinsicHeight(
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -775,7 +755,7 @@ class _CoachDashboardState extends State<CoachDashboard>
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          'Invitation Points',
+                          l10n.coachDashboardInvitationPoints,
                           style: TextStyle(
                             color: cs.onSurface,
                             fontSize: 12,
@@ -812,7 +792,7 @@ class _CoachDashboardState extends State<CoachDashboard>
                   Row(
                     children: [
                       Text(
-                        'Tier $_currentTier',
+                        l10n.coachDashboardTierLabel(_currentTier),
                         style: TextStyle(
                             color: cs.onSurface,
                             fontSize: 10,
@@ -821,7 +801,8 @@ class _CoachDashboardState extends State<CoachDashboard>
                       const SizedBox(width: 6),
                       Expanded(
                         child: Text(
-                          '$_tierProgress% to Tier $_nextTier • $_pointsRemaining points left',
+                          l10n.coachDashboardTierProgress(
+                              _tierProgress, _nextTier, _pointsRemaining),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(color: f.textMuted, fontSize: 10),
@@ -860,7 +841,7 @@ class _CoachDashboardState extends State<CoachDashboard>
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          'Invitations',
+                          l10n.coachDashboardInvitations,
                           style: TextStyle(
                               color: cs.onSurface,
                               fontSize: 12,
@@ -884,7 +865,7 @@ class _CoachDashboardState extends State<CoachDashboard>
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    '+$_invitationsThisWeek this week',
+                    l10n.coachDashboardInvitationsThisWeek(_invitationsThisWeek),
                     style: TextStyle(color: f.textSecondary, fontSize: 11),
                   ),
                 ],
@@ -897,12 +878,13 @@ class _CoachDashboardState extends State<CoachDashboard>
   }
 
   Widget _buildRecentReservations(ColorScheme cs, FitlekColors f) {
+    final l10n = AppLocalizations.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _sectionHeader(
-          'Recent Reservations',
-          action: widget.onViewCalendar == null ? null : 'View all',
+          l10n.coachDashboardRecentReservations,
+          action: widget.onViewCalendar == null ? null : l10n.coachDashboardViewAll,
           onAction: widget.onViewCalendar,
           cs: cs,
         ),
@@ -910,13 +892,13 @@ class _CoachDashboardState extends State<CoachDashboard>
         if (_recentReservations.isEmpty)
           _emptyCard(
             icon: Icons.calendar_today_rounded, // Wait, calendar with an x?
-            title: 'No upcoming reservations',
-            subtitle: 'New reservations will appear here.',
+            title: l10n.coachDashboardNoUpcomingReservationsTitle,
+            subtitle: l10n.coachDashboardNoUpcomingReservationsSubtitle,
             f: f,
             actionButton: OutlinedButton.icon(
               onPressed: () {}, // Can be wired up later
               icon: const Icon(Icons.calendar_month_rounded, size: 16),
-              label: const Text('Set Your Availability'),
+              label: Text(l10n.coachDashboardSetYourAvailability),
               style: OutlinedButton.styleFrom(
                 foregroundColor: cs.onSurface,
                 backgroundColor: cs.primary.withValues(alpha: 0.15),
@@ -945,12 +927,13 @@ class _CoachDashboardState extends State<CoachDashboard>
   }
 
   Widget _buildNotifications(ColorScheme cs, FitlekColors f) {
+    final l10n = AppLocalizations.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _sectionHeader(
-          'Notifications',
-          action: widget.onViewNotifications == null ? null : 'View all',
+          l10n.coachDashboardNotificationsTitle,
+          action: widget.onViewNotifications == null ? null : l10n.coachDashboardViewAll,
           onAction: widget.onViewNotifications,
           cs: cs,
         ),
@@ -958,8 +941,8 @@ class _CoachDashboardState extends State<CoachDashboard>
         if (_notifications.isEmpty)
           _emptyCard(
             icon: Icons.notifications_none_rounded,
-            title: 'No notifications',
-            subtitle: 'You are all caught up.',
+            title: l10n.coachDashboardNoNotificationsTitle,
+            subtitle: l10n.coachDashboardNoNotificationsSubtitle,
             f: f,
           )
         else
@@ -1135,6 +1118,7 @@ class _CoachDashboardState extends State<CoachDashboard>
   Widget _buildError(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final f = context.fitlek;
+    final l10n = AppLocalizations.of(context);
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
@@ -1149,7 +1133,7 @@ class _CoachDashboardState extends State<CoachDashboard>
             ),
             const SizedBox(height: 18),
             Text(
-              'Couldn\'t load the dashboard',
+              l10n.coachDashboardLoadErrorTitle,
               textAlign: TextAlign.center,
               style: TextStyle(
                   color: cs.onSurface,
@@ -1158,7 +1142,7 @@ class _CoachDashboardState extends State<CoachDashboard>
             ),
             const SizedBox(height: 6),
             Text(
-              'Check your connection and try again.',
+              l10n.coachDashboardLoadErrorSubtitle,
               textAlign: TextAlign.center,
               style: TextStyle(color: f.textMuted, fontSize: 13),
             ),
@@ -1178,7 +1162,7 @@ class _CoachDashboardState extends State<CoachDashboard>
                     Icon(Icons.refresh_rounded, color: cs.onPrimary, size: 18),
                     const SizedBox(width: 8),
                     Text(
-                      'Retry',
+                      l10n.coachDashboardRetry,
                       style: TextStyle(
                         color: cs.onPrimary,
                         fontWeight: FontWeight.w800,
@@ -1202,15 +1186,24 @@ class _ClientInvitationTile extends StatelessWidget {
 
   const _ClientInvitationTile({required this.item, this.onTap});
 
-  String _timeAgo() {
+  String _timeAgo(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final date =
         DateTime.tryParse(item['clickedAt']?.toString() ?? '')?.toLocal();
     if (date == null) return '';
     final difference = DateTime.now().difference(date);
-    if (difference.isNegative || difference.inMinutes < 1) return 'Just now';
-    if (difference.inHours < 1) return '${difference.inMinutes}m ago';
-    if (difference.inDays < 1) return '${difference.inHours}h ago';
-    if (difference.inDays < 7) return '${difference.inDays}d ago';
+    if (difference.isNegative || difference.inMinutes < 1) {
+      return l10n.coachDashboardJustNow;
+    }
+    if (difference.inHours < 1) {
+      return l10n.coachDashboardMinutesAgoShort(difference.inMinutes);
+    }
+    if (difference.inDays < 1) {
+      return l10n.coachDashboardHoursAgoShort(difference.inHours);
+    }
+    if (difference.inDays < 7) {
+      return l10n.coachDashboardDaysAgoShort(difference.inDays);
+    }
     return '${date.day.toString().padLeft(2, '0')}/'
         '${date.month.toString().padLeft(2, '0')}/${date.year}';
   }
@@ -1219,6 +1212,7 @@ class _ClientInvitationTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final f = context.fitlek;
+    final l10n = AppLocalizations.of(context);
     final status = item['status']?.toString() ?? 'pending';
     final pending = status == 'pending';
     final accepted = status == 'accepted';
@@ -1229,6 +1223,7 @@ class _ClientInvitationTile extends StatelessWidget {
             : f.error;
     final name = '${item['firstName'] ?? ''} ${item['lastName'] ?? ''}'.trim();
     final avatar = item['avatarUrl']?.toString();
+    final timeAgo = _timeAgo(context);
 
     return GestureDetector(
       onTap: onTap,
@@ -1269,7 +1264,7 @@ class _ClientInvitationTile extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    name.isEmpty ? 'Client' : name,
+                    name.isEmpty ? l10n.coachDashboardClientFallback : name,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
@@ -1280,7 +1275,9 @@ class _ClientInvitationTile extends StatelessWidget {
                   ),
                   const SizedBox(height: 3),
                   Text(
-                    pending ? 'Wants to connect · ${_timeAgo()}' : _timeAgo(),
+                    pending
+                        ? l10n.coachDashboardWantsToConnect(timeAgo)
+                        : timeAgo,
                     style: TextStyle(
                       color: f.textSecondary,
                       fontSize: 11.5,
@@ -1298,10 +1295,11 @@ class _ClientInvitationTile extends StatelessWidget {
               ),
               child: Text(
                 pending
-                    ? 'Pending'
+                    ? l10n.coachDashboardStatusPending
                     : accepted
-                        ? 'Accepted · +${item['pointsEarned'] ?? 20}'
-                        : 'Declined',
+                        ? l10n.coachDashboardStatusAcceptedPoints(
+                            '${item['pointsEarned'] ?? 20}')
+                        : l10n.coachDashboardStatusDeclined,
                 style: TextStyle(
                   color: statusColor,
                   fontSize: 10.5,
@@ -1346,30 +1344,18 @@ class _ReservationTile extends StatelessWidget {
     return DateTime.tryParse('${datePart}T$timePart');
   }
 
-  String _dateLabel() {
+  String _dateLabel(BuildContext context) {
     final date = _dateTime();
     if (date == null) return '';
+    final l10n = AppLocalizations.of(context);
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     final day = DateTime(date.year, date.month, date.day);
     final difference = day.difference(today).inDays;
-    if (difference == 0) return 'Today';
-    if (difference == 1) return 'Tomorrow';
-    const months = [
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'May',
-      'Jun',
-      'Jul',
-      'Aug',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Dec',
-    ];
-    return '${months[date.month - 1]} ${date.day}';
+    if (difference == 0) return l10n.coachDashboardFilterToday;
+    if (difference == 1) return l10n.coachDashboardTomorrow;
+    final locale = Localizations.localeOf(context).toString();
+    return DateFormat('MMM d', locale).format(date);
   }
 
   String _timeLabel() {
@@ -1382,15 +1368,20 @@ class _ReservationTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final f = context.fitlek;
+    final l10n = AppLocalizations.of(context);
     final avatarUrl = (item['avatarUrl'] as String?)?.trim();
     final hasAvatar = avatarUrl != null && avatarUrl.isNotEmpty;
     final status = (item['status'] ?? '').toString().toLowerCase();
     final confirmed = status == 'confirmed';
     final statusColor = confirmed ? cs.primary : f.warning;
-    final statusLabel = status.isEmpty
-        ? 'Unknown'
-        : '${status[0].toUpperCase()}${status.substring(1)}';
-    final date = _dateLabel();
+    final statusLabel = switch (status) {
+      'confirmed' => l10n.coachDashboardStatusConfirmed,
+      'pending' => l10n.coachDashboardStatusPending,
+      'cancelled' => l10n.coachDashboardStatusCancelled,
+      '' => l10n.coachDashboardStatusUnknown,
+      _ => '${status[0].toUpperCase()}${status.substring(1)}',
+    };
+    final date = _dateLabel(context);
     final time = _timeLabel();
 
     return GestureDetector(
@@ -1429,7 +1420,9 @@ class _ReservationTile extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    _fullName.isNotEmpty ? _fullName : 'Client',
+                    _fullName.isNotEmpty
+                        ? _fullName
+                        : l10n.coachDashboardClientFallback,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
@@ -1507,17 +1500,26 @@ class _NotificationTile extends StatelessWidget {
     }
   }
 
-  String _timeAgo() {
+  String _timeAgo(BuildContext context) {
     final raw = item['createdAt']?.toString();
     if (raw == null || raw.isEmpty) return '';
     final date = DateTime.tryParse(raw);
     if (date == null) return '';
+    final l10n = AppLocalizations.of(context);
     final difference = DateTime.now().difference(date);
-    if (difference.isNegative || difference.inMinutes < 1) return 'Just now';
-    if (difference.inMinutes < 60) return '${difference.inMinutes} mins ago';
-    if (difference.inHours < 24) return '${difference.inHours} hours ago';
-    if (difference.inDays == 1) return 'Yesterday';
-    if (difference.inDays < 7) return '${difference.inDays} days ago';
+    if (difference.isNegative || difference.inMinutes < 1) {
+      return l10n.coachDashboardJustNow;
+    }
+    if (difference.inMinutes < 60) {
+      return l10n.coachDashboardMinutesAgoLong(difference.inMinutes);
+    }
+    if (difference.inHours < 24) {
+      return l10n.coachDashboardHoursAgoLong(difference.inHours);
+    }
+    if (difference.inDays == 1) return l10n.coachDashboardYesterday;
+    if (difference.inDays < 7) {
+      return l10n.coachDashboardDaysAgoLong(difference.inDays);
+    }
     return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
   }
 
@@ -1525,11 +1527,12 @@ class _NotificationTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final f = context.fitlek;
+    final l10n = AppLocalizations.of(context);
     final style = _typeStyle(context);
     final isUnread = item['isRead'] == false || item['isRead'] == 0;
     final title = item['title']?.toString().trim() ?? '';
     final body = item['body']?.toString().trim() ?? '';
-    final time = _timeAgo();
+    final time = _timeAgo(context);
 
     return GestureDetector(
       onTap: onTap,
@@ -1557,7 +1560,9 @@ class _NotificationTile extends StatelessWidget {
                     children: [
                       Expanded(
                         child: Text(
-                          title.isNotEmpty ? title : 'Notification',
+                          title.isNotEmpty
+                              ? title
+                              : l10n.coachDashboardNotificationFallback,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(

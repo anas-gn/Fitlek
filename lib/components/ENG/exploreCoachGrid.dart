@@ -1,3 +1,4 @@
+import 'package:fitlek1/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import '../../models/anas/coach.dart';
 import '../../constants/urls.dart';
@@ -189,12 +190,12 @@ class ExploreCoachGrid extends StatelessWidget {
                                               borderRadius:
                                                   BorderRadius.circular(11)),
                                         ),
-                                        child: const Row(
+                                        child: Row(
                                           mainAxisAlignment:
                                               MainAxisAlignment.center,
                                           children: [
                                             Flexible(
-                                                child: Text('View & Book',
+                                                child: Text(AppLocalizations.of(context).exploreCoachGridViewAndBook,
                                                     maxLines: 1,
                                                     overflow:
                                                         TextOverflow.ellipsis,

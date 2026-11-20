@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:fitlek1/l10n/app_localizations.dart';
 import '../services/theme_service.dart';
 import '../theme/fitlek_theme_extension.dart';
 
@@ -44,7 +45,7 @@ class ThemeSelectorTile extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        'Appearance',
+                        AppLocalizations.of(context).themeSelectorAppearance,
                         style: TextStyle(
                           color: cs.onSurface.withValues(alpha: 0.85),
                           fontSize: 13,
@@ -101,7 +102,7 @@ class ThemeSelectorTile extends StatelessWidget {
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  'Appearance',
+                  AppLocalizations.of(ctx).themeSelectorAppearance,
                   style: TextStyle(
                     color: cs.onSurface,
                     fontSize: 16,
@@ -110,7 +111,7 @@ class ThemeSelectorTile extends StatelessWidget {
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  'Choose the app theme',
+                  AppLocalizations.of(ctx).themeSelectorChooseTheme,
                   style: TextStyle(color: fitlek.textMuted, fontSize: 12),
                 ),
                 const SizedBox(height: 16),

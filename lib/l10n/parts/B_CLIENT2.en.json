@@ -1,0 +1,741 @@
+{
+  "clientBookingHomeVisitLocation": "Home visit — arrange address with coach in messages",
+  "clientBookingDefaultLocation": "Location to be arranged with coach in messages",
+  "clientBookingSessionLabel": "Session {number}",
+  "@clientBookingSessionLabel": {
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
+  "clientBookingLeadTimeError": "Choose a session more than one hour from now.",
+  "clientBookingMultipleBookedSuccess": "All {count} sessions booked successfully!",
+  "@clientBookingMultipleBookedSuccess": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "clientBookingSingleBookedSuccess": "Booking sent successfully!",
+  "clientBookingErrorCode": "Error ({code})",
+  "@clientBookingErrorCode": {
+    "placeholders": {
+      "code": {
+        "type": "int"
+      }
+    }
+  },
+  "clientBookingServerUnreachable": "Unable to reach the server.",
+  "clientBookingChoosePackageTitle": "Choose a Package",
+  "clientBookingSelectPackageHeading": "Select a Package",
+  "clientBookingSelectPackageSubtitle": "Choose the package that fits you best, or book without a package.",
+  "clientBookingContinueToBooking": "Continue to Booking",
+  "clientBookingPackageSessionsCount": "{count, plural, =1{1 session} other{{count} sessions}}",
+  "@clientBookingPackageSessionsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "clientBookingPriceMad": "{price} MAD",
+  "@clientBookingPriceMad": {
+    "placeholders": {
+      "price": {
+        "type": "int"
+      }
+    }
+  },
+  "clientBookingPriceToDiscuss": "Price to discuss",
+  "clientBookingBookWithoutPackage": "Book without a package",
+  "clientBookingBookWithoutPackageSub": "Single session — price discussed with coach",
+  "clientBookingBannerPackagePrice": "{name} · {price} MAD",
+  "@clientBookingBannerPackagePrice": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "price": {
+        "type": "int"
+      }
+    }
+  },
+  "clientBookingBannerPackageRequest": "{name} · Price on request",
+  "@clientBookingBannerPackageRequest": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "clientBookingNoPackageSelected": "No package selected",
+  "clientBookingPackageSessionsTitle": "Package Sessions",
+  "clientBookingScheduledProgress": "{completed} of {total} scheduled",
+  "@clientBookingScheduledProgress": {
+    "placeholders": {
+      "completed": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "clientBookingSelectDatesWithPrice": "Select a date & time for each session ({price} MAD / session):",
+  "@clientBookingSelectDatesWithPrice": {
+    "placeholders": {
+      "price": {
+        "type": "int"
+      }
+    }
+  },
+  "clientBookingSelectDatesNoPrice": "Select a date & time for each of the {total} sessions included in your package:",
+  "@clientBookingSelectDatesNoPrice": {
+    "placeholders": {
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "clientBookingSessionWithPrice": "Session {number} · {price} MAD",
+  "@clientBookingSessionWithPrice": {
+    "placeholders": {
+      "number": {
+        "type": "int"
+      },
+      "price": {
+        "type": "int"
+      }
+    }
+  },
+  "clientBookingSelectingNow": "Selecting now...",
+  "clientBookingTapToSelect": "Tap to select",
+  "clientBookingHeaderTitle": "Book a session",
+  "clientBookingCoachFallback": "Coach",
+  "clientBookingAnywhereFallback": "Anywhere",
+  "clientBookingNewCoach": "New",
+  "clientBookingReviewsCount": "{count, plural, =1{1 review} other{{count} reviews}}",
+  "@clientBookingReviewsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "clientBookingPricePerSession": "{price} MAD/session",
+  "@clientBookingPricePerSession": {
+    "placeholders": {
+      "price": {
+        "type": "int"
+      }
+    }
+  },
+  "clientBookingSessionDateHeader": "Session {number} Date · {month}",
+  "@clientBookingSessionDateHeader": {
+    "placeholders": {
+      "number": {
+        "type": "int"
+      },
+      "month": {
+        "type": "String"
+      }
+    }
+  },
+  "clientBookingWeekdayMon": "M",
+  "clientBookingWeekdayTue": "T",
+  "clientBookingWeekdayWed": "W",
+  "clientBookingWeekdayThu": "T",
+  "clientBookingWeekdayFri": "F",
+  "clientBookingWeekdaySat": "S",
+  "clientBookingWeekdaySun": "S",
+  "clientBookingSessionLocationTitle": "Session location",
+  "clientBookingLocationHomeTitle": "My home",
+  "clientBookingLocationHomeSubtitle": "Arrange your address with the coach in messages",
+  "clientBookingLocationGymSubtitle": "Coach’s gym · confirm directions in messages",
+  "clientBookingLocationTbdTitle": "To be defined",
+  "clientBookingLocationTbdSubtitle": "Agree on the meeting place with your coach in messages",
+  "clientBookingSessionTimeSlotTitle": "Session {number} Time slot",
+  "@clientBookingSessionTimeSlotTitle": {
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
+  "clientBookingTimeSlotsTitle": "Time slots",
+  "clientBookingAvailableSlotsCount": "{count} available",
+  "@clientBookingAvailableSlotsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "clientBookingSlotsFull": "Full",
+  "clientBookingDateForSession": "{date} · for Session {number}",
+  "@clientBookingDateForSession": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      },
+      "number": {
+        "type": "int"
+      }
+    }
+  },
+  "clientBookingSlotSelected": "✓ Selected",
+  "clientBookingSlotDuration": "1h",
+  "clientBookingSlotBlocked": "Blocked",
+  "clientBookingSlotBooked": "Booked",
+  "clientBookingLegendFree": "Free",
+  "clientBookingLegendUnavailable": "Unavailable",
+  "clientBookingConfirmAllSessions": "CONFIRM ALL {total} SESSIONS",
+  "@clientBookingConfirmAllSessions": {
+    "placeholders": {
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "clientBookingSelectAllSessions": "SELECT ALL SESSIONS ({completed}/{total} CHOSEN)",
+  "@clientBookingSelectAllSessions": {
+    "placeholders": {
+      "completed": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "clientBookingConfirmWithTime": "CONFIRM · {time}",
+  "@clientBookingConfirmWithTime": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "clientBookingChooseASlot": "CHOOSE A SLOT",
+  "clientBookingSelectDateAndTimePrompt": "Please select a date & time for Session {number}",
+  "@clientBookingSelectDateAndTimePrompt": {
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
+  "clientBookingLocationYourGym": "Your gym",
+  "clientBookingConfirmDialogTitle": "Confirm booking",
+  "clientBookingNotYetRated": "Not yet rated",
+  "clientBookingLabelDate": "Date",
+  "clientBookingLabelTime": "Time",
+  "clientBookingScheduledSessionsCount": "Scheduled Sessions ({count})",
+  "@clientBookingScheduledSessionsCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "clientBookingSessionDateAtTime": "{date} at {time}",
+  "@clientBookingSessionDateAtTime": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      },
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "clientBookingNotScheduledYet": "Not scheduled yet",
+  "clientBookingLabelLocation": "Location",
+  "clientBookingLabelPackage": "Package",
+  "clientBookingLabelTotalPrice": "Total Price",
+  "clientBookingTotalPriceMulti": "{total} MAD ({perSession} MAD / session)",
+  "@clientBookingTotalPriceMulti": {
+    "placeholders": {
+      "total": {
+        "type": "int"
+      },
+      "perSession": {
+        "type": "int"
+      }
+    }
+  },
+  "clientBookingTotalPriceSingle": "{total} MAD / session",
+  "@clientBookingTotalPriceSingle": {
+    "placeholders": {
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "clientBookingBtnCancel": "CANCEL",
+  "clientBookingBtnConfirm": "CONFIRM",
+  "clientCoachDetailRemovedFavorite": "Removed from favorites",
+  "clientCoachDetailAddedFavorite": "Added to favorites ✓",
+  "clientCoachDetailFavoriteUpdateFailed": "Failed to update favorites",
+  "clientCoachDetailConnectionFailed": "Connection failed",
+  "clientCoachDetailErrorCode": "Error {code}",
+  "@clientCoachDetailErrorCode": {
+    "placeholders": {
+      "code": {
+        "type": "int"
+      }
+    }
+  },
+  "clientCoachDetailServerUnreachable": "Unable to reach the server.",
+  "clientCoachDetailSelectRatingFirst": "Select a rating first",
+  "clientCoachDetailReviewSaved": "Review saved ✓",
+  "clientCoachDetailServerError": "Server error",
+  "clientCoachDetailInvitationSent": "Invitation sent to the coach ✓",
+  "clientCoachDetailInvitationAlreadySent": "Invitation already sent",
+  "clientCoachDetailLoginToMessage": "Please login to message the coach",
+  "clientCoachDetailConversationStartFailed": "Unable to start conversation. Please try again.",
+  "clientCoachDetailReportReasonSpam": "Spam",
+  "clientCoachDetailReportReasonHarassment": "Harassment",
+  "clientCoachDetailReportReasonInappropriate": "Inappropriate content",
+  "clientCoachDetailReportReasonFraud": "Fraud / Scam",
+  "clientCoachDetailReportReasonOther": "Other",
+  "clientCoachDetailReportTitle": "Report {name}",
+  "@clientCoachDetailReportTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "clientCoachDetailReportPrompt": "Why are you reporting this user? We take these reports seriously.",
+  "clientCoachDetailCancel": "Cancel",
+  "clientCoachDetailSubmit": "Submit",
+  "clientCoachDetailReportSubmitted": "Report submitted successfully.",
+  "clientCoachDetailReportFailed": "Failed to submit report",
+  "clientCoachDetailNetworkError": "Network error",
+  "clientCoachDetailBlockTitle": "Block {name}?",
+  "@clientCoachDetailBlockTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "clientCoachDetailBlockMessage": "They won't be able to find your profile or send you messages. They will not be notified that you blocked them.",
+  "clientCoachDetailBlockConfirm": "Block",
+  "clientCoachDetailUserBlocked": "User blocked.",
+  "clientCoachDetailBlockFailed": "Failed to block user",
+  "clientCoachDetailQrTitle": "Coach QR Code",
+  "clientCoachDetailCertificationsTitle": "Certifications",
+  "clientCoachDetailVerifiedBySirvya": "Verified by Sirvya",
+  "clientCoachDetailSelfReported": "Self-reported",
+  "clientCoachDetailCoachingPackagesTitle": "Coaching packages",
+  "clientCoachDetailNoPackagesAvailable": "No packages available for this coach.",
+  "clientCoachDetailPriceMad": "{price} MAD",
+  "@clientCoachDetailPriceMad": {
+    "placeholders": {
+      "price": {
+        "type": "int"
+      }
+    }
+  },
+  "clientCoachDetailPackageSessionInfo": "{count, plural, =1{1 session · 60 min} other{{count} sessions · 60 min each}}",
+  "@clientCoachDetailPackageSessionInfo": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "clientCoachDetailChooseAndBook": "Book",
+  "clientCoachDetailSeeAll": "See all >",
+  "clientCoachDetailAgreeOnPriceNote": "Agree on the price before confirmation.",
+  "clientCoachDetailOnRequest": "On request",
+  "clientCoachDetailBookChip": "Book >",
+  "clientCoachDetailAvailableToday": "Available today",
+  "clientCoachDetailReportCoachMenu": "Report Coach",
+  "clientCoachDetailBlockCoachMenu": "Block Coach",
+  "clientCoachDetailStatRating": "Rating",
+  "clientCoachDetailStatReviews": "Reviews",
+  "clientCoachDetailStatClients": "Clients",
+  "clientCoachDetailPriceFrom": "From {price} MAD",
+  "@clientCoachDetailPriceFrom": {
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
+  },
+  "clientCoachDetailPriceOnRequest": "Price on request",
+  "clientCoachDetailSessionRatesFrom": "Session rates starting from {price} MAD",
+  "@clientCoachDetailSessionRatesFrom": {
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
+  },
+  "clientCoachDetailContactForRates": "Contact the coach for session rates",
+  "clientCoachDetailMessageBtn": "Message",
+  "clientCoachDetailRequestBookingBtn": "Book",
+  "clientCoachDetailSpecialtiesTitle": "Specialties",
+  "clientCoachDetailAboutTitle": "About",
+  "clientCoachDetailGalleryTitle": "Coaching gallery",
+  "clientCoachDetailViewAllCount": "View all ({count})",
+  "@clientCoachDetailViewAllCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "clientCoachDetailCoachingFallback": "Coaching",
+  "clientCoachDetailAvailabilityTitle": "Availability",
+  "clientCoachDetailNoSlotsAvailable": "No slots available",
+  "clientCoachDetailAssociatedGymTitle": "Associated gym",
+  "clientCoachDetailPracticalInfoTitle": "Practical info",
+  "clientCoachDetailCityDefault": "Casablanca",
+  "clientCoachDetailQrRowLabel": "Coach QR code",
+  "clientCoachDetailTapToEnlarge": "Tap to enlarge",
+  "clientCoachDetailClientReviewsTitle": "Client reviews",
+  "clientCoachDetailRatingSummary": "{rating} · {count, plural, =1{1 review} other{{count} reviews}} >",
+  "@clientCoachDetailRatingSummary": {
+    "placeholders": {
+      "rating": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "clientCoachDetailEditMyReview": "Edit my review",
+  "clientCoachDetailLeaveAReview": "Leave a review",
+  "clientCoachDetailViewAllReviewsBtn": "View all {count} reviews",
+  "@clientCoachDetailViewAllReviewsBtn": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "clientCoachDetailYourRatingLabel": "Your rating",
+  "clientCoachDetailCommentOptionalLabel": "Comment (optional)",
+  "clientCoachDetailReviewHint": "Share your experience with this coach…",
+  "clientCoachDetailUpdateReviewBtn": "Update review",
+  "clientCoachDetailPublishReviewBtn": "Publish review",
+  "clientCoachDetailMyReviewBadge": "My review",
+  "clientCoachDetailNoReviewsYet": "No reviews yet",
+  "clientCoachDetailBeFirstToReview": "Be the first to share your experience",
+  "clientCoachDetailRetry": "Retry",
+  "clientSessionsServerError": "Server error ({code})",
+  "@clientSessionsServerError": {
+    "placeholders": {
+      "code": {
+        "type": "int"
+      }
+    }
+  },
+  "clientSessionsCheckConnectionError": "Check your connection and try again.",
+  "clientSessionsLoadError": "Unable to load your sessions. Please try again.",
+  "clientSessionsRefreshTooltip": "Refresh sessions",
+  "clientSessionsCompletedCount": "{count, plural, =1{1 completed} other{{count} completed}}",
+  "@clientSessionsCompletedCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "clientSessionsTitle": "My sessions",
+  "clientSessionsSubtitle": "Manage your coaching appointments.",
+  "clientSessionsTabUpcoming": "Upcoming ({count})",
+  "@clientSessionsTabUpcoming": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "clientSessionsTabPast": "Past ({count})",
+  "@clientSessionsTabPast": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "clientSessionsTryAgain": "Try again",
+  "clientSessionsEmptyUpcoming": "No upcoming sessions.",
+  "clientSessionsEmptyPast": "No past sessions.",
+  "clientSessionsConfirmedWhenAccepted": "Your session is confirmed once the coach accepts.",
+  "clientSessionsHelpTitle": "Need help with a booking?",
+  "clientSessionsHelpSubtitle": "Get in touch and we'll be happy to help.",
+  "clientSessionsContactSupport": "Contact support",
+  "clientSessionsFilterAll": "All",
+  "clientSessionsFilterCompleted": "Completed",
+  "clientSessionsFilterCancelled": "Cancelled",
+  "clientSessionsCancelDialogTitle": "Cancel session",
+  "clientSessionsCancelDialogMessage": "Are you sure you want to cancel this booking?",
+  "clientSessionsCancelDialogNo": "NO",
+  "clientSessionsCancelDialogYes": "YES, CANCEL",
+  "clientSessionsStatusCompleted": "Completed",
+  "clientSessionsStatusPending": "Pending",
+  "clientSessionsStatusExpired": "Expired",
+  "clientSessionsStatusPriceDeclined": "Price declined",
+  "clientSessionsStatusCancelled": "Cancelled",
+  "clientSessionsPriceOfferReady": "Price offer ready — open details to approve.",
+  "clientSessionsAwaitingPrice": "Awaiting coach’s price.",
+  "clientSessionsAwaitingConfirmation": "Awaiting coach confirmation.",
+  "clientSessionsCancelledByYou": "Cancelled by you",
+  "clientSessionsPriceMad": "{price} MAD",
+  "@clientSessionsPriceMad": {
+    "placeholders": {
+      "price": {
+        "type": "int"
+      }
+    }
+  },
+  "clientSessionsDurationMin": "{minutes} min",
+  "@clientSessionsDurationMin": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "clientSessionsLocationTbc": "Location to be confirmed",
+  "clientSessionsSessionPriceWithPkg": "Session price ({packageName})",
+  "@clientSessionsSessionPriceWithPkg": {
+    "placeholders": {
+      "packageName": {
+        "type": "String"
+      }
+    }
+  },
+  "clientSessionsSessionTotal": "Session total",
+  "clientSessionsViewDetails": "View details >",
+  "clientSessionsBookAgain": "Book again >",
+  "clientSessionsEditReviewRating": "Rating: {rating}/5 ",
+  "@clientSessionsEditReviewRating": {
+    "placeholders": {
+      "rating": {
+        "type": "int"
+      }
+    }
+  },
+  "clientSessionsLeaveAReview": "Leave a review",
+  "clientSessionsMessageBtn": "Message",
+  "clientSessionsCancelBooking": "Cancel booking",
+  "clientSessionDetailAcceptPriceTitle": "Accept proposed price?",
+  "clientSessionDetailDeclinePriceTitle": "Decline proposed price?",
+  "clientSessionDetailAcceptPriceMessage": "Accept {price} MAD and confirm this session?",
+  "@clientSessionDetailAcceptPriceMessage": {
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
+  },
+  "clientSessionDetailDeclinePriceMessage": "Declining will cancel this booking request.",
+  "clientSessionDetailAcceptConfirmBtn": "ACCEPT & CONFIRM",
+  "clientSessionDetailDeclinePriceBtn": "DECLINE PRICE",
+  "clientSessionDetailPriceRespondError": "Could not respond to price.",
+  "clientSessionDetailConnectionUnavailable": "Connection unavailable. Please try again.",
+  "clientSessionDetailPriceExpiredTitle": "Price request expired",
+  "clientSessionDetailApprovePriceTitle": "Approve your session price",
+  "clientSessionDetailAwaitingPriceTitle": "Awaiting coach’s price",
+  "clientSessionDetailPriceExpiredBody": "No price was agreed before the deadline. Please make a new booking.",
+  "clientSessionDetailProposedPriceBody": "{price} MAD per session. Your acceptance confirms this booking.",
+  "@clientSessionDetailProposedPriceBody": {
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
+  },
+  "clientSessionDetailAwaitingPriceBody": "Your coach will send a price offer. You must accept it to confirm the session.",
+  "clientSessionDetailPriceDeadline": "Deadline: {date} · {time} (2 hours before the session)",
+  "@clientSessionDetailPriceDeadline": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      },
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "clientSessionDetailAcceptAndConfirm": "Accept & confirm",
+  "clientSessionDetailDecline": "Decline",
+  "clientSessionDetailStatusExpired": "EXPIRED",
+  "clientSessionDetailStatusPriceDeclined": "PRICE DECLINED",
+  "clientSessionDetailStatusPending": "PENDING",
+  "clientSessionDetailStatusConfirmed": "CONFIRMED",
+  "clientSessionDetailStatusCancelled": "CANCELLED",
+  "clientSessionDetailCancelTitle": "Cancel session?",
+  "clientSessionDetailCancelMessage": "This action cannot be undone.",
+  "clientSessionDetailCancelConfirmBtn": "CANCEL SESSION",
+  "clientSessionDetailSessionCancelledSnack": "Session cancelled.",
+  "clientSessionDetailCancelErrorSnack": "Error while cancelling.",
+  "clientSessionDetailServerUnreachable": "Unable to reach the server.",
+  "clientSessionDetailReviewPublishedSnack": "Review published successfully!",
+  "clientSessionDetailReviewPublishErrorSnack": "Error while publishing.",
+  "clientSessionDetailDialogBack": "BACK",
+  "clientSessionDetailTopBarTitle": "Session details",
+  "clientSessionDetailBannerPriceProposed": "{price} MAD · proposed",
+  "@clientSessionDetailBannerPriceProposed": {
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
+  },
+  "clientSessionDetailBannerPriceMad": "{price} MAD",
+  "@clientSessionDetailBannerPriceMad": {
+    "placeholders": {
+      "price": {
+        "type": "int"
+      }
+    }
+  },
+  "clientSessionDetailBannerFreeSession": "Free session",
+  "clientSessionDetailBannerAwaitingPricing": "Awaiting pricing",
+  "clientSessionDetailDurationTimeRange": "{minutes} min · {start} — {end}",
+  "@clientSessionDetailDurationTimeRange": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      },
+      "start": {
+        "type": "String"
+      },
+      "end": {
+        "type": "String"
+      }
+    }
+  },
+  "clientSessionDetailPerSessionPackage": "Per session · {packageName}",
+  "@clientSessionDetailPerSessionPackage": {
+    "placeholders": {
+      "packageName": {
+        "type": "String"
+      }
+    }
+  },
+  "clientSessionDetailInfoDate": "Date",
+  "clientSessionDetailInfoTime": "Time",
+  "clientSessionDetailInfoDuration": "Duration",
+  "clientSessionDetailDurationMinutes": "{minutes} minutes",
+  "@clientSessionDetailDurationMinutes": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "clientSessionDetailInfoLocation": "Location",
+  "clientSessionDetailLocationDefault": "Location to be arranged with coach in messages",
+  "clientSessionDetailInfoPackage": "Package",
+  "clientSessionDetailInfoRef": "Ref.",
+  "clientSessionDetailCoachFallback": "Coach",
+  "clientSessionDetailAnywhereFallback": "Anywhere",
+  "clientSessionDetailNewCoach": "New",
+  "clientSessionDetailBtnCancel": "CANCEL",
+  "clientSessionDetailApprovalExpiredReason": "The coach did not approve this booking before the one-hour deadline.",
+  "clientSessionDetailPriceNotAgreedReason": "The price was not agreed before the two-hour deadline.",
+  "clientSessionDetailRequestExpiredTitle": "Request expired",
+  "clientSessionDetailCancellationReasonTitle": "Cancellation reason",
+  "clientSessionDetailShareReviewTitle": "Share your review",
+  "clientSessionDetailShareReviewSubtitle": "Help others choose the right coach",
+  "clientSessionDetailPublishedBadge": "PUBLISHED",
+  "clientSessionDetailEditMyReview": "Edit my review",
+  "clientSessionDetailCancelEditing": "Cancel editing",
+  "clientSessionDetailCommentLabel": "Comment",
+  "clientSessionDetailHowWasSession": "How was your session?",
+  "clientSessionDetailReviewHint": "Share the details... (optional)",
+  "clientSessionDetailUpdateMyReviewBtn": "Update Review",
+  "clientSessionDetailPublishMyReviewBtn": "Publish Review",
+  "clientSessionDetailRating1": "Needs improvement",
+  "clientSessionDetailRating2": "Okay",
+  "clientSessionDetailRating3": "Good",
+  "clientSessionDetailRating4": "Very good",
+  "clientSessionDetailRating5": "Excellent!",
+  "clientConversationDeletedMessage": "This message was deleted",
+  "clientConversationSelectLimitError": "Select up to 100 messages at a time.",
+  "clientConversationDeleteDialogTitle": "{count, plural, =1{Delete 1 message?} other{Delete {count} messages?}}",
+  "@clientConversationDeleteDialogTitle": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "clientConversationDeleteDialogContent": "Delete for everyone is available for your own messages during the first 30 minutes.",
+  "clientConversationCancel": "Cancel",
+  "clientConversationDeleteForMe": "Delete for me",
+  "clientConversationDeleteForEveryone": "Delete for everyone",
+  "clientConversationDeleteFailed": "Could not delete messages.",
+  "clientConversationRefreshError": "Could not refresh messages. Check your connection.",
+  "clientConversationSendRetryError": "Could not send. Your message is ready to retry.",
+  "clientConversationAttachCamera": "Camera",
+  "clientConversationAttachGallery": "Gallery",
+  "clientConversationCaptionHint": "Add a caption...",
+  "clientConversationSend": "Send",
+  "clientConversationImageUploadFailed": "Image upload failed",
+  "clientConversationSendPhotoError": "Could not send the photo. Please try again.",
+  "clientConversationBatchLimitError": "Choose up to 30 photos per batch.",
+  "clientConversationBatchFailedError": "{count, plural, =1{1 photo could not be sent. The others were sent.} other{{count} photos could not be sent. The others were sent.}}",
+  "@clientConversationBatchFailedError": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "clientConversationAudioUploadFailed": "Audio upload failed",
+  "clientConversationMicPermissionError": "Allow microphone access for Sirvya in your phone Settings to record voice messages.",
+  "clientConversationAudioRecordError": "Could not record or send audio. Please try again.",
+  "clientConversationMediaSendFailed": "Failed to send media message",
+  "clientConversationNetworkError": "Network error",
+  "clientConversationTitleFallback": "Conversation",
+  "clientConversationSubtitleFallback": "Fitness coach",
+  "clientConversationMenuSelect": "Select messages",
+  "clientConversationMenuRefresh": "Refresh messages",
+  "clientConversationMenuReport": "Report Coach",
+  "clientConversationMenuBlock": "Block Coach",
+  "clientConversationReportReasonSpam": "Spam",
+  "clientConversationReportReasonHarassment": "Harassment",
+  "clientConversationReportReasonInappropriate": "Inappropriate content",
+  "clientConversationReportReasonFraud": "Fraud / Scam",
+  "clientConversationReportReasonOther": "Other",
+  "clientConversationThisCoachFallback": "this coach",
+  "clientConversationReportTitle": "Report {name}",
+  "@clientConversationReportTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "clientConversationReportPrompt": "Why are you reporting this user? We take these reports seriously.",
+  "clientConversationSubmit": "Submit",
+  "clientConversationIdentifyCoachReportError": "Unable to identify coach to report",
+  "clientConversationReportSubmitted": "Report submitted successfully.",
+  "clientConversationReportFailed": "Failed to submit report",
+  "clientConversationBlockTitle": "Block {name}?",
+  "@clientConversationBlockTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "clientConversationBlockMessage": "They won't be able to find your profile or send you messages. They will not be notified that you blocked them.",
+  "clientConversationBlockConfirm": "Block",
+  "clientConversationIdentifyCoachBlockError": "Unable to identify coach to block",
+  "clientConversationUserBlocked": "User blocked.",
+  "clientConversationBlockFailed": "Failed to block user"
+}

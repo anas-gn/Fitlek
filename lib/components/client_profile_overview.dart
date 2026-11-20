@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:fitlek1/l10n/app_localizations.dart';
 import '../models/client_profile_completion.dart';
 import 'profile_completed_badge.dart';
 import '../theme/fitlek_theme_extension.dart';
@@ -17,6 +18,7 @@ class ClientProfileIdentityCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.fitlek, scheme = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context);
     final name =
         '${profile['firstName'] ?? ''} ${profile['lastName'] ?? ''}'.trim();
     final avatar = '${profile['avatarUrl'] ?? ''}';
@@ -48,7 +50,7 @@ class ClientProfileIdentityCard extends StatelessWidget {
         Row(crossAxisAlignment: CrossAxisAlignment.center, children: [
           Stack(clipBehavior: Clip.none, children: [
             Semantics(
-                label: 'View profile photo',
+                label: l10n.clientProfileViewPhotoLabel,
                 button: true,
                 child: InkWell(
                     onTap: uploading ? null : onAvatar,
@@ -79,7 +81,7 @@ class ClientProfileIdentityCard extends StatelessWidget {
                 right: -5,
                 bottom: -5,
                 child: IconButton.filled(
-                    tooltip: 'Change profile photo',
+                    tooltip: l10n.clientProfileChangePhotoTooltip,
                     onPressed: uploading ? null : onChangePhoto,
                     style: IconButton.styleFrom(
                         foregroundColor: scheme.onPrimary,
@@ -95,14 +97,17 @@ class ClientProfileIdentityCard extends StatelessWidget {
               child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                Text(premium ? 'SIRVYA PREMIUM' : 'YOUR SIRVYA JOURNEY',
+                Text(
+                    premium
+                        ? l10n.clientProfilePremiumBadge
+                        : l10n.clientProfileJourneyBadge,
                     style: TextStyle(
                         fontSize: 9,
                         letterSpacing: 1.3,
                         fontWeight: FontWeight.w800,
                         color: colors.textMuted)),
                 const SizedBox(height: 8),
-                Text(name.isEmpty ? 'Welcome to Sirvya' : name,
+                Text(name.isEmpty ? l10n.clientProfileWelcomeTitle : name,
                     style: TextStyle(
                         color: scheme.onSurface,
                         fontSize: 22,
@@ -121,7 +126,8 @@ class ClientProfileIdentityCard extends StatelessWidget {
                       size: 15, color: colors.textMuted),
                   const SizedBox(width: 4),
                   Expanded(
-                      child: Text(city.isEmpty ? 'Set your city' : city,
+                      child: Text(
+                          city.isEmpty ? l10n.clientProfileSetCity : city,
                           style:
                               TextStyle(color: colors.textMuted, fontSize: 12)))
                 ]),
@@ -134,7 +140,7 @@ class ClientProfileIdentityCard extends StatelessWidget {
           Icon(Icons.lock_outline_rounded, size: 14, color: colors.textMuted),
           const SizedBox(width: 8),
           Expanded(
-              child: Text('Your personal space. Built around your progress.',
+              child: Text(l10n.clientProfilePersonalSpaceNote,
                   style: TextStyle(
                       color: colors.textMuted, fontSize: 11, height: 1.5)))
         ]),
@@ -148,9 +154,33 @@ class ClientProfileCompletionCard extends StatelessWidget {
   final ValueChanged<String> onComplete;
   const ClientProfileCompletionCard(
       {super.key, required this.completion, required this.onComplete});
+
+  String _stepLabel(AppLocalizations l10n, ClientProfileStep step) {
+    switch (step.section) {
+      case 'photo':
+        return l10n.clientProfileStepPhoto;
+      case 'email':
+        return l10n.clientProfileStepEmail;
+      case 'phone':
+        return l10n.clientProfileStepPhone;
+      case 'location':
+        return l10n.clientProfileStepCity;
+      case 'interests':
+        return l10n.clientProfileStepInterests;
+      case 'details':
+        if (step.label.contains('first')) return l10n.clientProfileStepFirstName;
+        if (step.label.contains('last')) return l10n.clientProfileStepLastName;
+        if (step.label.contains('height')) return l10n.clientProfileStepHeight;
+        return step.label;
+      default:
+        return step.label;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final colors = context.fitlek, scheme = Theme.of(context).colorScheme;
+    final l10n = AppLocalizations.of(context);
     if (completion.isComplete) {
       return const Align(
           alignment: Alignment.centerLeft, child: ProfileCompletedBadge());
@@ -164,7 +194,7 @@ class ClientProfileCompletionCard extends StatelessWidget {
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Row(children: [
             Expanded(
-                child: Text('Make it yours',
+                child: Text(l10n.clientProfileCompletionTitle,
                     style: TextStyle(
                         fontSize: 17,
                         fontWeight: FontWeight.w800,
@@ -177,7 +207,8 @@ class ClientProfileCompletionCard extends StatelessWidget {
           ]),
           const SizedBox(height: 6),
           Text(
-              'Profile completion · ${completion.completed} of ${completion.steps.length} details added',
+              l10n.clientProfileCompletionDetailsAdded(
+                  completion.completed, completion.steps.length),
               style: TextStyle(color: colors.textMuted, fontSize: 12)),
           const SizedBox(height: 15),
           TweenAnimationBuilder<double>(
@@ -189,7 +220,7 @@ class ClientProfileCompletionCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(10),
                   backgroundColor: colors.border,
                   color: colors.success,
-                  semanticsLabel: 'Profile completion',
+                  semanticsLabel: l10n.clientProfileCompletionSemantic,
                   semanticsValue: '${completion.percent}%')),
           const SizedBox(height: 15),
           InkWell(
@@ -207,7 +238,7 @@ class ClientProfileCompletionCard extends StatelessWidget {
                             size: 17, color: scheme.primary)),
                     const SizedBox(width: 10),
                     Expanded(
-                        child: Text(completion.next!.label,
+                        child: Text(_stepLabel(l10n, completion.next!),
                             style: TextStyle(
                                 color: scheme.onSurface,
                                 fontSize: 12,

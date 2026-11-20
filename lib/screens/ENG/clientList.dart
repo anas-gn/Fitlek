@@ -9,6 +9,7 @@ import '../../components/ENG/exploreCoachGrid.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
+import 'package:fitlek1/l10n/app_localizations.dart';
 import 'package:fitlek1/models/anas/coach.dart';
 import 'package:fitlek1/models/anas/reservation.dart';
 import 'clientCoachDetail.dart';
@@ -182,8 +183,9 @@ class _DiscoverScreenState extends State<DiscoverScreen>
     serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Location services are disabled.'),
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(AppLocalizations.of(context)
+              .clientListLocationServicesDisabled),
           backgroundColor: Colors.redAccent,
         ));
       }
@@ -195,8 +197,9 @@ class _DiscoverScreenState extends State<DiscoverScreen>
       permission = await Geolocator.requestPermission();
       if (permission == LocationPermission.denied) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text('Location permissions are denied'),
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(AppLocalizations.of(context)
+                .clientListLocationPermissionDenied),
             backgroundColor: Colors.redAccent,
           ));
         }
@@ -206,8 +209,9 @@ class _DiscoverScreenState extends State<DiscoverScreen>
 
     if (permission == LocationPermission.deniedForever) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Location permissions are permanently denied.'),
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(AppLocalizations.of(context)
+              .clientListLocationPermissionDeniedForever),
           backgroundColor: Colors.redAccent,
         ));
       }
@@ -215,10 +219,10 @@ class _DiscoverScreenState extends State<DiscoverScreen>
     }
 
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-        content: Text('Fetching location...'),
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(AppLocalizations.of(context).clientListFetchingLocation),
         backgroundColor: Colors.black54,
-        duration: Duration(seconds: 1),
+        duration: const Duration(seconds: 1),
       ));
     }
 
@@ -280,7 +284,8 @@ class _DiscoverScreenState extends State<DiscoverScreen>
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text('Failed to get location: $e'),
+          content: Text(AppLocalizations.of(context)
+              .clientListGetLocationFailed(e.toString())),
           backgroundColor: Colors.redAccent,
         ));
       }
@@ -477,16 +482,18 @@ class _DiscoverScreenState extends State<DiscoverScreen>
         _fetchCoachRatings();
       } else {
         setState(() {
-          _coachesError = 'Server error (${res.statusCode})';
+          _coachesError = AppLocalizations.of(context)
+              .clientListServerError(res.statusCode);
           _coachesLoading = false;
         });
       }
     } catch (error) {
       if (!mounted) return;
+      final l10n = AppLocalizations.of(context);
       setState(() {
         _coachesError = error is FormatException || error is TypeError
-            ? 'Could not load recommendations. Please try again.'
-            : 'Unable to connect. Please try again.';
+            ? l10n.clientListLoadRecommendationsFailed
+            : l10n.clientListConnectFailed;
         _coachesLoading = false;
       });
     }
@@ -561,14 +568,16 @@ class _DiscoverScreenState extends State<DiscoverScreen>
         });
       } else {
         setState(() {
-          _advisorsError = 'Server error (${res.statusCode})';
+          _advisorsError = AppLocalizations.of(context)
+              .clientListServerError(res.statusCode);
           _advisorsLoading = false;
         });
       }
     } catch (_) {
       if (!mounted) return;
       setState(() {
-        _advisorsError = 'Server unreachable.';
+        _advisorsError =
+            AppLocalizations.of(context).clientListServerUnreachable;
         _advisorsLoading = false;
       });
     }
@@ -669,10 +678,14 @@ class _DiscoverScreenState extends State<DiscoverScreen>
                       TextButton.icon(
                           onPressed: _openFilters,
                           icon: const Icon(Icons.tune_rounded, size: 18),
-                          label: const Text('Filters')),
+                          label: Text(AppLocalizations.of(context)
+                              .clientListFiltersButton)),
                       const Spacer(),
                       Flexible(
-                          child: Text(_selectedSpecialty ?? 'All specialties',
+                          child: Text(
+                              _selectedSpecialty ??
+                                  AppLocalizations.of(context)
+                                      .clientListAllSpecialties,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
@@ -752,7 +765,7 @@ class _DiscoverScreenState extends State<DiscoverScreen>
             const SizedBox(width: 16),
             Expanded(
               child: Text(
-                'Find a coach',
+                AppLocalizations.of(context).clientListFindACoach,
                 style: TextStyle(
                   color: Theme.of(context).colorScheme.onSurface,
                   fontSize: 22,
@@ -771,14 +784,18 @@ class _DiscoverScreenState extends State<DiscoverScreen>
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  _mapListToggleBtn('Map', Icons.map_outlined, _isMapView, () {
+                  _mapListToggleBtn(
+                      AppLocalizations.of(context).clientListMapToggle,
+                      Icons.map_outlined,
+                      _isMapView, () {
                     setState(() => _isMapView = true);
                     widget.onMapChanged?.call(true);
                     _tabController.animateTo(0);
                   }),
                   _mapListToggleBtn(
-                      'List', Icons.format_list_bulleted_rounded, !_isMapView,
-                      () {
+                      AppLocalizations.of(context).clientListListToggle,
+                      Icons.format_list_bulleted_rounded,
+                      !_isMapView, () {
                     setState(() => _isMapView = false);
                     widget.onMapChanged?.call(false);
                   }),
@@ -915,7 +932,7 @@ class _DiscoverScreenState extends State<DiscoverScreen>
                     color: Theme.of(context).colorScheme.onSurface,
                     fontSize: 14),
                 decoration: InputDecoration(
-                  hintText: 'Search coaches, specialties...',
+                  hintText: AppLocalizations.of(context).clientListSearchHint,
                   hintStyle: TextStyle(
                       color: context.fitlek.textSecondary, fontSize: 14),
                   border: InputBorder.none,
@@ -994,10 +1011,11 @@ class _DiscoverScreenState extends State<DiscoverScreen>
   }
 
   Widget _buildActiveFilters() {
+    final l10n = AppLocalizations.of(context);
     final activeChips = <Widget>[];
     if (_verifiedOnly) {
       activeChips.add(_activeChip(
-        label: 'Verified only',
+        label: l10n.clientListVerifiedOnly,
         icon: Icons.verified_rounded,
         onRemove: () => setState(() => _verifiedOnly = false),
       ));
@@ -1024,7 +1042,8 @@ class _DiscoverScreenState extends State<DiscoverScreen>
 
     if (_selectedMinRating != null) {
       activeChips.add(_activeChip(
-        label: '${_selectedMinRating?.toStringAsFixed(0)}+ Stars',
+        label: l10n
+            .clientListMinRatingChip(_selectedMinRating!.toStringAsFixed(0)),
         icon: Icons.star_rounded,
         onRemove: () => setState(() => _selectedMinRating = null),
       ));
@@ -1144,6 +1163,7 @@ class _DiscoverScreenState extends State<DiscoverScreen>
       builder: (sheetContext) =>
           StatefulBuilder(builder: (context, updateSheet) {
         _filterSheetSetState = updateSheet;
+        final l10n = AppLocalizations.of(context);
         return ConstrainedBox(
           constraints: BoxConstraints(
               maxHeight: MediaQuery.sizeOf(context).height * 0.85),
@@ -1151,13 +1171,13 @@ class _DiscoverScreenState extends State<DiscoverScreen>
             Padding(
                 padding: const EdgeInsets.fromLTRB(20, 10, 12, 0),
                 child: Row(children: [
-                  const Expanded(
-                      child: Text('Filter coaches',
-                          style: TextStyle(
+                  Expanded(
+                      child: Text(l10n.clientListFilterCoachesTitle,
+                          style: const TextStyle(
                               fontSize: 18, fontWeight: FontWeight.w800))),
                   TextButton(
                       onPressed: () => Navigator.pop(sheetContext),
-                      child: const Text('Done')),
+                      child: Text(l10n.clientListDone)),
                 ])),
             Flexible(
                 child: SingleChildScrollView(
@@ -1176,50 +1196,83 @@ class _DiscoverScreenState extends State<DiscoverScreen>
     if (mounted) setState(() => _showFilters = false);
   }
 
-  Widget _buildFilterPanel() => Container(
-        margin: const EdgeInsets.fromLTRB(20, 12, 20, 0),
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-            color: context.fitlek.card,
-            borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: context.fitlek.border)),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          SwitchListTile.adaptive(
-            contentPadding: EdgeInsets.zero,
-            secondary:
-                const Icon(Icons.verified_rounded, color: Color(0xFF38BDF8)),
-            title: const Text('Verified only'),
-            subtitle: const Text('Show coaches verified by Sirvya'),
-            value: _verifiedOnly,
-            onChanged: (value) => _updateFilters(() => _verifiedOnly = value),
-          ),
-          const SizedBox(height: 12),
-          Text('SORT BY',
+  Widget _buildFilterPanel() {
+    final l10n = AppLocalizations.of(context);
+    return Container(
+      margin: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+          color: context.fitlek.card,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: context.fitlek.border)),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        SwitchListTile.adaptive(
+          contentPadding: EdgeInsets.zero,
+          secondary:
+              const Icon(Icons.verified_rounded, color: Color(0xFF38BDF8)),
+          title: Text(l10n.clientListVerifiedOnly),
+          subtitle: Text(l10n.clientListVerifiedOnlySubtitle),
+          value: _verifiedOnly,
+          onChanged: (value) => _updateFilters(() => _verifiedOnly = value),
+        ),
+        const SizedBox(height: 12),
+        Text(l10n.clientListSortByLabel,
+            style: TextStyle(
+                color: context.fitlek.textMuted,
+                fontSize: 10,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 1.5)),
+        const SizedBox(height: 12),
+        Wrap(spacing: 10, runSpacing: 8, children: [
+          _sortBtn(l10n.clientListSortRecommended, 'recommended'),
+          _sortBtn(l10n.clientListSortPoints, 'points'),
+          _sortBtn(l10n.clientListSortAlphabetical, 'name'),
+          _sortBtn(l10n.clientListSortTopRated, 'rating'),
+        ]),
+        const SizedBox(height: 18),
+        Row(children: [
+          Text(l10n.clientListMinRatingLabel,
               style: TextStyle(
                   color: context.fitlek.textMuted,
                   fontSize: 10,
                   fontWeight: FontWeight.w700,
                   letterSpacing: 1.5)),
-          const SizedBox(height: 12),
-          Wrap(spacing: 10, runSpacing: 8, children: [
-            _sortBtn('Recommended for you', 'recommended'),
-            _sortBtn('Points', 'points'),
-            _sortBtn('Alphabetical', 'name'),
-            _sortBtn('Top rated', 'rating'),
-          ]),
+          const Spacer(),
+          if (_selectedMinRating != null)
+            GestureDetector(
+              onTap: () => _updateFilters(() => _selectedMinRating = null),
+              child: Text(l10n.clientListClear,
+                  style: TextStyle(
+                      color: Theme.of(context).colorScheme.primary,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700)),
+            ),
+        ]),
+        const SizedBox(height: 12),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            _ratingChip(l10n.clientListAll, null),
+            _ratingChip('4.5+', 4.5),
+            _ratingChip('4.0+', 4.0),
+            _ratingChip('3.5+', 3.5),
+          ],
+        ),
+        if (_availableCities.isNotEmpty) ...[
           const SizedBox(height: 18),
           Row(children: [
-            Text('MINIMUM RATING',
+            Text(l10n.clientListCityLabel,
                 style: TextStyle(
                     color: context.fitlek.textMuted,
                     fontSize: 10,
                     fontWeight: FontWeight.w700,
                     letterSpacing: 1.5)),
             const Spacer(),
-            if (_selectedMinRating != null)
+            if (_selectedCity != null)
               GestureDetector(
-                onTap: () => _updateFilters(() => _selectedMinRating = null),
-                child: Text('Clear',
+                onTap: () => _updateFilters(() => _selectedCity = null),
+                child: Text(l10n.clientListClear,
                     style: TextStyle(
                         color: Theme.of(context).colorScheme.primary,
                         fontSize: 11,
@@ -1231,44 +1284,14 @@ class _DiscoverScreenState extends State<DiscoverScreen>
             spacing: 8,
             runSpacing: 8,
             children: [
-              _ratingChip('All', null),
-              _ratingChip('4.5+', 4.5),
-              _ratingChip('4.0+', 4.0),
-              _ratingChip('3.5+', 3.5),
+              _cityChip(l10n.clientListAll, null),
+              ..._availableCities.map((city) => _cityChip(city, city)),
             ],
           ),
-          if (_availableCities.isNotEmpty) ...[
-            const SizedBox(height: 18),
-            Row(children: [
-              Text('CITY',
-                  style: TextStyle(
-                      color: context.fitlek.textMuted,
-                      fontSize: 10,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 1.5)),
-              const Spacer(),
-              if (_selectedCity != null)
-                GestureDetector(
-                  onTap: () => _updateFilters(() => _selectedCity = null),
-                  child: Text('Clear',
-                      style: TextStyle(
-                          color: Theme.of(context).colorScheme.primary,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700)),
-                ),
-            ]),
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                _cityChip('All', null),
-                ..._availableCities.map((city) => _cityChip(city, city)),
-              ],
-            ),
-          ],
-        ]),
-      );
+        ],
+      ]),
+    );
+  }
 
   Widget _sortBtn(String label, String value) {
     final active = _sortBy == value;
@@ -1385,6 +1408,7 @@ class _DiscoverScreenState extends State<DiscoverScreen>
   }
 
   void _openGridCoach(CoachModel coach) {
+    final l10n = AppLocalizations.of(context);
     final session = ReservationModel(
         id: 0,
         clientID: widget.clientID,
@@ -1395,10 +1419,10 @@ class _DiscoverScreenState extends State<DiscoverScreen>
         coachRating: _coachAvgRatings[coach.id] ?? 0,
         sessionStart: DateTime.now(),
         sessionEnd: DateTime.now().add(const Duration(hours: 1)),
-        location: 'To be defined',
+        location: l10n.clientListLocationToBeDefined,
         status: 'pending',
         price: 0,
-        companyName: 'Independent');
+        companyName: l10n.clientListCompanyIndependent);
     Navigator.push(
         context,
         MaterialPageRoute(
@@ -1411,6 +1435,7 @@ class _DiscoverScreenState extends State<DiscoverScreen>
   Widget _buildCoachTab() {
     if (_coachesLoading) return _shimmerList();
     if (_coachesError != null) return _errorView(_coachesError!, _fetchCoaches);
+    final l10n = AppLocalizations.of(context);
     final list = _filteredCoaches;
     if (_isMapView) {
       return ExploreCoachMap(
@@ -1422,8 +1447,8 @@ class _DiscoverScreenState extends State<DiscoverScreen>
     }
     if (list.isEmpty) {
       return _emptyView(_selectedCity != null
-          ? 'No coaches found in $_selectedCity'
-          : 'No coaches found');
+          ? l10n.clientListNoCoachesInCity(_selectedCity!)
+          : l10n.clientListNoCoachesFound);
     }
 
     return Column(
@@ -1435,7 +1460,7 @@ class _DiscoverScreenState extends State<DiscoverScreen>
             children: [
               Expanded(
                   child: Text(
-                '${list.length} coaches found',
+                l10n.clientListCoachesFoundCount(list.length),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
@@ -1445,7 +1470,7 @@ class _DiscoverScreenState extends State<DiscoverScreen>
                 ),
               )),
               IconButton(
-                  tooltip: 'List view',
+                  tooltip: l10n.clientListListViewTooltip,
                   isSelected: !_gridView,
                   style: IconButton.styleFrom(
                     backgroundColor: !_gridView
@@ -1460,7 +1485,7 @@ class _DiscoverScreenState extends State<DiscoverScreen>
                   onPressed: () => _setGridView(false),
                   icon: const Icon(Icons.view_list_rounded)),
               IconButton(
-                  tooltip: 'Grid view',
+                  tooltip: l10n.clientListGridViewTooltip,
                   isSelected: _gridView,
                   style: IconButton.styleFrom(
                     backgroundColor: _gridView
@@ -1479,7 +1504,7 @@ class _DiscoverScreenState extends State<DiscoverScreen>
                 child: Row(
                   children: [
                     Text(
-                      'Sort',
+                      l10n.clientListSortAction,
                       style: TextStyle(
                         color: Theme.of(context).colorScheme.onSurface,
                         fontSize: 14,
@@ -1539,11 +1564,12 @@ class _DiscoverScreenState extends State<DiscoverScreen>
     if (_advisorsError != null) {
       return _errorView(_advisorsError!, _fetchAdvisors);
     }
+    final l10n = AppLocalizations.of(context);
     final list = _filteredAdvisors;
     if (list.isEmpty) {
       return _emptyView(_selectedCity != null
-          ? 'No companies found in $_selectedCity'
-          : 'No companies found');
+          ? l10n.clientListNoCompaniesInCity(_selectedCity!)
+          : l10n.clientListNoCompaniesFound);
     }
 
     return RefreshIndicator(
@@ -1601,7 +1627,7 @@ class _DiscoverScreenState extends State<DiscoverScreen>
                             .colorScheme
                             .primary
                             .withValues(alpha: 0.4))),
-                child: Text('Retry',
+                child: Text(AppLocalizations.of(context).clientListRetry,
                     style: TextStyle(
                         color: Theme.of(context).colorScheme.primary,
                         fontWeight: FontWeight.w700,
@@ -1628,7 +1654,7 @@ class _DiscoverScreenState extends State<DiscoverScreen>
               _selectedCity = null;
               _verifiedOnly = false;
             }),
-            child: Text('Reset',
+            child: Text(AppLocalizations.of(context).clientListReset,
                 style: TextStyle(
                     color: Theme.of(context).colorScheme.primary,
                     fontSize: 12,
@@ -1845,6 +1871,7 @@ class _CoachCardState extends State<_CoachCard> {
   @override
   Widget build(BuildContext context) {
     final f = context.fitlek;
+    final l10n = AppLocalizations.of(context);
     final coach = widget.coach;
     final bool hasRating = widget.reviewCount > 0;
 
@@ -1863,10 +1890,10 @@ class _CoachCardState extends State<_CoachCard> {
           coachRating: widget.avgRating,
           sessionStart: DateTime.now(),
           sessionEnd: DateTime.now().add(const Duration(hours: 1)),
-          location: 'To be defined',
+          location: l10n.clientListLocationToBeDefined,
           status: 'pending',
           price: 0.0,
-          companyName: 'Independent',
+          companyName: l10n.clientListCompanyIndependent,
         );
         Navigator.push(
           context,
@@ -1929,14 +1956,14 @@ class _CoachCardState extends State<_CoachCard> {
                                 decoration: BoxDecoration(
                                     color: f.premium,
                                     borderRadius: BorderRadius.circular(8)),
-                                child: const Row(
+                                child: Row(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
-                                      Icon(Icons.workspace_premium_rounded,
+                                      const Icon(Icons.workspace_premium_rounded,
                                           color: Colors.black, size: 8),
-                                      SizedBox(width: 2),
-                                      Text('PREMIUM',
-                                          style: TextStyle(
+                                      const SizedBox(width: 2),
+                                      Text(l10n.clientListPremiumBadge,
+                                          style: const TextStyle(
                                               color: Colors.black,
                                               fontSize: 7,
                                               fontWeight: FontWeight.w900,
@@ -2035,7 +2062,7 @@ class _CoachCardState extends State<_CoachCard> {
                               Text(
                                 hasRating
                                     ? widget.avgRating.toStringAsFixed(1)
-                                    : 'New',
+                                    : l10n.clientListNewBadge,
                                 style: TextStyle(
                                     color: Theme.of(context)
                                         .colorScheme
@@ -2058,7 +2085,7 @@ class _CoachCardState extends State<_CoachCard> {
                                         color: f.success, size: 14),
                                     const SizedBox(width: 4),
                                     Text(
-                                      'Available today',
+                                      l10n.clientListAvailableToday,
                                       style: TextStyle(
                                           color: f.success,
                                           fontSize: 12,
@@ -2086,7 +2113,7 @@ class _CoachCardState extends State<_CoachCard> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'From',
+                              l10n.clientListPriceFrom,
                               style: TextStyle(
                                 color: f.textMuted,
                                 fontSize: 10,
@@ -2094,7 +2121,8 @@ class _CoachCardState extends State<_CoachCard> {
                               ),
                             ),
                             Text(
-                              '${coach.minPrice!.toInt()} MAD',
+                              l10n.clientListPriceCurrency(
+                                  coach.minPrice!.toInt()),
                               style: TextStyle(
                                 color: Theme.of(context)
                                     .colorScheme
@@ -2112,7 +2140,7 @@ class _CoachCardState extends State<_CoachCard> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Price',
+                              l10n.clientListPriceLabel,
                               style: TextStyle(
                                 color: f.textMuted,
                                 fontSize: 10,
@@ -2120,7 +2148,7 @@ class _CoachCardState extends State<_CoachCard> {
                               ),
                             ),
                             Text(
-                              'Price on request',
+                              l10n.clientListPriceOnRequest,
                               style: TextStyle(
                                 color: Theme.of(context)
                                     .colorScheme
@@ -2147,10 +2175,10 @@ class _CoachCardState extends State<_CoachCard> {
                           sessionStart: DateTime.now(),
                           sessionEnd:
                               DateTime.now().add(const Duration(hours: 1)),
-                          location: 'To be defined',
+                          location: l10n.clientListLocationToBeDefined,
                           status: 'pending',
                           price: 0.0,
-                          companyName: 'Independent',
+                          companyName: l10n.clientListCompanyIndependent,
                         );
                         Navigator.push(
                           context,
@@ -2184,7 +2212,7 @@ class _CoachCardState extends State<_CoachCard> {
                           mainAxisSize: MainAxisSize.min,
                           children: [
                             Text(
-                              'View & book',
+                              l10n.clientListViewAndBook,
                               style: TextStyle(
                                 color: Theme.of(context)
                                     .colorScheme
@@ -2239,7 +2267,8 @@ class _CoachCardState extends State<_CoachCard> {
         GestureDetector(
           onTap: () {
             Clipboard.setData(ClipboardData(text: coach.invitationCode));
-            _snack(context, 'Code copied', Colors.amber, Colors.black);
+            _snack(context, AppLocalizations.of(context).clientListCodeCopied,
+                Colors.amber, Colors.black);
           },
           child:
               _pill(Icons.qr_code_rounded, coach.invitationCode, Colors.amber),
@@ -2250,7 +2279,7 @@ class _CoachCardState extends State<_CoachCard> {
             Clipboard.setData(ClipboardData(text: coach.tel!));
             _snack(
                 context,
-                'Number copied',
+                AppLocalizations.of(context).clientListNumberCopied,
                 Theme.of(context).colorScheme.primary,
                 Theme.of(context).colorScheme.onPrimary);
           },
@@ -2437,12 +2466,14 @@ class _AdvisorCardState extends State<_AdvisorCard> {
                           color: Colors.black.withValues(alpha: 0.65),
                           borderRadius: BorderRadius.circular(20),
                           border: Border.all(color: Colors.white24)),
-                      child: const Row(children: [
-                        Icon(Icons.people_rounded,
+                      child: Row(children: [
+                        const Icon(Icons.people_rounded,
                             color: Colors.white70, size: 11),
-                        SizedBox(width: 4),
-                        Text('View coaches',
-                            style: TextStyle(
+                        const SizedBox(width: 4),
+                        Text(
+                            AppLocalizations.of(context)
+                                .clientListViewCoachesBadge,
+                            style: const TextStyle(
                                 color: Colors.white70,
                                 fontSize: 9,
                                 fontWeight: FontWeight.w700)),
@@ -2511,7 +2542,8 @@ class _AdvisorCardState extends State<_AdvisorCard> {
                       decoration: BoxDecoration(
                           color: Theme.of(context).colorScheme.primary,
                           borderRadius: BorderRadius.circular(10)),
-                      child: Text('VIEW PROFILE',
+                      child: Text(
+                          AppLocalizations.of(context).clientListViewProfile,
                           textAlign: TextAlign.center,
                           style: TextStyle(
                               color: Theme.of(context).colorScheme.onPrimary,

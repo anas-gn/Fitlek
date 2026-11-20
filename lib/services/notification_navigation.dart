@@ -5,6 +5,7 @@ import '../components/app_dialog.dart';
 import '../screens/ENG/coachInviteClients.dart';
 import 'campaign_service.dart';
 import 'package:flutter/material.dart';
+import 'package:fitlek1/l10n/app_localizations.dart';
 import 'apiService.dart';
 import '../models/anas/reservation.dart';
 import '../models/coachConversation.dart';
@@ -65,7 +66,8 @@ class NotificationNavigation {
               conversation: CoachConversation(
                   id: id,
                   clientId: '',
-                  clientName: '${item['actorName'] ?? 'Client'}',
+                  clientName:
+                      '${item['actorName'] ?? AppLocalizations.of(context).notificationNavClientFallback}',
                   clientPhotoUrl: '${item['actorAvatar'] ?? ''}',
                   lastMessage: '',
                   lastMessageTime: DateTime.now(),
@@ -131,16 +133,18 @@ class NotificationNavigation {
     }
     if (!context.mounted) return;
     if (screen == null) {
+      final l10n = AppLocalizations.of(context);
       await showDialog(
           context: context,
           builder: (ctx) => AppDialog(
-                title: Text('${item['title'] ?? 'Notification'}'),
+                title: Text(
+                    '${item['title'] ?? l10n.notificationNavTitleFallback}'),
                 content: Text(
-                    '${item['body'] ?? 'This item is no longer available.'}'),
+                    '${item['body'] ?? l10n.notificationNavBodyUnavailable}'),
                 actions: [
                   TextButton(
                       onPressed: () => Navigator.pop(ctx),
-                      child: const Text('Close'))
+                      child: Text(l10n.notificationNavClose))
                 ],
               ));
       return;

@@ -16,6 +16,8 @@ import '../../mainLayoutCoach.dart';
 import 'welcome.dart';
 import 'register.dart';
 import 'package:fitlek1/constants/urls.dart';
+import 'package:fitlek1/l10n/app_localizations.dart';
+import '../../services/locale_service.dart';
 import '../../theme/fitlek_theme_extension.dart';
 import '../../constants/app_colors.dart';
 
@@ -84,12 +86,14 @@ class _LoginScreenState extends State<LoginScreen>
     final email = _emailCtrl.text.trim();
     final password = _passwordCtrl.text;
 
+    final l = AppLocalizations.of(context);
+
     if (email.isEmpty) {
-      setState(() => _errorMsg = 'Enter your email address.');
+      setState(() => _errorMsg = l.loginErrorEmptyEmail);
       return;
     }
     if (password.isEmpty) {
-      setState(() => _errorMsg = 'Enter your password.');
+      setState(() => _errorMsg = l.loginErrorEmptyPassword);
       return;
     }
 
@@ -119,7 +123,7 @@ class _LoginScreenState extends State<LoginScreen>
 
         if (token == null || token.isEmpty) {
           setState(() {
-            _errorMsg = 'Invalid token received from the server.';
+            _errorMsg = l.loginErrorInvalidToken;
             _loading = false;
           });
           return;
@@ -127,7 +131,7 @@ class _LoginScreenState extends State<LoginScreen>
 
         if (user == null) {
           setState(() {
-            _errorMsg = 'User data is missing.';
+            _errorMsg = l.loginErrorMissingUserData;
             _loading = false;
           });
           return;
@@ -139,7 +143,7 @@ class _LoginScreenState extends State<LoginScreen>
 
         if (role == null || id == null) {
           setState(() {
-            _errorMsg = 'Incomplete user information.';
+            _errorMsg = l.loginErrorIncompleteUserInfo;
             _loading = false;
           });
           return;
@@ -154,29 +158,29 @@ class _LoginScreenState extends State<LoginScreen>
       } else if (res.statusCode == 403 && body['authProvider'] == 'google') {
         // Google-only account trying to use email/password
         setState(() {
-          _errorMsg = 'This account uses Google or Apple sign-in. Continue with your original sign-in method below.';
+          _errorMsg = l.loginErrorSocialAccount;
           _loading = false;
         });
       } else {
         final errorMsg = body['message'] ??
             body['error'] ??
-            'Login error (${res.statusCode})';
+            l.loginErrorCode(res.statusCode);
 
         setState(() {
-          _errorMsg = _friendly(errorMsg.toString());
+          _errorMsg = _friendly(errorMsg.toString(), l);
           _loading = false;
         });
       }
     } on http.ClientException {
       if (kDebugMode) debugPrint('âŒ NETWORK ERROR');
       setState(() {
-        _errorMsg = 'Check your connection.';
+        _errorMsg = l.loginErrorCheckConnection;
         _loading = false;
       });
     } catch (e) {
       if (kDebugMode) debugPrint('âŒ LOGIN ERROR: $e');
       setState(() {
-        _errorMsg = 'Check your connection';
+        _errorMsg = l.loginErrorCheckConnection;
         _loading = false;
       });
     }
@@ -221,7 +225,7 @@ class _LoginScreenState extends State<LoginScreen>
         break;
       default:
         setState(() {
-          _errorMsg = 'Unrecognized role: $role';
+          _errorMsg = AppLocalizations.of(context).loginErrorUnrecognizedRole(role);
           _loading = false;
           _googleLoading = false;
         });
@@ -278,7 +282,7 @@ class _LoginScreenState extends State<LoginScreen>
     } catch (e) {
       if (kDebugMode) debugPrint('❌ GOOGLE LOGIN ERROR: ');
       setState(() {
-        _errorMsg = 'Google sign-in failed. Please try again.';
+        _errorMsg = AppLocalizations.of(context).loginErrorGoogleFailed;
         _googleLoading = false;
       });
     }
@@ -313,7 +317,7 @@ class _LoginScreenState extends State<LoginScreen>
     } catch (e) {
       if (kDebugMode) debugPrint('❌ APPLE LOGIN ERROR: ');
       setState(() {
-        _errorMsg = 'Apple sign-in failed. Please try again.';
+        _errorMsg = AppLocalizations.of(context).loginErrorAppleFailed;
         _appleLoading = false;
       });
     }
@@ -341,16 +345,16 @@ class _LoginScreenState extends State<LoginScreen>
         ),
       );
 
-  String _friendly(String raw) {
+  String _friendly(String raw, AppLocalizations l) {
     final lower = raw.toLowerCase();
     if (lower.contains('credentials') || lower.contains('invalid')) {
-      return 'Incorrect email or password.';
+      return l.loginErrorInvalidCredentials;
     }
     if (lower.contains('banned') || lower.contains('suspend')) {
-      return 'This account is suspended.';
+      return l.loginErrorSuspended;
     }
-    if (lower.contains('required')) return 'Please fill in all fields.';
-    if (lower.contains('not found')) return 'No account found with this email.';
+    if (lower.contains('required')) return l.loginErrorFillAllFields;
+    if (lower.contains('not found')) return l.loginErrorAccountNotFound;
     return raw;
   }
 
@@ -465,12 +469,134 @@ class _LoginScreenState extends State<LoginScreen>
   }
 
   Widget _buildHeader() {
-    return Row(
-      children: [],
+    final l = AppLocalizations.of(context);
+    return ValueListenableBuilder<Locale?>(
+      valueListenable: LocaleService.locale,
+      builder: (context, currentLocale, _) {
+        final activeCode = currentLocale?.languageCode.toUpperCase() ??
+            Localizations.localeOf(context).languageCode.toUpperCase();
+        return Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            PopupMenuButton<String>(
+              tooltip: l.language,
+              color: const Color(0xFF142A27),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14),
+                side: BorderSide(color: Colors.white.withValues(alpha: 0.15)),
+              ),
+              onSelected: (value) {
+                if (value == 'system') {
+                  LocaleService.set(null);
+                } else {
+                  LocaleService.set(Locale(value));
+                }
+              },
+              itemBuilder: (context) => [
+                PopupMenuItem(
+                  value: 'en',
+                  child: Row(
+                    children: [
+                      Icon(
+                        currentLocale?.languageCode == 'en'
+                            ? Icons.radio_button_checked_rounded
+                            : Icons.radio_button_off_rounded,
+                        size: 16,
+                        color: currentLocale?.languageCode == 'en'
+                            ? AppColors.sand
+                            : Colors.white54,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        l.languageEnglish,
+                        style: const TextStyle(color: Colors.white, fontSize: 13),
+                      ),
+                    ],
+                  ),
+                ),
+                PopupMenuItem(
+                  value: 'fr',
+                  child: Row(
+                    children: [
+                      Icon(
+                        currentLocale?.languageCode == 'fr'
+                            ? Icons.radio_button_checked_rounded
+                            : Icons.radio_button_off_rounded,
+                        size: 16,
+                        color: currentLocale?.languageCode == 'fr'
+                            ? AppColors.sand
+                            : Colors.white54,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        l.languageFrench,
+                        style: const TextStyle(color: Colors.white, fontSize: 13),
+                      ),
+                    ],
+                  ),
+                ),
+                PopupMenuItem(
+                  value: 'system',
+                  child: Row(
+                    children: [
+                      Icon(
+                        currentLocale == null
+                            ? Icons.radio_button_checked_rounded
+                            : Icons.radio_button_off_rounded,
+                        size: 16,
+                        color: currentLocale == null
+                            ? AppColors.sand
+                            : Colors.white54,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        l.languageSystem,
+                        style: const TextStyle(color: Colors.white, fontSize: 13),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.18),
+                    width: 1,
+                  ),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.language_rounded,
+                        color: AppColors.sand, size: 15),
+                    const SizedBox(width: 6),
+                    Text(
+                      activeCode,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0.8,
+                      ),
+                    ),
+                    const SizedBox(width: 2),
+                    Icon(Icons.keyboard_arrow_down_rounded,
+                        color: Colors.white.withValues(alpha: 0.7), size: 15),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 
   Widget _buildHeading() {
+    final l = AppLocalizations.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -480,9 +606,9 @@ class _LoginScreenState extends State<LoginScreen>
             color: AppColors.sand.withValues(alpha: 0.14),
             borderRadius: BorderRadius.circular(20),
           ),
-          child: const Text(
-            'SIGN IN',
-            style: TextStyle(
+          child: Text(
+            l.loginBadgeSignIn,
+            style: const TextStyle(
               color: AppColors.sand,
               fontSize: 11,
               fontWeight: FontWeight.w800,
@@ -491,9 +617,9 @@ class _LoginScreenState extends State<LoginScreen>
           ),
         ),
         const SizedBox(height: 16),
-        const Text(
-          'Welcome back',
-          style: TextStyle(
+        Text(
+          l.loginHeadingTitle,
+          style: const TextStyle(
             fontSize: 40,
             fontWeight: FontWeight.w900,
             color: Colors.white,
@@ -503,7 +629,7 @@ class _LoginScreenState extends State<LoginScreen>
         ),
         const SizedBox(height: 10),
         Text(
-          'Log in to access your space and manage your activities.',
+          l.loginHeadingSubtitle,
           style: TextStyle(
             fontSize: 14,
             height: 1.5,
@@ -515,20 +641,21 @@ class _LoginScreenState extends State<LoginScreen>
   }
 
   Widget _buildFields() {
+    final l = AppLocalizations.of(context);
     return Column(
       children: [
         _LoginField(
           controller: _emailCtrl,
-          label: 'Email address',
-          hint: 'your@email.com',
+          label: l.loginEmailLabel,
+          hint: l.loginEmailHint,
           icon: Icons.alternate_email_rounded,
           keyboardType: TextInputType.emailAddress,
         ),
         const SizedBox(height: 14),
         _LoginField(
           controller: _passwordCtrl,
-          label: 'Password',
-          hint: 'Enter your password',
+          label: l.loginPasswordLabel,
+          hint: l.loginPasswordHint,
           icon: Icons.lock_outline_rounded,
           isPassword: true,
           showPassword: _showPassword,
@@ -541,6 +668,7 @@ class _LoginScreenState extends State<LoginScreen>
   }
 
   Widget _buildForgotPassword() {
+    final l = AppLocalizations.of(context);
     return Align(
       alignment: Alignment.centerRight,
       child: GestureDetector(
@@ -554,11 +682,11 @@ class _LoginScreenState extends State<LoginScreen>
             transitionDuration: const Duration(milliseconds: 500),
           ),
         ),
-        child: const Padding(
-          padding: EdgeInsets.symmetric(vertical: 4),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 4),
           child: Text(
-            'Forgot password?',
-            style: TextStyle(
+            l.loginForgotPassword,
+            style: const TextStyle(
               color: AppColors.sand,
               fontSize: 12,
               fontWeight: FontWeight.w700,
@@ -620,9 +748,9 @@ class _LoginScreenState extends State<LoginScreen>
                       const SizedBox(width: 10),
                       Flexible(
                         child: Text(
-                          'LOG IN',
+                          AppLocalizations.of(context).loginCtaLogIn,
                           overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
+                          style: const TextStyle(
                             color: AppColors.cyprus,
                             fontWeight: FontWeight.w900,
                             fontSize: 14,
@@ -648,7 +776,7 @@ class _LoginScreenState extends State<LoginScreen>
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 14),
           child: Text(
-            'OR',
+            AppLocalizations.of(context).loginOr,
             style: TextStyle(
               color: Colors.white.withValues(alpha: 0.4),
               fontSize: 11,
@@ -703,9 +831,9 @@ class _LoginScreenState extends State<LoginScreen>
                       const SizedBox(width: 12),
                       Flexible(
                         child: Text(
-                          'CONTINUE WITH GOOGLE',
+                          AppLocalizations.of(context).loginContinueGoogle,
                           overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
+                          style: const TextStyle(
                             color: Colors.white,
                             fontWeight: FontWeight.w800,
                             fontSize: 13,
@@ -742,18 +870,18 @@ class _LoginScreenState extends State<LoginScreen>
                     strokeWidth: 2.5,
                   ),
                 )
-              : const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 12),
+              : Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.apple_rounded, color: Colors.black, size: 26),
-                      SizedBox(width: 10),
+                      const Icon(Icons.apple_rounded, color: Colors.black, size: 26),
+                      const SizedBox(width: 10),
                       Flexible(
                         child: Text(
-                          'CONTINUE WITH APPLE',
+                          AppLocalizations.of(context).loginContinueApple,
                           overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
+                          style: const TextStyle(
                             color: Colors.black,
                             fontWeight: FontWeight.w800,
                             fontSize: 13,
@@ -817,7 +945,7 @@ class _LoginScreenState extends State<LoginScreen>
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 14),
           child: Text(
-            'Not registered yet?',
+            AppLocalizations.of(context).loginNotRegisteredYet,
             style: TextStyle(
                 color: Colors.white.withValues(alpha: 0.55), fontSize: 11),
           ),
@@ -831,6 +959,7 @@ class _LoginScreenState extends State<LoginScreen>
   }
 
   Widget _buildSignup() {
+    final l = AppLocalizations.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -858,9 +987,9 @@ class _LoginScreenState extends State<LoginScreen>
                   const SizedBox(width: 10),
                   Flexible(
                     child: Text(
-                      'CREATE AN ACCOUNT',
+                      l.loginCreateAccount,
                       overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
+                      style: const TextStyle(
                         color: AppColors.sand,
                         fontWeight: FontWeight.w900,
                         fontSize: 14,
@@ -878,15 +1007,15 @@ class _LoginScreenState extends State<LoginScreen>
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Text(
-              'Back to ',
+              l.loginBackTo,
               style: TextStyle(
                   color: Colors.white.withValues(alpha: 0.55), fontSize: 12),
             ),
             GestureDetector(
               onTap: _goToWelcome,
-              child: const Text(
-                'home',
-                style: TextStyle(
+              child: Text(
+                l.loginBackToHome,
+                style: const TextStyle(
                   color: AppColors.sand,
                   fontSize: 12,
                   fontWeight: FontWeight.w700,
@@ -1130,13 +1259,14 @@ class _SetPasswordSheetState extends State<_SetPasswordSheet> {
   }
 
   Future<void> _submit() async {
+    final l = AppLocalizations.of(context);
     final pass = _passCtrl.text;
     if (pass.length < 6) {
-      setState(() => _error = 'Password must be at least 6 characters.');
+      setState(() => _error = l.loginSetPasswordErrorMinLength);
       return;
     }
     if (pass != _confirmCtrl.text) {
-      setState(() => _error = 'Passwords do not match.');
+      setState(() => _error = l.loginSetPasswordErrorMismatch);
       return;
     }
     setState(() { _loading = true; _error = null; });
@@ -1154,17 +1284,18 @@ class _SetPasswordSheetState extends State<_SetPasswordSheet> {
       } else {
         final body = jsonDecode(res.body) as Map<String, dynamic>;
         setState(() {
-          _error = body['error'] as String? ?? 'Failed to set password.';
+          _error = body['error'] as String? ?? l.loginSetPasswordErrorFailed;
           _loading = false;
         });
       }
     } catch (_) {
-      setState(() { _error = 'Connection error.'; _loading = false; });
+      setState(() { _error = l.loginSetPasswordErrorConnection; _loading = false; });
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context);
     return Container(
       margin: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
       decoration: const BoxDecoration(
@@ -1178,10 +1309,10 @@ class _SetPasswordSheetState extends State<_SetPasswordSheet> {
               children: [
                 const Icon(Icons.check_circle_rounded, color: Color(0xFF4CAF50), size: 56),
                 const SizedBox(height: 12),
-                const Text('Password set!',
-                    style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w800)),
+                Text(l.loginSetPasswordSuccessTitle,
+                    style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w800)),
                 const SizedBox(height: 8),
-                Text('You can now log in with your email and password.',
+                Text(l.loginSetPasswordSuccessMessage,
                     textAlign: TextAlign.center,
                     style: TextStyle(color: Colors.white.withValues(alpha: 0.6), fontSize: 13)),
                 const SizedBox(height: 20),
@@ -1194,7 +1325,7 @@ class _SetPasswordSheetState extends State<_SetPasswordSheet> {
                         foregroundColor: AppColors.cyprus,
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                         padding: const EdgeInsets.symmetric(vertical: 16)),
-                    child: const Text('Done', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
+                    child: Text(l.loginSetPasswordDone, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
                   ),
                 ),
               ],
@@ -1210,10 +1341,10 @@ class _SetPasswordSheetState extends State<_SetPasswordSheet> {
                           borderRadius: BorderRadius.circular(2))),
                 ),
                 const SizedBox(height: 20),
-                const Text('Set a Password',
-                    style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w800)),
+                Text(l.loginSetPasswordTitle,
+                    style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w800)),
                 const SizedBox(height: 6),
-                Text('Optionally set a password so you can also log in with your email later.',
+                Text(l.loginSetPasswordSubtitle,
                     style: TextStyle(color: Colors.white.withValues(alpha: 0.55), fontSize: 13)),
                 const SizedBox(height: 20),
                 TextField(
@@ -1221,7 +1352,7 @@ class _SetPasswordSheetState extends State<_SetPasswordSheet> {
                   obscureText: _obscure,
                   style: const TextStyle(color: Colors.white),
                   decoration: InputDecoration(
-                    labelText: 'New Password',
+                    labelText: l.loginSetPasswordNewLabel,
                     labelStyle: TextStyle(color: Colors.white.withValues(alpha: 0.5)),
                     enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
@@ -1242,7 +1373,7 @@ class _SetPasswordSheetState extends State<_SetPasswordSheet> {
                   obscureText: _obscure,
                   style: const TextStyle(color: Colors.white),
                   decoration: InputDecoration(
-                    labelText: 'Confirm Password',
+                    labelText: l.loginSetPasswordConfirmLabel,
                     labelStyle: TextStyle(color: Colors.white.withValues(alpha: 0.5)),
                     enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
@@ -1266,7 +1397,7 @@ class _SetPasswordSheetState extends State<_SetPasswordSheet> {
                           side: BorderSide(color: Colors.white.withValues(alpha: 0.15)),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                           padding: const EdgeInsets.symmetric(vertical: 16)),
-                      child: const Text('Skip'),
+                      child: Text(l.loginSetPasswordSkip),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -1282,8 +1413,8 @@ class _SetPasswordSheetState extends State<_SetPasswordSheet> {
                       child: _loading
                           ? const SizedBox(width: 20, height: 20,
                               child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.cyprus))
-                          : const Text('Set Password',
-                              style: TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
+                          : Text(l.loginSetPasswordSubmit,
+                              style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
                     ),
                   ),
                 ]),

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../services/apiService.dart';
+import 'package:fitlek1/l10n/app_localizations.dart';
 import '../../theme/fitlek_theme_extension.dart';
 import 'coachProfile.dart' show CoachProfileData;
 
@@ -55,10 +56,10 @@ class _CoachVisibilityState extends State<CoachVisibility> {
       if (res['ok'] == true || res['message'] != null) {
         if (mounted) Navigator.pop(context, true);
       } else {
-        _showSnack(res['error'] ?? 'Failed to update visibility & messaging', isError: true);
+        _showSnack(res['error'] ?? AppLocalizations.of(context).coachVisibilityUpdateFailed, isError: true);
       }
     } catch (e) {
-      _showSnack('Network error', isError: true);
+      _showSnack(AppLocalizations.of(context).coachVisibilityNetworkError, isError: true);
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -83,7 +84,7 @@ class _CoachVisibilityState extends State<CoachVisibility> {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        title: const Text('Visibility & messaging', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w600)),
+        title: Text(AppLocalizations.of(context).coachVisibilityTitle, style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w600)),
         centerTitle: true,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
@@ -102,7 +103,7 @@ class _CoachVisibilityState extends State<CoachVisibility> {
           else
             TextButton(
               onPressed: _save,
-              child: const Text('Save', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+              child: Text(AppLocalizations.of(context).coachVisibilitySave, style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
             )
         ],
       ),
@@ -111,10 +112,10 @@ class _CoachVisibilityState extends State<CoachVisibility> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildSectionTitle('Profile visibility'),
+            _buildSectionTitle(AppLocalizations.of(context).coachVisibilityProfileSection),
             const SizedBox(height: 8),
             Text(
-              'Control who can see your profile on the platform.',
+              AppLocalizations.of(context).coachVisibilityProfileDesc,
               style: TextStyle(color: Colors.white.withOpacity(0.6), fontSize: 14),
             ),
             const SizedBox(height: 24),
@@ -131,9 +132,9 @@ class _CoachVisibilityState extends State<CoachVisibility> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('Public profile', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w500)),
+                        Text(AppLocalizations.of(context).coachVisibilityPublicProfile, style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w500)),
                         const SizedBox(height: 4),
-                        Text('Your profile is visible to all users', style: TextStyle(color: Colors.white.withOpacity(0.6), fontSize: 13)),
+                        Text(AppLocalizations.of(context).coachVisibilityPublicProfileDesc, style: TextStyle(color: Colors.white.withOpacity(0.6), fontSize: 13)),
                       ],
                     ),
                   ),
@@ -147,10 +148,10 @@ class _CoachVisibilityState extends State<CoachVisibility> {
             ),
             const SizedBox(height: 40),
             
-            _buildSectionTitle('Messaging settings'),
+            _buildSectionTitle(AppLocalizations.of(context).coachVisibilityMessagingSection),
             const SizedBox(height: 8),
             Text(
-              'Control who can send you direct messages.',
+              AppLocalizations.of(context).coachVisibilityMessagingDesc,
               style: TextStyle(color: Colors.white.withOpacity(0.6), fontSize: 14),
             ),
             const SizedBox(height: 24),
@@ -167,9 +168,9 @@ class _CoachVisibilityState extends State<CoachVisibility> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('Direct messaging', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w500)),
+                        Text(AppLocalizations.of(context).coachVisibilityDirectMessaging, style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w500)),
                         const SizedBox(height: 4),
-                        Text('Allow users to send you messages directly', style: TextStyle(color: Colors.white.withOpacity(0.6), fontSize: 13)),
+                        Text(AppLocalizations.of(context).coachVisibilityDirectMessagingDesc, style: TextStyle(color: Colors.white.withOpacity(0.6), fontSize: 13)),
                       ],
                     ),
                   ),

@@ -6,6 +6,8 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:fitlek1/l10n/app_localizations.dart';
+import 'package:fitlek1/services/svc_l10n.dart';
 import '../components/meal_share_card.dart';
 import 'meal_scan_service.dart';
 
@@ -17,12 +19,7 @@ class MealShareService {
     final c = meal.total('carbs').round();
     final f = meal.total('fat').round();
 
-    return '🥗 Just tracked my meal with SIRVYA AI!\n'
-        '🍽️ ${meal.name}\n'
-        '🔥 $cal kcal · 🥩 ${p}g Protein · 🍚 ${c}g Carbs · 🥑 ${f}g Fat\n\n'
-        'Scan meals, track your macros & reach your fitness goals with elite coaches on SIRVYA! 💪✨\n'
-        '📲 Download SIRVYA: https://sirvya.com\n'
-        '#SIRVYA #Fitness #Nutrition #MealScan #HealthyEating #Coach';
+    return svcL10n.mealShareServiceMarketingCaption(meal.name, cal, p, c, f);
   }
 
   /// Captures a widget wrapped in a [RepaintBoundary] as high-resolution PNG bytes.
@@ -70,7 +67,7 @@ class MealShareService {
           ShareParams(
             files: [XFile(file.path, mimeType: 'image/png')],
             text: caption,
-            subject: 'Tracked with SIRVYA: ${meal.name}',
+            subject: svcL10n.mealShareServiceSubject(meal.name),
           ),
         );
         return result.status == ShareResultStatus.success;
@@ -79,7 +76,7 @@ class MealShareService {
         final result = await SharePlus.instance.share(
           ShareParams(
             text: caption,
-            subject: 'Tracked with SIRVYA: ${meal.name}',
+            subject: svcL10n.mealShareServiceSubject(meal.name),
           ),
         );
         return result.status == ShareResultStatus.success;
@@ -89,13 +86,15 @@ class MealShareService {
       // If native sharing fails, offer to copy text
       if (context.mounted) {
         await Clipboard.setData(ClipboardData(text: caption));
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Meal summary copied to clipboard! You can paste it into WhatsApp or Instagram.',
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                AppLocalizations.of(context).mealShareServiceCopiedFallback,
+              ),
             ),
-          ),
-        );
+          );
+        }
       }
       return false;
     }
@@ -107,9 +106,10 @@ class MealShareService {
     await Clipboard.setData(ClipboardData(text: caption));
     if (context.mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Meal caption & SIRVYA link copied to clipboard!'),
-          duration: Duration(seconds: 2),
+        SnackBar(
+          content: Text(
+              AppLocalizations.of(context).mealShareServiceCaptionCopied),
+          duration: const Duration(seconds: 2),
         ),
       );
     }

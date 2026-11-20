@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:fitlek1/l10n/app_localizations.dart';
 import '../../theme/fitlek_theme_extension.dart';
 
 class CoachNavbar extends StatelessWidget {
@@ -6,15 +7,28 @@ class CoachNavbar extends StatelessWidget {
   final ValueChanged<int> onTap;
   const CoachNavbar(
       {super.key, required this.currentIndex, required this.onTap});
-  static const _items = [
-    (Icons.dashboard_outlined, Icons.dashboard_rounded, 'Dashboard'),
-    (Icons.calendar_month_outlined, Icons.calendar_month_rounded, 'Calendar'),
-    (Icons.chat_bubble_outline_rounded, Icons.chat_bubble_rounded, 'Chats'),
-    (Icons.people_outline_rounded, Icons.people_rounded, 'Clients'),
-    (Icons.person_outline_rounded, Icons.person_rounded, 'Profile'),
-  ];
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final items = [
+      (
+        Icons.dashboard_outlined,
+        Icons.dashboard_rounded,
+        l10n.coachNavbarDashboard
+      ),
+      (
+        Icons.calendar_month_outlined,
+        Icons.calendar_month_rounded,
+        l10n.coachNavbarCalendar
+      ),
+      (
+        Icons.chat_bubble_outline_rounded,
+        Icons.chat_bubble_rounded,
+        l10n.coachNavbarChats
+      ),
+      (Icons.people_outline_rounded, Icons.people_rounded, l10n.coachNavbarClients),
+      (Icons.person_outline_rounded, Icons.person_rounded, l10n.coachNavbarProfile),
+    ];
     final cs = Theme.of(context).colorScheme;
     final colors = context.fitlek;
     return SafeArea(
@@ -39,8 +53,8 @@ class CoachNavbar extends StatelessWidget {
             child: Padding(
               padding: const EdgeInsets.all(6),
               child: Row(
-                  children: List.generate(_items.length, (index) {
-                final item = _items[index];
+                  children: List.generate(items.length, (index) {
+                final item = items[index];
                 final selected = index == currentIndex;
                 final foreground =
                     selected ? cs.onPrimary : colors.navUnselected;
@@ -63,7 +77,7 @@ class CoachNavbar extends StatelessWidget {
                               borderRadius: BorderRadius.circular(18),
                               onTap: () => onTap(index),
                               child: Padding(
-                                  padding: const EdgeInsets.symmetric(
+                                   padding: const EdgeInsets.symmetric(
                                       horizontal: 2, vertical: 9),
                                   child: Column(
                                       mainAxisSize: MainAxisSize.min,

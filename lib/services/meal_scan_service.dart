@@ -58,17 +58,21 @@ class MealIngredient {
         'carbs': carbs,
         'fat': fat
       };
-  MealIngredient withGrams(double value) => MealIngredient(
+  MealIngredient withGrams(double value) {
+    final ratio = grams > 0 ? value / grams : 1.0;
+    return MealIngredient(
       name: name,
       imageKey: imageKey,
       imageUrl: imageUrl,
       preparation: preparation,
       quantity: '${value.round()} g',
       grams: value,
-      calories: calories * value / grams,
-      protein: protein * value / grams,
-      carbs: carbs * value / grams,
-      fat: fat * value / grams);
+      calories: double.parse((calories * ratio).toStringAsFixed(1)),
+      protein: double.parse((protein * ratio).toStringAsFixed(1)),
+      carbs: double.parse((carbs * ratio).toStringAsFixed(1)),
+      fat: double.parse((fat * ratio).toStringAsFixed(1)),
+    );
+  }
 }
 
 class ScannedMeal {
@@ -132,7 +136,8 @@ class ScannedMeal {
 
 class MealScanService {
   static Future<ScannedMeal> analyze(
-      XFile photo, String token, double portion, String notes) async {
+      XFile photo, String token, double portion, String notes,
+      {String language = 'en'}) async {
     final bytes = await photo.readAsBytes();
     if (bytes.length > 6 * 1024 * 1024) {
       throw Exception('Choose a photo under 6 MB.');
@@ -142,8 +147,10 @@ class MealScanService {
       final request =
           http.MultipartRequest('POST', Uri.parse('$baseUrl/meals/analyze'))
             ..headers['Authorization'] = 'Bearer $token'
+            ..headers['Accept-Language'] = language
             ..fields['portion'] = '$portion'
             ..fields['notes'] = notes
+            ..fields['language'] = language
             ..files.add(http.MultipartFile.fromBytes('photo', bytes,
                 filename: photo.name,
                 contentType: MediaType('application', 'octet-stream')));

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'login.dart';
 import 'package:fitlek1/constants/urls.dart';
+import 'package:fitlek1/l10n/app_localizations.dart';
 import '../../constants/app_colors.dart';
 
 const _red = Color(0xFFFF5252);
@@ -68,22 +69,22 @@ class _ClientForgotScreenState extends State<ClientForgotScreen>
     setState(() => _errorMsg = null);
   }
 
-  String? _validateStep(int step) {
+  String? _validateStep(int step, AppLocalizations l) {
     switch (step) {
       case 0:
         if (!RegExp(r'^[\w.+-]+@[\w-]+\.[a-z]{2,}$', caseSensitive: false)
             .hasMatch(_emailCtrl.text.trim())) {
-          return 'Invalid email address';
+          return l.clientForgotErrorInvalidEmail;
         }
         return null;
       case 1:
         if (_otpCtrl.text.trim().length != 6) {
-          return 'Enter 6-digit verification code';
+          return l.clientForgotErrorOtpLength;
         }
         return null;
       case 2:
-        if (_passwordCtrl.text.length < 6) return 'Password too short (min 6 chars)';
-        if (_passwordCtrl.text != _confirmCtrl.text) return 'Passwords do not match';
+        if (_passwordCtrl.text.length < 6) return l.clientForgotErrorPasswordShort;
+        if (_passwordCtrl.text != _confirmCtrl.text) return l.clientForgotErrorPasswordsMismatch;
         return null;
       default:
         return null;
@@ -91,7 +92,7 @@ class _ClientForgotScreenState extends State<ClientForgotScreen>
   }
 
   Future<void> _nextStep() async {
-    final err = _validateStep(_step);
+    final err = _validateStep(_step, AppLocalizations.of(context));
     if (err != null) {
       setState(() => _errorMsg = err);
       return;
@@ -106,6 +107,7 @@ class _ClientForgotScreenState extends State<ClientForgotScreen>
   }
 
   Future<void> _sendForgotOTP() async {
+    final l = AppLocalizations.of(context);
     setState(() {
       _loading = true;
       _errorMsg = null;
@@ -125,19 +127,20 @@ class _ClientForgotScreenState extends State<ClientForgotScreen>
         _animateStep();
       } else {
         setState(() {
-          _errorMsg = data['error'] as String? ?? 'Email not found';
+          _errorMsg = data['error'] as String? ?? l.clientForgotErrorEmailNotFound;
           _loading = false;
         });
       }
     } catch (_) {
       setState(() {
-        _errorMsg = 'Unable to reach the server';
+        _errorMsg = l.clientForgotErrorServerUnreachable;
         _loading = false;
       });
     }
   }
 
   Future<void> _verifyForgotOTP() async {
+    final l = AppLocalizations.of(context);
     setState(() {
       _loading = true;
       _errorMsg = null;
@@ -160,19 +163,20 @@ class _ClientForgotScreenState extends State<ClientForgotScreen>
         _animateStep();
       } else {
         setState(() {
-          _errorMsg = data['error'] as String? ?? 'Invalid verification code';
+          _errorMsg = data['error'] as String? ?? l.clientForgotErrorInvalidOtp;
           _loading = false;
         });
       }
     } catch (_) {
       setState(() {
-        _errorMsg = 'Unable to reach the server';
+        _errorMsg = l.clientForgotErrorServerUnreachable;
         _loading = false;
       });
     }
   }
 
   Future<void> _resetPassword() async {
+    final l = AppLocalizations.of(context);
     setState(() {
       _loading = true;
       _errorMsg = null;
@@ -193,13 +197,13 @@ class _ClientForgotScreenState extends State<ClientForgotScreen>
         _showSuccess();
       } else {
         setState(() {
-          _errorMsg = data['error'] as String? ?? 'Error while resetting password';
+          _errorMsg = data['error'] as String? ?? l.clientForgotErrorResetFailed;
           _loading = false;
         });
       }
     } catch (_) {
       setState(() {
-        _errorMsg = 'Unable to reach the server';
+        _errorMsg = l.clientForgotErrorServerUnreachable;
         _loading = false;
       });
     }
@@ -213,89 +217,92 @@ class _ClientForgotScreenState extends State<ClientForgotScreen>
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
-      builder: (ctx) => SafeArea(
-        child: SingleChildScrollView(
-          padding: EdgeInsets.fromLTRB(
-              28, 40, 28, 24 + MediaQuery.of(ctx).viewInsets.bottom),
-          child: Column(mainAxisSize: MainAxisSize.min, children: [
-            Container(
-              width: 80,
-              height: 80,
-              decoration: BoxDecoration(
-                color: AppColors.sand.withValues(alpha: 0.15),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(Icons.lock_open_rounded,
-                  color: AppColors.sand, size: 38),
-            ),
-            const SizedBox(height: 24),
-            const Text(
-              'Password updated',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 24,
-                  fontWeight: FontWeight.w900),
-            ),
-            const SizedBox(height: 10),
-            Text(
-              'You can now log in with your new password.',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.6),
-                  fontSize: 14,
-                  height: 1.5),
-            ),
-            const SizedBox(height: 32),
-            GestureDetector(
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.pushAndRemoveUntil(
-                  context,
-                  PageRouteBuilder(
-                    pageBuilder: (_, __, ___) => const LoginScreen(),
-                    transitionsBuilder: (_, a, __, child) =>
-                        FadeTransition(opacity: a, child: child),
-                    transitionDuration: const Duration(milliseconds: 500),
-                  ),
-                  (route) => false,
-                );
-              },
-              child: Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(vertical: 16),
+      builder: (ctx) {
+        final l = AppLocalizations.of(ctx);
+        return SafeArea(
+          child: SingleChildScrollView(
+            padding: EdgeInsets.fromLTRB(
+                28, 40, 28, 24 + MediaQuery.of(ctx).viewInsets.bottom),
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              Container(
+                width: 80,
+                height: 80,
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      AppColors.sand,
-                      AppColors.sand.withValues(alpha: 0.85)
+                  color: AppColors.sand.withValues(alpha: 0.15),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.lock_open_rounded,
+                    color: AppColors.sand, size: 38),
+              ),
+              const SizedBox(height: 24),
+              Text(
+                l.clientForgotSuccessTitle,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 24,
+                    fontWeight: FontWeight.w900),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                l.clientForgotSuccessMessage,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.6),
+                    fontSize: 14,
+                    height: 1.5),
+              ),
+              const SizedBox(height: 32),
+              GestureDetector(
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.pushAndRemoveUntil(
+                    context,
+                    PageRouteBuilder(
+                      pageBuilder: (_, __, ___) => const LoginScreen(),
+                      transitionsBuilder: (_, a, __, child) =>
+                          FadeTransition(opacity: a, child: child),
+                      transitionDuration: const Duration(milliseconds: 500),
+                    ),
+                    (route) => false,
+                  );
+                },
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        AppColors.sand,
+                        AppColors.sand.withValues(alpha: 0.85)
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(14),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.sand.withValues(alpha: 0.3),
+                        blurRadius: 16,
+                        offset: const Offset(0, 6),
+                      ),
                     ],
                   ),
-                  borderRadius: BorderRadius.circular(14),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.sand.withValues(alpha: 0.3),
-                      blurRadius: 16,
-                      offset: const Offset(0, 6),
-                    ),
-                  ],
-                ),
-                child: const Text(
-                  'LOG IN',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                      color: AppColors.cyprus,
-                      fontSize: 15,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 1.2),
+                  child: Text(
+                    l.clientForgotLogInCta,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                        color: AppColors.cyprus,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 1.2),
+                  ),
                 ),
               ),
-            ),
-          ]),
-        ),
-      ),
+            ]),
+          ),
+        );
+      },
     );
   }
 
@@ -455,19 +462,24 @@ class _ClientForgotScreenState extends State<ClientForgotScreen>
     );
   }
 
-  static const _stepLabels = ['STEP 1 / 3', 'STEP 2 / 3', 'STEP 3 / 3'];
-  static const _stepTitles = [
-    'Your\nemail address',
-    'Verification\ncode',
-    'New\npassword'
+  List<String> _stepLabels(AppLocalizations l) => [
+    l.clientForgotStep1Label,
+    l.clientForgotStep2Label,
+    l.clientForgotStep3Label,
   ];
-  static const _stepSubs = [
-    'Enter your email to receive a password reset code.',
-    'Enter the 6-digit code sent to your email.',
-    'Choose a new secure password.',
+  List<String> _stepTitles(AppLocalizations l) => [
+    l.clientForgotStep1Title,
+    l.clientForgotStep2Title,
+    l.clientForgotStep3Title,
+  ];
+  List<String> _stepSubs(AppLocalizations l) => [
+    l.clientForgotStep1Sub,
+    l.clientForgotStep2Sub,
+    l.clientForgotStep3Sub,
   ];
 
   Widget _buildStepHeader() {
+    final l = AppLocalizations.of(context);
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
@@ -476,7 +488,7 @@ class _ClientForgotScreenState extends State<ClientForgotScreen>
           borderRadius: BorderRadius.circular(20),
         ),
         child: Text(
-          _stepLabels[_step],
+          _stepLabels(l)[_step],
           style: const TextStyle(
             color: AppColors.sand,
             fontSize: 11,
@@ -487,7 +499,7 @@ class _ClientForgotScreenState extends State<ClientForgotScreen>
       ),
       const SizedBox(height: 16),
       Text(
-        _stepTitles[_step],
+        _stepTitles(l)[_step],
         style: const TextStyle(
           fontSize: 34,
           fontWeight: FontWeight.w900,
@@ -498,7 +510,7 @@ class _ClientForgotScreenState extends State<ClientForgotScreen>
       ),
       const SizedBox(height: 10),
       Text(
-        _stepSubs[_step],
+        _stepSubs(l)[_step],
         style: TextStyle(
           fontSize: 14,
           height: 1.5,
@@ -509,12 +521,13 @@ class _ClientForgotScreenState extends State<ClientForgotScreen>
   }
 
   Widget _buildStepContent() {
+    final l = AppLocalizations.of(context);
     switch (_step) {
       case 0:
         return _FitField(
           controller: _emailCtrl,
-          label: 'Email address',
-          hint: 'you@email.ma',
+          label: l.clientForgotEmailLabel,
+          hint: l.clientForgotEmailHint,
           icon: Icons.alternate_email_rounded,
           keyboardType: TextInputType.emailAddress,
         );
@@ -522,8 +535,8 @@ class _ClientForgotScreenState extends State<ClientForgotScreen>
         return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
           _FitField(
             controller: _otpCtrl,
-            label: '6-digit OTP code',
-            hint: '123456',
+            label: l.clientForgotOtpLabel,
+            hint: l.clientForgotOtpHint,
             icon: Icons.pin_rounded,
             keyboardType: TextInputType.number,
           ),
@@ -532,16 +545,16 @@ class _ClientForgotScreenState extends State<ClientForgotScreen>
             onPressed: _loading ? null : _sendForgotOTP,
             icon: const Icon(Icons.refresh_rounded,
                 color: AppColors.sand, size: 16),
-            label: const Text('Resend code',
-                style: TextStyle(color: AppColors.sand, fontSize: 12)),
+            label: Text(l.clientForgotResendCode,
+                style: const TextStyle(color: AppColors.sand, fontSize: 12)),
           ),
         ]);
       case 2:
         return Column(children: [
           _FitField(
             controller: _passwordCtrl,
-            label: 'New password',
-            hint: '••••••••',
+            label: l.clientForgotNewPasswordLabel,
+            hint: l.clientForgotNewPasswordHint,
             icon: Icons.lock_outline_rounded,
             obscure: _obscurePass,
             showToggle: true,
@@ -552,8 +565,8 @@ class _ClientForgotScreenState extends State<ClientForgotScreen>
           const SizedBox(height: 14),
           _FitField(
             controller: _confirmCtrl,
-            label: 'Confirm password',
-            hint: '••••••••',
+            label: l.clientForgotConfirmPasswordLabel,
+            hint: l.clientForgotConfirmPasswordHint,
             icon: Icons.lock_rounded,
             obscure: _obscureConf,
             showToggle: true,
@@ -569,7 +582,12 @@ class _ClientForgotScreenState extends State<ClientForgotScreen>
   }
 
   Widget _buildCTA() {
-    const labels = ['SEND CODE', 'VERIFY CODE', 'RESET PASSWORD'];
+    final l = AppLocalizations.of(context);
+    final labels = [
+      l.clientForgotCtaSendCode,
+      l.clientForgotCtaVerifyCode,
+      l.clientForgotCtaResetPassword,
+    ];
     return Column(children: [
       _loading
           ? const Center(
@@ -619,7 +637,7 @@ class _ClientForgotScreenState extends State<ClientForgotScreen>
       const SizedBox(height: 20),
       Row(mainAxisAlignment: MainAxisAlignment.center, children: [
         Text(
-          'Remember your password? ',
+          l.clientForgotRememberPassword,
           style: TextStyle(
               color: Colors.white.withValues(alpha: 0.55), fontSize: 13),
         ),
@@ -633,9 +651,9 @@ class _ClientForgotScreenState extends State<ClientForgotScreen>
               transitionDuration: const Duration(milliseconds: 500),
             ),
           ),
-          child: const Text(
-            'Log in',
-            style: TextStyle(
+          child: Text(
+            l.clientForgotLogInLink,
+            style: const TextStyle(
                 color: AppColors.sand,
                 fontSize: 13,
                 fontWeight: FontWeight.w700),
@@ -696,16 +714,16 @@ class _PasswordStrengthBar extends StatelessWidget {
     }
   }
 
-  String get _label {
+  String _label(AppLocalizations l) {
     switch (_strength) {
       case 1:
-        return 'Weak';
+        return l.clientForgotPasswordWeak;
       case 2:
-        return 'Medium';
+        return l.clientForgotPasswordMedium;
       case 3:
-        return 'Good';
+        return l.clientForgotPasswordGood;
       case 4:
-        return 'Strong';
+        return l.clientForgotPasswordStrong;
       default:
         return '';
     }
@@ -714,6 +732,7 @@ class _PasswordStrengthBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (password.isEmpty) return const SizedBox.shrink();
+    final l = AppLocalizations.of(context);
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Row(
         children: List.generate(
@@ -735,7 +754,7 @@ class _PasswordStrengthBar extends StatelessWidget {
       ),
       const SizedBox(height: 8),
       Text(
-        'Security: $_label',
+        l.clientForgotPasswordSecurity(_label(l)),
         style: TextStyle(
             color: _strengthColor, fontSize: 12, fontWeight: FontWeight.w600),
       ),

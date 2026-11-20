@@ -1,5 +1,6 @@
 import '../../components/app_dialog.dart';
 import '../../services/media_picker_service.dart';
+import 'package:fitlek1/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -131,18 +132,22 @@ class _CoachAboutYouState extends State<CoachAboutYou> {
         mimeType: mime,
       );
       if (up['ok'] != true) {
-        _showSnack(up['message']?.toString() ?? 'Upload failed', isError: true);
+        if (!mounted) return;
+        _showSnack(up['message']?.toString() ?? AppLocalizations.of(context).coachAboutYouErrorUploadFailed, isError: true);
         return;
       }
       final newUrl = up['url']?.toString();
       if (newUrl == null || newUrl.isEmpty) {
-        _showSnack('Upload failed', isError: true);
+        if (!mounted) return;
+        _showSnack(AppLocalizations.of(context).coachAboutYouErrorUploadFailed, isError: true);
         return;
       }
       setState(() => _avatarUrl = newUrl);
-      _showSnack('Photo ready. Save to confirm.');
+      if (!mounted) return;
+      _showSnack(AppLocalizations.of(context).coachAboutYouPhotoReady);
     } catch (e) {
-      _showSnack('Error: $e', isError: true);
+      if (!mounted) return;
+      _showSnack(AppLocalizations.of(context).coachAboutYouErrorGeneric(e.toString()), isError: true);
     } finally {
       if (mounted) setState(() => _uploadingAvatar = false);
     }
@@ -153,6 +158,44 @@ class _CoachAboutYouState extends State<CoachAboutYou> {
     'Tamazight', 'German', 'Italian', 'Dutch', 'Portuguese', 'Russian'
   ];
 
+  String _localizedLanguageName(String raw, AppLocalizations l) {
+    switch (raw.trim().toLowerCase()) {
+      case 'arabic':
+        return l.coachAboutYouLangArabic;
+      case 'french':
+        return l.coachAboutYouLangFrench;
+      case 'english':
+        return l.coachAboutYouLangEnglish;
+      case 'spanish':
+        return l.coachAboutYouLangSpanish;
+      case 'tamazight':
+        return l.coachAboutYouLangTamazight;
+      case 'german':
+        return l.coachAboutYouLangGerman;
+      case 'italian':
+        return l.coachAboutYouLangItalian;
+      case 'dutch':
+        return l.coachAboutYouLangDutch;
+      case 'portuguese':
+        return l.coachAboutYouLangPortuguese;
+      case 'russian':
+        return l.coachAboutYouLangRussian;
+      default:
+        return raw;
+    }
+  }
+
+  String _localizedGenderName(String raw, AppLocalizations l) {
+    switch (raw) {
+      case 'Male':
+        return l.coachAboutYouGenderMale;
+      case 'Female':
+        return l.coachAboutYouGenderFemale;
+      default:
+        return l.coachAboutYouGenderOther;
+    }
+  }
+
   Future<void> _addLanguage() async {
     final result = await showModalBottomSheet<String>(
       context: context,
@@ -160,6 +203,7 @@ class _CoachAboutYouState extends State<CoachAboutYou> {
       builder: (ctx) {
         final cs = Theme.of(ctx).colorScheme;
         final f = ctx.fitlek;
+        final l = AppLocalizations.of(ctx);
         return Material(
           type: MaterialType.transparency,
           child: Container(
@@ -178,7 +222,7 @@ class _CoachAboutYouState extends State<CoachAboutYou> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text('Select Language', style: TextStyle(color: cs.onSurface, fontWeight: FontWeight.w800, fontSize: 18)),
+                      Text(l.coachAboutYouSelectLanguageTitle, style: TextStyle(color: cs.onSurface, fontWeight: FontWeight.w800, fontSize: 18)),
                       GestureDetector(
                         onTap: () => Navigator.pop(ctx),
                         child: Container(
@@ -199,12 +243,12 @@ class _CoachAboutYouState extends State<CoachAboutYou> {
                     itemCount: _availableLanguages.length,
                     itemBuilder: (context, index) {
                       final lang = _availableLanguages[index];
-                      final isSelected = _languages.any((l) => l.toLowerCase() == lang.toLowerCase());
+                      final isSelected = _languages.any((item) => item.toLowerCase() == lang.toLowerCase());
                       return Material(
                         type: MaterialType.transparency,
                         child: ListTile(
                           contentPadding: const EdgeInsets.symmetric(horizontal: 24),
-                          title: Text(lang, style: TextStyle(color: isSelected ? cs.primary : cs.onSurface, fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500)),
+                          title: Text(_localizedLanguageName(lang, l), style: TextStyle(color: isSelected ? cs.primary : cs.onSurface, fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500)),
                           trailing: isSelected ? Icon(Icons.check_circle_rounded, color: cs.primary) : null,
                           onTap: () {
                             Navigator.pop(ctx, lang);
@@ -220,9 +264,9 @@ class _CoachAboutYouState extends State<CoachAboutYou> {
         );
       },
     );
-    if (result == null || result.isEmpty) return;
+    if (result == null || result.isEmpty || !mounted) return;
     if (_languages.any((l) => l.toLowerCase() == result.toLowerCase())) {
-      _showSnack('Language already added', isError: true);
+      _showSnack(AppLocalizations.of(context).coachAboutYouLanguageAlreadyAdded, isError: true);
       return;
     }
     setState(() => _languages.add(result));
@@ -232,9 +276,10 @@ class _CoachAboutYouState extends State<CoachAboutYou> {
     if (_saving) return;
     if (!(_formKey.currentState?.validate() ?? false)) return;
 
+    final l = AppLocalizations.of(context);
     final (firstName, lastName) = _splitName(_fullNameCtrl.text);
     if (firstName.isEmpty || lastName.isEmpty) {
-      _showSnack('Please enter your full name', isError: true);
+      _showSnack(l.coachAboutYouErrorFullName, isError: true);
       return;
     }
 
@@ -259,13 +304,13 @@ class _CoachAboutYouState extends State<CoachAboutYou> {
       if (!mounted) return;
 
       if (res['ok'] == true) {
-        _showSnack('Profile updated');
+        _showSnack(AppLocalizations.of(context).coachAboutYouProfileUpdated);
         Navigator.of(context).pop(true);
       } else {
-        _showSnack(res['message']?.toString() ?? 'Error while updating', isError: true);
+        _showSnack(res['message']?.toString() ?? AppLocalizations.of(context).coachAboutYouErrorUpdating, isError: true);
       }
     } catch (e) {
-      if (mounted) _showSnack('Error: $e', isError: true);
+      if (mounted) _showSnack(AppLocalizations.of(context).coachAboutYouErrorGeneric(e.toString()), isError: true);
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -275,6 +320,7 @@ class _CoachAboutYouState extends State<CoachAboutYou> {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final f = context.fitlek;
+    final l = AppLocalizations.of(context);
     final bgDark = const Color(0xFF0A1817); // from app_colors.dart darkBackground
     final cardDark = const Color(0xFF0F261F); // closer to the screenshot
 
@@ -289,13 +335,13 @@ class _CoachAboutYouState extends State<CoachAboutYou> {
           icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => Navigator.pop(context),
         ),
-        title: const Text('About you', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w800)),
+        title: Text(l.coachAboutYouTitle, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w800)),
         actions: [
           TextButton(
             onPressed: () {
               // TODO: preview
             },
-            child: const Text('Preview', style: TextStyle(color: Color(0xFF6DE899), fontWeight: FontWeight.w600, fontSize: 15)),
+            child: Text(l.coachAboutYouPreview, style: const TextStyle(color: Color(0xFF6DE899), fontWeight: FontWeight.w600, fontSize: 15)),
           ),
           const SizedBox(width: 8),
         ],
@@ -385,7 +431,7 @@ class _CoachAboutYouState extends State<CoachAboutYou> {
           const SizedBox(height: 12),
           GestureDetector(
             onTap: _uploadingAvatar ? null : _pickAndUploadAvatar,
-            child: const Text('Change photo', style: TextStyle(color: Color(0xFF6DE899), fontSize: 13, fontWeight: FontWeight.w600)),
+            child: Text(AppLocalizations.of(context).coachAboutYouChangePhoto, style: const TextStyle(color: Color(0xFF6DE899), fontSize: 13, fontWeight: FontWeight.w600)),
           ),
         ],
       ),
@@ -397,6 +443,7 @@ class _CoachAboutYouState extends State<CoachAboutYou> {
       );
 
   Widget _buildDetailsCard(Color cardBg, ColorScheme cs, FitlekColors f) {
+    final l = AppLocalizations.of(context);
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -407,26 +454,26 @@ class _CoachAboutYouState extends State<CoachAboutYou> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _label('Full name'),
+          _label(l.coachAboutYouFullNameLabel),
           const SizedBox(height: 8),
           _textField(_fullNameCtrl),
           const SizedBox(height: 16),
-          _label('Professional title'),
+          _label(l.coachAboutYouProfessionalTitleLabel),
           const SizedBox(height: 8),
           _textField(_titleCtrl),
           const SizedBox(height: 16),
-          _label('About me'),
+          _label(l.coachAboutYouBioLabel),
           const SizedBox(height: 8),
           _textField(_bioCtrl, maxLines: 4),
           const SizedBox(height: 16),
-          _label('Languages'),
+          _label(l.coachAboutYouLanguagesLabel),
           const SizedBox(height: 8),
           Wrap(
             spacing: 8,
             runSpacing: 8,
             children: [
-              ..._languages.map((l) => _chip(l, onRemove: () {
-                    setState(() => _languages.remove(l));
+              ..._languages.map((lang) => _chip(_localizedLanguageName(lang, l), onRemove: () {
+                    setState(() => _languages.remove(lang));
                   })),
               GestureDetector(
                 onTap: _addLanguage,
@@ -440,10 +487,10 @@ class _CoachAboutYouState extends State<CoachAboutYou> {
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
-                      children: const [
-                        Icon(Icons.add, size: 14, color: Colors.white),
-                        SizedBox(width: 4),
-                        Text('Add', style: TextStyle(color: Colors.white, fontSize: 13)),
+                      children: [
+                        const Icon(Icons.add, size: 14, color: Colors.white),
+                        const SizedBox(width: 4),
+                        Text(l.coachAboutYouAddLanguage, style: const TextStyle(color: Colors.white, fontSize: 13)),
                       ],
                     ),
                   ),
@@ -452,11 +499,11 @@ class _CoachAboutYouState extends State<CoachAboutYou> {
             ],
           ),
           const SizedBox(height: 16),
-          _label('Gender (optional)'),
+          _label(l.coachAboutYouGenderLabel),
           const SizedBox(height: 8),
-          _buildGenderDropdown(),
+          _buildGenderDropdown(l),
           const SizedBox(height: 8),
-          Text('Choose whether this appears on your public profile.', style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 12)),
+          Text(l.coachAboutYouGenderHint, style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 12)),
           const SizedBox(height: 12),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -467,7 +514,7 @@ class _CoachAboutYouState extends State<CoachAboutYou> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text('Show on profile', style: TextStyle(color: Colors.white, fontSize: 14)),
+                Text(l.coachAboutYouShowOnProfile, style: const TextStyle(color: Colors.white, fontSize: 14)),
                 Switch(
                   value: _showGender,
                   onChanged: (v) => setState(() => _showGender = v),
@@ -484,7 +531,7 @@ class _CoachAboutYouState extends State<CoachAboutYou> {
     );
   }
 
-  Widget _buildGenderDropdown() {
+  Widget _buildGenderDropdown(AppLocalizations l) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       decoration: BoxDecoration(
@@ -501,9 +548,9 @@ class _CoachAboutYouState extends State<CoachAboutYou> {
           style: const TextStyle(color: Colors.white, fontSize: 14),
           items: _genders.map((g) => DropdownMenuItem(value: g, child: Row(
             children: [
-              Icon(Icons.person_outline, size: 18, color: Colors.white),
+              const Icon(Icons.person_outline, size: 18, color: Colors.white),
               const SizedBox(width: 12),
-              Text(g),
+              Text(_localizedGenderName(g, l)),
             ],
           ))).toList(),
           onChanged: (v) {
@@ -563,16 +610,17 @@ class _CoachAboutYouState extends State<CoachAboutYou> {
       builder: (ctx) {
         final cs = Theme.of(ctx).colorScheme;
         final f = ctx.fitlek;
+        final l = AppLocalizations.of(ctx);
         return AppDialog(
           backgroundColor: f.card,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-          title: Text('Instagram handle', style: TextStyle(color: cs.onSurface, fontWeight: FontWeight.w800, fontSize: 16)),
+          title: Text(l.coachAboutYouInstagramDialogTitle, style: TextStyle(color: cs.onSurface, fontWeight: FontWeight.w800, fontSize: 16)),
           content: TextField(
             controller: ctrl,
             autofocus: true,
             style: TextStyle(color: cs.onSurface, fontWeight: FontWeight.w600),
             decoration: InputDecoration(
-              hintText: 'e.g. mouad.coach',
+              hintText: l.coachAboutYouInstagramHint,
               prefixText: '@',
               prefixStyle: TextStyle(color: cs.onSurface, fontWeight: FontWeight.w600),
               hintStyle: TextStyle(color: f.textMuted),
@@ -587,11 +635,11 @@ class _CoachAboutYouState extends State<CoachAboutYou> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: Text('Cancel', style: TextStyle(color: f.textMuted, fontWeight: FontWeight.w600)),
+              child: Text(l.coachAboutYouCancel, style: TextStyle(color: f.textMuted, fontWeight: FontWeight.w600)),
             ),
             TextButton(
               onPressed: () => Navigator.pop(ctx, ctrl.text.trim()),
-              child: Text('Save', style: TextStyle(color: cs.primary, fontWeight: FontWeight.w800)),
+              child: Text(l.coachAboutYouSave, style: TextStyle(color: cs.primary, fontWeight: FontWeight.w800)),
             ),
           ],
         );
@@ -604,20 +652,23 @@ class _CoachAboutYouState extends State<CoachAboutYou> {
   }
 
   Future<void> _openInstagram() async {
+    final l = AppLocalizations.of(context);
     final handle = _instagramCtrl.text.trim();
     if (handle.isEmpty) {
-      _showSnack('Please add your Instagram handle first', isError: true);
+      _showSnack(l.coachAboutYouErrorAddInstagramFirst, isError: true);
       return;
     }
     final url = Uri.parse('https://instagram.com/$handle');
     if (await canLaunchUrl(url)) {
       await launchUrl(url, mode: LaunchMode.externalApplication);
     } else {
-      _showSnack('Could not launch Instagram', isError: true);
+      if (!mounted) return;
+      _showSnack(AppLocalizations.of(context).coachAboutYouErrorLaunchInstagram, isError: true);
     }
   }
 
   Widget _buildContactCard(Color cardBg, ColorScheme cs, FitlekColors f) {
+    final l = AppLocalizations.of(context);
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -628,7 +679,7 @@ class _CoachAboutYouState extends State<CoachAboutYou> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Contact', style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w800)),
+          Text(l.coachAboutYouContactTitle, style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w800)),
           const SizedBox(height: 16),
           GestureDetector(
             onTap: _editInstagram,
@@ -640,8 +691,8 @@ class _CoachAboutYouState extends State<CoachAboutYou> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('Instagram', style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600)),
-                      Text(_instagramCtrl.text.isNotEmpty ? '@${_instagramCtrl.text}' : 'Add Instagram', style: TextStyle(color: _instagramCtrl.text.isNotEmpty ? Colors.white.withOpacity(0.7) : Colors.white.withOpacity(0.4), fontSize: 13)),
+                      Text(l.coachAboutYouInstagramTitle, style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600)),
+                      Text(_instagramCtrl.text.isNotEmpty ? '@${_instagramCtrl.text}' : l.coachAboutYouAddInstagram, style: TextStyle(color: _instagramCtrl.text.isNotEmpty ? Colors.white.withOpacity(0.7) : Colors.white.withOpacity(0.4), fontSize: 13)),
                     ],
                   ),
                 ),
@@ -651,7 +702,7 @@ class _CoachAboutYouState extends State<CoachAboutYou> {
                     children: [
                       const Icon(Icons.open_in_new, color: Color(0xFF6DE899), size: 14),
                       const SizedBox(width: 4),
-                      const Text('Open', style: TextStyle(color: Color(0xFF6DE899), fontSize: 13)),
+                      Text(l.coachAboutYouOpen, style: const TextStyle(color: Color(0xFF6DE899), fontSize: 13)),
                     ],
                   ),
                 ),
@@ -671,11 +722,11 @@ class _CoachAboutYouState extends State<CoachAboutYou> {
               ),
               const SizedBox(width: 12),
               Expanded(
-                child: Text('Email and phone are managed\nin Account settings.', style: TextStyle(color: Colors.white.withOpacity(0.7), fontSize: 12)),
+                child: Text(l.coachAboutYouEmailPhoneManaged, style: TextStyle(color: Colors.white.withOpacity(0.7), fontSize: 12)),
               ),
               Row(
                 children: [
-                  const Text('Account settings', style: TextStyle(color: Color(0xFF6DE899), fontSize: 13)),
+                  Text(l.coachAboutYouAccountSettings, style: const TextStyle(color: Color(0xFF6DE899), fontSize: 13)),
                   const SizedBox(width: 4),
                   const Icon(Icons.chevron_right, color: Color(0xFF6DE899), size: 16),
                 ],
@@ -688,6 +739,7 @@ class _CoachAboutYouState extends State<CoachAboutYou> {
   }
 
   Widget _buildBottomBar() {
+    final l = AppLocalizations.of(context);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       color: Colors.transparent,
@@ -703,7 +755,7 @@ class _CoachAboutYouState extends State<CoachAboutYou> {
           ),
           child: _saving
               ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, valueColor: AlwaysStoppedAnimation<Color>(Colors.black)))
-              : const Text('Save changes', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w800)),
+              : Text(l.coachAboutYouSaveChanges, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w800)),
         ),
       ),
     );

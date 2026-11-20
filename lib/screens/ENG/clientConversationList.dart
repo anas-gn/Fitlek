@@ -1,6 +1,8 @@
 import '../../services/live_updates.dart';
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+import 'package:fitlek1/l10n/app_localizations.dart';
 import 'package:http/http.dart' as http;
 import 'package:fitlek1/constants/urls.dart';
 import 'clientConversation.dart';
@@ -28,12 +30,12 @@ class _ConversationItem {
     this.unreadCount = 0,
   });
 
-  factory _ConversationItem.fromJson(Map<String, dynamic> j) =>
+  factory _ConversationItem.fromJson(Map<String, dynamic> j, String unknownLabel) =>
       _ConversationItem(
         id: j['id'],
         coachID: j['coachID'],
         clientID: j['clientID'],
-        otherName: j['otherName'] ?? 'Unknown',
+        otherName: j['otherName'] ?? unknownLabel,
         otherAvatar: j['otherAvatar'],
         lastMessageAt: j['lastMessageAt'] != null
             ? DateTime.tryParse(j['lastMessageAt'])
@@ -119,7 +121,7 @@ class _ClientConversationsListScreenState extends State<ClientConversationsListS
       if (res.statusCode == 200) {
         final List data = jsonDecode(res.body);
         final list = data
-            .map((e) => _ConversationItem.fromJson(e as Map<String, dynamic>))
+            .map((e) => _ConversationItem.fromJson(e as Map<String, dynamic>, AppLocalizations.of(context).clientConversationListUnknown))
             .toList();
         list.sort((a, b) {
           if (a.lastMessageAt == null && b.lastMessageAt == null) return 0;
@@ -133,13 +135,13 @@ class _ClientConversationsListScreenState extends State<ClientConversationsListS
         });
       } else {
         setState(() {
-          _error = 'Error (${res.statusCode})';
+          _error = AppLocalizations.of(context).clientConversationListError(res.statusCode);
           _loading = false;
         });
       }
     } catch (_) {
       setState(() {
-        _error = 'Server unreachable';
+        _error = AppLocalizations.of(context).clientConversationListServerUnreachable;
         _loading = false;
       });
     }
@@ -221,7 +223,7 @@ class _ClientConversationsListScreenState extends State<ClientConversationsListS
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Messages',
+                    AppLocalizations.of(context).clientConversationListTitle,
                     style: TextStyle(
                         color: Theme.of(context).colorScheme.onSurface,
                         fontSize: 28,
@@ -229,7 +231,7 @@ class _ClientConversationsListScreenState extends State<ClientConversationsListS
                   ),
                   SizedBox(height: 4),
                   Text(
-                    'Échangez avec vos coachs',
+                    AppLocalizations.of(context).clientConversationListSubtitle,
                     style: TextStyle(
                         color: context.fitlek.textSecondary, fontSize: 14),
                   ),
@@ -270,7 +272,7 @@ class _ClientConversationsListScreenState extends State<ClientConversationsListS
                     : Border.all(color: context.fitlek.border),
               ),
               child: Text(
-                'Tous',
+                AppLocalizations.of(context).clientConversationListFilterAll,
                 style: TextStyle(
                   color: _selectedFilter == 0
                       ? Theme.of(context).colorScheme.onPrimary
@@ -296,7 +298,7 @@ class _ClientConversationsListScreenState extends State<ClientConversationsListS
                     : Border.all(color: context.fitlek.border),
               ),
               child: Text(
-                'Non lus',
+                AppLocalizations.of(context).clientConversationListFilterUnread,
                 style: TextStyle(
                   color: _selectedFilter == 1
                       ? Theme.of(context).colorScheme.onPrimary
@@ -335,7 +337,7 @@ class _ClientConversationsListScreenState extends State<ClientConversationsListS
                     color: Theme.of(context).colorScheme.onSurface,
                     fontSize: 14),
                 decoration: InputDecoration(
-                  hintText: 'Rechercher une conversation',
+                  hintText: AppLocalizations.of(context).clientConversationListSearchHint,
                   hintStyle:
                       TextStyle(color: context.fitlek.textMuted, fontSize: 14),
                   border: InputBorder.none,
@@ -411,7 +413,7 @@ class _ClientConversationsListScreenState extends State<ClientConversationsListS
                           .withValues(alpha: 0.3)),
                 ),
                 child: Text(
-                  'RETRY',
+                  AppLocalizations.of(context).clientConversationListRetry,
                   style: TextStyle(
                       color: Theme.of(context).colorScheme.primary,
                       fontWeight: FontWeight.w800,
@@ -452,7 +454,7 @@ class _ClientConversationsListScreenState extends State<ClientConversationsListS
           SizedBox(height: 20),
           Center(
             child: Text(
-              'No conversations',
+              AppLocalizations.of(context).clientConversationListEmptyTitle,
               style: TextStyle(
                   color: context.fitlek.textMuted,
                   fontSize: 15,
@@ -462,7 +464,7 @@ class _ClientConversationsListScreenState extends State<ClientConversationsListS
           SizedBox(height: 8),
           Center(
             child: Text(
-              'Your conversations will appear here',
+              AppLocalizations.of(context).clientConversationListEmptySubtitle,
               style: TextStyle(color: context.fitlek.textMuted, fontSize: 13),
             ),
           ),
@@ -481,7 +483,7 @@ class _ClientConversationsListScreenState extends State<ClientConversationsListS
           SizedBox(height: 16),
           Center(
             child: Text(
-              'No results for "$_query"',
+              AppLocalizations.of(context).clientConversationListNoResults(_query),
               style: TextStyle(
                   color: context.fitlek.textSecondary, fontSize: 13.5),
             ),
@@ -499,7 +501,7 @@ class _ClientConversationsListScreenState extends State<ClientConversationsListS
             padding: EdgeInsets.symmetric(vertical: 24),
             child: Center(
               child: Text(
-                'Retrouvez ici toutes vos conversations.',
+                AppLocalizations.of(context).clientConversationListFooter,
                 style: TextStyle(color: context.fitlek.textMuted, fontSize: 12),
               ),
             ),
@@ -591,7 +593,7 @@ class _ConversationTile extends StatelessWidget {
                       ),
                       if (conversation.lastMessageAt != null)
                         Text(
-                          _formatTime(conversation.lastMessageAt!),
+                          _formatTime(context, conversation.lastMessageAt!),
                           style: TextStyle(
                             color: hasUnread
                                 ? Theme.of(context).colorScheme.primary
@@ -637,7 +639,7 @@ class _ConversationTile extends StatelessWidget {
                           conversation.lastMessage != null &&
                                   conversation.lastMessage!.isNotEmpty
                               ? conversation.lastMessage!
-                              : 'Appuyez pour ouvrir',
+                              : AppLocalizations.of(context).clientConversationListTapToOpen,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
@@ -679,19 +681,18 @@ class _ConversationTile extends StatelessWidget {
     );
   }
 
-  String _formatTime(DateTime d) {
+  String _formatTime(BuildContext context, DateTime d) {
     final now = DateTime.now();
     final diff = now.difference(d);
 
     if (diff.inDays == 0) {
-      return '${d.hour.toString().padLeft(2, '0')}:${d.minute.toString().padLeft(2, '0')}';
+      return DateFormat.Hm(Localizations.localeOf(context).toString()).format(d);
     } else if (diff.inDays == 1) {
-      return 'Hier';
+      return AppLocalizations.of(context).clientConversationListYesterday;
     } else if (diff.inDays < 7) {
-      const days = ['Lun.', 'Mar.', 'Mer.', 'Jeu.', 'Ven.', 'Sam.', 'Dim.'];
-      return days[d.weekday - 1];
+      return DateFormat.E(Localizations.localeOf(context).toString()).format(d);
     } else {
-      return '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}';
+      return DateFormat.Md(Localizations.localeOf(context).toString()).format(d);
     }
   }
 }

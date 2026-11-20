@@ -1,3 +1,5 @@
+import 'package:fitlek1/l10n/app_localizations.dart';
+import '../../services/locale_service.dart';
 import '../../services/media_picker_service.dart';
 import '../../services/live_updates.dart';
 import 'dart:convert';
@@ -374,7 +376,9 @@ class _CoachProfileState extends State<CoachProfile>
       if (!wasComplete &&
           CoachProfileCompletion(
                   _completionData, _galleryImages.length, _packageCount)
-              .isComplete) _showSnack('Profile Completed');
+              .isComplete) {
+        _showSnack(AppLocalizations.of(context).coachProfileCompletedSnack);
+      }
     } catch (_) {
       if (!mounted) return;
       setState(() {
@@ -407,6 +411,7 @@ class _CoachProfileState extends State<CoachProfile>
   }
 
   void _showLogoutDialog() {
+    final l10n = AppLocalizations.of(context);
     showDialog(
       context: context,
       builder: (ctx) => Dialog(
@@ -430,13 +435,13 @@ class _CoachProfileState extends State<CoachProfile>
                     color: context.fitlek.error, size: 26),
               ),
               SizedBox(height: 20),
-              Text('Log out',
+              Text(l10n.coachProfileLogOutTitle,
                   style: TextStyle(
                       color: Theme.of(context).colorScheme.onSurface,
                       fontSize: 18,
                       fontWeight: FontWeight.w700)),
               SizedBox(height: 8),
-              Text('Are you sure you want to log out?',
+              Text(l10n.coachProfileLogOutConfirmMessage,
                   textAlign: TextAlign.center,
                   style: TextStyle(
                       color: context.fitlek.textMuted,
@@ -456,7 +461,7 @@ class _CoachProfileState extends State<CoachProfile>
                           border: Border.all(color: context.fitlek.border),
                         ),
                         child: Center(
-                          child: Text('Cancel',
+                          child: Text(l10n.coachProfileCancel,
                               style: TextStyle(
                                   color:
                                       Theme.of(context).colorScheme.onSurface,
@@ -476,7 +481,7 @@ class _CoachProfileState extends State<CoachProfile>
                             color: context.fitlek.error,
                             borderRadius: BorderRadius.circular(14)),
                         child: Center(
-                          child: Text('Log out',
+                          child: Text(l10n.coachProfileLogOutTitle,
                               style: TextStyle(
                                   color: Theme.of(context).colorScheme.onError,
                                   fontWeight: FontWeight.w700,
@@ -566,14 +571,20 @@ class _CoachProfileState extends State<CoachProfile>
         mimeType: mime,
       );
       if (up['ok'] != true) {
-        if (mounted)
-          _showSnack(up['message']?.toString() ?? 'Upload failed',
+        if (mounted) {
+          _showSnack(
+              up['message']?.toString() ??
+                  AppLocalizations.of(context).coachProfileUploadFailed,
               isError: true);
+        }
         return;
       }
       final newUrl = up['url']?.toString();
       if (newUrl == null || newUrl.isEmpty) {
-        if (mounted) _showSnack('Upload failed', isError: true);
+        if (mounted) {
+          _showSnack(AppLocalizations.of(context).coachProfileUploadFailed,
+              isError: true);
+        }
         return;
       }
 
@@ -596,17 +607,27 @@ class _CoachProfileState extends State<CoachProfile>
         'ville': p.ville,
       });
       if (save['ok'] != true) {
-        if (mounted)
-          _showSnack(save['message']?.toString() ?? 'Error while saving',
+        if (mounted) {
+          _showSnack(
+              save['message']?.toString() ??
+                  AppLocalizations.of(context).coachProfileSaveError,
               isError: true);
+        }
         return;
       }
 
       await _loadAll();
       widget.onProfileUpdated?.call();
-      if (mounted) _showSnack('Profile photo updated');
+      if (mounted) {
+        _showSnack(AppLocalizations.of(context).coachProfilePhotoUpdated);
+      }
     } catch (e) {
-      if (mounted) _showSnack('Error: $e', isError: true);
+      if (mounted) {
+        _showSnack(
+            AppLocalizations.of(context)
+                .coachProfileErrorWithDetail(e.toString()),
+            isError: true);
+      }
     } finally {
       if (mounted) setState(() => _uploadingAvatar = false);
     }
@@ -649,6 +670,7 @@ class _CoachProfileState extends State<CoachProfile>
   }
 
   Widget _buildLoading() {
+    final l10n = AppLocalizations.of(context);
     return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -660,7 +682,7 @@ class _CoachProfileState extends State<CoachProfile>
                 color: Theme.of(context).colorScheme.primary, strokeWidth: 2.4),
           ),
           SizedBox(height: 16),
-          Text('Loading profile...',
+          Text(l10n.coachProfileLoading,
               style: TextStyle(
                   color: context.fitlek.textMuted,
                   fontSize: 13,
@@ -671,6 +693,7 @@ class _CoachProfileState extends State<CoachProfile>
   }
 
   Widget _buildError() {
+    final l10n = AppLocalizations.of(context);
     return Center(
       child: Padding(
         padding: EdgeInsets.all(32),
@@ -686,7 +709,7 @@ class _CoachProfileState extends State<CoachProfile>
                   color: context.fitlek.textMuted, size: 34),
             ),
             SizedBox(height: 16),
-            Text('Unable to load profile',
+            Text(l10n.coachProfileLoadError,
                 style: TextStyle(
                     color: context.fitlek.textMuted,
                     fontSize: 14,
@@ -699,7 +722,7 @@ class _CoachProfileState extends State<CoachProfile>
                 decoration: BoxDecoration(
                     color: Theme.of(context).colorScheme.primary,
                     borderRadius: BorderRadius.circular(14)),
-                child: Text('Retry',
+                child: Text(l10n.coachProfileRetry,
                     style: TextStyle(
                         color: Theme.of(context).colorScheme.onPrimary,
                         fontWeight: FontWeight.w800,
@@ -732,13 +755,14 @@ class _CoachProfileState extends State<CoachProfile>
   }
 
   Widget _buildHeaderUI() {
+    final l10n = AppLocalizations.of(context);
     return Padding(
       padding: EdgeInsets.fromLTRB(20, 10, 20, 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'My profile',
+            l10n.coachProfileTitle,
             style: TextStyle(
               color: Theme.of(context).colorScheme.onSurface,
               fontSize: 32,
@@ -751,6 +775,7 @@ class _CoachProfileState extends State<CoachProfile>
   }
 
   Widget _buildProfileCardUI(CoachProfileData p) {
+    final l10n = AppLocalizations.of(context);
     final cardColor = context.fitlek.card;
     final accentGreen = context.fitlek.success;
     final buttonLight = Theme.of(context).colorScheme.primary;
@@ -791,7 +816,9 @@ class _CoachProfileState extends State<CoachProfile>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      _fullName.isNotEmpty ? _fullName : 'Coach',
+                      _fullName.isNotEmpty
+                          ? _fullName
+                          : l10n.coachProfileCoachFallback,
                       style: TextStyle(
                           color: Theme.of(context).colorScheme.onSurface,
                           fontSize: 18,
@@ -801,7 +828,7 @@ class _CoachProfileState extends State<CoachProfile>
                     Text(
                       p.professionalTitle.isNotEmpty
                           ? p.professionalTitle
-                          : 'Personal trainer',
+                          : l10n.coachProfilePersonalTrainerFallback,
                       style: TextStyle(
                           color: Theme.of(context)
                               .colorScheme
@@ -821,7 +848,9 @@ class _CoachProfileState extends State<CoachProfile>
                         SizedBox(width: 4),
                         Expanded(
                           child: Text(
-                            p.ville.isNotEmpty ? p.ville : 'Location not set',
+                            p.ville.isNotEmpty
+                                ? p.ville
+                                : l10n.coachProfileLocationNotSet,
                             style: TextStyle(
                                 color: Theme.of(context)
                                     .colorScheme
@@ -849,7 +878,7 @@ class _CoachProfileState extends State<CoachProfile>
                               size: 14),
                           SizedBox(width: 6),
                           Text(
-                            'Public profile',
+                            l10n.coachProfilePublicProfileBadge,
                             style: TextStyle(
                                 color: Theme.of(context).colorScheme.onPrimary,
                                 fontSize: 12,
@@ -889,7 +918,7 @@ class _CoachProfileState extends State<CoachProfile>
                         SizedBox(width: 4),
                         Flexible(
                           child: Text(
-                            'Preview profile',
+                            l10n.coachProfilePreviewProfile,
                             style: TextStyle(
                                 color: Theme.of(context).colorScheme.onSurface,
                                 fontWeight: FontWeight.bold,
@@ -949,7 +978,148 @@ class _CoachProfileState extends State<CoachProfile>
     if (mounted) await _loadAll();
   }
 
+  String _localizedCompletionMessage(String msg) {
+    final l10n = AppLocalizations.of(context);
+    return switch (msg) {
+      'Add a profile photo to your profile.' => l10n.coachProfileStepAvatar,
+      'Add your first name to your profile.' => l10n.coachProfileStepFirstName,
+      'Add your last name to your profile.' => l10n.coachProfileStepLastName,
+      'Add your email to your profile.' => l10n.coachProfileStepEmail,
+      'Add your phone number to your profile.' => l10n.coachProfileStepPhone,
+      'Add your gender to your profile.' => l10n.coachProfileStepGender,
+      'Add your professional title to your profile.' =>
+        l10n.coachProfileStepProfessionalTitle,
+      'Add your biography to your profile.' => l10n.coachProfileStepBio,
+      'Add your languages to your profile.' => l10n.coachProfileStepLanguages,
+      'Add your Instagram page to your profile.' =>
+        l10n.coachProfileStepInstagram,
+      'Add your specialties to your profile.' =>
+        l10n.coachProfileStepSpecialties,
+      'Add your experience to your profile.' => l10n.coachProfileStepExperience,
+      'Add the client levels you coach to your profile.' =>
+        l10n.coachProfileStepClientLevels,
+      'Add a certification to your profile.' =>
+        l10n.coachProfileStepCertifications,
+      'Add your city to your profile.' => l10n.coachProfileStepCity,
+      'Add your coaching formats to your profile.' =>
+        l10n.coachProfileStepCoachingFormats,
+      'Add your service area to your profile.' =>
+        l10n.coachProfileStepServiceArea,
+      'Add your gym name to your profile.' => l10n.coachProfileStepGymName,
+      'Add your gym address to your profile.' =>
+        l10n.coachProfileStepGymAddress,
+      'Add a gym photo to your profile.' => l10n.coachProfileStepGymImage,
+      'Add a coaching package.' => l10n.coachProfileStepPackage,
+      'Add a photo to your coaching gallery.' => l10n.coachProfileStepGallery,
+      _ => msg,
+    };
+  }
+
+  String _currentLocaleLabel() {
+    final l10n = AppLocalizations.of(context);
+    final code = LocaleService.locale.value?.languageCode;
+    if (code == 'en') return l10n.languageEnglish;
+    if (code == 'fr') return l10n.languageFrench;
+    return l10n.languageSystem;
+  }
+
+  void _showLanguageSheet() {
+    final cs = Theme.of(context).colorScheme;
+    final f = context.fitlek;
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => ValueListenableBuilder<Locale?>(
+        valueListenable: LocaleService.locale,
+        builder: (ctx, currentLocale, _) {
+          final l10n = AppLocalizations.of(ctx);
+          final options = <(Locale?, String)>[
+            (null, l10n.languageSystem),
+            (const Locale('en'), l10n.languageEnglish),
+            (const Locale('fr'), l10n.languageFrench),
+          ];
+          return Container(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
+            decoration: BoxDecoration(
+              color: f.card,
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(22)),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                        color: f.border,
+                        borderRadius: BorderRadius.circular(2)),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text(l10n.language,
+                    style: TextStyle(
+                        color: cs.onSurface,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800)),
+                const SizedBox(height: 16),
+                ...options.map((opt) {
+                  final selected =
+                      currentLocale?.languageCode == opt.$1?.languageCode;
+                  return GestureDetector(
+                    onTap: () async {
+                      await LocaleService.set(opt.$1);
+                      if (ctx.mounted) Navigator.pop(ctx);
+                    },
+                    child: Container(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: selected
+                            ? cs.primary.withValues(alpha: 0.1)
+                            : f.card2,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                            color: selected
+                                ? cs.primary.withValues(alpha: 0.4)
+                                : f.border),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.language_rounded,
+                              color: selected ? cs.primary : f.textMuted,
+                              size: 20),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(opt.$2,
+                                style: TextStyle(
+                                    color: cs.onSurface,
+                                    fontSize: 14,
+                                    fontWeight: selected
+                                        ? FontWeight.w700
+                                        : FontWeight.w500)),
+                          ),
+                          if (selected)
+                            Icon(Icons.check_circle_rounded,
+                                color: cs.primary, size: 20),
+                        ],
+                      ),
+                    ),
+                  );
+                }),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
   Widget _buildProfileCompletionUI(CoachProfileData p) {
+    final l10n = AppLocalizations.of(context);
     final cardColor = context.fitlek.card;
     final accentGreen = context.fitlek.success;
 
@@ -976,7 +1146,7 @@ class _CoachProfileState extends State<CoachProfile>
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text('Profile completion',
+              Text(l10n.coachProfileCompletionTitle,
                   style: TextStyle(
                       color: Theme.of(context).colorScheme.onSurface,
                       fontSize: 16,
@@ -1024,7 +1194,7 @@ class _CoachProfileState extends State<CoachProfile>
               Expanded(
                   child: TextButton(
                       onPressed: () => _openCompletionStep(p, next.section),
-                      child: Text(next.message,
+                      child: Text(_localizedCompletionMessage(next.message),
                           style: TextStyle(
                               color: Theme.of(context).colorScheme.onSurface,
                               fontSize: 13)))),
@@ -1040,19 +1210,21 @@ class _CoachProfileState extends State<CoachProfile>
   }
 
   Widget _buildSettingsCard1(CoachProfileData p) {
+    final l10n = AppLocalizations.of(context);
     final cardColor = context.fitlek.card;
 
     final specialtyText = p.specialties.isNotEmpty
         ? p.specialties.join(', ')
-        : (p.specialty.isNotEmpty ? p.specialty : 'Not set');
+        : (p.specialty.isNotEmpty ? p.specialty : l10n.coachProfileNotSet);
     final expText = p.experience.isNotEmpty ? p.experience : '';
-    final expertiseSubtitle = (specialtyText == 'Not set' && expText.isEmpty)
-        ? 'Not set'
-        : '$specialtyText${expText.isNotEmpty && specialtyText != 'Not set' ? ' · ' : ''}$expText';
+    final expertiseSubtitle =
+        (specialtyText == l10n.coachProfileNotSet && expText.isEmpty)
+            ? l10n.coachProfileNotSet
+            : '$specialtyText${expText.isNotEmpty && specialtyText != l10n.coachProfileNotSet ? ' · ' : ''}$expText';
 
     final aboutSubtitle = (p.bio.isNotEmpty || p.languages.isNotEmpty)
-        ? 'Profile details configured'
-        : 'Photo, bio and languages';
+        ? l10n.coachProfileAboutConfigured
+        : l10n.coachProfileAboutDefault;
 
     return Container(
       margin: EdgeInsets.fromLTRB(16, 16, 16, 0),
@@ -1065,7 +1237,7 @@ class _CoachProfileState extends State<CoachProfile>
         children: [
           _settingsListTile(
             icon: Icons.person_outline_rounded,
-            title: 'About you',
+            title: l10n.coachProfileMenuAboutYou,
             subtitle: aboutSubtitle,
             onTap: () async {
               final token = await ApiService.getToken();
@@ -1088,7 +1260,7 @@ class _CoachProfileState extends State<CoachProfile>
               height: 1),
           _settingsListTile(
             icon: Icons.fitness_center_rounded,
-            title: 'Expertise & experience',
+            title: l10n.coachProfileMenuExpertise,
             subtitle: expertiseSubtitle,
             onTap: () async {
               final token = await ApiService.getToken();
@@ -1111,8 +1283,8 @@ class _CoachProfileState extends State<CoachProfile>
               height: 1),
           _settingsListTile(
             icon: Icons.receipt_long_outlined,
-            title: 'Services & packages',
-            subtitle: 'Manage your packages',
+            title: l10n.coachProfileMenuPackages,
+            subtitle: l10n.coachProfileMenuPackagesSubtitle,
             onTap: () async {
               final token = await ApiService.getToken();
               if (token != null && mounted) {
@@ -1134,8 +1306,10 @@ class _CoachProfileState extends State<CoachProfile>
               height: 1),
           _settingsListTile(
             icon: Icons.location_on_outlined,
-            title: 'Coaching locations',
-            subtitle: p.ville.isNotEmpty ? p.ville : 'Manage locations',
+            title: l10n.coachProfileMenuLocations,
+            subtitle: p.ville.isNotEmpty
+                ? p.ville
+                : l10n.coachProfileMenuLocationsSubtitle,
             onTap: () async {
               final token = await ApiService.getToken();
               if (token != null && mounted) {
@@ -1154,8 +1328,8 @@ class _CoachProfileState extends State<CoachProfile>
               height: 1),
           _settingsListTile(
             icon: Icons.photo_outlined,
-            title: 'Photos',
-            subtitle: '${_galleryImages.length} photos',
+            title: l10n.coachProfileMenuPhotos,
+            subtitle: l10n.coachProfilePhotosCount(_galleryImages.length),
             onTap: () async {
               final token = await ApiService.getToken();
               if (token != null && mounted) {
@@ -1174,6 +1348,7 @@ class _CoachProfileState extends State<CoachProfile>
   }
 
   Widget _buildSettingsCard2(CoachProfileData p) {
+    final l10n = AppLocalizations.of(context);
     final cardColor = context.fitlek.card;
     return Container(
       margin: EdgeInsets.fromLTRB(16, 16, 16, 0),
@@ -1186,8 +1361,8 @@ class _CoachProfileState extends State<CoachProfile>
         children: [
           _settingsListTile(
             icon: Icons.star_outline_rounded,
-            title: 'My feedback',
-            subtitle: 'Client ratings and reviews',
+            title: l10n.coachProfileMenuFeedback,
+            subtitle: l10n.coachProfileMenuFeedbackSubtitle,
             onTap: () async {
               final token = await ApiService.getToken();
               if (token == null || !mounted) return;
@@ -1204,7 +1379,7 @@ class _CoachProfileState extends State<CoachProfile>
           ),
           _settingsListTile(
             icon: Icons.campaign_outlined,
-            title: 'Visibility & messaging',
+            title: l10n.coachProfileMenuVisibility,
             subtitle: null,
             onTap: () async {
               final token = await ApiService.getToken();
@@ -1224,7 +1399,7 @@ class _CoachProfileState extends State<CoachProfile>
               height: 1),
           _settingsListTile(
             icon: Icons.settings_outlined,
-            title: 'Account & referrals',
+            title: l10n.coachProfileMenuAccount,
             subtitle: null,
             onTap: () async {
               final token = await ApiService.getToken();
@@ -1241,12 +1416,25 @@ class _CoachProfileState extends State<CoachProfile>
               }
             },
           ),
+          Divider(
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.05),
+              height: 1),
+          ValueListenableBuilder<Locale?>(
+            valueListenable: LocaleService.locale,
+            builder: (context, _, __) => _settingsListTile(
+              icon: Icons.language_rounded,
+              title: l10n.language,
+              subtitle: _currentLocaleLabel(),
+              onTap: _showLanguageSheet,
+            ),
+          ),
         ],
       ),
     );
   }
 
   Widget _buildLogoutButton() {
+    final l10n = AppLocalizations.of(context);
     return Container(
       margin: EdgeInsets.fromLTRB(16, 16, 16, 0),
       child: InkWell(
@@ -1265,7 +1453,7 @@ class _CoachProfileState extends State<CoachProfile>
               Icon(Icons.logout_rounded, color: context.fitlek.error, size: 22),
               SizedBox(width: 12),
               Text(
-                'Log out',
+                l10n.coachProfileLogOutTitle,
                 style: TextStyle(
                   color: context.fitlek.error,
                   fontSize: 16,
@@ -1325,6 +1513,7 @@ class _CoachProfileState extends State<CoachProfile>
   }
 
   Widget _buildGallery() {
+    final l10n = AppLocalizations.of(context);
     return Container(
       margin: EdgeInsets.fromLTRB(16, 0, 16, 14),
       child: Column(
@@ -1332,7 +1521,7 @@ class _CoachProfileState extends State<CoachProfile>
         children: [
           Padding(
             padding: EdgeInsets.symmetric(horizontal: 4, vertical: 8),
-            child: Text('Gallery Preview',
+            child: Text(l10n.coachProfileGalleryPreview,
                 style: TextStyle(
                     color: Theme.of(context).colorScheme.primary,
                     fontSize: 13,
@@ -1387,6 +1576,7 @@ class _CoachProfileState extends State<CoachProfile>
   Widget _buildProfileCard(CoachProfileData p) {
     final cs = Theme.of(context).colorScheme;
     final f = context.fitlek;
+    final l10n = AppLocalizations.of(context);
     return Container(
       margin: EdgeInsets.fromLTRB(16, 0, 16, 14),
       padding: EdgeInsets.fromLTRB(20, 26, 20, 22),
@@ -1460,7 +1650,7 @@ class _CoachProfileState extends State<CoachProfile>
           ),
           SizedBox(height: 16),
           Text(
-            _fullName.isNotEmpty ? _fullName : 'Coach',
+            _fullName.isNotEmpty ? _fullName : l10n.coachProfileCoachFallback,
             textAlign: TextAlign.center,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
@@ -1481,7 +1671,7 @@ class _CoachProfileState extends State<CoachProfile>
                   color: cs.primary.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(20),
                 ),
-                child: Text('Coach',
+                child: Text(l10n.coachProfileCoachFallback,
                     style: TextStyle(
                         color: cs.primary,
                         fontSize: 11.5,
@@ -1518,15 +1708,21 @@ class _CoachProfileState extends State<CoachProfile>
 
   // ── Stats row: Clients / Bookings / Points ─────────────────────────────
   Widget _buildStatsRow(DashboardStats s) {
+    final l10n = AppLocalizations.of(context);
     return Padding(
       padding: EdgeInsets.fromLTRB(16, 0, 16, 14),
       child: Row(
         children: [
-          Expanded(child: _statCard('${s.totalClients}', 'Clients')),
+          Expanded(
+              child: _statCard('${s.totalClients}', l10n.coachProfileStatClients)),
           SizedBox(width: 12),
-          Expanded(child: _statCard('${s.totalReservations}', 'Bookings')),
+          Expanded(
+              child: _statCard(
+                  '${s.totalReservations}', l10n.coachProfileStatBookings)),
           SizedBox(width: 12),
-          Expanded(child: _statCard('${s.invitationPoints}', 'Points')),
+          Expanded(
+              child: _statCard(
+                  '${s.invitationPoints}', l10n.coachProfileStatPoints)),
         ],
       ),
     );
@@ -1564,28 +1760,31 @@ class _CoachProfileState extends State<CoachProfile>
   // ── Professional information ───────────────────────────────────────────
   Widget _buildProfessionalInfo(CoachProfileData p) {
     final f = context.fitlek;
+    final l10n = AppLocalizations.of(context);
     final specialtyText =
         p.specialties.isNotEmpty ? p.specialties.join(', ') : p.specialty;
     final titleText =
         p.professionalTitle.isNotEmpty ? p.professionalTitle : p.experience;
     final rows = <Widget>[];
     if (titleText.isNotEmpty) {
-      rows.add(_infoRow(
-          Icons.workspace_premium_rounded, 'Professional Title', titleText));
+      rows.add(_infoRow(Icons.workspace_premium_rounded,
+          l10n.coachProfileInfoProfessionalTitle, titleText));
     }
     if (specialtyText.isNotEmpty) {
-      rows.add(
-          _infoRow(Icons.fitness_center_rounded, 'Specialties', specialtyText));
+      rows.add(_infoRow(Icons.fitness_center_rounded,
+          l10n.coachProfileInfoSpecialties, specialtyText));
     }
     if (p.certifications.isNotEmpty) {
-      rows.add(_infoRow(Icons.verified_rounded, 'Certifications',
-          p.certifications.join(', ')));
+      rows.add(_infoRow(Icons.verified_rounded,
+          l10n.coachProfileInfoCertifications, p.certifications.join(', ')));
     }
     if (p.bio.isNotEmpty) {
-      rows.add(_infoRow(Icons.description_rounded, 'Bio', p.bio));
+      rows.add(
+          _infoRow(Icons.description_rounded, l10n.coachProfileInfoBio, p.bio));
     }
     if (p.ville.isNotEmpty) {
-      rows.add(_infoRow(Icons.location_on_rounded, 'Location', p.ville));
+      rows.add(_infoRow(
+          Icons.location_on_rounded, l10n.coachProfileInfoLocation, p.ville));
     }
 
     return Container(
@@ -1599,7 +1798,7 @@ class _CoachProfileState extends State<CoachProfile>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('PROFESSIONAL INFORMATION',
+          Text(l10n.coachProfileProfessionalInformationSection,
               style: TextStyle(
                   color: Theme.of(context).colorScheme.primary,
                   fontSize: 12,
@@ -1610,7 +1809,7 @@ class _CoachProfileState extends State<CoachProfile>
             Padding(
               padding: EdgeInsets.only(bottom: 14),
               child: Text(
-                'Add your professional details from Edit Profile.',
+                l10n.coachProfileProfessionalInfoEmpty,
                 style: TextStyle(color: f.textMuted, fontSize: 13, height: 1.5),
               ),
             )

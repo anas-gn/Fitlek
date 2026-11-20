@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:fitlek1/l10n/app_localizations.dart';
 import '../services/connection_recovery.dart';
 import '../services/socketService.dart';
 import 'app_dialog.dart';
@@ -65,21 +66,24 @@ class _ConnectionRecoveryPromptState extends State<ConnectionRecoveryPrompt> {
     try {
       final retry = await showDialog<bool>(
         context: overlay.context,
-        builder: (context) => AppDialog(
-          icon: Icon(Icons.wifi_off_rounded,
-              color: Theme.of(context).colorScheme.primary),
-          title: const Text('Check your connection'),
-          content: const Text(ConnectionRecovery.message),
-          actions: [
-            TextButton(
-                onPressed: () => Navigator.pop(context, false),
-                child: const Text('Later')),
-            FilledButton.icon(
-                onPressed: () => Navigator.pop(context, true),
-                icon: const Icon(Icons.refresh_rounded),
-                label: const Text('Refresh app')),
-          ],
-        ),
+        builder: (context) {
+          final l10n = AppLocalizations.of(context);
+          return AppDialog(
+            icon: Icon(Icons.wifi_off_rounded,
+                color: Theme.of(context).colorScheme.primary),
+            title: Text(l10n.connectionRecoveryCheckTitle),
+            content: Text(ConnectionRecovery.message),
+            actions: [
+              TextButton(
+                  onPressed: () => Navigator.pop(context, false),
+                  child: Text(l10n.connectionRecoveryLater)),
+              FilledButton.icon(
+                  onPressed: () => Navigator.pop(context, true),
+                  icon: const Icon(Icons.refresh_rounded),
+                  label: Text(l10n.connectionRecoveryRefreshApp)),
+            ],
+          );
+        },
       );
       if (!mounted) return;
       _dismissedAt = DateTime.now();

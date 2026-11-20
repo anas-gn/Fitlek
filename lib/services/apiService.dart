@@ -1,3 +1,4 @@
+import 'package:fitlek1/services/svc_l10n.dart';
 import 'campaign_service.dart';
 import 'image_upload_service.dart';
 import 'socketService.dart';
@@ -198,7 +199,7 @@ class ApiService {
       if (kDebugMode) debugPrint('NETWORK ERROR GET $path: $e');
       return {
         'ok': false,
-        'message': 'Network error. Check your connection.',
+        'message': svcL10n.apiServiceNetworkError,
         'status': 0,
       };
     } catch (e) {
@@ -241,7 +242,7 @@ class ApiService {
       ConnectionRecovery.report(e);
       return {
         'ok': false,
-        'message': 'Network error. Check your connection.',
+        'message': svcL10n.apiServiceNetworkError,
         'status': 0,
       };
     } catch (e) {

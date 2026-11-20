@@ -1,5 +1,6 @@
 import '../../services/referral_link_service.dart';
 import 'package:flutter/material.dart';
+import 'package:fitlek1/l10n/app_localizations.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
 class ClientQrScannerScreen extends StatefulWidget {
@@ -93,7 +94,7 @@ class _ClientQrScannerScreenState extends State<ClientQrScannerScreen> {
             left: 0,
             right: 0,
             child: Text(
-              'Scan the coach QR code',
+              AppLocalizations.of(context).clientQrScannerPrompt,
               textAlign: TextAlign.center,
               style: TextStyle(
                   color: Colors.white.withValues(alpha: 0.8),

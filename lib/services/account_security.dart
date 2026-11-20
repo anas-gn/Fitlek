@@ -1,3 +1,4 @@
+import 'package:fitlek1/services/svc_l10n.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../constants/urls.dart' as urls;
@@ -25,7 +26,7 @@ class AccountSecurity {
           )
           .timeout(const Duration(seconds: 10));
       if (response.statusCode != 200) {
-        String message = 'Could not update your password. Please try again.';
+        String message = svcL10n.accountSecurityPasswordUpdateFailed;
         try {
           final body = jsonDecode(response.body);
           if (body is Map)

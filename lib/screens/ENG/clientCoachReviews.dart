@@ -2,6 +2,8 @@ import 'dart:convert';
 import '../../services/live_updates.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:intl/intl.dart';
+import 'package:fitlek1/l10n/app_localizations.dart';
 import 'package:fitlek1/constants/urls.dart';
 import 'package:fitlek1/models/anas/review.dart';
 import '../../theme/fitlek_theme_extension.dart';
@@ -90,14 +92,14 @@ class _ClientCoachReviewsScreenState extends State<ClientCoachReviewsScreen>
         if (mounted)
           setState(() {
             _loading = false;
-            _error = 'Could not load feedback. Pull down to retry.';
+            _error = AppLocalizations.of(context).clientCoachReviewsLoadFailed;
           });
       }
     } catch (_) {
       if (mounted)
         setState(() {
           _loading = false;
-          _error = 'Could not load feedback. Pull down to retry.';
+          _error = AppLocalizations.of(context).clientCoachReviewsLoadFailed;
         });
     }
   }
@@ -106,6 +108,7 @@ class _ClientCoachReviewsScreenState extends State<ClientCoachReviewsScreen>
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final f = context.fitlek;
+    final l10n = AppLocalizations.of(context);
 
     // Calculate rating counts for distribution (1 to 5)
     final counts = {1: 0, 2: 0, 3: 0, 4: 0, 5: 0};
@@ -132,7 +135,9 @@ class _ClientCoachReviewsScreenState extends State<ClientCoachReviewsScreen>
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              widget.coachView ? 'My feedback' : 'Reviews & Ratings',
+              widget.coachView
+                  ? l10n.clientCoachReviewsMyFeedbackTitle
+                  : l10n.clientCoachReviewsTitle,
               style: TextStyle(
                   color: Theme.of(context).colorScheme.onSurface,
                   fontSize: 18,
@@ -181,8 +186,9 @@ class _ClientCoachReviewsScreenState extends State<ClientCoachReviewsScreen>
                     children: [
                       Text(
                         _selectedStarFilter == null
-                            ? 'All Reviews (${_reviews.length})'
-                            : '$_selectedStarFilter Star Reviews (${filteredReviews.length})',
+                            ? l10n.clientCoachReviewsAllCount(_reviews.length)
+                            : l10n.clientCoachReviewsStarCount(
+                                _selectedStarFilter!, filteredReviews.length),
                         style: TextStyle(
                           color: Theme.of(context).colorScheme.onSurface,
                           fontSize: 15,
@@ -194,7 +200,7 @@ class _ClientCoachReviewsScreenState extends State<ClientCoachReviewsScreen>
                           onTap: () =>
                               setState(() => _selectedStarFilter = null),
                           child: Text(
-                            'Clear filter',
+                            l10n.clientCoachReviewsClearFilter,
                             style: TextStyle(
                                 color: Theme.of(context).colorScheme.primary,
                                 fontSize: 12,
@@ -263,7 +269,8 @@ class _ClientCoachReviewsScreenState extends State<ClientCoachReviewsScreen>
                 ),
                 SizedBox(height: 6),
                 Text(
-                  '$_totalReviews reviews',
+                  AppLocalizations.of(context)
+                      .clientCoachReviewsTotalCount(_totalReviews),
                   style: TextStyle(
                     color: Theme.of(context)
                         .colorScheme
@@ -355,7 +362,11 @@ class _ClientCoachReviewsScreenState extends State<ClientCoachReviewsScreen>
 
   Widget _buildFilterChips(Map<int, int> counts) {
     final filters = [
-      {'label': 'All (${_reviews.length})', 'value': null},
+      {
+        'label': AppLocalizations.of(context)
+            .clientCoachReviewsFilterAll(_reviews.length),
+        'value': null
+      },
       {'label': '5 ★ (${counts[5] ?? 0})', 'value': 5},
       {'label': '4 ★ (${counts[4] ?? 0})', 'value': 4},
       {'label': '3 ★ (${counts[3] ?? 0})', 'value': 3},
@@ -415,6 +426,7 @@ class _ClientCoachReviewsScreenState extends State<ClientCoachReviewsScreen>
   }
 
   Widget _buildEmptyFilterState() {
+    final l10n = AppLocalizations.of(context);
     return Container(
       padding: EdgeInsets.all(32),
       alignment: Alignment.center,
@@ -429,10 +441,10 @@ class _ClientCoachReviewsScreenState extends State<ClientCoachReviewsScreen>
           SizedBox(height: 12),
           Text(
             _selectedStarFilter != null
-                ? 'No reviews with $_selectedStarFilter stars yet'
+                ? l10n.clientCoachReviewsEmptyStarFilter(_selectedStarFilter!)
                 : widget.coachView
-                    ? 'Your client feedback will appear here'
-                    : 'No reviews found',
+                    ? l10n.clientCoachReviewsEmptyCoachView
+                    : l10n.clientCoachReviewsEmptyClientView,
             style: TextStyle(
                 color: Theme.of(context)
                     .colorScheme
@@ -447,20 +459,9 @@ class _ClientCoachReviewsScreenState extends State<ClientCoachReviewsScreen>
 
   Widget _buildReviewCard(ReviewItem review, FitlekColors f, ColorScheme cs) {
     final isMyReview = !widget.coachView && review.clientID == widget.clientID;
-    final month = [
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'May',
-      'Jun',
-      'Jul',
-      'Aug',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Dec'
-    ][review.createdAt.month - 1];
+    final dateLabel =
+        DateFormat.yMMM(Localizations.localeOf(context).toString())
+            .format(review.createdAt);
 
     return Container(
       margin: EdgeInsets.only(bottom: 12),
@@ -543,7 +544,8 @@ class _ClientCoachReviewsScreenState extends State<ClientCoachReviewsScreen>
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: Text(
-                              'My review',
+                              AppLocalizations.of(context)
+                                  .clientCoachReviewsMyReviewBadge,
                               style: TextStyle(
                                 color: Theme.of(context).colorScheme.primary,
                                 fontSize: 9.5,
@@ -556,7 +558,7 @@ class _ClientCoachReviewsScreenState extends State<ClientCoachReviewsScreen>
                     ),
                     SizedBox(height: 2),
                     Text(
-                      '$month ${review.createdAt.year}',
+                      dateLabel,
                       style: TextStyle(
                           color: Theme.of(context)
                               .colorScheme

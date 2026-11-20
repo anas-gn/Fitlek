@@ -9,6 +9,7 @@ import 'dart:convert';
 import 'dart:ui' as ui;
 import 'package:http/http.dart' as http;
 import 'package:fitlek1/constants/urls.dart';
+import 'package:fitlek1/l10n/app_localizations.dart';
 import '../../services/apiService.dart';
 import '../../theme/fitlek_theme_extension.dart';
 import 'coachProfile.dart' show CoachProfileData;
@@ -33,11 +34,11 @@ class _CoachLocationsState extends State<CoachLocations> {
   late String _serviceArea;
   List<String> _coachingFormats = [];
 
-  final List<Map<String, dynamic>> _formats = [
-    {'id': 'gym', 'label': 'At a gym', 'icon': Icons.fitness_center},
-    {'id': 'online', 'label': 'Online', 'icon': Icons.laptop_mac},
-    {'id': 'home', 'label': 'Client\'s home', 'icon': Icons.home_outlined},
-    {'id': 'outdoors', 'label': 'Outdoors', 'icon': Icons.park_outlined},
+  List<Map<String, dynamic>> _getFormats(AppLocalizations l10n) => [
+    {'id': 'gym', 'label': l10n.coachLocationsFormatGym, 'icon': Icons.fitness_center},
+    {'id': 'online', 'label': l10n.coachLocationsFormatOnline, 'icon': Icons.laptop_mac},
+    {'id': 'home', 'label': l10n.coachLocationsFormatHome, 'icon': Icons.home_outlined},
+    {'id': 'outdoors', 'label': l10n.coachLocationsFormatOutdoors, 'icon': Icons.park_outlined},
   ];
 
   @override
@@ -94,20 +95,22 @@ class _CoachLocationsState extends State<CoachLocations> {
       });
 
       if (mounted) {
+        final l10n = AppLocalizations.of(context);
         if (res['ok'] == true) {
           ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Changes saved successfully!')));
+              SnackBar(content: Text(l10n.coachLocationsSaveSuccess)));
           Navigator.pop(context, true);
         } else {
           ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-              content: Text(
-                  'Failed to save changes: ${res['error'] ?? res['message']}')));
+              content: Text(l10n.coachLocationsSaveFailed(
+                  '${res['error'] ?? res['message']}'))));
         }
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text('Error: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(AppLocalizations.of(context)
+                .coachLocationsErrorGeneric('$e'))));
       }
     } finally {
       if (mounted) setState(() => _saving = false);
@@ -126,15 +129,16 @@ class _CoachLocationsState extends State<CoachLocations> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = context.fitlek;
+    final l10n = AppLocalizations.of(context);
+    final formats = _getFormats(l10n);
     return Scaffold(
       backgroundColor:
           const Color(0xFF0F261F), // Dark background matching the screenshot
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        title: const Text('Locations & photos',
-            style: TextStyle(
+        title: Text(l10n.coachLocationsTitle,
+            style: const TextStyle(
                 color: Colors.white,
                 fontSize: 18,
                 fontWeight: FontWeight.w600)),
@@ -155,11 +159,11 @@ class _CoachLocationsState extends State<CoachLocations> {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 child: Row(
-                  children: const [
-                    Icon(Icons.visibility, color: Colors.white, size: 16),
-                    SizedBox(width: 4),
-                    Text('Preview',
-                        style: TextStyle(color: Colors.white, fontSize: 13)),
+                  children: [
+                    const Icon(Icons.visibility, color: Colors.white, size: 16),
+                    const SizedBox(width: 4),
+                    Text(l10n.coachLocationsPreview,
+                        style: const TextStyle(color: Colors.white, fontSize: 13)),
                   ],
                 ),
               ),
@@ -172,9 +176,9 @@ class _CoachLocationsState extends State<CoachLocations> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildSectionTitle('Coaching formats'),
+            _buildSectionTitle(l10n.coachLocationsFormatsTitle),
             const SizedBox(height: 4),
-            Text('How do you usually coach?',
+            Text(l10n.coachLocationsFormatsSubtitle,
                 style: TextStyle(
                     color: Colors.white.withOpacity(0.6), fontSize: 14)),
             const SizedBox(height: 16),
@@ -187,7 +191,7 @@ class _CoachLocationsState extends State<CoachLocations> {
               mainAxisSpacing: 12,
               crossAxisSpacing: 12,
               childAspectRatio: 2.2,
-              children: _formats.map((f) {
+              children: formats.map((f) {
                 final isSelected = _coachingFormats.contains(f['id']);
                 return GestureDetector(
                   onTap: () => _toggleFormat(f['id']),
@@ -252,10 +256,10 @@ class _CoachLocationsState extends State<CoachLocations> {
             ),
             const SizedBox(height: 24),
 
-            _buildSectionTitle('City'),
+            _buildSectionTitle(l10n.coachLocationsCityTitle),
             OutlinedButton.icon(
                 icon: const Icon(Icons.my_location),
-                label: const Text('Update my location'),
+                label: Text(l10n.coachLocationsUpdateLocation),
                 onPressed: () async {
                   final city = await Navigator.of(context).push<String>(
                       MaterialPageRoute(
@@ -274,13 +278,13 @@ class _CoachLocationsState extends State<CoachLocations> {
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: Padding(
                 padding: const EdgeInsets.symmetric(vertical: 16),
-                child: Text(_ville.isEmpty ? 'Use the location button to detect your city' : _ville,
+                child: Text(_ville.isEmpty ? l10n.coachLocationsDetectCityHint : _ville,
                     style: const TextStyle(color: Colors.white)),
               ),
             ),
             const SizedBox(height: 24),
 
-            _buildSectionTitle('Gym location'),
+            _buildSectionTitle(l10n.coachLocationsGymLocationTitle),
             const SizedBox(height: 12),
             Container(
               decoration: BoxDecoration(
@@ -314,7 +318,7 @@ class _CoachLocationsState extends State<CoachLocations> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(_gymName.isNotEmpty ? _gymName : 'Select Gym',
+                        Text(_gymName.isNotEmpty ? _gymName : l10n.coachLocationsSelectGym,
                             style: const TextStyle(
                                 color: Colors.white,
                                 fontWeight: FontWeight.bold,
@@ -340,12 +344,12 @@ class _CoachLocationsState extends State<CoachLocations> {
                       padding: const EdgeInsets.symmetric(
                           horizontal: 12, vertical: 6),
                       child: Row(
-                        children: const [
-                          Icon(Icons.edit, color: Colors.white, size: 14),
-                          SizedBox(width: 4),
-                          Text('Edit location',
+                        children: [
+                          const Icon(Icons.edit, color: Colors.white, size: 14),
+                          const SizedBox(width: 4),
+                          Text(l10n.coachLocationsEditLocation,
                               style:
-                                  TextStyle(color: Colors.white, fontSize: 12)),
+                                  const TextStyle(color: Colors.white, fontSize: 12)),
                         ],
                       ),
                     ),
@@ -355,9 +359,9 @@ class _CoachLocationsState extends State<CoachLocations> {
             ),
             const SizedBox(height: 24),
 
-            _buildSectionTitle('Service area'),
+            _buildSectionTitle(l10n.coachLocationsServiceAreaTitle),
             const SizedBox(height: 4),
-            Text('Only used for travel sessions.',
+            Text(l10n.coachLocationsServiceAreaSubtitle,
                 style: TextStyle(
                     color: Colors.white.withOpacity(0.6), fontSize: 14)),
             const SizedBox(height: 12),
@@ -370,7 +374,7 @@ class _CoachLocationsState extends State<CoachLocations> {
               decoration: InputDecoration(
                 prefixIcon:
                     const Icon(Icons.map_outlined, color: Colors.white70),
-                hintText: 'Maarif and nearby neighborhoods',
+                hintText: l10n.coachLocationsServiceAreaHint,
                 hintStyle: TextStyle(color: Colors.white.withOpacity(0.4)),
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8),
@@ -389,10 +393,10 @@ class _CoachLocationsState extends State<CoachLocations> {
             ListTile(
               contentPadding: EdgeInsets.zero,
               leading: const Icon(Icons.calendar_today, color: Colors.white),
-              title: const Text('Open calendar',
-                  style: TextStyle(
+              title: Text(l10n.coachLocationsOpenCalendar,
+                  style: const TextStyle(
                       color: Colors.white, fontWeight: FontWeight.w600)),
-              subtitle: Text('Manage availability',
+              subtitle: Text(l10n.coachLocationsManageAvailability,
                   style: TextStyle(color: Colors.white.withOpacity(0.6))),
               trailing: const Icon(Icons.chevron_right, color: Colors.white54),
               onTap: () {
@@ -424,8 +428,8 @@ class _CoachLocationsState extends State<CoachLocations> {
                         height: 20,
                         child: CircularProgressIndicator(
                             color: Colors.black, strokeWidth: 2))
-                    : const Text('Save changes',
-                        style: TextStyle(
+                    : Text(l10n.coachLocationsSaveChanges,
+                        style: const TextStyle(
                             fontSize: 16, fontWeight: FontWeight.bold)),
               ),
             ),
@@ -453,126 +457,131 @@ class _CoachLocationsState extends State<CoachLocations> {
     showDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setDialogState) => AppDialog(
-          backgroundColor: const Color(0xFF1E3A32),
-          title: const Text('Edit Gym Location',
-              style: TextStyle(color: Colors.white)),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: TextEditingController(text: tempName)
-                    ..selection = TextSelection.fromPosition(
-                        TextPosition(offset: tempName.length)),
-                  style: const TextStyle(color: Colors.white),
-                  decoration: InputDecoration(
-                    labelText: 'Gym Name',
-                    labelStyle: TextStyle(color: Colors.white70),
-                    hintText: 'e.g., Atlas Gym',
-                    hintStyle: TextStyle(color: Colors.white54),
-                  ),
-                  onChanged: (val) => tempName = val,
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: TextEditingController(text: tempAddress)
-                    ..selection = TextSelection.fromPosition(
-                        TextPosition(offset: tempAddress.length)),
-                  style: const TextStyle(color: Colors.white),
-                  decoration: InputDecoration(
-                    labelText: 'Neighborhood/Address',
-                    labelStyle: TextStyle(color: Colors.white70),
-                    hintText: 'e.g., Maarif - Casablanca',
-                    hintStyle: TextStyle(color: Colors.white54),
-                  ),
-                  onChanged: (val) => tempAddress = val,
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    if (tempImage.isNotEmpty)
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(4),
-                        child: Image.network(tempImage,
-                            width: 40, height: 40, fit: BoxFit.cover),
-                      ),
-                    if (tempImage.isNotEmpty) const SizedBox(width: 12),
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        onPressed: isUploading
-                            ? null
-                            : () async {
-                                final picker = AppMediaPicker(context);
-                                final xfile = await picker.pickImage(
-                                    source: ImageSource.gallery);
-                                if (xfile != null) {
-                                  setDialogState(() => isUploading = true);
-                                  try {
-                                    final req = http.MultipartRequest('POST',
-                                        Uri.parse('$baseUrl/upload/gym-image'));
-                                    req.headers['Authorization'] =
-                                        'Bearer ${widget.token}';
-                                    final image = await ImageUploadService.prepare(await xfile.readAsBytes(),xfile.name);
-final bytes = image.bytes;
-                                    req.files.add(http.MultipartFile.fromBytes(
-                                        'file', bytes,
-                                        filename: image.filename, contentType: MediaType.parse(image.mimeType)));
-                                    final res = await req.send();
-                                    if (res.statusCode == 200 ||
-                                        res.statusCode == 201) {
-                                      final respStr =
-                                          await res.stream.bytesToString();
-                                      final data = jsonDecode(respStr);
-                                      if (data['fileUrl'] != null) {
-                                        setDialogState(
-                                            () => tempImage = data['fileUrl']);
-                                      }
-                                    }
-                                  } catch (e) {
-                                    debugPrint('Upload err: $e');
-                                  } finally {
-                                    setDialogState(() => isUploading = false);
-                                  }
-                                }
-                              },
-                        icon: isUploading
-                            ? const SizedBox(
-                                width: 16,
-                                height: 16,
-                                child: CircularProgressIndicator(
-                                    strokeWidth: 2, color: Colors.white))
-                            : const Icon(Icons.image, size: 18),
-                        label:
-                            Text(isUploading ? 'Uploading...' : 'Upload Image'),
-                      ),
+        builder: (ctx, setDialogState) {
+          final l10n = AppLocalizations.of(ctx);
+          return AppDialog(
+            backgroundColor: const Color(0xFF1E3A32),
+            title: Text(l10n.coachLocationsEditGymDialogTitle,
+                style: const TextStyle(color: Colors.white)),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: TextEditingController(text: tempName)
+                      ..selection = TextSelection.fromPosition(
+                          TextPosition(offset: tempName.length)),
+                    style: const TextStyle(color: Colors.white),
+                    decoration: InputDecoration(
+                      labelText: l10n.coachLocationsGymNameLabel,
+                      labelStyle: const TextStyle(color: Colors.white70),
+                      hintText: l10n.coachLocationsGymNameHint,
+                      hintStyle: const TextStyle(color: Colors.white54),
                     ),
-                  ],
-                ),
-              ],
+                    onChanged: (val) => tempName = val,
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: TextEditingController(text: tempAddress)
+                      ..selection = TextSelection.fromPosition(
+                          TextPosition(offset: tempAddress.length)),
+                    style: const TextStyle(color: Colors.white),
+                    decoration: InputDecoration(
+                      labelText: l10n.coachLocationsAddressLabel,
+                      labelStyle: const TextStyle(color: Colors.white70),
+                      hintText: l10n.coachLocationsAddressHint,
+                      hintStyle: const TextStyle(color: Colors.white54),
+                    ),
+                    onChanged: (val) => tempAddress = val,
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      if (tempImage.isNotEmpty)
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(4),
+                          child: Image.network(tempImage,
+                              width: 40, height: 40, fit: BoxFit.cover),
+                        ),
+                      if (tempImage.isNotEmpty) const SizedBox(width: 12),
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: isUploading
+                              ? null
+                              : () async {
+                                  final picker = AppMediaPicker(context);
+                                  final xfile = await picker.pickImage(
+                                      source: ImageSource.gallery);
+                                  if (xfile != null) {
+                                    setDialogState(() => isUploading = true);
+                                    try {
+                                      final req = http.MultipartRequest('POST',
+                                          Uri.parse('$baseUrl/upload/gym-image'));
+                                      req.headers['Authorization'] =
+                                          'Bearer ${widget.token}';
+                                      final image = await ImageUploadService.prepare(await xfile.readAsBytes(),xfile.name);
+                                      final bytes = image.bytes;
+                                      req.files.add(http.MultipartFile.fromBytes(
+                                          'file', bytes,
+                                          filename: image.filename, contentType: MediaType.parse(image.mimeType)));
+                                      final res = await req.send();
+                                      if (res.statusCode == 200 ||
+                                          res.statusCode == 201) {
+                                        final respStr =
+                                            await res.stream.bytesToString();
+                                        final data = jsonDecode(respStr);
+                                        if (data['fileUrl'] != null) {
+                                          setDialogState(
+                                              () => tempImage = data['fileUrl']);
+                                        }
+                                      }
+                                    } catch (e) {
+                                      debugPrint('Upload err: $e');
+                                    } finally {
+                                      setDialogState(() => isUploading = false);
+                                    }
+                                  }
+                                },
+                          icon: isUploading
+                              ? const SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(
+                                      strokeWidth: 2, color: Colors.white))
+                              : const Icon(Icons.image, size: 18),
+                          label: Text(isUploading
+                              ? l10n.coachLocationsUploading
+                              : l10n.coachLocationsUploadImage),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx),
-              child:
-                  const Text('Cancel', style: TextStyle(color: Colors.white70)),
-            ),
-            TextButton(
-              onPressed: isUploading
-                  ? null
-                  : () {
-                      setState(() {
-                        _gymName = tempName;
-                        _gymAddress = tempAddress;
-                        _gymImage = tempImage;
-                      });
-                      Navigator.pop(ctx);
-                    },
-              child: const Text('Save', style: TextStyle(color: Colors.white)),
-            ),
-          ],
-        ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: Text(l10n.coachLocationsCancel,
+                    style: const TextStyle(color: Colors.white70)),
+              ),
+              TextButton(
+                onPressed: isUploading
+                    ? null
+                    : () {
+                        setState(() {
+                          _gymName = tempName;
+                          _gymAddress = tempAddress;
+                          _gymImage = tempImage;
+                        });
+                        Navigator.pop(ctx);
+                      },
+                child: Text(l10n.coachLocationsSave,
+                    style: const TextStyle(color: Colors.white)),
+              ),
+            ],
+          );
+        },
       ),
     );
   }

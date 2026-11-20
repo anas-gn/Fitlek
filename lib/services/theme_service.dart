@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:fitlek1/services/svc_l10n.dart';
 
 enum AppThemeMode { light, dark, system }
 
@@ -40,11 +41,11 @@ class ThemeService {
   static String label(AppThemeMode mode) {
     switch (mode) {
       case AppThemeMode.light:
-        return 'Light';
+        return svcL10n.themeServiceLight;
       case AppThemeMode.dark:
-        return 'Dark';
+        return svcL10n.themeServiceDark;
       case AppThemeMode.system:
-        return 'System';
+        return svcL10n.themeServiceSystem;
     }
   }
 }

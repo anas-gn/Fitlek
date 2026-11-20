@@ -1,5 +1,7 @@
 import '../../services/live_updates.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+import 'package:fitlek1/l10n/app_localizations.dart';
 import '../../services/apiService.dart';
 import '../../models/coachConversation.dart';
 import 'coachChat.dart';
@@ -64,14 +66,13 @@ class _CoachConversationsState extends State<CoachConversations> with LiveUpdate
   String _timeAgo(DateTime dt) {
     final diff = DateTime.now().difference(dt);
     if (diff.inDays == 0) {
-      return '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+      return DateFormat.Hm(Localizations.localeOf(context).toString()).format(dt);
     } else if (diff.inDays == 1) {
-      return 'Hier';
+      return AppLocalizations.of(context).coachConversationsYesterday;
     } else if (diff.inDays < 7) {
-      const days = ['Lun.', 'Mar.', 'Mer.', 'Jeu.', 'Ven.', 'Sam.', 'Dim.'];
-      return days[dt.weekday - 1];
+      return DateFormat.E(Localizations.localeOf(context).toString()).format(dt);
     } else {
-      return '${dt.day.toString().padLeft(2, '0')}/${dt.month.toString().padLeft(2, '0')}';
+      return DateFormat.Md(Localizations.localeOf(context).toString()).format(dt);
     }
   }
 
@@ -87,7 +88,7 @@ class _CoachConversationsState extends State<CoachConversations> with LiveUpdate
           Expanded(child: _loading
             ? const Center(child: CircularProgressIndicator(color: Color(0xFF1C3731)))
             : _filtered.isEmpty
-              ? const Center(child: Text('Aucune conversation', style: TextStyle(color: Colors.white54, fontSize: 15)))
+              ? Center(child: Text(AppLocalizations.of(context).coachConversationsEmpty, style: const TextStyle(color: Colors.white54, fontSize: 15)))
               : RefreshIndicator(
                   color: const Color(0xFF1C3731), backgroundColor: const Color(0xFFE8E6D9),
                   onRefresh: _load,
@@ -96,12 +97,12 @@ class _CoachConversationsState extends State<CoachConversations> with LiveUpdate
                     itemCount: _filtered.length + 1,
                     itemBuilder: (_, i) {
                       if (i == _filtered.length) {
-                        return const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 24),
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 24),
                           child: Center(
                             child: Text(
-                              'Retrouvez ici toutes vos conversations.',
-                              style: TextStyle(color: Colors.white54, fontSize: 12),
+                              AppLocalizations.of(context).coachConversationsFooter,
+                              style: const TextStyle(color: Colors.white54, fontSize: 12),
                             ),
                           ),
                         );
@@ -133,14 +134,14 @@ class _CoachConversationsState extends State<CoachConversations> with LiveUpdate
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Messages',
-                    style: TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.bold),
+                  Text(
+                    AppLocalizations.of(context).coachConversationsTitle,
+                    style: const TextStyle(color: Colors.white, fontSize: 28, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 4),
-                  const Text(
-                    'Échangez avec vos clients',
-                    style: TextStyle(color: Colors.white70, fontSize: 14),
+                  Text(
+                    AppLocalizations.of(context).coachConversationsSubtitle,
+                    style: const TextStyle(color: Colors.white70, fontSize: 14),
                   ),
                 ],
               ),
@@ -174,7 +175,7 @@ class _CoachConversationsState extends State<CoachConversations> with LiveUpdate
                 border: _selectedFilter == 0 ? null : Border.all(color: const Color(0xFF1C3731)),
               ),
               child: Text(
-                'Tous',
+                AppLocalizations.of(context).coachConversationsFilterAll,
                 style: TextStyle(
                   color: _selectedFilter == 0 ? Colors.black : Colors.white70,
                   fontWeight: FontWeight.bold,
@@ -194,7 +195,7 @@ class _CoachConversationsState extends State<CoachConversations> with LiveUpdate
                 border: _selectedFilter == 1 ? null : Border.all(color: const Color(0xFF1C3731)),
               ),
               child: Text(
-                'Non lus',
+                AppLocalizations.of(context).coachConversationsFilterUnread,
                 style: TextStyle(
                   color: _selectedFilter == 1 ? Colors.black : Colors.white70,
                   fontWeight: FontWeight.bold,
@@ -229,7 +230,7 @@ class _CoachConversationsState extends State<CoachConversations> with LiveUpdate
                 onChanged: (v) => setState(() => _query = v),
                 style: const TextStyle(color: Colors.white, fontSize: 14),
                 decoration: InputDecoration(
-                  hintText: 'Rechercher une conversation',
+                  hintText: AppLocalizations.of(context).coachConversationsSearchHint,
                   hintStyle: TextStyle(color: Colors.white54, fontSize: 14),
                   border: InputBorder.none,
                   enabledBorder: InputBorder.none,
@@ -337,7 +338,7 @@ class _CoachConversationsState extends State<CoachConversations> with LiveUpdate
                       ],
                       Expanded(
                         child: Text(
-                          conv.lastMessage.isNotEmpty ? conv.lastMessage : 'Appuyez pour ouvrir',
+                          conv.lastMessage.isNotEmpty ? conv.lastMessage : AppLocalizations.of(context).coachConversationsTapToOpen,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(

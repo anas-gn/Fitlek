@@ -1,6 +1,7 @@
 
 import 'package:flutter/material.dart';
 import 'headerFooter.dart';
+import 'package:fitlek1/l10n/app_localizations.dart';
 
 import '../../theme/fitlek_theme_extension.dart';
 
@@ -31,30 +32,12 @@ class _MainLayoutState extends State<MainLayout> {
   final ScrollController _scrollCtrl = ScrollController();
   double _scrollOffset = 0;
 
-  static const _navItems = [
-    NavItem(
-      icon: Icons.home_outlined,
-      activeIcon: Icons.home_rounded,
-      label: 'Home',
-    ),
-    NavItem(
-      icon: Icons.explore_outlined,
-      activeIcon: Icons.explore_rounded,
-      label: 'Explore',
-    ),
-    NavItem(
-      icon: Icons.calendar_today_outlined,
-      activeIcon: Icons.calendar_month_rounded,
-      label: 'Sessions',
-    ),
-    NavItem(
-      icon: Icons.person_outline,
-      activeIcon: Icons.person_rounded,
-      label: 'Profile',
-    ),
+  List<NavItem> _navItems(AppLocalizations l10n) => [
+    NavItem(icon: Icons.home_outlined, activeIcon: Icons.home_rounded, label: l10n.mainLayoutNavHome),
+    NavItem(icon: Icons.explore_outlined, activeIcon: Icons.explore_rounded, label: l10n.mainLayoutNavExplore),
+    NavItem(icon: Icons.calendar_today_outlined, activeIcon: Icons.calendar_month_rounded, label: l10n.mainLayoutNavSessions),
+    NavItem(icon: Icons.person_outline, activeIcon: Icons.person_rounded, label: l10n.mainLayoutNavProfile),
   ];
-
-  late final List<Widget> _screens;
 
   @override
   void initState() {
@@ -63,30 +46,6 @@ class _MainLayoutState extends State<MainLayout> {
       setState(() => _scrollOffset = _scrollCtrl.offset);
     });
 
-    // ═══ REMPLACE CES PLACEHOLDERS PAR TES VRAIS ÉCRANS ═══
-    _screens = [
-      _PlaceholderScreen(
-        title: 'Home',
-        color: Theme.of(context).colorScheme.primary,
-        scrollCtrl: _scrollCtrl,
-      ),
-      _PlaceholderScreen(
-        title: 'Explore',
-        color: context.fitlek.violet,
-        scrollCtrl: _scrollCtrl,
-      ),
-      _PlaceholderScreen(
-        title: 'Sessions',
-        color: context.fitlek.info,
-        scrollCtrl: _scrollCtrl,
-      ),
-      _PlaceholderScreen(
-        title: 'Profile',
-        color: context.fitlek.error,
-        scrollCtrl: _scrollCtrl,
-      ),
-    ];
-    
     // QUAND TES ÉCRANS SONT PRÊTS, REMPLACE PAR :
     // _screens = [
     //   HomeScreen(
@@ -103,6 +62,15 @@ class _MainLayoutState extends State<MainLayout> {
     //     onLogout: widget.onLogout,
     //   ),
     // ];
+  }
+
+  List<Widget> _buildScreens(AppLocalizations l10n) {
+    return [
+      _PlaceholderScreen(title: l10n.mainLayoutNavHome, color: Theme.of(context).colorScheme.primary, scrollCtrl: _scrollCtrl),
+      _PlaceholderScreen(title: l10n.mainLayoutNavExplore, color: context.fitlek.violet, scrollCtrl: _scrollCtrl),
+      _PlaceholderScreen(title: l10n.mainLayoutNavSessions, color: context.fitlek.info, scrollCtrl: _scrollCtrl),
+      _PlaceholderScreen(title: l10n.mainLayoutNavProfile, color: context.fitlek.error, scrollCtrl: _scrollCtrl),
+    ];
   }
 
   @override
@@ -124,6 +92,7 @@ class _MainLayoutState extends State<MainLayout> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       extendBody: true,
@@ -144,14 +113,14 @@ class _MainLayoutState extends State<MainLayout> {
       // ═══ BODY (scrollable, change selon l'onglet) ═══
       body: IndexedStack(
         index: _currentIndex,
-        children: _screens,
+        children: _buildScreens(l10n),
       ),
       
       // ═══ FOOTER FIXE EN BAS ═══
       bottomNavigationBar: AppFooter(
         currentIndex: _currentIndex,
         onTap: _onNavTap,
-        items: _navItems,
+        items: _navItems(l10n),
       ),
     );
   }
@@ -197,7 +166,7 @@ class _PlaceholderScreen extends StatelessWidget {
               Icon(Icons.construction_rounded, color: color, size: 28),
               const SizedBox(height: 8),
               Text(
-                '$title — Item ${i + 1}',
+                AppLocalizations.of(context).mainLayoutPlaceholderItem(title, i + 1),
                 style: TextStyle(
                   color: color,
                   fontSize: 14,
@@ -206,7 +175,7 @@ class _PlaceholderScreen extends StatelessWidget {
               ),
               const SizedBox(height: 4),
               Text(
-                'Replace this placeholder with your real screen',
+                AppLocalizations.of(context).mainLayoutPlaceholderHint,
                 style: TextStyle(
                   color: context.fitlek.textMuted,
                   fontSize: 11,

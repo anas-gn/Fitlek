@@ -1,0 +1,13 @@
+{
+  "accountSecurityPasswordUpdateFailed": "Impossible de mettre à jour votre mot de passe. Veuillez réessayer.",
+  "apiServiceNetworkError": "Erreur réseau. Vérifiez votre connexion.",
+  "connectionRecoveryMessage": "Votre connexion est peut-être faible ou interrompue, ou le serveur est temporairement indisponible. Vérifiez votre Wi-Fi ou vos données mobiles, puis réessayez.",
+  "conversationActivityTyping": "Écrit…",
+  "conversationActivityRecording": "Enregistre un message vocal…",
+  "socialAuthNotAvailable": "La connexion avec {provider} n'est pas encore disponible. Veuillez utiliser votre e-mail et votre mot de passe.",
+  "socialAuthAccountExists": "Un compte existe déjà avec cet e-mail. Connectez-vous avec votre méthode d'origine.",
+  "socialAuthNetwork": "Vérifiez votre connexion Internet et réessayez.",
+  "socialAuthNotVerified": "La connexion avec {provider} n'a pas pu être vérifiée. Veuillez réessayer.",
+  "socialAuthUserDisabled": "Ce compte est indisponible. Veuillez contacter le support.",
+  "socialAuthFailed": "La connexion avec {provider} a échoué. Veuillez réessayer."
+}

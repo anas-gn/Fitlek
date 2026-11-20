@@ -1,10 +1,12 @@
 import 'dart:convert';
+import 'package:fitlek1/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:qr_flutter/qr_flutter.dart';
 
 import '../../services/apiService.dart';
+import '../../services/locale_service.dart';
 import '../../components/theme_selector.dart';
 import '../../services/theme_service.dart';
 import '../../constants/app_colors.dart';
@@ -81,7 +83,119 @@ class _CoachAccountState extends State<CoachAccount> {
 
   void _copyToClipboard(String value, String label) {
     Clipboard.setData(ClipboardData(text: value));
-    _showSnack('$label copied to clipboard');
+    _showSnack(AppLocalizations.of(context).coachAccountCopiedToClipboard(label));
+  }
+
+  String _themeLabel(AppThemeMode mode) {
+    final l10n = AppLocalizations.of(context);
+    return switch (mode) {
+      AppThemeMode.light => l10n.coachAccountThemeLight,
+      AppThemeMode.dark => l10n.coachAccountThemeDark,
+      AppThemeMode.system => l10n.coachAccountThemeSystem,
+    };
+  }
+
+  String _currentLocaleLabel() {
+    final l10n = AppLocalizations.of(context);
+    final code = LocaleService.locale.value?.languageCode;
+    if (code == 'en') return l10n.languageEnglish;
+    if (code == 'fr') return l10n.languageFrench;
+    return l10n.languageSystem;
+  }
+
+  void _showLanguageSheet() {
+    final cs = Theme.of(context).colorScheme;
+    final f = context.fitlek;
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => ValueListenableBuilder<Locale?>(
+        valueListenable: LocaleService.locale,
+        builder: (ctx, currentLocale, _) {
+          final l10n = AppLocalizations.of(ctx);
+          final options = <(Locale?, String)>[
+            (null, l10n.languageSystem),
+            (const Locale('en'), l10n.languageEnglish),
+            (const Locale('fr'), l10n.languageFrench),
+          ];
+          return Container(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
+            decoration: BoxDecoration(
+              color: f.card,
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(22)),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                        color: f.border,
+                        borderRadius: BorderRadius.circular(2)),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text(l10n.language,
+                    style: TextStyle(
+                        color: cs.onSurface,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w800)),
+                const SizedBox(height: 16),
+                ...options.map((opt) {
+                  final selected =
+                      currentLocale?.languageCode == opt.$1?.languageCode;
+                  return GestureDetector(
+                    onTap: () async {
+                      await LocaleService.set(opt.$1);
+                      if (ctx.mounted) Navigator.pop(ctx);
+                    },
+                    child: Container(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: selected
+                            ? cs.primary.withValues(alpha: 0.1)
+                            : f.card2,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                            color: selected
+                                ? cs.primary.withValues(alpha: 0.4)
+                                : f.border),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.language_rounded,
+                              color: selected ? cs.primary : f.textMuted,
+                              size: 20),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(opt.$2,
+                                style: TextStyle(
+                                    color: cs.onSurface,
+                                    fontSize: 14,
+                                    fontWeight: selected
+                                        ? FontWeight.w700
+                                        : FontWeight.w500)),
+                          ),
+                          if (selected)
+                            Icon(Icons.check_circle_rounded,
+                                color: cs.primary, size: 20),
+                        ],
+                      ),
+                    ),
+                  );
+                }),
+              ],
+            ),
+          );
+        },
+      ),
+    );
   }
 
   void _showDeleteAccountSheet() {
@@ -106,6 +220,7 @@ class _CoachAccountState extends State<CoachAccount> {
       enableDrag: false,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setSheet) {
+          final l10n = AppLocalizations.of(ctx);
           Future<void> startCountdown() async {
             setSheet(() { secondsLeft = 600; canResend = false; });
             while (secondsLeft > 0) {
@@ -125,23 +240,23 @@ class _CoachAccountState extends State<CoachAccount> {
               ).timeout(const Duration(seconds: 15));
               final body = jsonDecode(res.body) as Map<String, dynamic>;
               if (res.statusCode == 409 && body['blocked'] == true) {
-                setSheet(() { loading = false; errorMsg = body['reason'] as String? ?? 'Cannot delete account right now.'; });
+                setSheet(() { loading = false; errorMsg = body['reason'] as String? ?? l10n.coachAccountDeleteCannotNow; });
                 return;
               }
               if (res.statusCode != 200) {
-                setSheet(() { loading = false; errorMsg = body['error'] as String? ?? 'Failed to send code.'; });
+                setSheet(() { loading = false; errorMsg = body['error'] as String? ?? l10n.coachAccountDeleteSendCodeFailed; });
                 return;
               }
               setSheet(() { loading = false; step = 2; otpValue = ''; errorMsg = null; });
               startCountdown();
             } catch (_) {
-              setSheet(() { loading = false; errorMsg = 'Unable to reach the server.'; });
+              setSheet(() { loading = false; errorMsg = l10n.coachAccountServerUnreachable; });
             }
           }
 
           Future<void> confirmDelete() async {
             if (otpValue.length != 6) {
-              setSheet(() => errorMsg = 'Please enter the full 6-digit code.');
+              setSheet(() => errorMsg = l10n.coachAccountEnterFullCode);
               return;
             }
             setSheet(() { loading = true; errorMsg = null; });
@@ -159,9 +274,9 @@ class _CoachAccountState extends State<CoachAccount> {
                 }
                 return;
               }
-              setSheet(() { loading = false; errorMsg = body['error'] as String? ?? 'Verification failed.'; });
+              setSheet(() { loading = false; errorMsg = body['error'] as String? ?? l10n.coachAccountVerificationFailed; });
             } catch (_) {
-              setSheet(() { loading = false; errorMsg = 'Unable to reach the server.'; });
+              setSheet(() { loading = false; errorMsg = l10n.coachAccountServerUnreachable; });
             }
           }
 
@@ -189,8 +304,8 @@ class _CoachAccountState extends State<CoachAccount> {
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Delete Account', style: TextStyle(color: cs.onSurface, fontSize: 17, fontWeight: FontWeight.w800)),
-                      Text('This action is permanent', style: TextStyle(color: textMuted, fontSize: 12)),
+                      Text(l10n.coachAccountDeleteTitle, style: TextStyle(color: cs.onSurface, fontSize: 17, fontWeight: FontWeight.w800)),
+                      Text(l10n.coachAccountDeletePermanentSubtitle, style: TextStyle(color: textMuted, fontSize: 12)),
                     ],
                   ),
                 ],
@@ -206,13 +321,13 @@ class _CoachAccountState extends State<CoachAccount> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('What will be deleted:', style: TextStyle(color: errorColor, fontSize: 12, fontWeight: FontWeight.w700)),
+                    Text(l10n.coachAccountDeleteWhatWillBeDeleted, style: TextStyle(color: errorColor, fontSize: 12, fontWeight: FontWeight.w700)),
                     const SizedBox(height: 8),
                     ...[
-                      'Your coach profile and personal information',
-                      'All client relationships and bookings',
-                      'Messages and conversations',
-                      'Referral points and invitation history',
+                      l10n.coachAccountDeleteItem1,
+                      l10n.coachAccountDeleteItem2,
+                      l10n.coachAccountDeleteItem3,
+                      l10n.coachAccountDeleteItem4,
                     ].map((item) => Padding(
                       padding: const EdgeInsets.only(bottom: 5),
                       child: Row(
@@ -244,7 +359,7 @@ class _CoachAccountState extends State<CoachAccount> {
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
-                        'I understand this action is irreversible and all my data will be permanently deleted.',
+                        l10n.coachAccountDeleteUnderstandCheckbox,
                         style: TextStyle(color: cs.onSurface, fontSize: 12.5, height: 1.4),
                       ),
                     ),
@@ -278,7 +393,7 @@ class _CoachAccountState extends State<CoachAccount> {
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(color: borderColor),
                         ),
-                        child: Center(child: Text('Cancel',
+                        child: Center(child: Text(l10n.coachAccountCancel,
                             style: TextStyle(color: cs.onSurface, fontWeight: FontWeight.w700, fontSize: 14))),
                       ),
                     ),
@@ -298,8 +413,8 @@ class _CoachAccountState extends State<CoachAccount> {
                           child: loading
                               ? const SizedBox(width: 18, height: 18,
                                   child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                              : const Text('SEND CODE',
-                                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 13, letterSpacing: 0.8)),
+                              : Text(l10n.coachAccountDeleteSendCodeButton,
+                                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 13, letterSpacing: 0.8)),
                         ),
                       ),
                     ),
@@ -330,14 +445,14 @@ class _CoachAccountState extends State<CoachAccount> {
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Verify your identity', style: TextStyle(color: cs.onSurface, fontSize: 17, fontWeight: FontWeight.w800)),
-                        Text('Check your email for the code', style: TextStyle(color: textMuted, fontSize: 12)),
+                        Text(l10n.coachAccountDeleteVerifyTitle, style: TextStyle(color: cs.onSurface, fontSize: 17, fontWeight: FontWeight.w800)),
+                        Text(l10n.coachAccountDeleteCheckEmailSubtitle, style: TextStyle(color: textMuted, fontSize: 12)),
                       ],
                     ),
                   ],
                 ),
                 const SizedBox(height: 20),
-                Text('Enter the 6-digit code sent to your email address to confirm account deletion.',
+                Text(l10n.coachAccountDeleteEnterCodeInstructions,
                   style: TextStyle(color: textMuted, fontSize: 13, height: 1.5)),
                 const SizedBox(height: 16),
                 Container(
@@ -367,12 +482,12 @@ class _CoachAccountState extends State<CoachAccount> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     if (!canResend)
-                      Text('Code expires in $mins:$secs', style: TextStyle(color: textMuted, fontSize: 12))
+                      Text(l10n.coachAccountDeleteCodeExpiresIn(mins, secs), style: TextStyle(color: textMuted, fontSize: 12))
                     else
-                      Text('Code expired', style: TextStyle(color: errorColor, fontSize: 12, fontWeight: FontWeight.w600)),
+                      Text(l10n.coachAccountDeleteCodeExpired, style: TextStyle(color: errorColor, fontSize: 12, fontWeight: FontWeight.w600)),
                     GestureDetector(
                       onTap: canResend && !loading ? requestOtp : null,
-                      child: Text('Resend code', style: TextStyle(
+                      child: Text(l10n.coachAccountDeleteResendCode, style: TextStyle(
                         color: canResend ? errorColor : textMuted,
                         fontSize: 12, fontWeight: FontWeight.w700,
                         decoration: canResend ? TextDecoration.underline : null,
@@ -407,7 +522,7 @@ class _CoachAccountState extends State<CoachAccount> {
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(color: borderColor),
                           ),
-                          child: Center(child: Text('Back',
+                          child: Center(child: Text(l10n.coachAccountBack,
                               style: TextStyle(color: cs.onSurface, fontWeight: FontWeight.w700, fontSize: 14))),
                         ),
                       ),
@@ -427,8 +542,8 @@ class _CoachAccountState extends State<CoachAccount> {
                             child: loading
                                 ? const SizedBox(width: 18, height: 18,
                                     child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                                : const Text('DELETE ACCOUNT',
-                                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 12, letterSpacing: 0.5)),
+                                : Text(l10n.coachAccountDeleteConfirmButton,
+                                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 12, letterSpacing: 0.5)),
                           ),
                         ),
                       ),
@@ -463,6 +578,7 @@ class _CoachAccountState extends State<CoachAccount> {
   void _showThemeSheet(ThemeController controller) {
     final cs = Theme.of(context).colorScheme;
     final f = context.fitlek;
+    final l10n = AppLocalizations.of(context);
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -486,9 +602,9 @@ class _CoachAccountState extends State<CoachAccount> {
                 ),
               ),
               const SizedBox(height: 16),
-              Text('Appearance', style: TextStyle(color: cs.onSurface, fontSize: 16, fontWeight: FontWeight.w800)),
+              Text(l10n.coachAccountAppearance, style: TextStyle(color: cs.onSurface, fontSize: 16, fontWeight: FontWeight.w800)),
               const SizedBox(height: 6),
-              Text('Choose the app theme', style: TextStyle(color: f.textMuted, fontSize: 12)),
+              Text(l10n.coachAccountChooseAppTheme, style: TextStyle(color: f.textMuted, fontSize: 12)),
               const SizedBox(height: 16),
               ...AppThemeMode.values.map((mode) {
                 final selected = controller.mode == mode;
@@ -515,7 +631,7 @@ class _CoachAccountState extends State<CoachAccount> {
                         Icon(icon, color: selected ? cs.primary : f.textMuted, size: 20),
                         const SizedBox(width: 12),
                         Expanded(
-                          child: Text(ThemeService.label(mode),
+                          child: Text(_themeLabel(mode),
                               style: TextStyle(color: cs.onSurface, fontSize: 14, fontWeight: selected ? FontWeight.w700 : FontWeight.w500)),
                         ),
                         if (selected) Icon(Icons.check_circle_rounded, color: cs.primary, size: 20),
@@ -532,6 +648,7 @@ class _CoachAccountState extends State<CoachAccount> {
   }
 
   void _showQrDialog(String code) {
+    final l10n = AppLocalizations.of(context);
     showDialog(
       context: context,
       builder: (ctx) => Dialog(
@@ -542,7 +659,7 @@ class _CoachAccountState extends State<CoachAccount> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text('Scan to invite',
+              Text(l10n.coachAccountScanToInvite,
                   style: TextStyle(color: Theme.of(context).colorScheme.onSurface, fontSize: 16, fontWeight: FontWeight.w800)),
               const SizedBox(height: 20),
               Container(
@@ -560,7 +677,7 @@ class _CoachAccountState extends State<CoachAccount> {
               const SizedBox(height: 20),
               GestureDetector(
                 onTap: () {
-                  _copyToClipboard(code, 'Code');
+                  _copyToClipboard(code, l10n.coachAccountCode);
                   Navigator.pop(ctx);
                 },
                 child: Container(
@@ -568,7 +685,7 @@ class _CoachAccountState extends State<CoachAccount> {
                   padding: const EdgeInsets.symmetric(vertical: 13),
                   decoration: BoxDecoration(color: Theme.of(context).colorScheme.primary, borderRadius: BorderRadius.circular(14)),
                   child: Center(
-                    child: Text('Copy code',
+                    child: Text(l10n.coachAccountCopyCode,
                         style: TextStyle(color: Theme.of(context).colorScheme.onPrimary, fontWeight: FontWeight.w800)),
                   ),
                 ),
@@ -581,6 +698,7 @@ class _CoachAccountState extends State<CoachAccount> {
   }
 
   Widget _buildReferralCard(CoachProfileData p) {
+    final l10n = AppLocalizations.of(context);
     final code = p.invitationCode.isNotEmpty ? p.invitationCode : '—';
     const onDark = AppColors.sand;
     final onDarkMuted = AppColors.sand.withOpacity(0.62);
@@ -603,9 +721,9 @@ class _CoachAccountState extends State<CoachAccount> {
         children: [
           Row(
             children: [
-              const Expanded(
-                child: Text('Coach Referral',
-                    style: TextStyle(color: onDark, fontSize: 18, fontWeight: FontWeight.w800)),
+              Expanded(
+                child: Text(l10n.coachAccountReferralTitle,
+                    style: const TextStyle(color: onDark, fontSize: 18, fontWeight: FontWeight.w800)),
               ),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
@@ -619,7 +737,7 @@ class _CoachAccountState extends State<CoachAccount> {
             ],
           ),
           const SizedBox(height: 4),
-          Text('Invite friends and earn rewards', style: TextStyle(color: accent, fontSize: 12.5, fontWeight: FontWeight.w600)),
+          Text(l10n.coachAccountReferralSubtitle, style: TextStyle(color: accent, fontSize: 12.5, fontWeight: FontWeight.w600)),
           const SizedBox(height: 16),
 
           Container(
@@ -655,11 +773,11 @@ class _CoachAccountState extends State<CoachAccount> {
                       style: const TextStyle(color: onDark, fontSize: 20, fontWeight: FontWeight.w900, letterSpacing: 2)),
                 ),
                 GestureDetector(
-                  onTap: () => _copyToClipboard(p.invitationCode, 'Code'),
+                  onTap: () => _copyToClipboard(p.invitationCode, l10n.coachAccountCode),
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 9),
                     decoration: BoxDecoration(color: onDark, borderRadius: BorderRadius.circular(10)),
-                    child: const Text('Copy', style: TextStyle(color: AppColors.cyprus, fontSize: 13, fontWeight: FontWeight.w800)),
+                    child: Text(l10n.coachAccountCopy, style: const TextStyle(color: AppColors.cyprus, fontSize: 13, fontWeight: FontWeight.w800)),
                   ),
                 ),
               ],
@@ -667,7 +785,7 @@ class _CoachAccountState extends State<CoachAccount> {
           ),
           const SizedBox(height: 14),
           Text(
-            'Earn ${p.referralReward} bonus points for every professional coach you onboard to the SIRVYA ecosystem.',
+            l10n.coachAccountReferralRewardDesc(p.referralReward),
             style: TextStyle(color: onDarkMuted, fontSize: 11.5, height: 1.5, fontStyle: FontStyle.italic),
           ),
         ],
@@ -757,13 +875,14 @@ class _CoachAccountState extends State<CoachAccount> {
     final f = context.fitlek;
     final cs = Theme.of(context).colorScheme;
     final controller = ThemeControllerScope.of(context);
+    final l10n = AppLocalizations.of(context);
 
     return Scaffold(
       backgroundColor: const Color(0xFF0F261F),
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        title: const Text('Account & referrals', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w600)),
+        title: Text(l10n.coachAccountTitle, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w600)),
         centerTitle: true,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
@@ -786,7 +905,7 @@ class _CoachAccountState extends State<CoachAccount> {
                   _settingsRow(
                     icon: Icons.lock_outline_rounded,
                     iconColor: cs.primary,
-                    label: 'Private account',
+                    label: l10n.coachAccountPrivateAccount,
                     showChevron: false,
                     trailingWidget: Transform.scale(
                       scale: 0.9,
@@ -806,9 +925,9 @@ class _CoachAccountState extends State<CoachAccount> {
                   _settingsRow(
                     icon: Icons.mail_outline_rounded,
                     iconColor: cs.primary,
-                    label: 'Email',
+                    label: l10n.coachAccountEmail,
                     value: _email,
-                    subtitle: 'Change email with verification.',
+                    subtitle: l10n.coachAccountChangeEmailSubtitle,
                     onTap: () async {
                       final newEmail = await Navigator.push(
                         context,
@@ -816,7 +935,7 @@ class _CoachAccountState extends State<CoachAccount> {
                       );
                       if (newEmail != null && newEmail is String) {
                         setState(() => _email = newEmail);
-                        _showSnack('Email updated successfully');
+                        _showSnack(l10n.coachAccountEmailUpdated);
                       }
                     },
                   ),
@@ -824,7 +943,7 @@ class _CoachAccountState extends State<CoachAccount> {
                   _settingsRow(
                     icon: Icons.phone_outlined,
                     iconColor: cs.primary,
-                    label: 'Phone',
+                    label: l10n.coachAccountPhone,
                     value: _phone,
                     onTap: () async {
                       final newPhoneStr = await Navigator.push(
@@ -833,7 +952,7 @@ class _CoachAccountState extends State<CoachAccount> {
                       );
                       if (newPhoneStr != null && newPhoneStr is String) {
                         setState(() => _phone = newPhoneStr);
-                        _showSnack('Phone updated successfully');
+                        _showSnack(l10n.coachAccountPhoneUpdated);
                       }
                     },
                   ),
@@ -841,14 +960,14 @@ class _CoachAccountState extends State<CoachAccount> {
                   _settingsRow(
                     icon: Icons.security_rounded,
                     iconColor: cs.primary,
-                    label: 'Password & security',
+                    label: l10n.coachAccountPasswordSecurity,
                     onTap: () async {
                       final success = await Navigator.push(
                         context,
                         MaterialPageRoute(builder: (_) => CoachChangePassword(token: widget.token)),
                       );
                       if (success == true) {
-                        _showSnack('Password updated successfully');
+                        _showSnack(l10n.coachAccountPasswordUpdated);
                       }
                     },
                   ),
@@ -869,16 +988,27 @@ class _CoachAccountState extends State<CoachAccount> {
                     builder: (context, _) => _settingsRow(
                       icon: Icons.brightness_6_rounded,
                       iconColor: cs.primary,
-                      label: 'Appearance',
-                      trailingText: ThemeService.label(controller.mode),
+                      label: l10n.coachAccountAppearance,
+                      trailingText: _themeLabel(controller.mode),
                       onTap: () => _showThemeSheet(controller),
+                    ),
+                  ),
+                  _settingsDivider(),
+                  ValueListenableBuilder<Locale?>(
+                    valueListenable: LocaleService.locale,
+                    builder: (context, _, __) => _settingsRow(
+                      icon: Icons.language_rounded,
+                      iconColor: cs.primary,
+                      label: l10n.language,
+                      trailingText: _currentLocaleLabel(),
+                      onTap: _showLanguageSheet,
                     ),
                   ),
                   _settingsDivider(),
                   _settingsRow(
                     icon: Icons.notifications_none_rounded,
                     iconColor: cs.primary,
-                    label: 'Notifications',
+                    label: l10n.coachAccountNotifications,
                     onTap: () {
                       Navigator.push(
                         context,
@@ -890,7 +1020,7 @@ class _CoachAccountState extends State<CoachAccount> {
                   _settingsRow(
                     icon: Icons.block_rounded,
                     iconColor: cs.primary,
-                    label: 'Blocked Users',
+                    label: l10n.coachAccountBlockedUsers,
                     onTap: () {
                       Navigator.push(
                         context,
@@ -903,7 +1033,7 @@ class _CoachAccountState extends State<CoachAccount> {
                   _settingsRow(
                     icon: Icons.delete_forever_rounded,
                     iconColor: f.textMuted,
-                    label: 'Delete Account',
+                    label: l10n.coachAccountDeleteAccount,
                     labelColor: f.textMuted,
                     showChevron: false,
                     onTap: _showDeleteAccountSheet,

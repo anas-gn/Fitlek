@@ -1,3 +1,4 @@
+import 'package:fitlek1/services/svc_l10n.dart';
 import 'dart:async';
 import 'package:flutter/widgets.dart';
 import 'socketService.dart';
@@ -39,8 +40,8 @@ class ConversationActivity extends ValueNotifier<String?>
         '${event['userID']}' == '$userID') return;
     _remoteExpiry?.cancel();
     value = switch (event['activity']) {
-      'typing' => 'Typing…',
-      'recording' => 'Recording a voice message…',
+      'typing' => svcL10n.conversationActivityTyping,
+      'recording' => svcL10n.conversationActivityRecording,
       _ => null
     };
     if (value != null)

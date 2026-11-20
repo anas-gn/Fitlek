@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:fitlek1/l10n/app_localizations.dart';
 import '../services/meal_scan_service.dart';
 import 'meal_visuals.dart';
 import 'sirvya_logo.dart';
@@ -46,6 +47,7 @@ class MealShareCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final calories = meal.total('calories').round();
     final protein = meal.total('protein').round();
     final carbs = meal.total('carbs').round();
@@ -75,8 +77,8 @@ class MealShareCard extends StatelessWidget {
       child: ClipRRect(
         borderRadius: BorderRadius.circular(28),
         child: isSirvyaOverlay
-            ? _buildSirvyaLayout(calories, protein, carbs, fat)
-            : _buildClassicCardLayout(calories, protein, carbs, fat),
+            ? _buildSirvyaLayout(l10n, calories, protein, carbs, fat)
+            : _buildClassicCardLayout(l10n, calories, protein, carbs, fat),
       ),
     );
   }
@@ -85,7 +87,7 @@ class MealShareCard extends StatelessWidget {
   // 1. SIRVYA PHOTO OVERLAY STYLE (Full-Bleed Native Photo + Pure White HUD)
   // ===========================================================================
   Widget _buildSirvyaLayout(
-      int calories, int protein, int carbs, int fat) {
+      AppLocalizations l10n, int calories, int protein, int carbs, int fat) {
     return Stack(
       fit: StackFit.expand,
       children: [
@@ -153,7 +155,7 @@ class MealShareCard extends StatelessWidget {
               const Spacer(),
 
               // Bottom Stats & Meal Details in pure white directly on top of image
-              _buildSirvyaBottomHUD(calories, protein, carbs, fat),
+              _buildSirvyaBottomHUD(l10n, calories, protein, carbs, fat),
             ],
           ),
         ),
@@ -218,7 +220,7 @@ class MealShareCard extends StatelessWidget {
   }
 
   Widget _buildSirvyaBottomHUD(
-      int calories, int protein, int carbs, int fat) {
+      AppLocalizations l10n, int calories, int protein, int carbs, int fat) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       mainAxisSize: MainAxisSize.min,
@@ -263,7 +265,7 @@ class MealShareCard extends StatelessWidget {
                   color: Colors.white,
                   size: 21,
                 ),
-                label: 'Calories',
+                label: l10n.mealShareCardCalories,
                 value: '$calories',
                 subUnit: 'kcal',
               ),
@@ -273,7 +275,7 @@ class MealShareCard extends StatelessWidget {
             Expanded(
               child: _buildStatColumn(
                 icon: const MuscleBicepIcon(size: 20, color: Colors.white),
-                label: 'Protein',
+                label: l10n.mealShareCardProtein,
                 value: '${protein}g',
               ),
             ),
@@ -282,7 +284,7 @@ class MealShareCard extends StatelessWidget {
             Expanded(
               child: _buildStatColumn(
                 icon: const WheatGrainIcon(size: 20, color: Colors.white),
-                label: 'Carbs',
+                label: l10n.mealShareCardCarbs,
                 value: '${carbs}g',
               ),
             ),
@@ -295,7 +297,7 @@ class MealShareCard extends StatelessWidget {
                   color: Colors.white,
                   size: 20,
                 ),
-                label: 'Fat',
+                label: l10n.mealShareCardFat,
                 value: '${fat}g',
               ),
             ),
@@ -412,7 +414,7 @@ class MealShareCard extends StatelessWidget {
   // 2. CLASSIC CARD STYLE
   // ===========================================================================
   Widget _buildClassicCardLayout(
-      int calories, int protein, int carbs, int fat) {
+      AppLocalizations l10n, int calories, int protein, int carbs, int fat) {
     return Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(28),
@@ -445,7 +447,7 @@ class MealShareCard extends StatelessWidget {
             SizedBox(height: isStory ? 12 : 8),
             _buildClassicTitle(),
             SizedBox(height: isStory ? 12 : 8),
-            _buildClassicNutrition(calories, protein, carbs, fat),
+            _buildClassicNutrition(l10n, calories, protein, carbs, fat),
             if (showIngredients && meal.ingredients.isNotEmpty) ...[
               const SizedBox(height: 10),
               _buildIngredientsChips(),
@@ -500,7 +502,7 @@ class MealShareCard extends StatelessWidget {
   }
 
   Widget _buildClassicNutrition(
-      int calories, int protein, int carbs, int fat) {
+      AppLocalizations l10n, int calories, int protein, int carbs, int fat) {
     return Container(
       padding: EdgeInsets.symmetric(
         horizontal: 12,
@@ -522,7 +524,7 @@ class MealShareCard extends StatelessWidget {
                 child: _buildStatColumn(
                   icon: const Icon(Icons.local_fire_department_rounded,
                       color: Colors.white, size: 20),
-                  label: 'Calories',
+                  label: l10n.mealShareCardCalories,
                   value: '$calories',
                   subUnit: 'kcal',
                 ),
@@ -531,7 +533,7 @@ class MealShareCard extends StatelessWidget {
               Expanded(
                 child: _buildStatColumn(
                   icon: const MuscleBicepIcon(size: 19, color: Colors.white),
-                  label: 'Protein',
+                  label: l10n.mealShareCardProtein,
                   value: '${protein}g',
                 ),
               ),
@@ -539,7 +541,7 @@ class MealShareCard extends StatelessWidget {
               Expanded(
                 child: _buildStatColumn(
                   icon: const WheatGrainIcon(size: 19, color: Colors.white),
-                  label: 'Carbs',
+                  label: l10n.mealShareCardCarbs,
                   value: '${carbs}g',
                 ),
               ),
@@ -548,7 +550,7 @@ class MealShareCard extends StatelessWidget {
                 child: _buildStatColumn(
                   icon: const Icon(Icons.water_drop_outlined,
                       color: Colors.white, size: 19),
-                  label: 'Fat',
+                  label: l10n.mealShareCardFat,
                   value: '${fat}g',
                 ),
               ),

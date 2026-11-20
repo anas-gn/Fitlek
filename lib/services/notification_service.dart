@@ -2,6 +2,7 @@ import 'campaign_service.dart';
 import '../components/notification_card.dart';
 import 'socketService.dart';
 import 'notification_delivery_gate.dart';
+import 'package:fitlek1/services/svc_l10n.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -145,11 +146,11 @@ class NotificationService {
     }
 
     // 4. Create high importance Android notification channel
-    const AndroidNotificationChannel channel = AndroidNotificationChannel(
+    final AndroidNotificationChannel channel = AndroidNotificationChannel(
       'sirvya_high_importance_channel', // id
-      'Sirvya Notifications', // title
+      svcL10n.notificationServiceChannelName, // title
       description:
-          'This channel is used for important notifications.', // description
+          svcL10n.notificationServiceChannelDesc, // description
       importance: Importance.max,
       playSound: true,
       enableVibration: true,
@@ -291,17 +292,17 @@ class NotificationService {
             DateTime.now().millisecondsSinceEpoch.remainder(2147483647),
         title: title,
         body: body,
-        notificationDetails: const NotificationDetails(
+        notificationDetails: NotificationDetails(
             android: AndroidNotificationDetails(
-                'sirvya_high_importance_channel', 'Sirvya Notifications',
-                channelDescription:
-                    'This channel is used for important notifications.',
+                'sirvya_high_importance_channel',
+                svcL10n.notificationServiceChannelName,
+                channelDescription: svcL10n.notificationServiceChannelDesc,
                 importance: Importance.max,
                 priority: Priority.high,
                 playSound: true,
                 enableVibration: true,
                 icon: '@mipmap/ic_launcher'),
-            iOS: DarwinNotificationDetails(
+            iOS: const DarwinNotificationDetails(
                 presentAlert: true, presentBadge: true, presentSound: true)),
         payload: jsonEncode(item));
   }

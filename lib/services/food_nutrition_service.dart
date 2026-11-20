@@ -7,6 +7,7 @@ import 'meal_scan_service.dart';
 class FoodItem {
   final String id;
   final String name;
+  final String? nameFr;
   final String category;
   final double calories; // per 100g
   final double protein; // per 100g
@@ -22,6 +23,7 @@ class FoodItem {
   const FoodItem({
     required this.id,
     required this.name,
+    this.nameFr,
     this.category = 'other',
     required this.calories,
     required this.protein,
@@ -35,9 +37,17 @@ class FoodItem {
     this.aliases = const [],
   });
 
+  String displayName([String? languageCode]) {
+    if (languageCode == 'fr' && nameFr != null && nameFr!.trim().isNotEmpty) {
+      return nameFr!;
+    }
+    return name;
+  }
+
   factory FoodItem.fromLocalJson(Map<String, dynamic> j) => FoodItem(
         id: j['id'] as String? ?? '',
         name: j['name'] as String? ?? '',
+        nameFr: j['name_fr'] as String?,
         category: j['category'] as String? ?? 'other',
         calories: (j['cal'] as num?)?.toDouble() ?? 0.0,
         protein: (j['p'] as num?)?.toDouble() ?? 0.0,
@@ -48,7 +58,7 @@ class FoodItem {
         aliases: (j['aliases'] as List?)?.map((e) => '$e').toList() ?? const [],
       );
 
-  factory FoodItem.fromOpenFoodFacts(Map<String, dynamic> p) {
+  factory FoodItem.fromOpenFoodFacts(Map<String, dynamic> p, [String? languageCode]) {
     final nut = (p['nutriments'] as Map<String, dynamic>?) ?? const {};
 
     double parseNum(dynamic val) {
@@ -98,11 +108,23 @@ class FoodItem {
 
     final brand = parseBrand(p['brands']);
 
-    String rawName = (p['product_name'] as String?)?.trim() ??
-        (p['product_name_en'] as String?)?.trim() ??
-        (p['generic_name'] as String?)?.trim() ??
-        (p['generic_name_en'] as String?)?.trim() ??
-        '';
+    final isFr = languageCode == 'fr';
+    String rawName = '';
+    if (isFr) {
+      rawName = (p['product_name_fr'] as String?)?.trim() ??
+          (p['generic_name_fr'] as String?)?.trim() ??
+          '';
+    }
+    if (rawName.isEmpty) {
+      rawName = (p['product_name'] as String?)?.trim() ??
+          (p['product_name_en'] as String?)?.trim() ??
+          (p['generic_name'] as String?)?.trim() ??
+          (p['generic_name_en'] as String?)?.trim() ??
+          '';
+    }
+
+    final rawNameFr = (p['product_name_fr'] as String?)?.trim() ??
+        (p['generic_name_fr'] as String?)?.trim();
 
     if (rawName.isEmpty && brand != null && brand.isNotEmpty) {
       rawName = brand;
@@ -129,6 +151,7 @@ class FoodItem {
     return FoodItem(
       id: rawCode,
       name: displayName,
+      nameFr: rawNameFr != null && rawNameFr.isNotEmpty ? rawNameFr : null,
       category: 'packaged',
       calories: double.parse(kcal.toStringAsFixed(1)),
       protein: double.parse(protein.toStringAsFixed(1)),
@@ -140,10 +163,10 @@ class FoodItem {
     );
   }
 
-  MealIngredient toIngredient({required double grams}) {
+  MealIngredient toIngredient({required double grams, String? languageCode}) {
     final factor = grams / 100.0;
     return MealIngredient(
-      name: name,
+      name: displayName(languageCode),
       grams: grams,
       quantity: '${grams.round()} g',
       calories: double.parse((calories * factor).toStringAsFixed(1)),
@@ -192,7 +215,8 @@ class FoodNutritionService {
     }
   }
 
-  List<FoodItem> searchLocal(String query, {String? category, int limit = 25}) {
+  List<FoodItem> searchLocal(String query,
+      {String? category, int limit = 25, String? languageCode}) {
     final q = _clean(query);
     Iterable<FoodItem> pool = _localFoods;
     if (category != null && category.isNotEmpty && category != 'all') {
@@ -203,9 +227,12 @@ class FoodNutritionService {
       return pool.take(limit).toList();
     }
 
+    final isFr = languageCode == 'fr';
     final scored = <MapEntry<FoodItem, int>>[];
     for (final item in pool) {
-      final nameClean = _clean(item.name);
+      final primaryName = isFr ? (item.nameFr ?? item.name) : item.name;
+      final secondaryName = isFr ? item.name : (item.nameFr ?? '');
+      final nameClean = _clean(primaryName);
       final idClean = _clean(item.id);
       int score = 0;
 
@@ -217,10 +244,29 @@ class FoodNutritionService {
         score = 65;
       } else if (nameClean.contains(q)) {
         score = 45;
-      } else if (item.aliases.any((a) => _clean(a).startsWith(q))) {
-        score = 35;
-      } else if (item.aliases.any((a) => _clean(a).contains(q))) {
-        score = 25;
+      } else if (q.contains(nameClean) && nameClean.length >= 4) {
+        score = 42;
+      } else {
+        if (secondaryName.isNotEmpty) {
+          final secClean = _clean(secondaryName);
+          if (secClean == q) {
+            score = 75;
+          } else if (secClean.startsWith(q)) {
+            score = 60;
+          } else if (secClean.contains(q)) {
+            score = 40;
+          }
+        }
+        if (score == 0) {
+          if (item.aliases.any((a) => _clean(a).startsWith(q))) {
+            score = 35;
+          } else if (item.aliases.any((a) => _clean(a).contains(q))) {
+            score = 25;
+          } else if (item.aliases
+              .any((a) => q.contains(_clean(a)) && _clean(a).length >= 4)) {
+            score = 22;
+          }
+        }
       }
 
       if (score > 0) {
@@ -232,11 +278,12 @@ class FoodNutritionService {
     return scored.map((e) => e.key).take(limit).toList();
   }
 
-  Future<List<FoodItem>> searchOnline(String query, {int limit = 10}) async {
+  Future<List<FoodItem>> searchOnline(String query,
+      {int limit = 10, String? languageCode}) async {
     final q = query.trim();
     if (q.length < 2) return const [];
 
-    final cacheKey = q.toLowerCase();
+    final cacheKey = '${languageCode ?? "all"}_${q.toLowerCase()}';
     if (_onlineCache.containsKey(cacheKey)) {
       return _onlineCache[cacheKey]!;
     }
@@ -248,7 +295,7 @@ class FoodNutritionService {
       final results = <FoodItem>[];
       for (final p in rawList) {
         if (p is Map<String, dynamic>) {
-          final item = FoodItem.fromOpenFoodFacts(p);
+          final item = FoodItem.fromOpenFoodFacts(p, languageCode);
           if (item.name.isNotEmpty && item.name != 'Unknown food item') {
             results.add(item);
           }
@@ -282,7 +329,7 @@ class FoodNutritionService {
     // Attempt 2: Open Food Facts API v2 search with projection (fields=)
     try {
       const fields =
-          'code,product_name,product_name_en,generic_name,brands,nutriments,image_front_small_url,image_small_url,image_url';
+          'code,product_name,product_name_fr,product_name_en,generic_name,generic_name_fr,brands,nutriments,image_front_small_url,image_small_url,image_url';
       final uri = Uri.parse(
         'https://world.openfoodfacts.org/api/v2/search?search_terms=${Uri.encodeComponent(q)}&fields=$fields&page_size=$limit',
       );
@@ -309,19 +356,22 @@ class FoodNutritionService {
   Future<List<FoodItem>> search({
     required String query,
     String? category,
+    String? languageCode,
     bool autoFallbackOnline = true,
   }) async {
     await init();
-    final local = searchLocal(query, category: category);
+    final local =
+        searchLocal(query, category: category, languageCode: languageCode);
 
     // If query is specific and local database has few matches, query Open Food Facts
     if (autoFallbackOnline && query.trim().length >= 2 && local.length < 2) {
-      final online = await searchOnline(query);
+      final online =
+          await searchOnline(query, languageCode: languageCode);
       if (online.isNotEmpty) {
-        final existingNames = local.map((e) => _clean(e.name)).toSet();
+        final existingNames = local.map((e) => _clean(e.displayName(languageCode))).toSet();
         final combined = List<FoodItem>.from(local);
         for (final item in online) {
-          if (!existingNames.contains(_clean(item.name))) {
+          if (!existingNames.contains(_clean(item.displayName(languageCode)))) {
             combined.add(item);
           }
         }

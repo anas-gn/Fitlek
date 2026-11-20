@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'dart:convert';
+import 'package:fitlek1/l10n/app_localizations.dart';
 import '../services/meal_scan_service.dart';
 import '../constants/urls.dart';
 import 'meal_share_card.dart';
@@ -74,7 +75,8 @@ class IngredientThumbnail extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Semantics(
-      label: '${ingredient.name} illustration',
+      label: AppLocalizations.of(context)
+          .mealVisualsIngredientIllustration(ingredient.name),
       image: true,
       child: Container(
         width: size,
@@ -174,150 +176,155 @@ class MealResultView extends StatelessWidget {
       required this.onRemove,
       this.diaryControls});
   @override
-  Widget build(BuildContext context) => Scaffold(
-        backgroundColor: mealInk,
-        bottomNavigationBar: _saveBar(context),
-        body: CustomScrollView(slivers: [
-          SliverAppBar(
-              backgroundColor: mealInk,
-              surfaceTintColor: Colors.transparent,
-              pinned: true,
-              expandedHeight: 305,
-              title: const Text('Meal analysis',
-                  style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600)),
-              actions: [
-                IconButton(
-                    tooltip: 'Share meal',
-                    onPressed: () => showMealShareModal(context, meal),
-                    icon: Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: const BoxDecoration(
-                            shape: BoxShape.circle, color: Color(0x88071E19)),
-                        child: const Icon(Icons.share_rounded,
-                            size: 19, color: mealCream))),
-                const SizedBox(width: 8),
-              ],
-              leading: IconButton(
-                  tooltip: 'Back',
-                  onPressed: () => Navigator.maybePop(context),
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return Scaffold(
+      backgroundColor: mealInk,
+      bottomNavigationBar: _saveBar(context, l10n),
+      body: CustomScrollView(slivers: [
+        SliverAppBar(
+            backgroundColor: mealInk,
+            surfaceTintColor: Colors.transparent,
+            pinned: true,
+            expandedHeight: 305,
+            title: Text(l10n.mealVisualsAnalysisTitle,
+                style:
+                    const TextStyle(fontSize: 17, fontWeight: FontWeight.w600)),
+            actions: [
+              IconButton(
+                  tooltip: l10n.mealVisualsShareMealTooltip,
+                  onPressed: () => showMealShareModal(context, meal),
                   icon: Container(
                       padding: const EdgeInsets.all(8),
                       decoration: const BoxDecoration(
                           shape: BoxShape.circle, color: Color(0x88071E19)),
-                      child: const Icon(Icons.arrow_back, size: 20))),
-              flexibleSpace: FlexibleSpaceBar(
-                  background: Stack(fit: StackFit.expand, children: [
-                MealPhoto(path: meal.photoPath, bytes: meal.photoBytes),
-                const DecoratedBox(
-                    decoration: BoxDecoration(
-                        gradient: LinearGradient(
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                            stops: [
-                      0,
-                      .4,
-                      1
-                    ],
-                            colors: [
-                      Color(0x77071E19),
-                      Color(0x00071E19),
-                      mealInk
-                    ]))),
-                Positioned(
-                    left: 24,
-                    right: 24,
-                    bottom: 24,
-                    child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          MealChip(
-                              meal.confidence == 'manual'
-                                  ? 'YOUR MEAL DIARY'
-                                  : 'SIRVYA MEAL SCAN',
-                              icon: Icons.auto_awesome_rounded),
-                          const SizedBox(height: 14),
-                          Text(meal.name,
-                              maxLines: 3,
-                              overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                  color: mealCream,
-                                  fontSize: 27,
-                                  height: 1.12,
-                                  letterSpacing: -.8,
-                                  fontWeight: FontWeight.w800)),
-                          const SizedBox(height: 9),
-                          Row(children: [
-                            const Icon(Icons.rice_bowl_outlined,
-                                color: mealMuted, size: 15),
-                            const SizedBox(width: 7),
-                            Expanded(
-                                child: Text(
-                                    meal.confidence == 'manual'
-                                        ? '1 serving · Entered nutrition'
-                                        : '${meal.portion == 1 ? '1 plate' : '${meal.portion} plates'} · Estimated nutrition',
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
-                                        color: mealMuted, fontSize: 12)))
-                          ]),
-                        ])),
-              ]))),
-          SliverPadding(
-              padding: const EdgeInsets.fromLTRB(20, 0, 20, 30),
-              sliver: SliverList.list(children: [
-                if (diaryControls != null) ...[
-                  diaryControls!,
-                  const SizedBox(height: 18)
-                ],
-                _nutrition(),
-                const SizedBox(height: 14),
-                _shareBanner(context),
-                const SizedBox(height: 22),
-                Row(children: [
-                  const Expanded(
-                      child: Text('Inside your plate',
-                          style: TextStyle(
-                              color: mealCream,
-                              fontSize: 22,
-                              fontWeight: FontWeight.w700,
-                              letterSpacing: -.5))),
-                  Text('${meal.ingredients.length} ingredients',
-                      style: const TextStyle(color: mealMuted, fontSize: 11))
-                ]),
-                const SizedBox(height: 5),
-                const Text('Fine-tune portions to make this estimate yours.',
-                    style: TextStyle(color: mealMuted, fontSize: 12)),
-                const SizedBox(height: 14),
-                ...meal.ingredients
-                    .asMap()
-                    .entries
-                    .map((entry) => _ingredient(entry.key, entry.value)),
-                const SizedBox(height: 5),
-                OutlinedButton.icon(
-                    onPressed: saving ? null : () => onEdit(null),
-                    style: OutlinedButton.styleFrom(
-                        minimumSize: const Size(double.infinity, 48),
-                        foregroundColor: mealLime,
-                        side: BorderSide(color: mealLime.withValues(alpha: .3)),
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(16))),
-                    icon: const Icon(Icons.add, size: 18),
-                    label: const Text('Add an ingredient')),
-                const SizedBox(height: 24),
-                _insight(),
-                const SizedBox(height: 14),
-                Text(
-                    meal.confidence == 'manual'
-                        ? 'Nutrition is based on the values you entered for this serving.'
-                        : 'Ingredient images are illustrations. Nutrition is estimated from your meal photo and portion details.',
-                    textAlign: TextAlign.center,
-                    style:
-                        const TextStyle(color: mealMuted, fontSize: 11, height: 1.6)),
-              ])),
-        ]),
-      );
+                      child: const Icon(Icons.share_rounded,
+                          size: 19, color: mealCream))),
+              const SizedBox(width: 8),
+            ],
+            leading: IconButton(
+                tooltip: l10n.mealVisualsBackTooltip,
+                onPressed: () => Navigator.maybePop(context),
+                icon: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: const BoxDecoration(
+                        shape: BoxShape.circle, color: Color(0x88071E19)),
+                    child: const Icon(Icons.arrow_back, size: 20))),
+            flexibleSpace: FlexibleSpaceBar(
+                background: Stack(fit: StackFit.expand, children: [
+              MealPhoto(path: meal.photoPath, bytes: meal.photoBytes),
+              const DecoratedBox(
+                  decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          stops: [
+                    0,
+                    .4,
+                    1
+                  ],
+                          colors: [
+                    Color(0x77071E19),
+                    Color(0x00071E19),
+                    mealInk
+                  ]))),
+              Positioned(
+                  left: 24,
+                  right: 24,
+                  bottom: 24,
+                  child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        MealChip(
+                            meal.confidence == 'manual'
+                                ? l10n.mealVisualsChipManualDiary
+                                : l10n.mealVisualsChipScan,
+                            icon: Icons.auto_awesome_rounded),
+                        const SizedBox(height: 14),
+                        Text(meal.name,
+                            maxLines: 3,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                                color: mealCream,
+                                fontSize: 27,
+                                height: 1.12,
+                                letterSpacing: -.8,
+                                fontWeight: FontWeight.w800)),
+                        const SizedBox(height: 9),
+                        Row(children: [
+                          const Icon(Icons.rice_bowl_outlined,
+                              color: mealMuted, size: 15),
+                          const SizedBox(width: 7),
+                          Expanded(
+                              child: Text(
+                                  meal.confidence == 'manual'
+                                      ? l10n.mealVisualsManualServing
+                                      : meal.portion == 1
+                                          ? l10n.mealVisualsEstimatedOnePlate
+                                          : l10n.mealVisualsEstimatedPlates(
+                                              '${meal.portion}'),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(
+                                      color: mealMuted, fontSize: 12)))
+                        ]),
+                      ])),
+            ]))),
+        SliverPadding(
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 30),
+            sliver: SliverList.list(children: [
+              if (diaryControls != null) ...[
+                diaryControls!,
+                const SizedBox(height: 18)
+              ],
+              _nutrition(l10n),
+              const SizedBox(height: 14),
+              _shareBanner(context, l10n),
+              const SizedBox(height: 22),
+              Row(children: [
+                Expanded(
+                    child: Text(l10n.mealVisualsInsideYourPlate,
+                        style: const TextStyle(
+                            color: mealCream,
+                            fontSize: 22,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: -.5))),
+                Text(l10n.mealVisualsIngredientsCount(meal.ingredients.length),
+                    style: const TextStyle(color: mealMuted, fontSize: 11))
+              ]),
+              const SizedBox(height: 5),
+              Text(l10n.mealVisualsFineTunePortions,
+                  style: const TextStyle(color: mealMuted, fontSize: 12)),
+              const SizedBox(height: 14),
+              ...meal.ingredients.asMap().entries.map(
+                  (entry) => _ingredient(l10n, entry.key, entry.value)),
+              const SizedBox(height: 5),
+              OutlinedButton.icon(
+                  onPressed: saving ? null : () => onEdit(null),
+                  style: OutlinedButton.styleFrom(
+                      minimumSize: const Size(double.infinity, 48),
+                      foregroundColor: mealLime,
+                      side: BorderSide(color: mealLime.withValues(alpha: .3)),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(16))),
+                  icon: const Icon(Icons.add, size: 18),
+                  label: Text(l10n.mealVisualsAddIngredient)),
+              const SizedBox(height: 24),
+              _insight(l10n),
+              const SizedBox(height: 14),
+              Text(
+                  meal.confidence == 'manual'
+                      ? l10n.mealVisualsManualDisclaimer
+                      : l10n.mealVisualsScanDisclaimer,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                      color: mealMuted, fontSize: 11, height: 1.6)),
+            ])),
+      ]),
+    );
+  }
 
-  Widget _nutrition() => Container(
+  Widget _nutrition(AppLocalizations l10n) => Container(
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
             gradient: const LinearGradient(
@@ -332,8 +339,8 @@ class MealResultView extends StatelessWidget {
                 child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                  const Text('TOTAL ENERGY',
-                      style: TextStyle(
+                  Text(l10n.mealVisualsTotalEnergy,
+                      style: const TextStyle(
                           color: mealLime,
                           fontSize: 10,
                           fontWeight: FontWeight.w700,
@@ -359,8 +366,8 @@ class MealResultView extends StatelessWidget {
                   const SizedBox(height: 3),
                   Text(
                       meal.confidence == 'manual'
-                          ? 'Nutrition you entered'
-                          : 'An estimate of this portion',
+                          ? l10n.mealVisualsNutritionEntered
+                          : l10n.mealVisualsEstimateOfPortion,
                       style: const TextStyle(color: mealMuted, fontSize: 11)),
                 ])),
             const SizedBox(width: 14),
@@ -377,16 +384,16 @@ class MealResultView extends StatelessWidget {
           Container(height: 1, color: mealCream.withValues(alpha: .09)),
           const SizedBox(height: 18),
           Row(children: [
-            _macro('Protein', 'protein', mealProtein),
+            _macro(l10n.mealVisualsMacroProtein, 'protein', mealProtein),
             const SizedBox(width: 8),
-            _macro('Carbs', 'carbs', mealCarbs),
+            _macro(l10n.mealVisualsMacroCarbs, 'carbs', mealCarbs),
             const SizedBox(width: 8),
-            _macro('Fat', 'fat', mealFat)
+            _macro(l10n.mealVisualsMacroFat, 'fat', mealFat)
           ]),
         ]),
       );
 
-  Widget _shareBanner(BuildContext context) => Container(
+  Widget _shareBanner(BuildContext context, AppLocalizations l10n) => Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           gradient: const LinearGradient(
@@ -425,23 +432,24 @@ class MealResultView extends StatelessWidget {
                         color: mealLime, size: 20),
                   ),
                   const SizedBox(width: 12),
-                  const Expanded(
+                  Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Share to',
-                          style: TextStyle(
+                          l10n.mealVisualsShareToTitle,
+                          style: const TextStyle(
                             color: mealCream,
                             fontSize: 16,
                             fontWeight: FontWeight.w800,
                             letterSpacing: -0.2,
                           ),
                         ),
-                        SizedBox(height: 2),
+                        const SizedBox(height: 2),
                         Text(
-                          'Post your meal & macros to Instagram, WhatsApp & more',
-                          style: TextStyle(color: mealMuted, fontSize: 11),
+                          l10n.mealVisualsShareToSubtitle,
+                          style:
+                              const TextStyle(color: mealMuted, fontSize: 11),
                         ),
                       ],
                     ),
@@ -457,7 +465,7 @@ class MealResultView extends StatelessWidget {
                 Expanded(
                   child: _socialChannelPill(
                     context: context,
-                    label: 'Story',
+                    label: l10n.mealVisualsChannelStory,
                     icon: Icons.camera_alt_outlined,
                     color: const Color(0xFFE1306C),
                     format: MealShareFormat.story,
@@ -467,7 +475,7 @@ class MealResultView extends StatelessWidget {
                 Expanded(
                   child: _socialChannelPill(
                     context: context,
-                    label: 'WhatsApp',
+                    label: l10n.mealVisualsChannelWhatsApp,
                     icon: Icons.chat_bubble_outline_rounded,
                     color: const Color(0xFF25D366),
                     format: MealShareFormat.story,
@@ -477,7 +485,7 @@ class MealResultView extends StatelessWidget {
                 Expanded(
                   child: _socialChannelPill(
                     context: context,
-                    label: 'Post',
+                    label: l10n.mealVisualsChannelPost,
                     icon: Icons.crop_square_rounded,
                     color: const Color(0xFF1877F2),
                     format: MealShareFormat.post,
@@ -534,7 +542,7 @@ class MealResultView extends StatelessWidget {
       child: Container(
           padding: const EdgeInsets.fromLTRB(11, 12, 9, 12),
           decoration: BoxDecoration(
-              color: mealInk.withValues(alpha: .3),
+               color: mealInk.withValues(alpha: .3),
               borderRadius: BorderRadius.circular(14)),
           child:
               Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -558,70 +566,76 @@ class MealResultView extends StatelessWidget {
                         fontSize: 22,
                         fontWeight: FontWeight.w700))),
           ])));
-  Widget _ingredient(int index, MealIngredient ingredient) => Padding(
-      padding: const EdgeInsets.only(bottom: 9),
-      child: Material(
-          color: const Color(0xFF102B23),
-          borderRadius: BorderRadius.circular(20),
-          child: InkWell(
-            onTap: saving ? null : () => onEdit(index),
-            borderRadius: BorderRadius.circular(20),
-            child: Container(
-                padding: const EdgeInsets.all(11),
-                decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(20),
-                    border:
-                        Border.all(color: mealCream.withValues(alpha: .06))),
-                child: Row(children: [
-                  IngredientThumbnail(ingredient: ingredient, size: 58),
-                  const SizedBox(width: 12),
-                  Expanded(
-                      child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                        Text(ingredient.name,
-                            style: const TextStyle(
-                                color: mealCream,
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                                height: 1.25)),
-                        const SizedBox(height: 5),
-                        Text(
-                            '${ingredient.quantity.isNotEmpty ? ingredient.quantity : '${ingredient.grams.round()} g'} · ${ingredient.calories.round()} kcal',
-                            style: const TextStyle(
-                                color: mealMuted, fontSize: 11)),
-                        if (ingredient.preparation != 'unknown')
-                          Padding(
-                              padding: const EdgeInsets.only(top: 4),
-                              child: Text(ingredient.preparation.toUpperCase(),
-                                  style: const TextStyle(
-                                      color: mealLime,
-                                      fontSize: 9,
-                                      fontWeight: FontWeight.w700,
-                                      letterSpacing: 1))),
-                      ])),
-                  IconButton(
-                      tooltip: 'Edit ${ingredient.name}',
-                      visualDensity: VisualDensity.compact,
-                      onPressed: saving ? null : () => onEdit(index),
-                      icon: const Icon(Icons.tune_rounded,
-                          color: mealMuted, size: 19)),
-                  if (meal.ingredients.length > 1)
-                    PopupMenuButton<String>(
-                        tooltip: 'More options for ${ingredient.name}',
-                        padding: EdgeInsets.zero,
-                        icon: const Icon(Icons.more_vert,
-                            color: mealMuted, size: 18),
-                        enabled: !saving,
-                        onSelected: (_) => onRemove(index),
-                        itemBuilder: (_) => [
-                              const PopupMenuItem(
-                                  value: 'remove',
-                                  child: Text('Remove ingredient'))
-                            ]),
-                ])),
-          )));
-  Widget _insight() => Container(
+  Widget _ingredient(
+          AppLocalizations l10n, int index, MealIngredient ingredient) =>
+      Padding(
+          padding: const EdgeInsets.only(bottom: 9),
+          child: Material(
+              color: const Color(0xFF102B23),
+              borderRadius: BorderRadius.circular(20),
+              child: InkWell(
+                onTap: saving ? null : () => onEdit(index),
+                borderRadius: BorderRadius.circular(20),
+                child: Container(
+                    padding: const EdgeInsets.all(11),
+                    decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                            color: mealCream.withValues(alpha: .06))),
+                    child: Row(children: [
+                      IngredientThumbnail(ingredient: ingredient, size: 58),
+                      const SizedBox(width: 12),
+                      Expanded(
+                          child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                            Text(ingredient.name,
+                                style: const TextStyle(
+                                    color: mealCream,
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                    height: 1.25)),
+                            const SizedBox(height: 5),
+                            Text(
+                                '${ingredient.quantity.isNotEmpty ? ingredient.quantity : '${ingredient.grams.round()} g'} · ${ingredient.calories.round()} kcal',
+                                style: const TextStyle(
+                                    color: mealMuted, fontSize: 11)),
+                            if (ingredient.preparation != 'unknown')
+                              Padding(
+                                  padding: const EdgeInsets.only(top: 4),
+                                  child: Text(
+                                      ingredient.preparation.toUpperCase(),
+                                      style: const TextStyle(
+                                          color: mealLime,
+                                          fontSize: 9,
+                                          fontWeight: FontWeight.w700,
+                                          letterSpacing: 1))),
+                          ])),
+                      IconButton(
+                          tooltip: l10n.mealVisualsEditIngredientTooltip(
+                              ingredient.name),
+                          visualDensity: VisualDensity.compact,
+                          onPressed: saving ? null : () => onEdit(index),
+                          icon: const Icon(Icons.tune_rounded,
+                              color: mealMuted, size: 19)),
+                      if (meal.ingredients.length > 1)
+                        PopupMenuButton<String>(
+                            tooltip: l10n.mealVisualsMoreOptionsTooltip(
+                                ingredient.name),
+                            padding: EdgeInsets.zero,
+                            icon: const Icon(Icons.more_vert,
+                                color: mealMuted, size: 18),
+                            enabled: !saving,
+                            onSelected: (_) => onRemove(index),
+                            itemBuilder: (_) => [
+                                  PopupMenuItem(
+                                      value: 'remove',
+                                      child: Text(
+                                          l10n.mealVisualsRemoveIngredient))
+                                ]),
+                    ])),
+              )));
+  Widget _insight(AppLocalizations l10n) => Container(
       padding: const EdgeInsets.all(17),
       decoration: BoxDecoration(
           color: mealLime.withValues(alpha: .045),
@@ -633,18 +647,19 @@ class MealResultView extends StatelessWidget {
             runSpacing: 9,
             crossAxisAlignment: WrapCrossAlignment.center,
             children: [
-              const Row(mainAxisSize: MainAxisSize.min, children: [
-                Icon(Icons.auto_awesome_outlined, color: mealLime, size: 19),
-                SizedBox(width: 9),
+              Row(mainAxisSize: MainAxisSize.min, children: [
+                const Icon(Icons.auto_awesome_outlined,
+                    color: mealLime, size: 19),
+                const SizedBox(width: 9),
                 Flexible(
-                    child: Text('A little context',
-                        style: TextStyle(
+                    child: Text(l10n.mealVisualsContextTitle,
+                        style: const TextStyle(
                             color: mealCream, fontWeight: FontWeight.w600))),
               ]),
               MealChip(
                   meal.confidence == 'manual'
-                      ? 'Entered manually'
-                      : '${meal.confidence} confidence',
+                      ? l10n.mealVisualsConfidenceManual
+                      : l10n.mealVisualsConfidenceLevel(meal.confidence),
                   color: meal.confidence == 'low' ? mealCarbs : mealLime)
             ]),
         const SizedBox(height: 10),
@@ -652,7 +667,7 @@ class MealResultView extends StatelessWidget {
             style:
                 const TextStyle(color: mealMuted, fontSize: 12, height: 1.65)),
       ]));
-  Widget _saveBar(BuildContext context) => Container(
+  Widget _saveBar(BuildContext context, AppLocalizations l10n) => Container(
       decoration: BoxDecoration(
           color: mealInk,
           border:
@@ -681,15 +696,17 @@ class MealResultView extends StatelessWidget {
                             : Row(
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
-                                    const Icon(Icons.bookmark_add_outlined, size: 20),
+                                    const Icon(Icons.bookmark_add_outlined,
+                                        size: 20),
                                     const SizedBox(width: 10),
                                     Flexible(
                                         child: FittedBox(
                                             fit: BoxFit.scaleDown,
                                             child: Text(
                                                 saved
-                                                    ? 'Save changes'
-                                                    : 'Save meal',
+                                                    ? l10n
+                                                        .mealVisualsSaveChanges
+                                                    : l10n.mealVisualsSaveMeal,
                                                 style: const TextStyle(
                                                     fontSize: 15,
                                                     fontWeight:
@@ -698,8 +715,8 @@ class MealResultView extends StatelessWidget {
                                     const Icon(Icons.arrow_forward, size: 18)
                                   ]))),
                 const SizedBox(height: 8),
-                const Text('Account diary · Photos stay on this device',
-                    style: TextStyle(color: mealMuted, fontSize: 10)),
+                Text(l10n.mealVisualsSaveBarFooter,
+                    style: const TextStyle(color: mealMuted, fontSize: 10)),
               ]))));
 }
 

@@ -1,0 +1,113 @@
+{
+  "blockedUsersListLoadFailed": "Failed to load blocked users",
+  "blockedUsersListNetworkError": "Network error: {error}",
+  "@blockedUsersListNetworkError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "blockedUsersListUnblockTitle": "Unblock {name}?",
+  "@blockedUsersListUnblockTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "blockedUsersListUnblockMessage": "They will be able to see your profile and send you messages again.",
+  "blockedUsersListCancel": "Cancel",
+  "blockedUsersListUnblock": "Unblock",
+  "blockedUsersListUnblocked": "{name} has been unblocked",
+  "@blockedUsersListUnblocked": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "blockedUsersListUnblockFailed": "Failed to unblock user",
+  "blockedUsersListTitle": "Blocked Users",
+  "blockedUsersListRetry": "Retry",
+  "blockedUsersListEmptyTitle": "No blocked users",
+  "blockedUsersListEmptyMessage": "When you block someone, they will appear here.",
+  "blockedUsersListBlockedLabel": "Blocked",
+  "clientNotificationsLoadFailed": "Could not load notifications",
+  "clientNotificationsMarkReadFailed": "Could not mark notifications read.",
+  "clientNotificationsTitle": "Notifications",
+  "clientNotificationsMarkAllRead": "Mark all as read",
+  "clientNotificationsErrorRetry": "{error} · Retry",
+  "@clientNotificationsErrorRetry": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "clientNotificationsEmpty": "No notifications yet.",
+  "coachInvitationsMinutesAgo": "{minutes}m ago",
+  "@coachInvitationsMinutesAgo": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "coachInvitationsHoursAgo": "{hours}h ago",
+  "@coachInvitationsHoursAgo": {
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      }
+    }
+  },
+  "coachInvitationsYesterday": "Yesterday",
+  "coachInvitationsDaysAgo": "{days, plural, =1{1 day ago} other{{days} days ago}}",
+  "@coachInvitationsDaysAgo": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "coachInvitationsGenericError": "Something went wrong, please try again.",
+  "coachInvitationsEmpty": "No invitations clicked yet",
+  "coachInvitationsTitle": "Invitations",
+  "coachInvitationsPointsHeader": "Client Invitation Points",
+  "coachInvitationsPointsValue": "{points} pts",
+  "@coachInvitationsPointsValue": {
+    "placeholders": {
+      "points": {
+        "type": "int"
+      }
+    }
+  },
+  "coachInvitationsAcceptedClients": "accepted clients",
+  "coachInvitationsPointsEarned": "+{points} pts",
+  "@coachInvitationsPointsEarned": {
+    "placeholders": {
+      "points": {
+        "type": "int"
+      }
+    }
+  },
+  "coachInvitationsDeclined": "Declined",
+  "coachInvitationsDecline": "Decline",
+  "coachInvitationsAccept": "Accept",
+  "welcomePage1Tag": "COACHING",
+  "welcomePage1Title": "Your Coach,",
+  "welcomePage1Accent": "On Demand.",
+  "welcomePage1Subtitle": "Find certified coaches near you and book a session in seconds.",
+  "welcomePage2Tag": "PROGRESS",
+  "welcomePage2Title": "Track Every",
+  "welcomePage2Accent": "Milestone.",
+  "welcomePage2Subtitle": "Monitor your sessions and measure your growth day after day.",
+  "welcomePage3Tag": "COMMUNITY",
+  "welcomePage3Title": "Join",
+  "welcomePage3Accent": "SIRVYA.",
+  "welcomePage3Subtitle": "Connect with top coaches and transform your body for good.",
+  "welcomeSkip": "Skip",
+  "welcomeLogIn": "LOG IN",
+  "welcomeCreateAccount": "CREATE AN ACCOUNT"
+}

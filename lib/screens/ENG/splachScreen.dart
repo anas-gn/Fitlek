@@ -1,3 +1,4 @@
+import 'package:fitlek1/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -96,7 +97,7 @@ class _SplashScreenState extends State<SplashScreen>
                     ),
                     const SizedBox(height: 20),
                     Text(
-                      'Your Personal Coach',
+                      AppLocalizations.of(context).splashTagline,
                       style: TextStyle(
                         color: context.fitlek.textMuted,
                         fontSize: 13,

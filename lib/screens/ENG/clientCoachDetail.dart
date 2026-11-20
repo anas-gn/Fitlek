@@ -3,6 +3,8 @@ import '../../services/live_updates.dart';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:intl/intl.dart';
+import 'package:fitlek1/l10n/app_localizations.dart';
 import 'package:fitlek1/constants/urls.dart';
 import 'package:fitlek1/models/anas/reservation.dart';
 import 'package:fitlek1/models/anas/coach.dart';
@@ -143,15 +145,28 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> with SingleTicker
           )
           .timeout(const Duration(seconds: 8));
       if (res.statusCode == 200 || res.statusCode == 201) {
-        _showSnack(
-            previous ? 'Removed from favorites' : 'Added to favorites ✓');
+        if (mounted) {
+          final l10n = AppLocalizations.of(context);
+          _showSnack(previous
+              ? l10n.clientCoachDetailRemovedFavorite
+              : l10n.clientCoachDetailAddedFavorite);
+        }
       } else {
-        if (mounted) setState(() => _isFavorite = previous);
-        _showSnack('Failed to update favorites', isError: true);
+        if (mounted) {
+          setState(() => _isFavorite = previous);
+          _showSnack(
+              AppLocalizations.of(context)
+                  .clientCoachDetailFavoriteUpdateFailed,
+              isError: true);
+        }
       }
     } catch (_) {
-      if (mounted) setState(() => _isFavorite = previous);
-      _showSnack('Connection failed', isError: true);
+      if (mounted) {
+        setState(() => _isFavorite = previous);
+        _showSnack(
+            AppLocalizations.of(context).clientCoachDetailConnectionFailed,
+            isError: true);
+      }
     } finally {
       if (mounted) setState(() => _togglingFavorite = false);
     }
@@ -318,13 +333,16 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> with SingleTicker
         });
       } else {
         setState(() {
-          _errorCoach = 'Error ${res.statusCode}';
+          _errorCoach = AppLocalizations.of(context)
+              .clientCoachDetailErrorCode(res.statusCode);
           _loadingCoach = false;
         });
       }
     } catch (e) {
+      if (!mounted) return;
       setState(() {
-        _errorCoach = 'Unable to reach the server.';
+        _errorCoach =
+            AppLocalizations.of(context).clientCoachDetailServerUnreachable;
         _loadingCoach = false;
       });
     }
@@ -370,7 +388,9 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> with SingleTicker
   Future<void> _submitReview() async {
     if (widget.preview) return;
     if (_pendingRating == 0) {
-      _showSnack('Select a rating first', isError: true);
+      _showSnack(
+          AppLocalizations.of(context).clientCoachDetailSelectRatingFirst,
+          isError: true);
       return;
     }
     setState(() => _submittingReview = true);
@@ -392,18 +412,26 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> with SingleTicker
             }),
           )
           .timeout(const Duration(seconds: 10));
+      if (!mounted) return;
       if (res.statusCode == 201) {
-        _showSnack('Review saved ✓');
+        _showSnack(AppLocalizations.of(context).clientCoachDetailReviewSaved);
         setState(() => _showReviewForm = false);
         await _fetchReviews();
       } else {
         final body = jsonDecode(res.body);
-        _showSnack(body['error'] ?? 'Server error', isError: true);
+        _showSnack(
+            body['error'] ??
+                AppLocalizations.of(context).clientCoachDetailServerError,
+            isError: true);
       }
     } catch (e) {
-      _showSnack('Connection failed', isError: true);
+      if (mounted) {
+        _showSnack(
+            AppLocalizations.of(context).clientCoachDetailConnectionFailed,
+            isError: true);
+      }
     } finally {
-      setState(() => _submittingReview = false);
+      if (mounted) setState(() => _submittingReview = false);
     }
   }
 
@@ -424,20 +452,27 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> with SingleTicker
             }),
           )
           .timeout(const Duration(seconds: 10));
+      if (!mounted) return;
+      final l10n = AppLocalizations.of(context);
       if (res.statusCode == 201) {
-        _showSnack('Invitation sent to the coach ✓');
+        _showSnack(l10n.clientCoachDetailInvitationSent);
         setState(() => _inviteStatus = 'pending');
       } else if (res.statusCode == 409) {
-        _showSnack('Invitation already sent', isError: true);
+        _showSnack(l10n.clientCoachDetailInvitationAlreadySent, isError: true);
         setState(() => _inviteStatus = 'pending');
       } else {
         final body = jsonDecode(res.body);
-        _showSnack(body['error'] ?? 'Server error', isError: true);
+        _showSnack(body['error'] ?? l10n.clientCoachDetailServerError,
+            isError: true);
       }
     } catch (e) {
-      _showSnack('Connection failed', isError: true);
+      if (mounted) {
+        _showSnack(
+            AppLocalizations.of(context).clientCoachDetailConnectionFailed,
+            isError: true);
+      }
     } finally {
-      setState(() => _sendingInvite = false);
+      if (mounted) setState(() => _sendingInvite = false);
     }
   }
 
@@ -490,15 +525,20 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> with SingleTicker
   Future<void> _openConversation() async {
     if (widget.preview) return;
     if (widget.clientID == null) {
-      _showSnack('Please login to message the coach', isError: true);
+      _showSnack(AppLocalizations.of(context).clientCoachDetailLoginToMessage,
+          isError: true);
       return;
     }
     if (_conversationID == null) {
       await _fetchConversation();
     }
     if (_conversationID == null) {
-      _showSnack('Unable to start conversation. Please try again.',
-          isError: true);
+      if (mounted) {
+        _showSnack(
+            AppLocalizations.of(context)
+                .clientCoachDetailConversationStartFailed,
+            isError: true);
+      }
       return;
     }
     if (!mounted) return;
@@ -548,13 +588,20 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> with SingleTicker
   }
 
   void _showReportDialog(String name, int coachID) {
+    final l10n = AppLocalizations.of(context);
     String? selectedReason;
     final reasons = [
-      'Spam',
-      'Harassment',
-      'Inappropriate content',
-      'Fraud / Scam',
-      'Other'
+      (value: 'Spam', label: l10n.clientCoachDetailReportReasonSpam),
+      (
+        value: 'Harassment',
+        label: l10n.clientCoachDetailReportReasonHarassment
+      ),
+      (
+        value: 'Inappropriate content',
+        label: l10n.clientCoachDetailReportReasonInappropriate
+      ),
+      (value: 'Fraud / Scam', label: l10n.clientCoachDetailReportReasonFraud),
+      (value: 'Other', label: l10n.clientCoachDetailReportReasonOther),
     ];
     showDialog(
       context: context,
@@ -563,7 +610,7 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> with SingleTicker
           backgroundColor: context.fitlek.card,
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          title: Text('Report $name',
+          title: Text(l10n.clientCoachDetailReportTitle(name),
               style: TextStyle(
                   color: Theme.of(context).colorScheme.onSurface,
                   fontSize: 16,
@@ -571,17 +618,16 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> with SingleTicker
           content: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(
-                  'Why are you reporting this user? We take these reports seriously.',
+              Text(l10n.clientCoachDetailReportPrompt,
                   style:
                       TextStyle(color: context.fitlek.textMuted, fontSize: 13)),
               const SizedBox(height: 16),
               ...reasons.map((r) => RadioListTile<String>(
-                    title: Text(r,
+                    title: Text(r.label,
                         style: TextStyle(
                             color: Theme.of(context).colorScheme.onSurface,
                             fontSize: 13)),
-                    value: r,
+                    value: r.value,
                     groupValue: selectedReason,
                     activeColor: Theme.of(context).colorScheme.primary,
                     contentPadding: EdgeInsets.zero,
@@ -594,7 +640,7 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> with SingleTicker
           actions: [
             TextButton(
                 onPressed: () => Navigator.pop(ctx),
-                child: Text('Cancel',
+                child: Text(l10n.clientCoachDetailCancel,
                     style: TextStyle(color: context.fitlek.textMuted))),
             TextButton(
               onPressed: selectedReason == null
@@ -603,7 +649,7 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> with SingleTicker
                       Navigator.pop(ctx);
                       _submitReport(coachID, selectedReason!);
                     },
-              child: Text('Submit',
+              child: Text(l10n.clientCoachDetailSubmit,
                   style: TextStyle(
                       color: selectedReason == null
                           ? context.fitlek.textMuted
@@ -631,41 +677,47 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> with SingleTicker
           'type': 'user',
         }),
       );
+      if (!mounted) return;
       if (res.statusCode == 200) {
-        _showSnack('Report submitted successfully.');
+        _showSnack(AppLocalizations.of(context).clientCoachDetailReportSubmitted);
       } else {
-        _showSnack('Failed to submit report', isError: true);
+        _showSnack(AppLocalizations.of(context).clientCoachDetailReportFailed,
+            isError: true);
       }
     } catch (_) {
-      _showSnack('Network error', isError: true);
+      if (mounted) {
+        _showSnack(AppLocalizations.of(context).clientCoachDetailNetworkError,
+            isError: true);
+      }
     }
   }
 
   void _showBlockDialog(String name, int coachID) {
+    final l10n = AppLocalizations.of(context);
     showDialog(
       context: context,
       builder: (ctx) => AppDialog(
         backgroundColor: context.fitlek.card,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text('Block $name?',
+        title: Text(l10n.clientCoachDetailBlockTitle(name),
             style: TextStyle(
                 color: Theme.of(context).colorScheme.onSurface,
                 fontWeight: FontWeight.w800)),
         content: Text(
-          'They won\'t be able to find your profile or send you messages. They will not be notified that you blocked them.',
+          l10n.clientCoachDetailBlockMessage,
           style: TextStyle(color: context.fitlek.textMuted),
         ),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: Text('Cancel',
+              child: Text(l10n.clientCoachDetailCancel,
                   style: TextStyle(color: context.fitlek.textMuted))),
           TextButton(
             onPressed: () async {
               Navigator.pop(ctx);
               _submitBlock(coachID);
             },
-            child: Text('Block',
+            child: Text(l10n.clientCoachDetailBlockConfirm,
                 style: TextStyle(
                     color: context.fitlek.error, fontWeight: FontWeight.bold)),
           ),
@@ -685,18 +737,24 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> with SingleTicker
         },
         body: jsonEncode({'blockedID': blockedID}),
       );
+      if (!mounted) return;
       if (res.statusCode == 200) {
-        _showSnack('User blocked.');
+        _showSnack(AppLocalizations.of(context).clientCoachDetailUserBlocked);
         if (mounted) Navigator.pop(context);
       } else {
-        _showSnack('Failed to block user', isError: true);
+        _showSnack(AppLocalizations.of(context).clientCoachDetailBlockFailed,
+            isError: true);
       }
     } catch (_) {
-      _showSnack('Network error', isError: true);
+      if (mounted) {
+        _showSnack(AppLocalizations.of(context).clientCoachDetailNetworkError,
+            isError: true);
+      }
     }
   }
 
   void _showQrDialog(String code) {
+    final l10n = AppLocalizations.of(context);
     showDialog(
       context: context,
       builder: (ctx) => Dialog(
@@ -707,7 +765,7 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> with SingleTicker
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text('Coach QR Code',
+              Text(l10n.clientCoachDetailQrTitle,
                   style: TextStyle(
                       color: Theme.of(context).colorScheme.onSurface,
                       fontSize: 16,
@@ -871,14 +929,15 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> with SingleTicker
     if (certs == null || certs.isEmpty) {
       return const SizedBox.shrink();
     }
+    final l10n = AppLocalizations.of(context);
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _sectionHeaderWithIcon(
-              'Certifications', Icons.workspace_premium_outlined),
+          _sectionHeaderWithIcon(l10n.clientCoachDetailCertificationsTitle,
+              Icons.workspace_premium_outlined),
           const SizedBox(height: 16),
           ...certs
               .map((cert) => Padding(
@@ -920,8 +979,8 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> with SingleTicker
                                 const SizedBox(height: 2),
                                 Text(
                                     c.isApproved
-                                        ? 'Verified by Sirvya'
-                                        : 'Self-reported',
+                                        ? l10n.clientCoachDetailVerifiedBySirvya
+                                        : l10n.clientCoachDetailSelfReported,
                                     style: TextStyle(
                                         color: context.fitlek.textMuted,
                                         fontSize: 12)),
@@ -966,6 +1025,7 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> with SingleTicker
       builder: (ctx) {
         final onSurface = Theme.of(context).colorScheme.onSurface;
         final f = context.fitlek;
+        final l10n = AppLocalizations.of(context);
         return Container(
           height: MediaQuery.of(ctx).size.height * 0.75,
           decoration: BoxDecoration(
@@ -997,7 +1057,7 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> with SingleTicker
                             color: onSurface, size: 22),
                         const SizedBox(width: 10),
                         Text(
-                          'Coaching packages',
+                          l10n.clientCoachDetailCoachingPackagesTitle,
                           style: TextStyle(
                             color: onSurface,
                             fontSize: 18,
@@ -1018,7 +1078,7 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> with SingleTicker
                 child: _packages.isEmpty
                     ? Center(
                         child: Text(
-                          'No packages available for this coach.',
+                          l10n.clientCoachDetailNoPackagesAvailable,
                           style: TextStyle(color: f.textMuted),
                         ),
                       )
@@ -1054,7 +1114,8 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> with SingleTicker
                                     ),
                                     if (pkg.price != null)
                                       Text(
-                                        '${pkg.price!.toInt()} MAD',
+                                        l10n.clientCoachDetailPriceMad(
+                                            pkg.price!.toInt()),
                                         style: TextStyle(
                                           color: Theme.of(context)
                                               .colorScheme
@@ -1084,7 +1145,8 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> with SingleTicker
                                         color: f.textMuted, size: 14),
                                     const SizedBox(width: 6),
                                     Text(
-                                      '${pkg.sessions ?? 1} session${pkg.sessions != null && pkg.sessions! > 1 ? 's' : ''} · 60 min${pkg.sessions != null && pkg.sessions! > 1 ? ' each' : ''}',
+                                      l10n.clientCoachDetailPackageSessionInfo(
+                                          pkg.sessions ?? 1),
                                       style: TextStyle(
                                           color: f.textSecondary,
                                           fontSize: 12),
@@ -1104,14 +1166,14 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> with SingleTicker
                                             .onPrimary,
                                         elevation: 0,
                                         padding: const EdgeInsets.symmetric(
-                                            horizontal: 16, vertical: 8),
+                                            horizontal: 12, vertical: 8),
                                         shape: RoundedRectangleBorder(
                                             borderRadius:
                                                 BorderRadius.circular(10)),
                                       ),
-                                      child: const Text(
-                                        'Choose & Book',
-                                        style: TextStyle(
+                                      child: Text(
+                                        l10n.clientCoachDetailChooseAndBook,
+                                        style: const TextStyle(
                                             fontWeight: FontWeight.w700,
                                             fontSize: 13),
                                       ),
@@ -1134,16 +1196,17 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> with SingleTicker
   Widget _buildPackagesSection() {
     final cs = Theme.of(context).colorScheme;
     final f = context.fitlek;
+    final l10n = AppLocalizations.of(context);
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         _sectionHeaderWithIcon(
-          'Coaching packages',
+          l10n.clientCoachDetailCoachingPackagesTitle,
           Icons.inventory_2_outlined,
           trailing: GestureDetector(
             onTap: _openAllPackagesSheet,
-            child: const Text('See all >',
-                style: TextStyle(
+            child: Text(l10n.clientCoachDetailSeeAll,
+                style: const TextStyle(
                     color: Color(0xFF38BDF8),
                     fontSize: 13,
                     fontWeight: FontWeight.w600)),
@@ -1170,7 +1233,7 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> with SingleTicker
               borderRadius: BorderRadius.circular(16),
               border: Border.all(color: f.border),
             ),
-            child: Text('No packages available for this coach.',
+            child: Text(l10n.clientCoachDetailNoPackagesAvailable,
                 style: TextStyle(color: f.textMuted, fontSize: 13)),
           )
         else
@@ -1186,10 +1249,9 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> with SingleTicker
         const SizedBox(height: 12),
         Row(
           children: [
-            Icon(Icons.info_outline_rounded,
-                color: f.textMuted, size: 14),
+            Icon(Icons.info_outline_rounded, color: f.textMuted, size: 14),
             const SizedBox(width: 6),
-            Text('Agree on the price before confirmation.',
+            Text(l10n.clientCoachDetailAgreeOnPriceNote,
                 style: TextStyle(color: f.textMuted, fontSize: 12)),
           ],
         ),
@@ -1199,6 +1261,7 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> with SingleTicker
 
   Widget _buildClientPackageCard(
       CoachPackage pkg, ColorScheme cs, FitlekColors f) {
+    final l10n = AppLocalizations.of(context);
     return GestureDetector(
       onTap: () => _navigateToBooking(pkg),
       child: Container(
@@ -1245,7 +1308,7 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> with SingleTicker
                     color: f.textMuted, size: 14),
                 const SizedBox(width: 6),
                 Text(
-                    '${pkg.sessions ?? 1} session${pkg.sessions != null && pkg.sessions! > 1 ? 's' : ''} · 60 min${pkg.sessions != null && pkg.sessions! > 1 ? ' each' : ''}',
+                    l10n.clientCoachDetailPackageSessionInfo(pkg.sessions ?? 1),
                     style: TextStyle(color: f.textSecondary, fontSize: 12)),
               ],
             ),
@@ -1262,8 +1325,9 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> with SingleTicker
                       Flexible(
                         child: Text(
                             pkg.price != null
-                                ? '${pkg.price!.toInt()} MAD'
-                                : 'On request',
+                                ? l10n.clientCoachDetailPriceMad(
+                                    pkg.price!.toInt())
+                                : l10n.clientCoachDetailOnRequest,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
                                 color: cs.onSurface,
@@ -1282,7 +1346,7 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> with SingleTicker
                     border: Border.all(
                         color: cs.primary.withValues(alpha: 0.25)),
                   ),
-                  child: Text('Book >',
+                  child: Text(l10n.clientCoachDetailBookChip,
                       style: TextStyle(
                           color: cs.primary,
                           fontSize: 11,
@@ -1485,7 +1549,8 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> with SingleTicker
                         ),
                         const SizedBox(width: 6),
                         Text(
-                          'Available today',
+                          AppLocalizations.of(context)
+                              .clientCoachDetailAvailableToday,
                           style: TextStyle(
                               color: context.fitlek.success,
                               fontSize: 11,
@@ -1505,6 +1570,7 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> with SingleTicker
 
   Widget _buildMoreMenu(CoachModel c) {
     final name = c.fullName.isNotEmpty ? c.fullName : widget.session.coachName;
+    final l10n = AppLocalizations.of(context);
     return PopupMenuButton<String>(
       icon: Container(
         padding: const EdgeInsets.all(7),
@@ -1531,7 +1597,7 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> with SingleTicker
           child: Row(children: [
             Icon(Icons.flag_rounded, color: context.fitlek.textMuted, size: 18),
             const SizedBox(width: 10),
-            Text('Report Coach',
+            Text(l10n.clientCoachDetailReportCoachMenu,
                 style: TextStyle(
                     color: Theme.of(context).colorScheme.onSurface,
                     fontSize: 13,
@@ -1543,7 +1609,7 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> with SingleTicker
           child: Row(children: [
             Icon(Icons.block_rounded, color: context.fitlek.error, size: 18),
             const SizedBox(width: 10),
-            Text('Block Coach',
+            Text(l10n.clientCoachDetailBlockCoachMenu,
                 style: TextStyle(
                     color: context.fitlek.error,
                     fontSize: 13,
@@ -1555,6 +1621,7 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> with SingleTicker
   }
 
   Widget _buildStats(double rating, int totalInvitations, int totalReviews) {
+    final l10n = AppLocalizations.of(context);
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
       child: Container(
@@ -1575,7 +1642,7 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> with SingleTicker
             children: [
               _statSegment(
                 rating > 0 ? rating.toStringAsFixed(1) : '—',
-                'Rating',
+                l10n.clientCoachDetailStatRating,
                 Icons.star_rounded,
               ),
               VerticalDivider(
@@ -1584,7 +1651,7 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> with SingleTicker
                   width: 1),
               _statSegment(
                 '$totalReviews',
-                'Reviews',
+                l10n.clientCoachDetailStatReviews,
                 Icons.chat_bubble_outline_rounded,
               ),
               VerticalDivider(
@@ -1593,7 +1660,7 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> with SingleTicker
                   width: 1),
               _statSegment(
                 '$totalInvitations',
-                'Clients',
+                l10n.clientCoachDetailStatClients,
                 Icons.people_outline_rounded,
               ),
             ],
@@ -1640,6 +1707,7 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> with SingleTicker
   }
 
   Widget _buildPriceBar() {
+    final l10n = AppLocalizations.of(context);
     double? minPrice;
     if (_packages.isNotEmpty) {
       final validPrices =
@@ -1650,11 +1718,11 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> with SingleTicker
     }
 
     final title = minPrice != null
-        ? 'From ${minPrice.toStringAsFixed(0)} MAD'
-        : 'Price on request';
+        ? l10n.clientCoachDetailPriceFrom(minPrice.toStringAsFixed(0))
+        : l10n.clientCoachDetailPriceOnRequest;
     final subtitle = minPrice != null
-        ? 'Session rates starting from ${minPrice.toStringAsFixed(0)} MAD'
-        : 'Contact the coach for session rates';
+        ? l10n.clientCoachDetailSessionRatesFrom(minPrice.toStringAsFixed(0))
+        : l10n.clientCoachDetailContactForRates;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
@@ -1734,7 +1802,7 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> with SingleTicker
     return GestureDetector(
       onTap: _openConversation,
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 16),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 16),
         decoration: BoxDecoration(
           color: context.fitlek.card2,
           borderRadius: BorderRadius.circular(16),
@@ -1743,13 +1811,17 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> with SingleTicker
         child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
           Icon(Icons.chat_bubble_outline_rounded,
               color: Theme.of(context).colorScheme.onSurface, size: 20),
-          const SizedBox(width: 8),
-          Text(
-            'Message',
-            style: TextStyle(
-                color: Theme.of(context).colorScheme.onSurface,
-                fontWeight: FontWeight.bold,
-                fontSize: 14),
+          const SizedBox(width: 6),
+          Flexible(
+            child: Text(
+              AppLocalizations.of(context).clientCoachDetailMessageBtn,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSurface,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 14),
+            ),
           ),
         ]),
       ),
@@ -1772,7 +1844,7 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> with SingleTicker
               ),
             )),
         child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 16),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 16),
           decoration: BoxDecoration(
             color: Theme.of(context).colorScheme.primary,
             borderRadius: BorderRadius.circular(16),
@@ -1780,12 +1852,17 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> with SingleTicker
           child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
             Icon(Icons.calendar_month_outlined,
                 color: Theme.of(context).colorScheme.onPrimary, size: 20),
-            const SizedBox(width: 8),
-            Text('Request booking',
-                style: TextStyle(
-                    color: Theme.of(context).colorScheme.onPrimary,
-                    fontWeight: FontWeight.w900,
-                    fontSize: 14)),
+            const SizedBox(width: 6),
+            Flexible(
+              child: Text(
+                  AppLocalizations.of(context).clientCoachDetailRequestBookingBtn,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                      color: Theme.of(context).colorScheme.onPrimary,
+                      fontWeight: FontWeight.w900,
+                      fontSize: 14)),
+            ),
           ]),
         ),
       );
@@ -1817,7 +1894,9 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> with SingleTicker
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _sectionHeaderWithIcon('Specialties', Icons.fitness_center_rounded),
+          _sectionHeaderWithIcon(
+              AppLocalizations.of(context).clientCoachDetailSpecialtiesTitle,
+              Icons.fitness_center_rounded),
           const SizedBox(height: 16),
           Wrap(
               spacing: 8,
@@ -1893,7 +1972,7 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> with SingleTicker
                       color: Theme.of(context).colorScheme.primary,
                       borderRadius: BorderRadius.circular(4))),
               const SizedBox(width: 8),
-              Text('About',
+              Text(AppLocalizations.of(context).clientCoachDetailAboutTitle,
                   style: TextStyle(
                       color: Theme.of(context).colorScheme.onSurface,
                       fontSize: 16,
@@ -1981,6 +2060,7 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> with SingleTicker
 
   Widget _buildGallery(String speciality) {
     final primary = Theme.of(context).colorScheme.primary;
+    final l10n = AppLocalizations.of(context);
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -1989,14 +2069,15 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> with SingleTicker
               color: Theme.of(context).colorScheme.onSurface, size: 20),
           const SizedBox(width: 8),
           Expanded(
-              child: Text('Coaching gallery',
+              child: Text(l10n.clientCoachDetailGalleryTitle,
                   style: TextStyle(
                       color: Theme.of(context).colorScheme.onSurface,
                       fontSize: 16,
                       fontWeight: FontWeight.w800))),
           TextButton(
               onPressed: () => _openGallery(_galleryIndex, speciality),
-              child: Text('View all (${_galleryImages.length})',
+              child: Text(
+                  l10n.clientCoachDetailViewAllCount(_galleryImages.length),
                   style: TextStyle(color: primary, fontSize: 12))),
         ]),
         const SizedBox(height: 10),
@@ -2033,7 +2114,7 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> with SingleTicker
                                 child: Text(
                                     speciality.isNotEmpty
                                         ? speciality
-                                        : 'Coaching',
+                                        : l10n.clientCoachDetailCoachingFallback,
                                     maxLines: 2,
                                     overflow: TextOverflow.ellipsis,
                                     style: const TextStyle(
@@ -2091,25 +2172,13 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> with SingleTicker
   }
 
   Widget _buildAvailability() {
+    final l10n = AppLocalizations.of(context);
+    final locale = Localizations.localeOf(context).toString();
     final today = DateTime.now();
     final days = List.generate(3, (i) => today.add(Duration(days: i)));
 
-    String getDayName(DateTime d) =>
-        ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][d.weekday - 1];
-    String getMonthName(DateTime d) => [
-          'Jan',
-          'Feb',
-          'Mar',
-          'Apr',
-          'May',
-          'Jun',
-          'Jul',
-          'Aug',
-          'Sep',
-          'Oct',
-          'Nov',
-          'Dec'
-        ][d.month - 1];
+    String getDayName(DateTime d) => DateFormat('EEE', locale).format(d);
+    String getMonthName(DateTime d) => DateFormat('MMM', locale).format(d);
 
     final selectedDate = days[_selectedDayIndex];
     final selectedDateStr =
@@ -2154,7 +2223,7 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> with SingleTicker
                   Icon(Icons.calendar_today_outlined,
                       color: Theme.of(context).colorScheme.onSurface, size: 20),
                   const SizedBox(width: 8),
-                  Text('Availability',
+                  Text(l10n.clientCoachDetailAvailabilityTitle,
                       style: TextStyle(
                           color: Theme.of(context).colorScheme.onSurface,
                           fontSize: 16,
@@ -2177,8 +2246,8 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> with SingleTicker
                     ),
                   ),
                 ),
-                child: const Text('See all >',
-                    style: TextStyle(
+                child: Text(l10n.clientCoachDetailSeeAll,
+                    style: const TextStyle(
                         color: Color(0xFF38BDF8),
                         fontSize: 13,
                         fontWeight: FontWeight.w600)),
@@ -2212,8 +2281,9 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> with SingleTicker
                             child: CircularProgressIndicator(
                                 strokeWidth: 2, color: Color(0xFF38BDF8))))
                     : allSlots.isEmpty
-                        ? const Text('No slots available',
-                            style: TextStyle(color: Colors.grey, fontSize: 12))
+                        ? Text(l10n.clientCoachDetailNoSlotsAvailable,
+                            style: const TextStyle(
+                                color: Colors.grey, fontSize: 12))
                         : Builder(
                             builder: (context) {
                               final availableList = allSlots
@@ -2229,8 +2299,9 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> with SingleTicker
                                   .toList();
 
                               if (availableList.isEmpty) {
-                                return const Text('No slots available',
-                                    style: TextStyle(
+                                return Text(
+                                    l10n.clientCoachDetailNoSlotsAvailable,
+                                    style: const TextStyle(
                                         color: Colors.grey, fontSize: 12));
                               }
 
@@ -2402,7 +2473,7 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> with SingleTicker
             borderRadius: BorderRadius.circular(18),
             border: Border.all(color: context.fitlek.border)),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text('Associated gym',
+          Text(AppLocalizations.of(context).clientCoachDetailAssociatedGymTitle,
               style: TextStyle(
                   color: Theme.of(context).colorScheme.onSurface,
                   fontSize: 15,
@@ -2478,6 +2549,7 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> with SingleTicker
   }
 
   Widget _buildPracticalInfo(CoachModel c) {
+    final l10n = AppLocalizations.of(context);
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 24, 20, 0),
       child: Column(
@@ -2488,7 +2560,7 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> with SingleTicker
               Icon(Icons.location_on_outlined,
                   color: Theme.of(context).colorScheme.onSurface, size: 20),
               const SizedBox(width: 8),
-              Text('Practical info',
+              Text(l10n.clientCoachDetailPracticalInfoTitle,
                   style: TextStyle(
                       color: Theme.of(context).colorScheme.onSurface,
                       fontSize: 16,
@@ -2512,7 +2584,8 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> with SingleTicker
             ),
             child: Column(
               children: [
-                _practicalRow(Icons.location_on, 'Casablanca', null),
+                _practicalRow(Icons.location_on,
+                    l10n.clientCoachDetailCityDefault, null),
                 Divider(color: context.fitlek.border, height: 1),
                 if (c.instagramPage.isNotEmpty) ...[
                   Builder(builder: (context) {
@@ -2549,7 +2622,7 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> with SingleTicker
                 ],
                 _practicalRow(
                   Icons.qr_code_2,
-                  'Coach QR code',
+                  l10n.clientCoachDetailQrRowLabel,
                   Icons.chevron_right,
                   onTap: () {
                     if (c.invitationCode.isNotEmpty) {
@@ -2598,6 +2671,7 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> with SingleTicker
   Widget _buildQrCode(CoachModel c) {
     final code = c.invitationCode;
     if (code.isEmpty) return const SizedBox.shrink();
+    final l10n = AppLocalizations.of(context);
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 28, 20, 0),
       child: Container(
@@ -2610,7 +2684,7 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> with SingleTicker
         ),
         child: Column(
           children: [
-            Row(children: [_sectionHeader('Coach QR Code')]),
+            Row(children: [_sectionHeader(l10n.clientCoachDetailQrTitle)]),
             const SizedBox(height: 18),
             GestureDetector(
               onTap: () => _showQrDialog(code),
@@ -2625,7 +2699,7 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> with SingleTicker
               ),
             ),
             const SizedBox(height: 10),
-            Text('Tap to enlarge',
+            Text(l10n.clientCoachDetailTapToEnlarge,
                 style:
                     TextStyle(color: context.fitlek.textMuted, fontSize: 11)),
           ],
@@ -2656,6 +2730,7 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> with SingleTicker
   }
 
   Widget _buildReviewsSection(double rating, bool canReview) {
+    final l10n = AppLocalizations.of(context);
     return Padding(
       padding: const EdgeInsets.fromLTRB(0, 32, 0, 0),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -2669,7 +2744,7 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> with SingleTicker
                   Icon(Icons.chat_bubble_outline_rounded,
                       color: Theme.of(context).colorScheme.onSurface, size: 20),
                   const SizedBox(width: 8),
-                  Text('Client reviews',
+                  Text(l10n.clientCoachDetailClientReviewsTitle,
                       style: TextStyle(
                           color: Theme.of(context).colorScheme.onSurface,
                           fontSize: 16,
@@ -2683,7 +2758,8 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> with SingleTicker
                     const Icon(Icons.star, color: Color(0xFF38BDF8), size: 16),
                     const SizedBox(width: 4),
                     Text(
-                        '${_avgRating.toStringAsFixed(1)} · $_totalReviews reviews >',
+                        l10n.clientCoachDetailRatingSummary(
+                            _avgRating.toStringAsFixed(1), _totalReviews),
                         style: const TextStyle(
                             color: Color(0xFF38BDF8),
                             fontSize: 13,
@@ -2727,12 +2803,19 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> with SingleTicker
                       color: Theme.of(context).colorScheme.primary,
                       size: 16),
                   const SizedBox(width: 10),
-                  Text(_myReview != null ? 'Edit my review' : 'Leave a review',
-                      style: TextStyle(
-                          color: Theme.of(context).colorScheme.primary,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700)),
-                  const Spacer(),
+                  Expanded(
+                    child: Text(
+                        _myReview != null
+                            ? l10n.clientCoachDetailEditMyReview
+                            : l10n.clientCoachDetailLeaveAReview,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                            color: Theme.of(context).colorScheme.primary,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w700)),
+                  ),
+                  const SizedBox(width: 8),
                   Icon(
                       _showReviewForm
                           ? Icons.keyboard_arrow_up_rounded
@@ -2784,12 +2867,19 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> with SingleTicker
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Text(
-                        'View all ${_totalReviews > _reviews.length ? _totalReviews : _reviews.length} reviews',
-                        style: const TextStyle(
-                          color: Color(0xFF38BDF8),
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
+                      Flexible(
+                        child: Text(
+                          l10n.clientCoachDetailViewAllReviewsBtn(
+                              _totalReviews > _reviews.length
+                                  ? _totalReviews
+                                  : _reviews.length),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: Color(0xFF38BDF8),
+                            fontSize: 14,
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
                       ),
                       const SizedBox(width: 6),
@@ -2806,132 +2896,123 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> with SingleTicker
     );
   }
 
-  Widget _buildReviewForm() => Container(
-        padding: const EdgeInsets.all(18),
-        decoration: BoxDecoration(
-            color: context.fitlek.card,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-                color: Theme.of(context)
-                    .colorScheme
-                    .primary
-                    .withValues(alpha: 0.2))),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text('Your rating',
-              style: TextStyle(
-                  color: context.fitlek.textSecondary,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600)),
-          const SizedBox(height: 10),
-          Row(
-              children: List.generate(5, (i) {
-            final filled = i < _pendingRating;
-            return GestureDetector(
-              onTap: () => setState(() => _pendingRating = i + 1),
-              child: Padding(
-                padding: const EdgeInsets.only(right: 6),
-                child: AnimatedScale(
-                    scale: filled ? 1.2 : 1.0,
-                    duration: const Duration(milliseconds: 150),
-                    child: Icon(
-                        filled
-                            ? Icons.star_rounded
-                            : Icons.star_outline_rounded,
-                        color: filled
-                            ? Theme.of(context).colorScheme.primary
-                            : context.fitlek.textMuted,
-                        size: 30)),
-              ),
-            );
-          })),
-          const SizedBox(height: 16),
-          Text('Comment (optional)',
-              style: TextStyle(
-                  color: context.fitlek.textSecondary,
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600)),
-          const SizedBox(height: 8),
-          TextField(
-            controller: _commentCtrl,
-            maxLines: 3,
+  Widget _buildReviewForm() {
+    final l10n = AppLocalizations.of(context);
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+          color: context.fitlek.card,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+              color: Theme.of(context)
+                  .colorScheme
+                  .primary
+                  .withValues(alpha: 0.2))),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text(l10n.clientCoachDetailYourRatingLabel,
             style: TextStyle(
-                color: Theme.of(context).colorScheme.onSurface, fontSize: 13),
-            decoration: InputDecoration(
-              hintText: 'Share your experience with this coach…',
-              hintStyle:
-                  TextStyle(color: context.fitlek.textMuted, fontSize: 12),
-              filled: true,
-              fillColor: Theme.of(context).scaffoldBackgroundColor,
-              contentPadding:
-                  const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-              border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                  borderSide: BorderSide(color: context.fitlek.border)),
-              enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                  borderSide: BorderSide(color: context.fitlek.border)),
-              focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
-                  borderSide: BorderSide(
-                      color: Theme.of(context).colorScheme.primary,
-                      width: 1.5)),
+                color: context.fitlek.textSecondary,
+                fontSize: 11,
+                fontWeight: FontWeight.w600)),
+        const SizedBox(height: 10),
+        Row(
+            children: List.generate(5, (i) {
+          final filled = i < _pendingRating;
+          return GestureDetector(
+            onTap: () => setState(() => _pendingRating = i + 1),
+            child: Padding(
+              padding: const EdgeInsets.only(right: 6),
+              child: AnimatedScale(
+                  scale: filled ? 1.2 : 1.0,
+                  duration: const Duration(milliseconds: 150),
+                  child: Icon(
+                      filled
+                          ? Icons.star_rounded
+                          : Icons.star_outline_rounded,
+                      color: filled
+                          ? Theme.of(context).colorScheme.primary
+                          : context.fitlek.textMuted,
+                      size: 30)),
             ),
+          );
+        })),
+        const SizedBox(height: 16),
+        Text(l10n.clientCoachDetailCommentOptionalLabel,
+            style: TextStyle(
+                color: context.fitlek.textSecondary,
+                fontSize: 11,
+                fontWeight: FontWeight.w600)),
+        const SizedBox(height: 8),
+        TextField(
+          controller: _commentCtrl,
+          maxLines: 3,
+          style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurface, fontSize: 13),
+          decoration: InputDecoration(
+            hintText: l10n.clientCoachDetailReviewHint,
+            hintStyle:
+                TextStyle(color: context.fitlek.textMuted, fontSize: 12),
+            filled: true,
+            fillColor: Theme.of(context).scaffoldBackgroundColor,
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide: BorderSide(color: context.fitlek.border)),
+            enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide: BorderSide(color: context.fitlek.border)),
+            focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide: BorderSide(
+                    color: Theme.of(context).colorScheme.primary, width: 1.5)),
           ),
-          const SizedBox(height: 14),
-          SizedBox(
-            width: double.infinity,
-            child: GestureDetector(
-              onTap: _submittingReview ? null : _submitReview,
-              child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                decoration: BoxDecoration(
-                    color: _pendingRating > 0
-                        ? Theme.of(context).colorScheme.primary
-                        : Theme.of(context)
-                            .colorScheme
-                            .primary
-                            .withValues(alpha: 0.4),
-                    borderRadius: BorderRadius.circular(10)),
-                child: Center(
-                  child: _submittingReview
-                      ? SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(
-                              color: Theme.of(context).colorScheme.onPrimary,
-                              strokeWidth: 2))
-                      : Text(
-                          _myReview != null
-                              ? 'Update review'
-                              : 'Publish review',
-                          style: TextStyle(
-                              color: Theme.of(context).colorScheme.onPrimary,
-                              fontWeight: FontWeight.w800,
-                              fontSize: 13,
-                              letterSpacing: 0.4)),
-                ),
+        ),
+        const SizedBox(height: 14),
+        SizedBox(
+          width: double.infinity,
+          child: GestureDetector(
+            onTap: _submittingReview ? null : _submitReview,
+            child: Container(
+              padding: const EdgeInsets.symmetric(vertical: 14),
+              decoration: BoxDecoration(
+                  color: _pendingRating > 0
+                      ? Theme.of(context).colorScheme.primary
+                      : Theme.of(context)
+                          .colorScheme
+                          .primary
+                          .withValues(alpha: 0.4),
+                  borderRadius: BorderRadius.circular(10)),
+              child: Center(
+                child: _submittingReview
+                    ? SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                            color: Theme.of(context).colorScheme.onPrimary,
+                            strokeWidth: 2))
+                    : Text(
+                        _myReview != null
+                            ? l10n.clientCoachDetailUpdateReviewBtn
+                            : l10n.clientCoachDetailPublishReviewBtn,
+                        style: TextStyle(
+                            color: Theme.of(context).colorScheme.onPrimary,
+                            fontWeight: FontWeight.w800,
+                            fontSize: 13,
+                            letterSpacing: 0.4)),
               ),
             ),
           ),
-        ]),
-      );
+        ),
+      ]),
+    );
+  }
 
   Widget _buildReviewCard(ReviewItem review) {
+    final l10n = AppLocalizations.of(context);
+    final locale = Localizations.localeOf(context).toString();
     final isMyReview = review.clientID == widget.clientID;
-    final month = [
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'May',
-      'Jun',
-      'Jul',
-      'Aug',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Dec'
-    ][review.createdAt.month - 1];
+    final dateFormatted = DateFormat('MMM yyyy', locale).format(review.createdAt);
     return Container(
       margin: const EdgeInsets.fromLTRB(20, 0, 20, 10),
       padding: const EdgeInsets.all(16),
@@ -2997,7 +3078,7 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> with SingleTicker
                               .primary
                               .withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(6)),
-                      child: Text('My review',
+                      child: Text(l10n.clientCoachDetailMyReviewBadge,
                           style: TextStyle(
                               color: Theme.of(context).colorScheme.primary,
                               fontSize: 9,
@@ -3006,7 +3087,7 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> with SingleTicker
                   ],
                 ]),
                 const SizedBox(height: 2),
-                Text('$month ${review.createdAt.year}',
+                Text(dateFormatted,
                     style: TextStyle(
                         color: context.fitlek.textMuted, fontSize: 10)),
               ])),
@@ -3033,6 +3114,7 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> with SingleTicker
   }
 
   Widget _buildEmptyReviews() {
+    final l10n = AppLocalizations.of(context);
     final canReview = !widget.preview &&
         widget.session.isConfirmed &&
         widget.session.sessionStart.isBefore(DateTime.now());
@@ -3049,14 +3131,14 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> with SingleTicker
           Icon(Icons.star_border_rounded,
               color: context.fitlek.textMuted, size: 38),
           const SizedBox(height: 10),
-          Text('No reviews yet',
+          Text(l10n.clientCoachDetailNoReviewsYet,
               style: TextStyle(
                   color: context.fitlek.textMuted,
                   fontSize: 13,
                   fontWeight: FontWeight.w600)),
           if (canReview) ...[
             const SizedBox(height: 4),
-            Text('Be the first to share your experience',
+            Text(l10n.clientCoachDetailBeFirstToReview,
                 style:
                     TextStyle(color: context.fitlek.textMuted, fontSize: 11)),
           ],
@@ -3129,7 +3211,7 @@ class _CoachDetailScreenState extends State<CoachDetailScreen> with SingleTicker
                       .colorScheme
                       .primary
                       .withValues(alpha: 0.3))),
-          child: Text('Retry',
+          child: Text(AppLocalizations.of(context).clientCoachDetailRetry,
               style: TextStyle(
                   color: Theme.of(context).colorScheme.primary,
                   fontWeight: FontWeight.w700,

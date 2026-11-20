@@ -1,4 +1,5 @@
 import 'package:geolocator/geolocator.dart';
+import 'package:fitlek1/l10n/app_localizations.dart';
 import '../../services/background_location_service.dart';
 import 'package:flutter/material.dart';
 import '../../components/location_picker.dart';
@@ -28,7 +29,7 @@ class _UserLocationSettingsState extends State<UserLocationSettings> {
   Future<void> _save() async {
     if (_location == null) return;
     if ('${_location!['city'] ?? ''}'.trim().isEmpty || _location!['latitude'] == null || _location!['longitude'] == null) {
-      setState(() => _error = 'Press Use my current location to detect and fill your location.');
+      setState(() => _error = AppLocalizations.of(context).userLocationSettingsDetectPrompt);
       return;
     }
     if (widget.forSignup) {
@@ -52,16 +53,15 @@ class _UserLocationSettingsState extends State<UserLocationSettings> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-      appBar: AppBar(title: const Text('My location')),
+      appBar: AppBar(title: Text(AppLocalizations.of(context).userLocationSettingsTitle)),
       body: FutureBuilder<Map<String, dynamic>>(
           future: _initial,
           builder: (context, snapshot) {
             if (!snapshot.hasData)
               return const Center(child: CircularProgressIndicator());
             if (snapshot.data?['ok'] != true)
-              return const Center(
-                  child: Text(
-                      'Could not load your location. Please reopen this screen.'));
+              return Center(
+                  child: Text(AppLocalizations.of(context).userLocationSettingsLoadError));
             _location ??= Map<String, dynamic>.from(snapshot.data!);
             return Center(
                 child: ConstrainedBox(
@@ -76,8 +76,8 @@ class _UserLocationSettingsState extends State<UserLocationSettings> {
                         ListTile(
                           contentPadding: EdgeInsets.zero,
                           leading: const Icon(Icons.location_on_outlined),
-                          title: const Text('Allow background updates'),
-                          subtitle: const Text('To update distances while the app is closed, choose Always allow in your phone location settings. Updates target every 15 minutes; your phone may delay them. Keep location updates switched on, then save.'),
+                          title: Text(AppLocalizations.of(context).userLocationSettingsBackgroundTitle),
+                          subtitle: Text(AppLocalizations.of(context).userLocationSettingsBackgroundSubtitle),
                           onTap: () async { await Geolocator.openAppSettings(); },
                         ),
                       if (_error != null)
@@ -88,10 +88,10 @@ class _UserLocationSettingsState extends State<UserLocationSettings> {
                       FilledButton(
                           onPressed: _saving ? null : _save,
                           child: Text(_saving
-                              ? 'Saving…'
+                              ? AppLocalizations.of(context).userLocationSettingsSaving
                               : widget.forSignup
-                                  ? 'Continue'
-                                  : 'Save location')),
+                                  ? AppLocalizations.of(context).userLocationSettingsContinue
+                                  : AppLocalizations.of(context).userLocationSettingsSave)),
                     ])));
           }));
 }

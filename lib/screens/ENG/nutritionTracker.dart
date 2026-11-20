@@ -1,3 +1,4 @@
+import 'package:fitlek1/l10n/app_localizations.dart';
 import 'nutritionGoal.dart';
 import '../../components/nutrition_goal_card.dart';
 import '../../components/meal_diary_actions.dart';
@@ -9,6 +10,36 @@ import '../../services/nutrition_diary_service.dart';
 import '../../theme/fitlek_theme_extension.dart';
 import '../../components/meal_share_modal.dart';
 import 'mealScanner.dart';
+
+String _mealTypeLabel(AppLocalizations l10n, String type) {
+  switch (type) {
+    case 'breakfast':
+      return l10n.mealScannerMealBreakfast;
+    case 'lunch':
+      return l10n.mealScannerMealLunch;
+    case 'dinner':
+      return l10n.mealScannerMealDinner;
+    case 'snack':
+      return l10n.mealScannerMealSnack;
+    default:
+      return mealTypeLabel(type);
+  }
+}
+
+String _macroLabel(AppLocalizations l10n, String key) {
+  switch (key) {
+    case 'calories':
+      return l10n.nutritionGoalMacroCalories;
+    case 'protein':
+      return l10n.nutritionGoalMacroProtein;
+    case 'carbs':
+      return l10n.nutritionGoalMacroCarbs;
+    case 'fat':
+      return l10n.nutritionGoalMacroFat;
+    default:
+      return mealTypeLabel(key);
+  }
+}
 
 class NutritionTrackerScreen extends StatefulWidget {
   final int clientID;
@@ -75,7 +106,7 @@ class _NutritionTrackerScreenState extends State<NutritionTrackerScreen>
     } catch (_) {
       if (mounted && request == _request) {
         setState(() => _error =
-            'Could not sync your diary. Check your connection and try again.');
+            AppLocalizations.of(context).nutritionTrackerSyncError);
       }
     } finally {
       if (mounted && request == _request) setState(() => _loading = false);
@@ -137,8 +168,8 @@ class _NutritionTrackerScreenState extends State<NutritionTrackerScreen>
       if (mounted) await _load();
     } catch (_) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text('Could not load your goal. Please try again.')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(AppLocalizations.of(context).nutritionTrackerGoalLoadError)));
       }
     }
   }
@@ -164,8 +195,8 @@ class _NutritionTrackerScreenState extends State<NutritionTrackerScreen>
       if (mounted) await _load();
     } catch (_) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text('Could not remove this meal. Try again.')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(AppLocalizations.of(context).nutritionTrackerMealRemoveError)));
       }
     }
   }
@@ -190,7 +221,7 @@ class _NutritionTrackerScreenState extends State<NutritionTrackerScreen>
         child: ListView(
             padding: const EdgeInsets.fromLTRB(18, 16, 18, 32),
             children: [
-              Text('YOUR DAILY DIARY',
+              Text(AppLocalizations.of(context).nutritionTrackerDailyDiary,
                   style: TextStyle(
                       color: c.textMuted,
                       letterSpacing: 2,
@@ -199,21 +230,21 @@ class _NutritionTrackerScreenState extends State<NutritionTrackerScreen>
               const SizedBox(height: 7),
               Row(children: [
                 Expanded(
-                    child: Text('Fuel your day.',
+                    child: Text(AppLocalizations.of(context).nutritionTrackerFuelDay,
                         style: TextStyle(
                             color: scheme.onSurface,
                             fontSize: 30,
                             fontWeight: FontWeight.w800,
                             letterSpacing: -1))),
                 IconButton(
-                    tooltip: 'Daily targets',
+                    tooltip: AppLocalizations.of(context).nutritionTrackerDailyTargetsTooltip,
                     onPressed: _targets,
                     icon: const Icon(Icons.tune_rounded))
               ]),
               const SizedBox(height: 16),
               Row(children: [
                 IconButton(
-                    tooltip: 'Previous day',
+                    tooltip: AppLocalizations.of(context).nutritionTrackerPrevDayTooltip,
                     onPressed: () =>
                         _select(_date.subtract(const Duration(days: 1))),
                     icon: const Icon(Icons.chevron_left_rounded)),
@@ -224,11 +255,11 @@ class _NutritionTrackerScreenState extends State<NutritionTrackerScreen>
                             const Icon(Icons.calendar_today_outlined, size: 17),
                         label: Text(
                             DateUtils.isSameDay(_date, today)
-                                ? 'Today · ${_label(_date)}'
+                                ? '${AppLocalizations.of(context).nutritionTrackerToday} · ${_label(_date)}'
                                 : _label(_date),
                             textAlign: TextAlign.center))),
                 IconButton(
-                    tooltip: 'Next day',
+                    tooltip: AppLocalizations.of(context).nutritionTrackerNextDayTooltip,
                     onPressed: _date.isBefore(today)
                         ? () => _select(_date.add(const Duration(days: 1)))
                         : null,
@@ -239,7 +270,7 @@ class _NutritionTrackerScreenState extends State<NutritionTrackerScreen>
                     alignment: Alignment.center,
                     child: TextButton(
                         onPressed: () => _select(today),
-                        child: const Text('Back to today'))),
+                        child: Text(AppLocalizations.of(context).nutritionTrackerBackToToday))),
               const SizedBox(height: 14),
               if (_loading) const LinearProgressIndicator(minHeight: 2),
               if (_error != null)
@@ -250,7 +281,7 @@ class _NutritionTrackerScreenState extends State<NutritionTrackerScreen>
                       TextButton.icon(
                           onPressed: _load,
                           icon: const Icon(Icons.refresh),
-                          label: const Text('Retry sync'))
+                          label: Text(AppLocalizations.of(context).nutritionTrackerRetrySync))
                     ]))),
               if (showData) ...[
                 _card(Column(
@@ -261,7 +292,7 @@ class _NutritionTrackerScreenState extends State<NutritionTrackerScreen>
                             child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                              Text('ENERGY LOGGED',
+                              Text(AppLocalizations.of(context).nutritionTrackerEnergyLogged,
                                   style: TextStyle(
                                       color: c.textMuted,
                                       fontSize: 10,
@@ -288,7 +319,7 @@ class _NutritionTrackerScreenState extends State<NutritionTrackerScreen>
                                             style:
                                                 TextStyle(color: c.textMuted))
                                       ])),
-                              Text('${_day!.meals.length} meals logged',
+                              Text(AppLocalizations.of(context).nutritionTrackerMealsLogged(_day!.meals.length),
                                   style: TextStyle(
                                       color: c.textMuted, fontSize: 12))
                             ])),
@@ -313,19 +344,19 @@ class _NutritionTrackerScreenState extends State<NutritionTrackerScreen>
                       const SizedBox(height: 16),
                       if (goal != null && goal > 0)
                         Text(
-                            '${goal.round()} kcal daily target · ${calories <= goal ? '${(goal - calories).round()} remaining' : '${(calories - goal).round()} above target'}',
+                            '${AppLocalizations.of(context).nutritionTrackerTargetSummary(goal.round())} · ${calories <= goal ? AppLocalizations.of(context).nutritionTrackerRemaining((goal - calories).round()) : AppLocalizations.of(context).nutritionTrackerAboveTarget((calories - goal).round())}',
                             style: TextStyle(color: c.textMuted, fontSize: 12))
                       else
                         TextButton(
                             onPressed: _targets,
-                            child: const Text('Set your own daily targets →')),
+                            child: Text(AppLocalizations.of(context).nutritionTrackerSetDailyTargets)),
                     ])),
                 const SizedBox(height: 12),
                 Row(children: [
                   for (final item in [
-                    ('Protein', 'protein', mealProtein),
-                    ('Carbs', 'carbs', mealCarbs),
-                    ('Fat', 'fat', mealFat)
+                    (AppLocalizations.of(context).nutritionGoalMacroProtein, 'protein', mealProtein),
+                    (AppLocalizations.of(context).nutritionGoalMacroCarbs, 'carbs', mealCarbs),
+                    (AppLocalizations.of(context).nutritionGoalMacroFat, 'fat', mealFat)
                   ])
                     Expanded(
                         child: Padding(
@@ -344,17 +375,17 @@ class _NutritionTrackerScreenState extends State<NutritionTrackerScreen>
                     child: FilledButton.icon(
                         onPressed: _scan,
                         icon: const Icon(Icons.camera_alt_outlined, size: 18),
-                        label: const Text('Scan a meal'))),
+                        label: Text(AppLocalizations.of(context).nutritionTrackerScanMeal))),
                 const SizedBox(width: 8),
                 Expanded(
                     child: OutlinedButton.icon(
                         onPressed: _manual,
                         icon: const Icon(Icons.add, size: 18),
-                        label: const Text('Add manually')))
+                        label: Text(AppLocalizations.of(context).nutritionTrackerAddManually)))
               ]),
               const SizedBox(height: 24),
               if (showData) ...[
-                Text('Meals & moments',
+                Text(AppLocalizations.of(context).nutritionTrackerMealsMoments,
                     style: TextStyle(
                         color: scheme.onSurface,
                         fontSize: 21,
@@ -362,12 +393,12 @@ class _NutritionTrackerScreenState extends State<NutritionTrackerScreen>
                 const SizedBox(height: 14),
                 for (final type in mealTypes)
                   Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
+                       padding: const EdgeInsets.only(bottom: 12),
                       child: _mealGroup(type)),
               ],
               const SizedBox(height: 6),
               Text(
-                  'Nutrition estimates are based on your saved portions. Meal details sync to your account; photos stay on this device and may be unavailable on another phone. Your diary follows the calendar dates you choose.',
+                  AppLocalizations.of(context).nutritionTrackerEstimatesNotice,
                   textAlign: TextAlign.center,
                   style:
                       TextStyle(color: c.textMuted, fontSize: 11, height: 1.6)),
@@ -375,7 +406,7 @@ class _NutritionTrackerScreenState extends State<NutritionTrackerScreen>
     return widget.embedded
         ? body
         : Scaffold(
-            appBar: AppBar(title: const Text('Nutrition diary')), body: body);
+            appBar: AppBar(title: Text(AppLocalizations.of(context).nutritionTrackerDiaryTitle)), body: body);
   }
 
   Widget _macro(String title, String key, Color color) {
@@ -408,8 +439,8 @@ class _NutritionTrackerScreenState extends State<NutritionTrackerScreen>
           const SizedBox(height: 6),
           Text(
               goal != null && goal > 0
-                  ? 'of ${goal.round()} g'
-                  : 'No target set',
+                  ? AppLocalizations.of(context).nutritionTrackerOfGrams(goal.round())
+                  : AppLocalizations.of(context).nutritionTrackerNoTargetSet,
               style: TextStyle(color: c.textMuted, fontSize: 9))
         ]));
   }
@@ -431,7 +462,7 @@ class _NutritionTrackerScreenState extends State<NutritionTrackerScreen>
             color: Theme.of(context).colorScheme.primary),
         const SizedBox(width: 9),
         Expanded(
-            child: Text(mealTypeLabel(type),
+            child: Text(_mealTypeLabel(AppLocalizations.of(context), type),
                 style: const TextStyle(
                     fontSize: 16, fontWeight: FontWeight.w800))),
         Text(
@@ -441,7 +472,7 @@ class _NutritionTrackerScreenState extends State<NutritionTrackerScreen>
       if (meals.isEmpty)
         Padding(
             padding: const EdgeInsets.only(top: 10),
-            child: Text('Nothing logged yet',
+            child: Text(AppLocalizations.of(context).nutritionTrackerNothingLogged,
                 style: TextStyle(color: c.textMuted, fontSize: 12))),
       for (final meal in meals)
         Padding(
@@ -472,12 +503,12 @@ class _NutritionTrackerScreenState extends State<NutritionTrackerScreen>
                                 color: c.textMuted, fontSize: 10, height: 1.6))
                       ])),
                   IconButton(
-                      tooltip: 'Share ${meal.name}',
+                      tooltip: AppLocalizations.of(context).nutritionTrackerShareMealTooltip(meal.name),
                       onPressed: () => showMealShareModal(context, meal),
                       icon: Icon(Icons.share_outlined,
                           size: 19, color: c.textMuted)),
                   IconButton(
-                      tooltip: 'Remove ${meal.name}',
+                      tooltip: AppLocalizations.of(context).nutritionTrackerRemoveMealTooltip(meal.name),
                       onPressed: () => _delete(meal),
                       icon: Icon(Icons.delete_outline_rounded,
                           size: 20, color: c.textMuted))
@@ -530,10 +561,11 @@ class _NutritionEntrySheetState extends State<NutritionEntrySheet> {
     _type = category;
     final values = _values.map((key, value) =>
         MapEntry(key, double.parse(value.text.replaceAll(',', '.'))));
+    final l10n = AppLocalizations.of(context);
     final meal = ScannedMeal(
         id: _id,
         name: _name.text.trim(),
-        notes: 'Nutrition entered manually.',
+        notes: l10n.nutritionTrackerManualNotes,
         confidence: 'manual',
         createdAt: DateTime.now(),
         mealDate: ScannedMeal.dayKey(widget.date),
@@ -544,7 +576,7 @@ class _NutritionEntrySheetState extends State<NutritionEntrySheet> {
           MealIngredient(
               name: _name.text.trim(),
               grams: 0,
-              quantity: '1 serving',
+              quantity: l10n.nutritionTrackerOneServing,
               calories: values['calories']!,
               protein: values['protein']!,
               carbs: values['carbs']!,
@@ -558,14 +590,16 @@ class _NutritionEntrySheetState extends State<NutritionEntrySheet> {
         setState(() {
           _saving = false;
           _error =
-              'Could not sync this meal. Your input is still here; retry to save it.';
+              l10n.nutritionTrackerSyncMealError;
         });
       }
     }
   }
 
   @override
-  Widget build(BuildContext context) => _sheet(
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return _sheet(
       context,
       Form(
           key: _form,
@@ -573,24 +607,24 @@ class _NutritionEntrySheetState extends State<NutritionEntrySheet> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Add a meal',
+                Text(l10n.nutritionTrackerAddMealTitle,
                     style:
-                        TextStyle(fontSize: 26, fontWeight: FontWeight.w800)),
+                        const TextStyle(fontSize: 26, fontWeight: FontWeight.w800)),
                 const SizedBox(height: 6),
-                const Text('Use the nutrition on a label or in your recipe.'),
+                Text(l10n.nutritionTrackerAddMealSubtitle),
                 const SizedBox(height: 20),
                 TextFormField(
                     controller: _name,
                     enabled: !_saving,
                     maxLength: 120,
-                    decoration: InputDecoration(labelText: 'Meal name'),
+                    decoration: InputDecoration(labelText: l10n.nutritionTrackerMealNameLabel),
                     validator: (value) => value == null || value.trim().isEmpty
-                        ? 'Enter a meal name'
+                        ? l10n.nutritionTrackerEnterMealName
                         : null),
                 const SizedBox(height: 12),
-                const Text(
-                    'Choose Breakfast, Lunch, Dinner or Snack after tapping Save meal.',
-                    style: TextStyle(fontSize: 12)),
+                Text(
+                    l10n.nutritionTrackerChooseMealTypeNotice,
+                    style: const TextStyle(fontSize: 12)),
                 const SizedBox(height: 16),
                 for (final key in nutritionKeys)
                   Padding(
@@ -602,11 +636,11 @@ class _NutritionEntrySheetState extends State<NutritionEntrySheet> {
                           keyboardType: const TextInputType.numberWithOptions(
                               decimal: true),
                           decoration: InputDecoration(
-                              labelText: '${mealTypeLabel(key)} (${key == 'calories' ? 'kcal' : 'g'})'),
+                              labelText: '${_macroLabel(l10n, key)} (${key == 'calories' ? 'kcal' : 'g'})'),
                           validator: (value) => _validNumber(value,
                                   max: key == 'calories' ? 50000 : 10000)
                               ? null
-                              : 'Enter a valid number, including 0')),
+                              : l10n.nutritionTrackerEnterValidNumber)),
                 if (_error != null)
                   Padding(
                       padding: const EdgeInsets.only(bottom: 12),
@@ -616,8 +650,9 @@ class _NutritionEntrySheetState extends State<NutritionEntrySheet> {
                     width: double.infinity,
                     child: FilledButton(
                         onPressed: _saving ? null : _save,
-                        child: Text(_saving ? 'Saving…' : 'Save meal')))
+                        child: Text(_saving ? l10n.nutritionTrackerSaving : l10n.nutritionTrackerSaveMeal)))
               ])));
+  }
 }
 
 bool _validNumber(String? value, {required double max}) {
@@ -673,14 +708,16 @@ class _NutritionGoalsSheetState extends State<NutritionGoalsSheet> {
       if (mounted) {
         setState(() {
           _saving = false;
-          _error = 'Could not save targets. Your input is still here.';
+          _error = AppLocalizations.of(context).nutritionTrackerSaveTargetsError;
         });
       }
     }
   }
 
   @override
-  Widget build(BuildContext context) => _sheet(
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return _sheet(
       context,
       Form(
           key: _form,
@@ -688,12 +725,11 @@ class _NutritionGoalsSheetState extends State<NutritionGoalsSheet> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text('Your daily targets',
+                Text(l10n.nutritionTrackerDailyTargetsTitle,
                     style:
-                        TextStyle(fontSize: 26, fontWeight: FontWeight.w800)),
+                        const TextStyle(fontSize: 26, fontWeight: FontWeight.w800)),
                 const SizedBox(height: 10),
-                const Text(
-                    'Set the targets that suit your plan. Leave a field empty to track without a target.'),
+                Text(l10n.nutritionTrackerSetTargetsSubtitle),
                 const SizedBox(height: 22),
                 for (final key in nutritionKeys)
                   Padding(
@@ -704,19 +740,20 @@ class _NutritionGoalsSheetState extends State<NutritionGoalsSheet> {
                           keyboardType: const TextInputType.numberWithOptions(
                               decimal: true),
                           decoration: InputDecoration(
-                              labelText: '${mealTypeLabel(key)} (${key == 'calories' ? 'kcal' : 'g'})'),
+                              labelText: '${_macroLabel(l10n, key)} (${key == 'calories' ? 'kcal' : 'g'})'),
                           validator: (value) => value == null ||
                                   value.trim().isEmpty ||
                                   _validNumber(value,
                                       max: key == 'calories' ? 20000 : 2000)
                               ? null
-                              : 'Enter a valid daily target')),
+                              : l10n.nutritionTrackerEnterValidDailyTarget)),
                 if (_error != null)
                   Text(_error!, style: TextStyle(color: context.fitlek.error)),
                 SizedBox(
                     width: double.infinity,
                     child: FilledButton(
                         onPressed: _saving ? null : _save,
-                        child: Text(_saving ? 'Saving…' : 'Save targets')))
+                        child: Text(_saving ? l10n.nutritionTrackerSaving : l10n.nutritionTrackerSaveTargets)))
               ])));
+  }
 }

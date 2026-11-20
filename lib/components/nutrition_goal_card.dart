@@ -1,8 +1,27 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:fitlek1/l10n/app_localizations.dart';
 import '../screens/ENG/nutritionGoal.dart';
 import '../services/nutrition_diary_service.dart';
 import '../theme/fitlek_theme_extension.dart';
+
+String _localizedNutritionKeyLabel(AppLocalizations l10n, String key) =>
+    switch (key) {
+      'calories' => l10n.mealShareCardCalories,
+      'protein' => l10n.mealShareCardProtein,
+      'carbs' => l10n.mealShareCardCarbs,
+      'fat' => l10n.mealShareCardFat,
+      _ => mealTypeLabel(key),
+    };
+
+String _localizedNutritionGoalLabel(AppLocalizations l10n, Object? goalType) =>
+    switch (goalType) {
+      'balanced' => l10n.nutritionGoalLabelBalanced,
+      'lose' => l10n.nutritionGoalLabelLose,
+      'gain' => l10n.nutritionGoalLabelGain,
+      'maintain' => l10n.nutritionGoalLabelMaintain,
+      _ => nutritionGoalLabels[goalType] ?? l10n.nutritionGoalCardPersonalGoal,
+    };
 
 class NutritionGoalCard extends StatefulWidget {
   final int clientID;
@@ -76,6 +95,7 @@ class _NutritionGoalCardState extends State<NutritionGoalCard> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final c = context.fitlek, cs = Theme.of(context).colorScheme;
     final plan = (_data?['plan'] as Map?)?.cast<String, dynamic>(),
         progress = (_data?['progress'] as Map?)?.cast<String, dynamic>() ?? {};
@@ -91,14 +111,16 @@ class _NutritionGoalCardState extends State<NutritionGoalCard> {
           Row(children: [
             Icon(Icons.flag_outlined, color: cs.primary),
             const SizedBox(width: 10),
-            const Expanded(
-                child: Text('My nutrition goal',
-                    style:
-                        TextStyle(fontSize: 17, fontWeight: FontWeight.w800))),
+            Expanded(
+                child: Text(l10n.nutritionGoalCardTitle,
+                    style: const TextStyle(
+                        fontSize: 17, fontWeight: FontWeight.w800))),
             if (!_loading && !_failed)
               TextButton(
                   onPressed: _edit,
-                  child: Text(plan == null ? 'Set goal' : 'Edit'))
+                  child: Text(plan == null
+                      ? l10n.nutritionGoalCardSetGoal
+                      : l10n.nutritionGoalCardEdit))
           ]),
           if (_loading)
             const Padding(
@@ -107,25 +129,24 @@ class _NutritionGoalCardState extends State<NutritionGoalCard> {
           else if (_failed)
             TextButton(
                 onPressed: _load,
-                child: const Text('Could not load your goal · Retry'))
+                child: Text(l10n.nutritionGoalCardLoadFailedRetry))
           else if (plan == null)
-            Text(
-                'Choose your goal and optional reminders. Start with balanced habits or set a personal weight goal.',
+            Text(l10n.nutritionGoalCardEmptyPrompt,
                 style: TextStyle(color: c.textMuted, fontSize: 12, height: 1.5))
           else ...[
             const SizedBox(height: 10),
-            Text(nutritionGoalLabels[plan['goalType']] ?? 'Your personal goal',
+            Text(_localizedNutritionGoalLabel(l10n, plan['goalType']),
                 style:
                     const TextStyle(fontSize: 19, fontWeight: FontWeight.w800)),
             const SizedBox(height: 7),
             Text(
                 status == 'achieved'
-                    ? 'Goal reached · Choose a new goal when ready'
+                    ? l10n.nutritionGoalCardStatusAchieved
                     : status == 'paused'
-                        ? 'Paused · Resume whenever you like'
+                        ? l10n.nutritionGoalCardStatusPaused
                         : plan['reminders']['enabled'] == true
-                            ? 'Active · Reminders follow your preferences'
-                            : 'Active · Reminders off',
+                            ? l10n.nutritionGoalCardStatusActiveRemindersOn
+                            : l10n.nutritionGoalCardStatusActiveRemindersOff,
                 style: TextStyle(
                     color: status == 'achieved' ? c.success : c.textMuted,
                     fontSize: 12)),
@@ -142,8 +163,8 @@ class _NutritionGoalCardState extends State<NutritionGoalCard> {
               const SizedBox(height: 7),
               Text(
                   (progress['measurements'] as num? ?? 0) == 0
-                      ? 'Add a recent weigh-in to track your goal.'
-                      : 'Based on your saved weigh-ins. Completion uses recent check-ins, not a promised date.',
+                      ? l10n.nutritionGoalCardAddWeighInHint
+                      : l10n.nutritionGoalCardBasedOnWeighIns,
                   style:
                       TextStyle(color: c.textMuted, fontSize: 10, height: 1.5)),
             ],
@@ -155,7 +176,7 @@ class _NutritionGoalCardState extends State<NutritionGoalCard> {
                         builder: (_) =>
                             NutritionReviewScreen(service: _service))),
                 icon: const Icon(Icons.insights_outlined, size: 18),
-                label: const Text('Monthly & yearly progress')),
+                label: Text(l10n.nutritionGoalCardProgressButton)),
           ],
         ]));
   }
@@ -211,7 +232,8 @@ class _NutritionReviewScreenState extends State<NutritionReviewScreen> {
       if (mounted && request == _request) setState(() => _data = data);
     } catch (_) {
       if (mounted && request == _request) {
-        setState(() => _error = 'Could not load this review. Try again.');
+        setState(
+            () => _error = AppLocalizations.of(context).nutritionReviewLoadError);
       }
     } finally {
       if (mounted && request == _request) setState(() => _loading = false);
@@ -227,16 +249,19 @@ class _NutritionReviewScreenState extends State<NutritionReviewScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final c = context.fitlek,
         averages = (_data?['dailyAverages'] as Map?) ?? {};
     final now = DateTime.now();
     return Scaffold(
-        appBar: AppBar(title: const Text('Your progress review')),
+        appBar: AppBar(title: Text(l10n.nutritionReviewTitle)),
         body: ListView(padding: const EdgeInsets.all(20), children: [
           SegmentedButton<bool>(
-              segments: const [
-                ButtonSegment(value: false, label: Text('Monthly')),
-                ButtonSegment(value: true, label: Text('Yearly'))
+              segments: [
+                ButtonSegment(
+                    value: false, label: Text(l10n.nutritionReviewMonthly)),
+                ButtonSegment(
+                    value: true, label: Text(l10n.nutritionReviewYearly))
               ],
               selected: {
                 _year
@@ -248,7 +273,7 @@ class _NutritionReviewScreenState extends State<NutritionReviewScreen> {
           const SizedBox(height: 20),
           Row(children: [
             IconButton(
-                tooltip: 'Previous period',
+                tooltip: l10n.nutritionReviewPreviousPeriod,
                 onPressed: () => _shift(-1),
                 icon: const Icon(Icons.chevron_left)),
             Expanded(
@@ -261,7 +286,7 @@ class _NutritionReviewScreenState extends State<NutritionReviewScreen> {
                     style: const TextStyle(
                         fontSize: 20, fontWeight: FontWeight.w800))),
             IconButton(
-                tooltip: 'Next period',
+                tooltip: l10n.nutritionReviewNextPeriod,
                 onPressed: (_year
                         ? _date.year < now.year
                         : DateTime(_date.year, _date.month)
@@ -276,25 +301,29 @@ class _NutritionReviewScreenState extends State<NutritionReviewScreen> {
             TextButton(onPressed: _load, child: Text(_error!))
           else if (_data != null) ...[
             const SizedBox(height: 24),
-            Text('${_data!['loggedDays']} days logged',
+            Text(
+                l10n.nutritionReviewDaysLogged(
+                    (_data!['loggedDays'] as num? ?? 0).toInt()),
                 style:
                     const TextStyle(fontSize: 30, fontWeight: FontWeight.w800)),
             const SizedBox(height: 8),
-            Text('${_data!['meals']} saved meals',
+            Text(
+                l10n.nutritionReviewSavedMeals(
+                    (_data!['meals'] as num? ?? 0).toInt()),
                 style: TextStyle(color: c.textMuted)),
             const SizedBox(height: 24),
-            const Text('Daily averages',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
+            Text(l10n.nutritionReviewDailyAveragesTitle,
+                style:
+                    const TextStyle(fontSize: 20, fontWeight: FontWeight.w800)),
             const SizedBox(height: 8),
-            Text(
-                'Only days with saved meals are included. Unlogged days are not treated as zero intake.',
+            Text(l10n.nutritionReviewDailyAveragesSubtitle,
                 style:
                     TextStyle(color: c.textMuted, fontSize: 12, height: 1.5)),
             const SizedBox(height: 18),
             for (final key in nutritionKeys)
               Card(
                   child: ListTile(
-                      title: Text(mealTypeLabel(key)),
+                      title: Text(_localizedNutritionKeyLabel(l10n, key)),
                       trailing: Text(
                           (_data!['loggedDays'] as num? ?? 0) == 0
                               ? '—'
@@ -305,15 +334,16 @@ class _NutritionReviewScreenState extends State<NutritionReviewScreen> {
             if ((_data!['weight'] as Map?)?['first'] != null)
               Card(
                   child: ListTile(
-                      title: const Text('Weight check-ins'),
-                      subtitle: Text(
-                          '${_data!['weight']['checkIns']} check-ins in this period'),
+                      title: Text(l10n.nutritionReviewWeightCheckInsTitle),
+                      subtitle: Text(l10n.nutritionReviewWeightCheckInsSubtitle(
+                          (_data!['weight']['checkIns'] as num? ?? 0).toInt())),
                       trailing: Text(
-                          '${_data!['weight']['first']} to ${_data!['weight']['latest']} kg',
+                          l10n.nutritionReviewWeightRange(
+                              '${_data!['weight']['first']}',
+                              '${_data!['weight']['latest']}'),
                           style:
                               const TextStyle(fontWeight: FontWeight.w700)))),
-            Text(
-                'This is your logged history, not a complete measure of your intake. Small, consistent check-ins can help you understand your routine.',
+            Text(l10n.nutritionReviewFooterDisclaimer,
                 style:
                     TextStyle(color: c.textMuted, fontSize: 12, height: 1.5)),
           ],

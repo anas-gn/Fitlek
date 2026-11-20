@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:fitlek1/l10n/app_localizations.dart';
 import '../../constants/names.dart';
 
 import '../../theme/fitlek_theme_extension.dart';
@@ -89,7 +90,7 @@ class ManagerHeader extends StatelessWidget {
                   color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3), width: 1),
             ),
             child: Text(
-              'MANAGER',
+              AppLocalizations.of(context).managerHeaderRoleBadge,
               style: TextStyle(
                 color: Theme.of(context).colorScheme.primary,
                 fontSize: 10,

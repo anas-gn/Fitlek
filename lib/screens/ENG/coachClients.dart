@@ -1,5 +1,7 @@
 import '../../services/live_updates.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+import 'package:fitlek1/l10n/app_localizations.dart';
 import '../../services/apiService.dart';
 import 'coachInviteClients.dart';
 import 'coachClientDetail.dart';
@@ -166,8 +168,8 @@ class _CoachClientsState extends State<CoachClients>
         SnackBar(
           content: Text(
             accept
-                ? 'Invitation accepted: +20 points. The client is now available in Chats.'
-                : 'Invitation declined.',
+                ? AppLocalizations.of(context).coachClientsInviteAccepted
+                : AppLocalizations.of(context).coachClientsInviteDeclined,
           ),
         ),
       );
@@ -175,7 +177,8 @@ class _CoachClientsState extends State<CoachClients>
     } else {
       ApiService.showError(
         context,
-        result['message']?.toString() ?? 'Unable to update invitation.',
+        result['message']?.toString() ??
+            AppLocalizations.of(context).coachClientsInviteUpdateFailed,
       );
     }
   }
@@ -226,7 +229,7 @@ class _CoachClientsState extends State<CoachClients>
                                       _buildInvitationsSection(),
                                       const SizedBox(height: 20)
                                     ],
-                                    Text('YOUR CLIENTS',
+                                    Text(AppLocalizations.of(context).coachClientsYourClients,
                                         style: TextStyle(
                                             color: f.textMuted,
                                             fontSize: 11,
@@ -259,7 +262,7 @@ class _CoachClientsState extends State<CoachClients>
           Expanded(
             child:
                 Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text('My Clients',
+              Text(AppLocalizations.of(context).coachClientsTitle,
                   style: TextStyle(
                       color: cs.onSurface,
                       fontSize: 26,
@@ -268,10 +271,10 @@ class _CoachClientsState extends State<CoachClients>
               const SizedBox(height: 2),
               Text(
                 _loading
-                    ? 'Loading…'
+                    ? AppLocalizations.of(context).coachClientsLoading
                     : count == 0
-                        ? 'Bookings and invitations bring your clients here'
-                        : '$count client${count == 1 ? '' : 's'} • Sessions and conversations',
+                        ? AppLocalizations.of(context).coachClientsEmptySubtitle
+                        : AppLocalizations.of(context).coachClientsCountSubtitle(count),
                 style: TextStyle(color: f.textMuted, fontSize: 12.5),
               ),
             ]),
@@ -288,7 +291,7 @@ class _CoachClientsState extends State<CoachClients>
               child: Row(mainAxisSize: MainAxisSize.min, children: [
                 Icon(Icons.person_add_rounded, color: cs.onPrimary, size: 16),
                 const SizedBox(width: 6),
-                Text('Invite',
+                Text(AppLocalizations.of(context).coachClientsInvite,
                     style: TextStyle(
                         color: cs.onPrimary,
                         fontSize: 13,
@@ -300,11 +303,11 @@ class _CoachClientsState extends State<CoachClients>
         const SizedBox(height: 14),
         Row(children: [
           Expanded(
-              child: _statBox('${_clients.length}', 'Total', cs.onSurface)),
+              child: _statBox('${_clients.length}', AppLocalizations.of(context).coachClientsStatTotal, cs.onSurface)),
           const SizedBox(width: 10),
-          Expanded(child: _statBox('$_pendingCount', 'Pending', f.warning)),
+          Expanded(child: _statBox('$_pendingCount', AppLocalizations.of(context).coachClientsStatPending, f.warning)),
           const SizedBox(width: 10),
-          Expanded(child: _statBox('$_upcomingCount', 'Upcoming', cs.primary)),
+          Expanded(child: _statBox('$_upcomingCount', AppLocalizations.of(context).coachClientsStatUpcoming, cs.primary)),
         ]),
         const SizedBox(height: 14),
         Container(
@@ -317,7 +320,7 @@ class _CoachClientsState extends State<CoachClients>
             onChanged: (v) => setState(() => _query = v),
             style: TextStyle(color: cs.onSurface, fontSize: 14),
             decoration: InputDecoration(
-              hintText: 'Search clients...',
+              hintText: AppLocalizations.of(context).coachClientsSearchHint,
               hintStyle: TextStyle(color: f.textMuted, fontSize: 14),
               prefixIcon:
                   Icon(Icons.search_rounded, color: f.textMuted, size: 20),
@@ -357,7 +360,7 @@ class _CoachClientsState extends State<CoachClients>
                   borderRadius: BorderRadius.circular(20),
                   border: Border.all(color: sel ? cs.primary : f.border),
                 ),
-                child: Text(filter,
+                child: Text(_filterLabel(filter),
                     style: TextStyle(
                         color: sel ? cs.onPrimary : f.textSecondary,
                         fontSize: 12,
@@ -370,18 +373,30 @@ class _CoachClientsState extends State<CoachClients>
     );
   }
 
+  String _filterLabel(String filter) {
+    final l10n = AppLocalizations.of(context);
+    switch (filter) {
+      case 'Upcoming':
+        return l10n.coachClientsStatUpcoming;
+      case 'Pending':
+        return l10n.coachClientsStatPending;
+      default:
+        return l10n.coachClientsFilterAll;
+    }
+  }
+
   Widget _buildSortButton() {
     final cs = Theme.of(context).colorScheme;
     final f = context.fitlek;
     return PopupMenuButton<_ClientSort>(
-      tooltip: 'Sort',
+      tooltip: AppLocalizations.of(context).coachClientsSort,
       color: f.card,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       onSelected: (v) => setState(() => _sort = v),
       itemBuilder: (ctx) => [
-        _sortItem(_ClientSort.az, 'Name A–Z'),
-        _sortItem(_ClientSort.za, 'Name Z–A'),
-        _sortItem(_ClientSort.newest, 'Newest connected'),
+        _sortItem(_ClientSort.az, AppLocalizations.of(context).coachClientsSortAz),
+        _sortItem(_ClientSort.za, AppLocalizations.of(context).coachClientsSortZa),
+        _sortItem(_ClientSort.newest, AppLocalizations.of(context).coachClientsSortNewest),
       ],
       child: Container(
         padding: const EdgeInsets.all(9),
@@ -439,7 +454,7 @@ class _CoachClientsState extends State<CoachClients>
         Row(
           children: [
             Text(
-              'CLIENT INVITATIONS',
+              AppLocalizations.of(context).coachClientsInvitations,
               style: TextStyle(
                 color: f.textMuted,
                 fontSize: 11,
@@ -456,7 +471,7 @@ class _CoachClientsState extends State<CoachClients>
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
-                  '$_pendingInvitationCount pending',
+                  AppLocalizations.of(context).coachClientsPendingCount(_pendingInvitationCount),
                   style: TextStyle(
                     color: f.warning,
                     fontSize: 10.5,
@@ -521,7 +536,7 @@ class _CoachClientsState extends State<CoachClients>
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            name.isEmpty ? 'Client' : name,
+                            name.isEmpty ? AppLocalizations.of(context).coachClientsClientFallback : name,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
@@ -555,10 +570,11 @@ class _CoachClientsState extends State<CoachClients>
                       ),
                       child: Text(
                         isPending
-                            ? 'Pending'
+                            ? AppLocalizations.of(context).coachClientsStatusPending
                             : isAccepted
-                                ? 'Accepted · +${invitation['pointsEarned'] ?? 20} pts'
-                                : 'Declined',
+                                ? AppLocalizations.of(context).coachClientsStatusAccepted(
+                                    '${invitation['pointsEarned'] ?? 20}')
+                                : AppLocalizations.of(context).coachClientsStatusDeclined,
                         style: TextStyle(
                           color: statusColor,
                           fontSize: 10.5,
@@ -584,7 +600,7 @@ class _CoachClientsState extends State<CoachClients>
                             shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(11)),
                           ),
-                          child: const Text('Decline'),
+                          child: Text(AppLocalizations.of(context).coachClientsDecline),
                         ),
                       ),
                       const SizedBox(width: 10),
@@ -608,7 +624,7 @@ class _CoachClientsState extends State<CoachClients>
                                     color: cs.onPrimary,
                                   ),
                                 )
-                              : const Text('Accept'),
+                              : Text(AppLocalizations.of(context).coachClientsAccept),
                         ),
                       ),
                     ],
@@ -627,12 +643,12 @@ class _CoachClientsState extends State<CoachClients>
     if (date == null) return '';
     final now = DateTime.now();
     final difference = now.difference(date);
-    if (difference.inMinutes < 1) return 'Just now';
-    if (difference.inHours < 1) return '${difference.inMinutes}m ago';
-    if (difference.inDays < 1) return '${difference.inHours}h ago';
-    if (difference.inDays < 7) return '${difference.inDays}d ago';
-    return '${date.day.toString().padLeft(2, '0')}/'
-        '${date.month.toString().padLeft(2, '0')}/${date.year}';
+    final l10n = AppLocalizations.of(context);
+    if (difference.inMinutes < 1) return l10n.coachClientsJustNow;
+    if (difference.inHours < 1) return l10n.coachClientsMinutesAgo(difference.inMinutes);
+    if (difference.inDays < 1) return l10n.coachClientsHoursAgo(difference.inHours);
+    if (difference.inDays < 7) return l10n.coachClientsDaysAgo(difference.inDays);
+    return DateFormat.yMd(Localizations.localeOf(context).toString()).format(date);
   }
 
   Widget _buildClientsEmptyCard() {
@@ -651,7 +667,7 @@ class _CoachClientsState extends State<CoachClients>
           Icon(Icons.people_outline_rounded, color: f.textMuted, size: 44),
           const SizedBox(height: 10),
           Text(
-            'Your coaching clients will appear here',
+            AppLocalizations.of(context).coachClientsEmptyTitle,
             style: TextStyle(
               color: cs.onSurface,
               fontSize: 14,
@@ -660,7 +676,7 @@ class _CoachClientsState extends State<CoachClients>
           ),
           const SizedBox(height: 4),
           Text(
-            'Clients appear when they book with you or when you accept their invitation.',
+            AppLocalizations.of(context).coachClientsEmptyBody,
             textAlign: TextAlign.center,
             style: TextStyle(color: f.textMuted, fontSize: 12.5),
           ),
@@ -671,8 +687,11 @@ class _CoachClientsState extends State<CoachClients>
 
   String _nextSessionLabel(dynamic raw) {
     final date = DateTime.tryParse(raw.toString())?.toLocal();
-    if (date == null) return 'Upcoming session';
-    return 'Next: ${date.day}/${date.month} at ${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
+    final l10n = AppLocalizations.of(context);
+    if (date == null) return l10n.coachClientsUpcomingSession;
+    final loc = Localizations.localeOf(context).toString();
+    return l10n.coachClientsNextSession(
+        DateFormat.Md(loc).format(date), DateFormat.Hm(loc).format(date));
   }
 
   Widget _buildClientCard(dynamic c) {
@@ -740,7 +759,10 @@ class _CoachClientsState extends State<CoachClients>
                       fontWeight: FontWeight.w600)),
               const SizedBox(height: 3),
               Text(
-                  '${_count(c, 'sessionCount')} sessions • ${_count(c, 'upcomingCount')} upcoming • ${_count(c, 'pendingCount')} pending',
+                  AppLocalizations.of(context).coachClientsSessionSummary(
+                      _count(c, 'sessionCount'),
+                      _count(c, 'upcomingCount'),
+                      _count(c, 'pendingCount')),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(color: f.textMuted, fontSize: 12)),
@@ -770,7 +792,7 @@ class _CoachClientsState extends State<CoachClients>
       child: Column(mainAxisSize: MainAxisSize.min, children: [
         Icon(Icons.wifi_off_rounded, color: f.textMuted, size: 52),
         const SizedBox(height: 12),
-        Text('Unable to load clients',
+        Text(AppLocalizations.of(context).coachClientsLoadError,
             style: TextStyle(color: f.textMuted, fontSize: 15)),
         const SizedBox(height: 20),
         GestureDetector(
@@ -779,7 +801,7 @@ class _CoachClientsState extends State<CoachClients>
             padding: const EdgeInsets.symmetric(horizontal: 26, vertical: 12),
             decoration: BoxDecoration(
                 color: cs.primary, borderRadius: BorderRadius.circular(14)),
-            child: Text('Retry',
+            child: Text(AppLocalizations.of(context).coachClientsRetry,
                 style: TextStyle(
                     color: cs.onPrimary,
                     fontWeight: FontWeight.w800,
@@ -801,8 +823,8 @@ class _CoachClientsState extends State<CoachClients>
           const SizedBox(height: 12),
           Text(
               _isSearching
-                  ? 'No clients match your search.'
-                  : 'No clients match this filter.',
+                  ? AppLocalizations.of(context).coachClientsNoMatchSearch
+                  : AppLocalizations.of(context).coachClientsNoMatchFilter,
               textAlign: TextAlign.center,
               style: TextStyle(
                   color: cs.onSurface,

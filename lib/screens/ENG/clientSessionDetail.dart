@@ -4,6 +4,8 @@ import 'dart:convert';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:intl/intl.dart';
+import 'package:fitlek1/l10n/app_localizations.dart';
 import 'package:fitlek1/models/anas/reservation.dart';
 import 'clientCoachDetail.dart';
 import 'package:fitlek1/constants/urls.dart';
@@ -118,12 +120,18 @@ class _SessionDetailScreenState extends State<SessionDetailScreen>
 
   Future<void> _replyPrice(bool accept) async {
     if (_priceBusy) return;
+    final l10n = AppLocalizations.of(context);
     final yes = await _showConfirmDialog(
-        title: accept ? 'Accept proposed price?' : 'Decline proposed price?',
+        title: accept
+            ? l10n.clientSessionDetailAcceptPriceTitle
+            : l10n.clientSessionDetailDeclinePriceTitle,
         message: accept
-            ? 'Accept ${_session.proposedPrice?.toStringAsFixed(2)} MAD and confirm this session?'
-            : 'Declining will cancel this booking request.',
-        confirmLabel: accept ? 'ACCEPT & CONFIRM' : 'DECLINE PRICE',
+            ? l10n.clientSessionDetailAcceptPriceMessage(
+                _session.proposedPrice?.toStringAsFixed(2) ?? '0.00')
+            : l10n.clientSessionDetailDeclinePriceMessage,
+        confirmLabel: accept
+            ? l10n.clientSessionDetailAcceptConfirmBtn
+            : l10n.clientSessionDetailDeclinePriceBtn,
         confirmColor: Theme.of(context).colorScheme.primary);
     if (!yes || !mounted) return;
     setState(() => _priceBusy = true);
@@ -136,84 +144,69 @@ class _SessionDetailScreenState extends State<SessionDetailScreen>
       if (!mounted) return;
       if (response.statusCode != 200)
         _showSnack(
-            jsonDecode(response.body)['error'] ?? 'Could not respond to price.',
+            jsonDecode(response.body)['error'] ??
+                AppLocalizations.of(context)
+                    .clientSessionDetailPriceRespondError,
             color: context.fitlek.error);
       await _refreshSession();
     } catch (_) {
       if (!mounted) return;
-      _showSnack('Connection unavailable. Please try again.',
+      _showSnack(
+          AppLocalizations.of(context).clientSessionDetailConnectionUnavailable,
           color: context.fitlek.error);
     } finally {
       if (mounted) setState(() => _priceBusy = false);
     }
   }
 
-  Widget _buildPriceApproval() => Container(
-        padding: const EdgeInsets.all(16),
-        margin: const EdgeInsets.only(bottom: 20),
-        decoration: BoxDecoration(
-            color: context.fitlek.card,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Theme.of(context).colorScheme.primary)),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(
-              _session.priceExpired
-                  ? 'Price request expired'
-                  : _session.pricingStatus == 'proposed'
-                      ? 'Approve your session price'
-                      : 'Awaiting coach’s price',
-              style:
-                  const TextStyle(fontSize: 17, fontWeight: FontWeight.w800)),
-          const SizedBox(height: 8),
-          Text(_session.priceExpired
-              ? 'No price was agreed before the deadline. Please make a new booking.'
-              : _session.pricingStatus == 'proposed'
-                  ? '${_session.proposedPrice?.toStringAsFixed(2)} MAD per session. Your acceptance confirms this booking.'
-                  : 'Your coach will send a price offer. You must accept it to confirm the session.'),
-          const SizedBox(height: 8),
-          Text(
-              'Deadline: ${_formatDate(_session.priceDeadline)} · ${_formatTime(_session.priceDeadline)} (2 hours before the session)',
-              style: const TextStyle(fontSize: 12)),
-          if (_session.pricingStatus == 'proposed' &&
-              !_session.priceExpired) ...[
-            const SizedBox(height: 12),
-            Wrap(spacing: 8, runSpacing: 8, children: [
-              FilledButton(
-                  onPressed: _priceBusy ? null : () => _replyPrice(true),
-                  child: const Text('Accept & confirm')),
-              OutlinedButton(
-                  onPressed: _priceBusy ? null : () => _replyPrice(false),
-                  child: const Text('Decline'))
-            ]),
-          ],
-        ]),
-      );
+  Widget _buildPriceApproval() {
+    final l10n = AppLocalizations.of(context);
+    return Container(
+      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.only(bottom: 20),
+      decoration: BoxDecoration(
+          color: context.fitlek.card,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Theme.of(context).colorScheme.primary)),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text(
+            _session.priceExpired
+                ? l10n.clientSessionDetailPriceExpiredTitle
+                : _session.pricingStatus == 'proposed'
+                    ? l10n.clientSessionDetailApprovePriceTitle
+                    : l10n.clientSessionDetailAwaitingPriceTitle,
+            style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w800)),
+        const SizedBox(height: 8),
+        Text(_session.priceExpired
+            ? l10n.clientSessionDetailPriceExpiredBody
+            : _session.pricingStatus == 'proposed'
+                ? l10n.clientSessionDetailProposedPriceBody(
+                    _session.proposedPrice?.toStringAsFixed(2) ?? '0.00')
+                : l10n.clientSessionDetailAwaitingPriceBody),
+        const SizedBox(height: 8),
+        Text(
+            l10n.clientSessionDetailPriceDeadline(
+                _formatDate(_session.priceDeadline),
+                _formatTime(_session.priceDeadline)),
+            style: const TextStyle(fontSize: 12)),
+        if (_session.pricingStatus == 'proposed' && !_session.priceExpired) ...[
+          const SizedBox(height: 12),
+          Wrap(spacing: 8, runSpacing: 8, children: [
+            FilledButton(
+                onPressed: _priceBusy ? null : () => _replyPrice(true),
+                child: Text(l10n.clientSessionDetailAcceptAndConfirm)),
+            OutlinedButton(
+                onPressed: _priceBusy ? null : () => _replyPrice(false),
+                child: Text(l10n.clientSessionDetailDecline))
+          ]),
+        ],
+      ]),
+    );
+  }
 
   String _formatDate(DateTime dt) {
-    const months = [
-      'January',
-      'February',
-      'March',
-      'April',
-      'May',
-      'June',
-      'July',
-      'August',
-      'September',
-      'October',
-      'November',
-      'December',
-    ];
-    const days = [
-      'Monday',
-      'Tuesday',
-      'Wednesday',
-      'Thursday',
-      'Friday',
-      'Saturday',
-      'Sunday'
-    ];
-    return '${days[dt.weekday - 1]} ${dt.day} ${months[dt.month - 1]} ${dt.year}';
+    final locale = Localizations.localeOf(context).toString();
+    return DateFormat('EEEE d MMMM yyyy', locale).format(dt);
   }
 
   String _formatTime(DateTime dt) =>
@@ -240,15 +233,19 @@ class _SessionDetailScreenState extends State<SessionDetailScreen>
   }
 
   String get _statusLabel {
-    if (_session.isExpired) return 'EXPIRED';
-    if (_session.pricingStatus == 'declined') return 'PRICE DECLINED';
+    final l10n = AppLocalizations.of(context);
+    if (_session.isExpired) return l10n.clientSessionDetailStatusExpired;
+    if (_session.pricingStatus == 'declined')
+      return l10n.clientSessionDetailStatusPriceDeclined;
     switch (_effectiveStatus) {
       case 'pending':
-        return 'PENDING';
+        return l10n.clientSessionDetailStatusPending;
       case 'confirmed':
-        return 'CONFIRMED';
+        return l10n.clientSessionDetailStatusConfirmed;
       default:
-        return _isExpiredPending ? 'EXPIRED' : 'CANCELLED';
+        return _isExpiredPending
+            ? l10n.clientSessionDetailStatusExpired
+            : l10n.clientSessionDetailStatusCancelled;
     }
   }
 
@@ -280,10 +277,11 @@ class _SessionDetailScreenState extends State<SessionDetailScreen>
 
   Future<void> _cancelSession() async {
     final errorColor = context.fitlek.error;
+    final l10n = AppLocalizations.of(context);
     final confirm = await _showConfirmDialog(
-      title: 'Cancel session?',
-      message: 'This action cannot be undone.',
-      confirmLabel: 'CANCEL SESSION',
+      title: l10n.clientSessionDetailCancelTitle,
+      message: l10n.clientSessionDetailCancelMessage,
+      confirmLabel: l10n.clientSessionDetailCancelConfirmBtn,
       confirmColor: errorColor,
     );
     if (!confirm) return;
@@ -301,18 +299,29 @@ class _SessionDetailScreenState extends State<SessionDetailScreen>
           )
           .timeout(const Duration(seconds: 10));
 
+      if (!mounted) return;
       if (res.statusCode == 200) {
         final updated = _session.copyWith(status: 'cancelled');
         setState(() => _session = updated);
-        _showSnack('Session cancelled.', color: errorColor);
+        _showSnack(
+            AppLocalizations.of(context)
+                .clientSessionDetailSessionCancelledSnack,
+            color: errorColor);
         if (mounted) Navigator.pop(context, updated);
       } else {
         final body = jsonDecode(res.body);
-        _showSnack(body['error'] ?? 'Error while cancelling.',
+        _showSnack(
+            body['error'] ??
+                AppLocalizations.of(context)
+                    .clientSessionDetailCancelErrorSnack,
             color: errorColor);
       }
     } catch (_) {
-      _showSnack('Unable to reach the server.', color: errorColor);
+      if (mounted) {
+        _showSnack(
+            AppLocalizations.of(context).clientSessionDetailServerUnreachable,
+            color: errorColor);
+      }
     } finally {
       if (mounted) setState(() => _cancelling = false);
     }
@@ -338,6 +347,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen>
         }),
       ).timeout(const Duration(seconds: 10));
 
+      if (!mounted) return;
       if (res.statusCode == 201) {
         setState(() {
           _reviewSubmitted = true;
@@ -347,14 +357,24 @@ class _SessionDetailScreenState extends State<SessionDetailScreen>
             reviewComment: _commentCtrl.text.trim(),
           );
         });
-        _showSnack('Review published successfully!', color: successColor);
+        _showSnack(
+            AppLocalizations.of(context)
+                .clientSessionDetailReviewPublishedSnack,
+            color: successColor);
       } else {
         final body = jsonDecode(res.body);
-        _showSnack(body['error'] ?? 'Error while publishing.',
+        _showSnack(
+            body['error'] ??
+                AppLocalizations.of(context)
+                    .clientSessionDetailReviewPublishErrorSnack,
             color: errorColor);
       }
     } catch (_) {
-      _showSnack('Unable to reach the server.', color: errorColor);
+      if (mounted) {
+        _showSnack(
+            AppLocalizations.of(context).clientSessionDetailServerUnreachable,
+            color: errorColor);
+      }
     } finally {
       if (mounted) setState(() => _reviewLoading = false);
     }
@@ -392,7 +412,8 @@ class _SessionDetailScreenState extends State<SessionDetailScreen>
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context, false),
-                child: Text('BACK',
+                child: Text(
+                    AppLocalizations.of(context).clientSessionDetailDialogBack,
                     style: TextStyle(
                         color: context.fitlek.textMuted,
                         fontWeight: FontWeight.w700)),
@@ -481,7 +502,8 @@ class _SessionDetailScreenState extends State<SessionDetailScreen>
               child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                Text('Session details',
+                Text(
+                    AppLocalizations.of(context).clientSessionDetailTopBarTitle,
                     style: TextStyle(
                         color: Theme.of(context).colorScheme.onSurface,
                         fontSize: 17,
@@ -508,112 +530,122 @@ class _SessionDetailScreenState extends State<SessionDetailScreen>
         ]),
       );
 
-  Widget _buildStatusBanner() => Container(
-        width: double.infinity,
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-            gradient: LinearGradient(colors: [
-              _statusColor.withValues(alpha: 0.22),
-              _statusColor.withValues(alpha: 0.06)
-            ], begin: Alignment.topLeft, end: Alignment.bottomRight),
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(
-                color: _statusColor.withValues(alpha: 0.3), width: 1.5),
-            boxShadow: [
-              BoxShadow(
-                  color: _statusColor.withValues(alpha: 0.07),
-                  blurRadius: 20,
-                  offset: const Offset(0, 8))
-            ]),
-        child: Row(children: [
-          Expanded(
-              child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                Text(
-                    _session.pricingStatus == 'proposed'
-                        ? '${_session.proposedPrice?.toStringAsFixed(2)} MAD · proposed'
-                        : _session.price > 0
-                            ? '${_session.price.toInt()} MAD'
-                            : _session.pricingStatus == 'accepted'
-                                ? 'Free session'
-                                : 'Awaiting pricing',
-                    style: TextStyle(
-                        color: _statusColor,
-                        fontSize: 32,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: -1)),
-                const SizedBox(height: 6),
-                Text(
-                    '${_session.durationMin} min · ${_formatTime(_session.sessionStart)} — ${_formatTime(_session.sessionEnd)}',
-                    style: TextStyle(
-                        color: context.fitlek.textSecondary, fontSize: 12)),
-                if (_session.packageName != null &&
-                    _session.packageName!.isNotEmpty) ...[
-                  const SizedBox(height: 4),
-                  Text(
-                    'Per session · ${_session.packageName}',
-                    style: TextStyle(
-                        color: context.fitlek.textMuted,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600),
-                  ),
-                ],
-              ])),
-          Container(
-            width: 56,
-            height: 56,
-            decoration: BoxDecoration(
-                color: _statusColor.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: _statusColor.withValues(alpha: 0.3))),
-            child: Icon(
-                _effectiveStatus == 'confirmed'
-                    ? Icons.check_circle_rounded
-                    : _effectiveStatus == 'pending'
-                        ? Icons.schedule_rounded
-                        : Icons.cancel_rounded,
-                color: _statusColor,
-                size: 28),
-          ),
-        ]),
-      );
-
-  Widget _buildInfoCard() => Container(
-        decoration: BoxDecoration(
-            color: context.fitlek.card,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: context.fitlek.border)),
-        clipBehavior: Clip.antiAlias,
-        child: Column(children: [
-          _infoRow(Icons.calendar_today_rounded, 'Date',
-              _formatDate(_session.sessionStart),
-              isFirst: true),
-          _divider(),
-          _infoRow(Icons.access_time_rounded, 'Time',
-              '${_formatTime(_session.sessionStart)} — ${_formatTime(_session.sessionEnd)}'),
-          _divider(),
-          _infoRow(Icons.schedule_rounded, 'Duration',
-              '${_session.durationMin} minutes'),
-          _divider(),
-          _infoRow(
-              Icons.location_on_rounded,
-              'Location',
-              _session.location.isNotEmpty
-                  ? _session.location
-                  : 'Location to be arranged with coach in messages'),
+  Widget _buildStatusBanner() {
+    final l10n = AppLocalizations.of(context);
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+          gradient: LinearGradient(colors: [
+            _statusColor.withValues(alpha: 0.22),
+            _statusColor.withValues(alpha: 0.06)
+          ], begin: Alignment.topLeft, end: Alignment.bottomRight),
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(
+              color: _statusColor.withValues(alpha: 0.3), width: 1.5),
+          boxShadow: [
+            BoxShadow(
+                color: _statusColor.withValues(alpha: 0.07),
+                blurRadius: 20,
+                offset: const Offset(0, 8))
+          ]),
+      child: Row(children: [
+        Expanded(
+            child:
+                Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Text(
+              _session.pricingStatus == 'proposed'
+                  ? l10n.clientSessionDetailBannerPriceProposed(
+                      _session.proposedPrice?.toStringAsFixed(2) ?? '0.00')
+                  : _session.price > 0
+                      ? l10n.clientSessionDetailBannerPriceMad(
+                          _session.price.toInt())
+                      : _session.pricingStatus == 'accepted'
+                          ? l10n.clientSessionDetailBannerFreeSession
+                          : l10n.clientSessionDetailBannerAwaitingPricing,
+              style: TextStyle(
+                  color: _statusColor,
+                  fontSize: 32,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -1)),
+          const SizedBox(height: 6),
+          Text(
+              l10n.clientSessionDetailDurationTimeRange(
+                  _session.durationMin,
+                  _formatTime(_session.sessionStart),
+                  _formatTime(_session.sessionEnd)),
+              style:
+                  TextStyle(color: context.fitlek.textSecondary, fontSize: 12)),
           if (_session.packageName != null &&
               _session.packageName!.isNotEmpty) ...[
-            _divider(),
-            _infoRow(Icons.workspace_premium_rounded, 'Package',
-                _session.packageName!),
+            const SizedBox(height: 4),
+            Text(
+              l10n.clientSessionDetailPerSessionPackage(_session.packageName!),
+              style: TextStyle(
+                  color: context.fitlek.textMuted,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600),
+            ),
           ],
+        ])),
+        Container(
+          width: 56,
+          height: 56,
+          decoration: BoxDecoration(
+              color: _statusColor.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: _statusColor.withValues(alpha: 0.3))),
+          child: Icon(
+              _effectiveStatus == 'confirmed'
+                  ? Icons.check_circle_rounded
+                  : _effectiveStatus == 'pending'
+                      ? Icons.schedule_rounded
+                      : Icons.cancel_rounded,
+              color: _statusColor,
+              size: 28),
+        ),
+      ]),
+    );
+  }
+
+  Widget _buildInfoCard() {
+    final l10n = AppLocalizations.of(context);
+    return Container(
+      decoration: BoxDecoration(
+          color: context.fitlek.card,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: context.fitlek.border)),
+      clipBehavior: Clip.antiAlias,
+      child: Column(children: [
+        _infoRow(Icons.calendar_today_rounded, l10n.clientSessionDetailInfoDate,
+            _formatDate(_session.sessionStart),
+            isFirst: true),
+        _divider(),
+        _infoRow(Icons.access_time_rounded, l10n.clientSessionDetailInfoTime,
+            '${_formatTime(_session.sessionStart)} — ${_formatTime(_session.sessionEnd)}'),
+        _divider(),
+        _infoRow(Icons.schedule_rounded, l10n.clientSessionDetailInfoDuration,
+            l10n.clientSessionDetailDurationMinutes(_session.durationMin)),
+        _divider(),
+        _infoRow(
+            Icons.location_on_rounded,
+            l10n.clientSessionDetailInfoLocation,
+            _session.location.isNotEmpty
+                ? _session.location
+                : l10n.clientSessionDetailLocationDefault),
+        if (_session.packageName != null &&
+            _session.packageName!.isNotEmpty) ...[
           _divider(),
-          _infoRow(Icons.receipt_long_rounded, 'Ref.',
-              '#${_session.id.toString().padLeft(5, '0')}',
-              isLast: true),
-        ]),
-      );
+          _infoRow(Icons.workspace_premium_rounded,
+              l10n.clientSessionDetailInfoPackage, _session.packageName!),
+        ],
+        _divider(),
+        _infoRow(Icons.receipt_long_rounded, l10n.clientSessionDetailInfoRef,
+            '#${_session.id.toString().padLeft(5, '0')}',
+            isLast: true),
+      ]),
+    );
+  }
 
   Widget _infoRow(IconData icon, String label, String value,
           {bool isFirst = false, bool isLast = false}) =>
@@ -730,7 +762,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen>
                           letterSpacing: -0.3)),
                   const SizedBox(height: 4),
                   Text(
-                      "${_session.coachSpeciality.isNotEmpty ? _session.coachSpeciality : 'Coach'} • ${_session.location.isNotEmpty ? _session.location : 'Anywhere'}",
+                      "${_session.coachSpeciality.isNotEmpty ? _session.coachSpeciality : AppLocalizations.of(context).clientSessionDetailCoachFallback} • ${_session.location.isNotEmpty ? _session.location : AppLocalizations.of(context).clientSessionDetailAnywhereFallback}",
                       style: TextStyle(
                           color: context.fitlek.textSecondary, fontSize: 12)),
                   const SizedBox(height: 6),
@@ -748,7 +780,9 @@ class _SessionDetailScreenState extends State<SessionDetailScreen>
                       ),
                       const SizedBox(width: 3),
                       Text(
-                        hasRating ? rating.toStringAsFixed(1) : 'New',
+                        hasRating
+                            ? rating.toStringAsFixed(1)
+                            : AppLocalizations.of(context).clientSessionDetailNewCoach,
                         style: TextStyle(
                           color: Theme.of(context).colorScheme.onSurface,
                           fontSize: 11,
@@ -795,7 +829,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen>
                       Icon(Icons.close_rounded,
                           color: context.fitlek.error, size: 16),
                       const SizedBox(width: 8),
-                      Text('CANCEL',
+                      Text(AppLocalizations.of(context).clientSessionDetailBtnCancel,
                           style: TextStyle(
                               color: context.fitlek.error,
                               fontWeight: FontWeight.w800,
@@ -821,7 +855,10 @@ class _SessionDetailScreenState extends State<SessionDetailScreen>
                   color: _statusColor,
                   size: 16),
               const SizedBox(width: 8),
-              Text(_session.isPending ? 'PENDING' : 'CONFIRMED',
+              Text(
+                  _session.isPending
+                      ? AppLocalizations.of(context).clientSessionDetailStatusPending
+                      : AppLocalizations.of(context).clientSessionDetailStatusConfirmed,
                   style: TextStyle(
                       color: _statusColor,
                       fontWeight: FontWeight.w900,
@@ -833,12 +870,13 @@ class _SessionDetailScreenState extends State<SessionDetailScreen>
       ]);
 
   Widget _buildCancelledInfo() {
+    final l10n = AppLocalizations.of(context);
     final reason = _session.cancellationReason ??
         _session.rejectionReason ??
         (_isExpiredPending
             ? (_session.approvalExpired
-                ? 'The coach did not approve this booking before the one-hour deadline.'
-                : 'The price was not agreed before the two-hour deadline.')
+                ? l10n.clientSessionDetailApprovalExpiredReason
+                : l10n.clientSessionDetailPriceNotAgreedReason)
             : '');
     if (reason.isEmpty) return const SizedBox.shrink();
     return Container(
@@ -854,7 +892,10 @@ class _SessionDetailScreenState extends State<SessionDetailScreen>
           Icon(Icons.info_outline_rounded,
               color: context.fitlek.error, size: 14),
           const SizedBox(width: 8),
-          Text(_isExpiredPending ? 'Request expired' : 'Cancellation reason',
+          Text(
+              _isExpiredPending
+                  ? l10n.clientSessionDetailRequestExpiredTitle
+                  : l10n.clientSessionDetailCancellationReasonTitle,
               style: TextStyle(
                   color: context.fitlek.error,
                   fontWeight: FontWeight.w800,
@@ -872,6 +913,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen>
   }
 
   Widget _buildReviewSection() {
+    final l10n = AppLocalizations.of(context);
     final alreadyReviewed = _session.reviewRating != null || _reviewSubmitted;
     return Container(
       margin: const EdgeInsets.only(bottom: 20),
@@ -891,14 +933,14 @@ class _SessionDetailScreenState extends State<SessionDetailScreen>
               child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                Text('Share your review',
+                Text(l10n.clientSessionDetailShareReviewTitle,
                     style: TextStyle(
                         color: Theme.of(context).colorScheme.onSurface,
                         fontSize: 16,
                         fontWeight: FontWeight.w800,
                         letterSpacing: -0.3)),
                 const SizedBox(height: 2),
-                Text('Help others choose the right coach',
+                Text(l10n.clientSessionDetailShareReviewSubtitle,
                     style: TextStyle(
                         color: context.fitlek.textMuted, fontSize: 11)),
               ])),
@@ -912,7 +954,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen>
                 Icon(Icons.check_circle_rounded,
                     color: context.fitlek.success, size: 12),
                 const SizedBox(width: 4),
-                Text('PUBLISHED',
+                Text(l10n.clientSessionDetailPublishedBadge,
                     style: TextStyle(
                         color: context.fitlek.success,
                         fontSize: 9,
@@ -931,7 +973,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen>
                     _editingReview = true;
                   }),
               icon: const Icon(Icons.edit_outlined, size: 17),
-              label: const Text('Edit my review')),
+              label: Text(l10n.clientSessionDetailEditMyReview)),
         ] else ...[
           _buildReviewForm(),
           if (_editingReview)
@@ -939,13 +981,14 @@ class _SessionDetailScreenState extends State<SessionDetailScreen>
                 onPressed: _reviewLoading
                     ? null
                     : () => setState(() => _editingReview = false),
-                child: const Text('Cancel editing')),
+                child: Text(l10n.clientSessionDetailCancelEditing)),
         ],
       ]),
     );
   }
 
   Widget _buildReviewDisplay() {
+    final l10n = AppLocalizations.of(context);
     final rating = _session.reviewRating ?? _selectedRating;
     final comment = _session.reviewComment ??
         (_commentCtrl.text.isNotEmpty ? _commentCtrl.text : null);
@@ -981,7 +1024,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen>
               border: Border.all(color: context.fitlek.border)),
           child:
               Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text('Comment',
+            Text(l10n.clientSessionDetailCommentLabel,
                 style: TextStyle(
                     color: context.fitlek.textMuted,
                     fontSize: 10,
@@ -998,129 +1041,133 @@ class _SessionDetailScreenState extends State<SessionDetailScreen>
     ]);
   }
 
-  Widget _buildReviewForm() =>
-      Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text('How was your session?',
-            style:
-                TextStyle(color: context.fitlek.textSecondary, fontSize: 13)),
-        const SizedBox(height: 16),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: List.generate(5, (i) {
-            final filled =
-                i < (_hoverRating > 0 ? _hoverRating : _selectedRating);
-            return GestureDetector(
-              onTap: () => setState(() => _selectedRating = i + 1),
-              child: MouseRegion(
-                onEnter: (_) => setState(() => _hoverRating = i + 1),
-                onExit: (_) => setState(() => _hoverRating = 0),
-                child: AnimatedScale(
-                  duration: const Duration(milliseconds: 150),
-                  scale: filled ? 1.1 : 1.0,
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 8),
-                    child: Icon(
-                        filled
-                            ? Icons.star_rounded
-                            : Icons.star_outline_rounded,
-                        color: Theme.of(context).colorScheme.primary,
-                        size: 40),
-                  ),
+  Widget _buildReviewForm() {
+    final l10n = AppLocalizations.of(context);
+    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Text(l10n.clientSessionDetailHowWasSession,
+          style: TextStyle(color: context.fitlek.textSecondary, fontSize: 13)),
+      const SizedBox(height: 16),
+      Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: List.generate(5, (i) {
+          final filled =
+              i < (_hoverRating > 0 ? _hoverRating : _selectedRating);
+          return GestureDetector(
+            onTap: () => setState(() => _selectedRating = i + 1),
+            child: MouseRegion(
+              onEnter: (_) => setState(() => _hoverRating = i + 1),
+              onExit: (_) => setState(() => _hoverRating = 0),
+              child: AnimatedScale(
+                duration: const Duration(milliseconds: 150),
+                scale: filled ? 1.1 : 1.0,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  child: Icon(
+                      filled
+                          ? Icons.star_rounded
+                          : Icons.star_outline_rounded,
+                      color: Theme.of(context).colorScheme.primary,
+                      size: 40),
                 ),
               ),
-            );
-          }),
-        ),
-        if (_selectedRating > 0) ...[
-          const SizedBox(height: 8),
-          Center(
-              child: Text(_ratingText(_selectedRating),
-                  style: TextStyle(
-                      color: Theme.of(context).colorScheme.primary,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600))),
-        ],
-        const SizedBox(height: 18),
-        Container(
-          decoration: BoxDecoration(
-              color: context.fitlek.inputFill,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: context.fitlek.border)),
-          child: TextField(
-            controller: _commentCtrl,
-            maxLines: 3,
-            style: TextStyle(
-                color: Theme.of(context).colorScheme.onSurface, fontSize: 13),
-            decoration: InputDecoration(
-              hintText: 'Share the details... (optional)',
-              hintStyle:
-                  TextStyle(color: context.fitlek.textMuted, fontSize: 12),
-              border: InputBorder.none,
-              contentPadding: const EdgeInsets.all(14),
             ),
+          );
+        }),
+      ),
+      if (_selectedRating > 0) ...[
+        const SizedBox(height: 8),
+        Center(
+            child: Text(_ratingText(_selectedRating),
+                style: TextStyle(
+                    color: Theme.of(context).colorScheme.primary,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600))),
+      ],
+      const SizedBox(height: 18),
+      Container(
+        decoration: BoxDecoration(
+            color: context.fitlek.inputFill,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: context.fitlek.border)),
+        child: TextField(
+          controller: _commentCtrl,
+          maxLines: 3,
+          style: TextStyle(
+              color: Theme.of(context).colorScheme.onSurface, fontSize: 13),
+          decoration: InputDecoration(
+            hintText: l10n.clientSessionDetailReviewHint,
+            hintStyle: TextStyle(color: context.fitlek.textMuted, fontSize: 12),
+            border: InputBorder.none,
+            contentPadding: const EdgeInsets.all(14),
           ),
         ),
-        const SizedBox(height: 16),
-        SizedBox(
-          width: double.infinity,
-          child: GestureDetector(
-            onTap:
-                (_selectedRating > 0 && !_reviewLoading) ? _submitReview : null,
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              padding: const EdgeInsets.symmetric(vertical: 15),
-              decoration: BoxDecoration(
-                  color: _selectedRating > 0
-                      ? Theme.of(context).colorScheme.primary
-                      : context.fitlek.card2,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                      color: _selectedRating > 0
-                          ? Theme.of(context)
-                              .colorScheme
-                              .primary
-                              .withValues(alpha: 0.3)
-                          : context.fitlek.border)),
-              child: _reviewLoading
-                  ? Center(
-                      child: SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(
-                              color: Theme.of(context).colorScheme.onPrimary,
-                              strokeWidth: 2)))
-                  : Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                      Icon(Icons.send_rounded,
-                          color: _selectedRating > 0
-                              ? Theme.of(context).colorScheme.onPrimary
-                              : context.fitlek.textMuted,
-                          size: 15),
-                      const SizedBox(width: 8),
-                      Text(
+      ),
+      const SizedBox(height: 16),
+      SizedBox(
+        width: double.infinity,
+        child: GestureDetector(
+          onTap: (_selectedRating > 0 && !_reviewLoading) ? _submitReview : null,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
+            decoration: BoxDecoration(
+                color: _selectedRating > 0
+                    ? Theme.of(context).colorScheme.primary
+                    : context.fitlek.card2,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                    color: _selectedRating > 0
+                        ? Theme.of(context)
+                            .colorScheme
+                            .primary
+                            .withValues(alpha: 0.3)
+                        : context.fitlek.border)),
+            child: _reviewLoading
+                ? Center(
+                    child: SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                            color: Theme.of(context).colorScheme.onPrimary,
+                            strokeWidth: 2)))
+                : Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                    Icon(Icons.send_rounded,
+                        color: _selectedRating > 0
+                            ? Theme.of(context).colorScheme.onPrimary
+                            : context.fitlek.textMuted,
+                        size: 15),
+                    const SizedBox(width: 8),
+                    Flexible(
+                      child: Text(
                           _editingReview
-                              ? 'UPDATE MY REVIEW'
-                              : 'PUBLISH MY REVIEW',
+                              ? l10n.clientSessionDetailUpdateMyReviewBtn
+                              : l10n.clientSessionDetailPublishMyReviewBtn,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                           style: TextStyle(
                               color: _selectedRating > 0
                                   ? Theme.of(context).colorScheme.onPrimary
                                   : context.fitlek.textMuted,
                               fontWeight: FontWeight.w900,
                               fontSize: 12,
-                              letterSpacing: 1.2)),
-                    ]),
-            ),
+                              letterSpacing: 0.8)),
+                    ),
+                  ]),
           ),
         ),
-      ]);
+      ),
+    ]);
+  }
 
   String _ratingText(int r) {
-    const texts = [
+    final l10n = AppLocalizations.of(context);
+    final texts = [
       '',
-      'Needs improvement',
-      'Okay',
-      'Good',
-      'Very good',
-      'Excellent!'
+      l10n.clientSessionDetailRating1,
+      l10n.clientSessionDetailRating2,
+      l10n.clientSessionDetailRating3,
+      l10n.clientSessionDetailRating4,
+      l10n.clientSessionDetailRating5,
     ];
     return texts[r.clamp(0, 5)];
   }

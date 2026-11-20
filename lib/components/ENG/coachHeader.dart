@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:fitlek1/l10n/app_localizations.dart';
 import '../../components/sirvya_logo.dart';
 import '../../theme/fitlek_theme_extension.dart';
 import '../../components/ENG/imagePreview.dart';
@@ -71,11 +72,12 @@ class CoachHeader extends StatelessWidget {
 
   Widget _buildNotificationButton(
       BuildContext context, ColorScheme cs, FitlekColors f) {
+    final l10n = AppLocalizations.of(context);
     return Semantics(
       button: true,
       label: unreadCount > 0
-          ? 'Notifications, $unreadCount unread'
-          : 'Notifications',
+          ? l10n.coachHeaderNotificationsUnread(unreadCount)
+          : l10n.coachHeaderNotifications,
       child: GestureDetector(
         onTap: onNotificationTap,
         child: Stack(
@@ -132,7 +134,7 @@ class CoachHeader extends StatelessWidget {
   Widget _buildAvatar(BuildContext context, ColorScheme cs, FitlekColors f) {
     return Semantics(
       button: true,
-      label: 'Open Coach Profile',
+      label: AppLocalizations.of(context).coachHeaderOpenProfileLabel,
       child: GestureDetector(
         onTap: onAvatarTap,
         onLongPress: () {

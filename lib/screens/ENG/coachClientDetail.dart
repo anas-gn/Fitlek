@@ -1,3 +1,4 @@
+import 'package:fitlek1/l10n/app_localizations.dart';
 import '../../components/app_dialog.dart';
 import '../../services/live_updates.dart';
 import 'coachCalendar.dart';
@@ -179,14 +180,14 @@ class _CoachClientDetailState extends State<CoachClientDetail>
                   Icon(Icons.person_remove_rounded, color: f.error, size: 26),
             ),
             const SizedBox(height: 16),
-            Text('Disconnect invitation',
+            Text(AppLocalizations.of(context).coachClientDetailDisconnectInviteTitle,
                 style: TextStyle(
                     color: cs.onSurface,
                     fontSize: 18,
                     fontWeight: FontWeight.w700)),
             const SizedBox(height: 8),
             Text(
-              'Disconnect your invitation with $_fullName? Clients with bookings remain visible so you can manage their sessions. Their account and sessions are kept.',
+              AppLocalizations.of(context).coachClientDetailDisconnectInviteMessage(_fullName),
               textAlign: TextAlign.center,
               style:
                   TextStyle(color: f.textSecondary, fontSize: 13, height: 1.5),
@@ -219,7 +220,7 @@ class _CoachClientDetailState extends State<CoachClientDetail>
                         color: f.error,
                         borderRadius: BorderRadius.circular(12)),
                     child: Center(
-                        child: Text('Disconnect',
+                        child: Text(AppLocalizations.of(context).coachClientDetailDisconnect,
                             style: TextStyle(
                                 color: cs.onError,
                                 fontWeight: FontWeight.w700))),
@@ -257,7 +258,7 @@ class _CoachClientDetailState extends State<CoachClientDetail>
         elevation: 0,
         centerTitle: true,
         iconTheme: IconThemeData(color: cs.onSurface),
-        title: Text('Client',
+        title: Text(AppLocalizations.of(context).coachClientDetailTitle,
             style: TextStyle(
                 color: cs.onSurface,
                 fontSize: 17,
@@ -290,7 +291,7 @@ class _CoachClientDetailState extends State<CoachClientDetail>
       child: Column(mainAxisSize: MainAxisSize.min, children: [
         Icon(Icons.wifi_off_rounded, color: f.textMuted, size: 48),
         const SizedBox(height: 12),
-        Text('Unable to load client',
+        Text(AppLocalizations.of(context).coachClientDetailLoadError,
             style: TextStyle(color: f.textMuted, fontSize: 15)),
         const SizedBox(height: 20),
         GestureDetector(
@@ -299,7 +300,7 @@ class _CoachClientDetailState extends State<CoachClientDetail>
             padding: const EdgeInsets.symmetric(horizontal: 26, vertical: 12),
             decoration: BoxDecoration(
                 color: cs.primary, borderRadius: BorderRadius.circular(14)),
-            child: Text('Retry',
+            child: Text(AppLocalizations.of(context).coachClientDetailRetry,
                 style: TextStyle(
                     color: cs.onPrimary,
                     fontWeight: FontWeight.w800,
@@ -430,7 +431,7 @@ class _CoachClientDetailState extends State<CoachClientDetail>
                 borderRadius: BorderRadius.circular(18),
                 border: Border.all(color: f.border)),
             child: Center(
-                child: Text('No sessions yet',
+                child: Text(AppLocalizations.of(context).coachClientDetailNoSessions,
                     style: TextStyle(color: f.textMuted, fontSize: 13))),
           )
         else
@@ -726,7 +727,7 @@ class _CoachClientDetailState extends State<CoachClientDetail>
               Icon(Icons.flag_rounded,
                   color: context.fitlek.textMuted, size: 18),
               const SizedBox(width: 8),
-              Text('Report Client',
+              Text(AppLocalizations.of(context).coachClientDetailReport,
                   style: TextStyle(
                       color: Theme.of(context).colorScheme.onSurface,
                       fontSize: 13,
@@ -740,7 +741,7 @@ class _CoachClientDetailState extends State<CoachClientDetail>
             children: [
               Icon(Icons.block_rounded, color: context.fitlek.error, size: 18),
               const SizedBox(width: 8),
-              Text('Block Client',
+              Text(AppLocalizations.of(context).coachClientDetailBlock,
                   style: TextStyle(
                       color: context.fitlek.error,
                       fontSize: 13,
@@ -769,7 +770,7 @@ class _CoachClientDetailState extends State<CoachClientDetail>
           backgroundColor: context.fitlek.card,
           shape:
               RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          title: Text('Report $_fullName',
+          title: Text(AppLocalizations.of(context).coachClientDetailReportTitle(_fullName),
               style: TextStyle(
                   color: Theme.of(context).colorScheme.onSurface,
                   fontSize: 16)),
@@ -777,7 +778,7 @@ class _CoachClientDetailState extends State<CoachClientDetail>
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                  'Why are you reporting this user? We take these reports seriously.',
+                  AppLocalizations.of(context).coachClientDetailReportSubtitle,
                   style:
                       TextStyle(color: context.fitlek.textMuted, fontSize: 13)),
               const SizedBox(height: 16),
@@ -809,7 +810,7 @@ class _CoachClientDetailState extends State<CoachClientDetail>
                       _submitReport(
                           int.parse(widget.clientId), selectedReason!);
                     },
-              child: Text('Submit',
+              child: Text(AppLocalizations.of(context).coachClientDetailSubmit,
                   style: TextStyle(
                       color: selectedReason == null
                           ? context.fitlek.textMuted
@@ -845,7 +846,7 @@ class _CoachClientDetailState extends State<CoachClientDetail>
       builder: (ctx) => AppDialog(
         backgroundColor: context.fitlek.card,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Text('Block $_fullName?',
+        title: Text(AppLocalizations.of(context).coachClientDetailBlockTitle(_fullName),
             style: TextStyle(color: Theme.of(context).colorScheme.onSurface)),
         content: Text(
           'They won\'t be able to find your profile or send you messages. They will not be notified that you blocked them.',
@@ -861,7 +862,7 @@ class _CoachClientDetailState extends State<CoachClientDetail>
               Navigator.pop(ctx);
               _submitBlock(int.parse(widget.clientId));
             },
-            child: Text('Block',
+            child: Text(AppLocalizations.of(context).coachClientDetailBlockConfirm,
                 style: TextStyle(
                     color: context.fitlek.error, fontWeight: FontWeight.bold)),
           ),

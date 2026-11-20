@@ -3,6 +3,8 @@ import '../../services/booking_policy.dart';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:intl/intl.dart';
+import 'package:fitlek1/l10n/app_localizations.dart';
 import 'package:fitlek1/models/anas/reservation.dart';
 import 'package:fitlek1/models/anas/coachPackage.dart';
 import 'package:fitlek1/constants/urls.dart';
@@ -74,8 +76,8 @@ class _BookingScreenState extends State<BookingScreen>
   String get _bookingLocation => _selectedLocation == 'gym'
       ? [_gymName, _gymAddress].where((v) => v.isNotEmpty).join(' · ')
       : _selectedLocation == 'home'
-          ? 'Home visit — arrange address with coach in messages'
-          : 'Location to be arranged with coach in messages';
+          ? AppLocalizations.of(context).clientBookingHomeVisitLocation
+          : AppLocalizations.of(context).clientBookingDefaultLocation;
   CoachPackage?
       _selectedPackage; // null means no package selected (book directly)
   bool _packageStepDone =
@@ -358,21 +360,8 @@ class _BookingScreenState extends State<BookingScreen>
   }
 
   String _formattedShortDate(DateTime d) {
-    const m = [
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'May',
-      'Jun',
-      'Jul',
-      'Aug',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Dec'
-    ];
-    return '${m[d.month - 1]} ${d.day}';
+    final locale = Localizations.localeOf(context).toString();
+    return DateFormat('MMM d', locale).format(d);
   }
 
   bool get _allSessionsComplete =>
@@ -409,8 +398,10 @@ class _BookingScreenState extends State<BookingScreen>
         time: t,
         available: !isBlocked && !isReserved,
         isBlocked: isBlocked,
-        bookedSessionLabel:
-            isTakenByPackageSession ? 'Session $sessionIndex' : null,
+        bookedSessionLabel: isTakenByPackageSession
+            ? AppLocalizations.of(context)
+                .clientBookingSessionLabel(sessionIndex)
+            : null,
       );
     }).toList();
   }
@@ -423,7 +414,7 @@ class _BookingScreenState extends State<BookingScreen>
       final start = DateTime(date.year, date.month, date.day,
           int.parse(parts[0]), int.parse(parts[1]));
       if (!hasBookingLeadTime(start)) {
-        _showError('Choose a session more than one hour from now.');
+        _showError(AppLocalizations.of(context).clientBookingLeadTimeError);
         return;
       }
     }
@@ -473,6 +464,7 @@ class _BookingScreenState extends State<BookingScreen>
             _reservedSlots.putIfAbsent(key, () => []).add(s.time!);
           }
         }
+        final l10n = AppLocalizations.of(context);
         Navigator.pop(context);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -483,8 +475,9 @@ class _BookingScreenState extends State<BookingScreen>
               Expanded(
                 child: Text(
                   _selectedSessions.length > 1
-                      ? 'All ${_selectedSessions.length} sessions booked successfully!'
-                      : 'Booking sent successfully!',
+                      ? l10n.clientBookingMultipleBookedSuccess(
+                          _selectedSessions.length)
+                      : l10n.clientBookingSingleBookedSuccess,
                   style: TextStyle(
                       color: Theme.of(context).colorScheme.onPrimary,
                       fontWeight: FontWeight.w700),
@@ -499,13 +492,16 @@ class _BookingScreenState extends State<BookingScreen>
           ),
         );
       } else {
-        final msg =
-            jsonDecode(res.body)['error'] ?? 'Error (${res.statusCode})';
+        final msg = jsonDecode(res.body)['error'] ??
+            AppLocalizations.of(context)
+                .clientBookingErrorCode(res.statusCode);
         _showError(msg);
       }
     } catch (e) {
-      if (mounted) setState(() => _submitting = false);
-      _showError('Unable to reach the server.');
+      if (mounted) {
+        setState(() => _submitting = false);
+        _showError(AppLocalizations.of(context).clientBookingServerUnreachable);
+      }
     }
   }
 
@@ -561,11 +557,12 @@ class _BookingScreenState extends State<BookingScreen>
   Widget _buildPackageSelectionStep() {
     final cs = Theme.of(context).colorScheme;
     final f = context.fitlek;
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
         child: Column(children: [
-          _buildHeader(title: 'Choose a Package'),
+          _buildHeader(title: l10n.clientBookingChoosePackageTitle),
           Expanded(
             child: SingleChildScrollView(
               padding: EdgeInsets.fromLTRB(20, 0, 20, 32),
@@ -581,7 +578,7 @@ class _BookingScreenState extends State<BookingScreen>
                         height: 16,
                         color: cs.primary,
                         margin: EdgeInsets.only(right: 10)),
-                    Text('Select a Package',
+                    Text(l10n.clientBookingSelectPackageHeading,
                         style: TextStyle(
                             color: cs.onSurface,
                             fontSize: 15,
@@ -589,7 +586,7 @@ class _BookingScreenState extends State<BookingScreen>
                   ]),
                   SizedBox(height: 6),
                   Text(
-                    'Choose the package that fits you best, or book without a package.',
+                    l10n.clientBookingSelectPackageSubtitle,
                     style: TextStyle(
                         color: f.textMuted, fontSize: 12.5, height: 1.5),
                   ),
@@ -624,7 +621,7 @@ class _BookingScreenState extends State<BookingScreen>
                             Icon(Icons.arrow_forward_rounded,
                                 color: cs.onPrimary, size: 18),
                             SizedBox(width: 8),
-                            Text('Continue to Booking',
+                            Text(l10n.clientBookingContinueToBooking,
                                 style: TextStyle(
                                     color: cs.onPrimary,
                                     fontSize: 15,
@@ -645,6 +642,7 @@ class _BookingScreenState extends State<BookingScreen>
 
   Widget _buildPackageOption(CoachPackage pkg, ColorScheme cs, FitlekColors f) {
     final isSelected = _selectedPackage?.id == pkg.id;
+    final l10n = AppLocalizations.of(context);
     return GestureDetector(
       onTap: () => _selectPackage(pkg),
       child: AnimatedContainer(
@@ -690,13 +688,14 @@ class _BookingScreenState extends State<BookingScreen>
               SizedBox(height: 8),
               Wrap(spacing: 8, children: [
                 if (pkg.sessions != null)
-                  _chipTag('${pkg.sessions} sessions',
+                  _chipTag(l10n.clientBookingPackageSessionsCount(pkg.sessions!),
                       Icons.calendar_today_rounded, cs, f),
                 pkg.price != null
-                    ? _chipTag('${pkg.price!.toInt()} MAD',
+                    ? _chipTag(l10n.clientBookingPriceMad(pkg.price!.toInt()),
                         Icons.payments_rounded, cs, f,
                         colored: true)
-                    : _chipTag('Price to discuss', Icons.chat_rounded, cs, f),
+                    : _chipTag(l10n.clientBookingPriceToDiscuss,
+                        Icons.chat_rounded, cs, f),
               ]),
             ]),
           ),
@@ -721,6 +720,7 @@ class _BookingScreenState extends State<BookingScreen>
 
   Widget _buildNoPackageOption(ColorScheme cs, FitlekColors f) {
     final isSelected = _selectedPackage == null;
+    final l10n = AppLocalizations.of(context);
     return GestureDetector(
       onTap: () => _selectPackage(null),
       child: AnimatedContainer(
@@ -748,13 +748,13 @@ class _BookingScreenState extends State<BookingScreen>
           Expanded(
             child:
                 Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text('Book without a package',
+              Text(l10n.clientBookingBookWithoutPackage,
                   style: TextStyle(
                       color: cs.onSurface,
                       fontSize: 14,
                       fontWeight: FontWeight.w700)),
               SizedBox(height: 3),
-              Text('Single session — price discussed with coach',
+              Text(l10n.clientBookingBookWithoutPackageSub,
                   style: TextStyle(color: f.textMuted, fontSize: 12)),
             ]),
           ),
@@ -838,6 +838,7 @@ class _BookingScreenState extends State<BookingScreen>
   Widget _buildSelectedPackageBanner() {
     final cs = Theme.of(context).colorScheme;
     final f = context.fitlek;
+    final l10n = AppLocalizations.of(context);
     final pkg = _selectedPackage;
     return GestureDetector(
       onTap: () => setState(() => _packageStepDone = false),
@@ -862,8 +863,11 @@ class _BookingScreenState extends State<BookingScreen>
           Expanded(
             child: Text(
               pkg != null
-                  ? '${pkg.name}${pkg.price != null ? ' · ${pkg.price!.toInt()} MAD' : ' · Price on request'}'
-                  : 'No package selected',
+                  ? (pkg.price != null
+                      ? l10n.clientBookingBannerPackagePrice(
+                          pkg.name, pkg.price!.toInt())
+                      : l10n.clientBookingBannerPackageRequest(pkg.name))
+                  : l10n.clientBookingNoPackageSelected,
               style: TextStyle(
                   color: pkg != null ? cs.primary : f.textMuted,
                   fontSize: 12.5,
@@ -879,6 +883,7 @@ class _BookingScreenState extends State<BookingScreen>
   Widget _buildMultiSessionSelector() {
     final cs = Theme.of(context).colorScheme;
     final f = context.fitlek;
+    final l10n = AppLocalizations.of(context);
     final completedCount = _selectedSessions.where((s) => s.isComplete).length;
     final total = _selectedSessions.length;
     final double perSessionPrice = (_selectedPackage != null &&
@@ -919,7 +924,7 @@ class _BookingScreenState extends State<BookingScreen>
                   ),
                   SizedBox(width: 10),
                   Text(
-                    'Package Sessions',
+                    l10n.clientBookingPackageSessionsTitle,
                     style: TextStyle(
                       color: cs.onSurface,
                       fontSize: 15,
@@ -948,7 +953,7 @@ class _BookingScreenState extends State<BookingScreen>
                   ),
                 ),
                 child: Text(
-                  '$completedCount of $total scheduled',
+                  l10n.clientBookingScheduledProgress(completedCount, total),
                   style: TextStyle(
                     color: completedCount == total
                         ? cs.primary
@@ -963,8 +968,9 @@ class _BookingScreenState extends State<BookingScreen>
           SizedBox(height: 6),
           Text(
             perSessionPrice > 0
-                ? 'Select a date & time for each session (${perSessionPrice.toInt()} MAD / session):'
-                : 'Select a date & time for each of the $total sessions included in your package:',
+                ? l10n.clientBookingSelectDatesWithPrice(
+                    perSessionPrice.toInt())
+                : l10n.clientBookingSelectDatesNoPrice(total),
             style: TextStyle(color: f.textMuted, fontSize: 12, height: 1.4),
           ),
           SizedBox(height: 14),
@@ -1026,8 +1032,9 @@ class _BookingScreenState extends State<BookingScreen>
                             Expanded(
                               child: Text(
                                 perSessionPrice > 0
-                                    ? 'Session ${idx + 1} · ${perSessionPrice.toInt()} MAD'
-                                    : 'Session ${idx + 1}',
+                                    ? l10n.clientBookingSessionWithPrice(
+                                        idx + 1, perSessionPrice.toInt())
+                                    : l10n.clientBookingSessionLabel(idx + 1),
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
                                 style: TextStyle(
@@ -1084,7 +1091,9 @@ class _BookingScreenState extends State<BookingScreen>
                           ),
                         ] else ...[
                           Text(
-                            isActive ? 'Selecting now...' : 'Tap to select',
+                            isActive
+                                ? l10n.clientBookingSelectingNow
+                                : l10n.clientBookingTapToSelect,
                             style: TextStyle(
                               color: isActive
                                   ? Theme.of(context).colorScheme.primary
@@ -1106,7 +1115,7 @@ class _BookingScreenState extends State<BookingScreen>
     );
   }
 
-  Widget _buildHeader({String title = 'Book a session'}) => Padding(
+  Widget _buildHeader({String? title}) => Padding(
         padding: EdgeInsets.fromLTRB(20, 16, 20, 12),
         child: Row(children: [
           _iconBtn(
@@ -1115,7 +1124,8 @@ class _BookingScreenState extends State<BookingScreen>
           ),
           SizedBox(width: 14),
           Expanded(
-            child: Text(title,
+            child: Text(
+                title ?? AppLocalizations.of(context).clientBookingHeaderTitle,
                 style: TextStyle(
                     color: Theme.of(context).colorScheme.onSurface,
                     fontSize: 18,
@@ -1130,6 +1140,7 @@ class _BookingScreenState extends State<BookingScreen>
     final rating = _coachRating > 0 ? _coachRating : s.coachRating;
     final reviews = _totalReviews;
     final price = _coachPrice > 0 ? _coachPrice : s.price;
+    final l10n = AppLocalizations.of(context);
 
     return Container(
       padding: EdgeInsets.all(16),
@@ -1181,14 +1192,14 @@ class _BookingScreenState extends State<BookingScreen>
                     letterSpacing: -0.3)),
             SizedBox(height: 4),
             Text(
-                "${s.coachSpeciality.isNotEmpty ? s.coachSpeciality : 'Coach'} • ${s.location.isNotEmpty ? s.location : 'Anywhere'}",
+                "${s.coachSpeciality.isNotEmpty ? s.coachSpeciality : l10n.clientBookingCoachFallback} • ${s.location.isNotEmpty ? s.location : l10n.clientBookingAnywhereFallback}",
                 style:
                     TextStyle(color: context.fitlek.textMuted, fontSize: 12)),
             SizedBox(height: 6),
             Row(
               children: [
                 Text(
-                  '⭐ ${rating > 0 ? rating.toStringAsFixed(1) : 'New'}',
+                  '⭐ ${rating > 0 ? rating.toStringAsFixed(1) : l10n.clientBookingNewCoach}',
                   style: TextStyle(
                       color: Theme.of(context).colorScheme.onSurface,
                       fontSize: 12,
@@ -1202,7 +1213,7 @@ class _BookingScreenState extends State<BookingScreen>
                           fontSize: 12,
                           fontWeight: FontWeight.w900)),
                   SizedBox(width: 4),
-                  Text('$reviews reviews',
+                  Text(l10n.clientBookingReviewsCount(reviews),
                       style: TextStyle(
                           color: context.fitlek.textMuted, fontSize: 12)),
                 ],
@@ -1214,7 +1225,7 @@ class _BookingScreenState extends State<BookingScreen>
                           fontSize: 12,
                           fontWeight: FontWeight.w900)),
                   SizedBox(width: 6),
-                  Text('${price.toInt()} MAD/session',
+                  Text(l10n.clientBookingPricePerSession(price.toInt()),
                       style: TextStyle(
                           color: context.fitlek.textMuted, fontSize: 12)),
                 ],
@@ -1228,6 +1239,7 @@ class _BookingScreenState extends State<BookingScreen>
 
   Widget _buildCalendar() {
     final isMulti = _selectedSessions.length > 1;
+    final l10n = AppLocalizations.of(context);
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Row(children: [
         Container(
@@ -1237,7 +1249,8 @@ class _BookingScreenState extends State<BookingScreen>
             margin: EdgeInsets.only(right: 10)),
         Text(
             isMulti
-                ? 'Session ${_activeSessionIndex + 1} Date · ${_monthLabel(_displayedMonth)}'
+                ? l10n.clientBookingSessionDateHeader(
+                    _activeSessionIndex + 1, _monthLabel(_displayedMonth))
                 : _monthLabel(_displayedMonth),
             style: TextStyle(
                 color: Theme.of(context).colorScheme.onSurface,
@@ -1268,7 +1281,15 @@ class _BookingScreenState extends State<BookingScreen>
         padding: EdgeInsets.all(14),
         child: Column(children: [
           Row(
-            children: ['M', 'T', 'W', 'T', 'F', 'S', 'S']
+            children: [
+              l10n.clientBookingWeekdayMon,
+              l10n.clientBookingWeekdayTue,
+              l10n.clientBookingWeekdayWed,
+              l10n.clientBookingWeekdayThu,
+              l10n.clientBookingWeekdayFri,
+              l10n.clientBookingWeekdaySat,
+              l10n.clientBookingWeekdaySun,
+            ]
                 .map((d) => Expanded(
                       child: Center(
                         child: Text(d,
@@ -1409,6 +1430,7 @@ class _BookingScreenState extends State<BookingScreen>
   }
 
   Widget _buildLocationSelector() {
+    final l10n = AppLocalizations.of(context);
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Row(children: [
         Container(
@@ -1416,7 +1438,7 @@ class _BookingScreenState extends State<BookingScreen>
             height: 16,
             color: Theme.of(context).colorScheme.primary,
             margin: EdgeInsets.only(right: 10)),
-        Text('Session location',
+        Text(l10n.clientBookingSessionLocationTitle,
             style: TextStyle(
                 color: Theme.of(context).colorScheme.onSurface,
                 fontSize: 15,
@@ -1433,8 +1455,8 @@ class _BookingScreenState extends State<BookingScreen>
         child: Column(children: [
           _locationOption(
             icon: Icons.home_rounded,
-            label: 'My home',
-            subtitle: 'Arrange your address with the coach in messages',
+            label: l10n.clientBookingLocationHomeTitle,
+            subtitle: l10n.clientBookingLocationHomeSubtitle,
             value: 'home',
           ),
           SizedBox(height: 10),
@@ -1444,14 +1466,14 @@ class _BookingScreenState extends State<BookingScreen>
                 label: _gymName,
                 subtitle: _gymAddress.isNotEmpty
                     ? _gymAddress
-                    : 'Coach’s gym · confirm directions in messages',
+                    : l10n.clientBookingLocationGymSubtitle,
                 value: 'gym'),
             SizedBox(height: 10),
           ],
           _locationOption(
             icon: Icons.help_outline_rounded,
-            label: 'To be defined',
-            subtitle: 'Agree on the meeting place with your coach in messages',
+            label: l10n.clientBookingLocationTbdTitle,
+            subtitle: l10n.clientBookingLocationTbdSubtitle,
             value: null,
           ),
         ]),
@@ -1549,6 +1571,7 @@ class _BookingScreenState extends State<BookingScreen>
     final slots = _slotsFor(_selectedDate);
     final availableCount = slots.where((s) => s.available).length;
     final isMulti = _selectedSessions.length > 1;
+    final l10n = AppLocalizations.of(context);
 
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Row(children: [
@@ -1559,8 +1582,9 @@ class _BookingScreenState extends State<BookingScreen>
             margin: EdgeInsets.only(right: 10)),
         Text(
             isMulti
-                ? 'Session ${_activeSessionIndex + 1} Time slot'
-                : 'Time slots',
+                ? l10n.clientBookingSessionTimeSlotTitle(
+                    _activeSessionIndex + 1)
+                : l10n.clientBookingTimeSlotsTitle,
             style: TextStyle(
                 color: Theme.of(context).colorScheme.onSurface,
                 fontSize: 15,
@@ -1583,7 +1607,9 @@ class _BookingScreenState extends State<BookingScreen>
                       : _red.withValues(alpha: 0.3)),
             ),
             child: Text(
-              availableCount > 0 ? '$availableCount available' : 'Full',
+              availableCount > 0
+                  ? l10n.clientBookingAvailableSlotsCount(availableCount)
+                  : l10n.clientBookingSlotsFull,
               style: TextStyle(
                   color: availableCount > 0
                       ? Theme.of(context).colorScheme.primary
@@ -1595,7 +1621,10 @@ class _BookingScreenState extends State<BookingScreen>
       ]),
       SizedBox(height: 6),
       Text(
-          '${_formattedDate(_selectedDate)}${isMulti ? ' · for Session ${_activeSessionIndex + 1}' : ''}',
+          isMulti
+              ? l10n.clientBookingDateForSession(
+                  _formattedDate(_selectedDate), _activeSessionIndex + 1)
+              : _formattedDate(_selectedDate),
           style: TextStyle(color: context.fitlek.textMuted, fontSize: 12)),
       SizedBox(height: 14),
       if (_loadingSlots)
@@ -1678,14 +1707,14 @@ class _BookingScreenState extends State<BookingScreen>
                         SizedBox(height: 3),
                         Text(
                           isSelected
-                              ? '✓ Selected'
+                              ? l10n.clientBookingSlotSelected
                               : slot.bookedSessionLabel != null
                                   ? slot.bookedSessionLabel!
                                   : slot.available
-                                      ? '1h'
+                                      ? l10n.clientBookingSlotDuration
                                       : slot.isBlocked
-                                          ? 'Blocked'
-                                          : 'Booked',
+                                          ? l10n.clientBookingSlotBlocked
+                                          : l10n.clientBookingSlotBooked,
                           style: TextStyle(
                               color: isSelected
                                   ? Theme.of(context)
@@ -1711,12 +1740,12 @@ class _BookingScreenState extends State<BookingScreen>
       Row(children: [
         _dot(Theme.of(context).colorScheme.primary),
         SizedBox(width: 5),
-        Text('Free',
+        Text(l10n.clientBookingLegendFree,
             style: TextStyle(color: context.fitlek.textMuted, fontSize: 10)),
         SizedBox(width: 16),
         _dot(_red.withValues(alpha: 0.7)),
         SizedBox(width: 5),
-        Text('Unavailable',
+        Text(l10n.clientBookingLegendUnavailable,
             style: TextStyle(color: context.fitlek.textMuted, fontSize: 10)),
       ]),
     ]);
@@ -1729,6 +1758,7 @@ class _BookingScreenState extends State<BookingScreen>
           BoxDecoration(color: color, borderRadius: BorderRadius.circular(2)));
 
   Widget _buildConfirmButton() {
+    final l10n = AppLocalizations.of(context);
     final bool isMulti = _selectedSessions.length > 1;
     final int completedCount =
         _selectedSessions.where((s) => s.isComplete).length;
@@ -1740,12 +1770,15 @@ class _BookingScreenState extends State<BookingScreen>
     String btnText;
     if (isMulti) {
       if (allDone) {
-        btnText = 'CONFIRM ALL $totalCount SESSIONS';
+        btnText = l10n.clientBookingConfirmAllSessions(totalCount);
       } else {
-        btnText = 'SELECT ALL SESSIONS ($completedCount/$totalCount CHOSEN)';
+        btnText = l10n.clientBookingSelectAllSessions(
+            completedCount, totalCount);
       }
     } else {
-      btnText = valid ? 'CONFIRM · $_selectedTime' : 'CHOOSE A SLOT';
+      btnText = valid
+          ? l10n.clientBookingConfirmWithTime(_selectedTime!)
+          : l10n.clientBookingChooseASlot;
     }
 
     return GestureDetector(
@@ -1759,8 +1792,8 @@ class _BookingScreenState extends State<BookingScreen>
                   _switchActiveSession(firstIncomplete);
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text(
-                          'Please select a date & time for Session ${firstIncomplete + 1}'),
+                      content: Text(l10n.clientBookingSelectDateAndTimePrompt(
+                          firstIncomplete + 1)),
                       backgroundColor: Colors.orange.shade800,
                       behavior: SnackBarBehavior.floating,
                       shape: RoundedRectangleBorder(
@@ -1844,40 +1877,13 @@ class _BookingScreenState extends State<BookingScreen>
       );
 
   String _monthLabel(DateTime d) {
-    const months = [
-      'January',
-      'February',
-      'March',
-      'April',
-      'May',
-      'June',
-      'July',
-      'August',
-      'September',
-      'October',
-      'November',
-      'December'
-    ];
-    return '${months[d.month - 1]} ${d.year}';
+    final locale = Localizations.localeOf(context).toString();
+    return DateFormat('MMMM yyyy', locale).format(d);
   }
 
   String _formattedDate(DateTime d) {
-    const m = [
-      'Jan',
-      'Feb',
-      'Mar',
-      'Apr',
-      'May',
-      'Jun',
-      'Jul',
-      'Aug',
-      'Sep',
-      'Oct',
-      'Nov',
-      'Dec'
-    ];
-    const w = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-    return '${w[d.weekday - 1]} ${d.day} ${m[d.month - 1]}';
+    final locale = Localizations.localeOf(context).toString();
+    return DateFormat('EEE d MMM', locale).format(d);
   }
 }
 
@@ -1919,19 +1925,21 @@ class _ConfirmationDialog extends StatelessWidget {
     required this.onConfirm,
   });
 
-  String get _locationLabel {
+  String _locationLabel(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     switch (location) {
       case 'home':
-        return 'My home';
+        return l10n.clientBookingLocationHomeTitle;
       case 'gym':
-        return 'Your gym';
+        return l10n.clientBookingLocationYourGym;
       default:
-        return location ?? 'Location to be arranged with coach in messages';
+        return location ?? l10n.clientBookingDefaultLocation;
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final activeSessions = sessions.isNotEmpty
         ? sessions
         : (date != null && time != null
@@ -1954,7 +1962,7 @@ class _ConfirmationDialog extends StatelessWidget {
                   height: 18,
                   color: Theme.of(context).colorScheme.primary,
                   margin: EdgeInsets.only(right: 10)),
-              Text('Confirm booking',
+              Text(l10n.clientBookingConfirmDialogTitle,
                   style: TextStyle(
                       color: Theme.of(context).colorScheme.onSurface,
                       fontSize: 16,
@@ -2022,8 +2030,8 @@ class _ConfirmationDialog extends StatelessWidget {
                                 SizedBox(width: 5),
                                 Text(
                                   rating > 0
-                                      ? '${rating.toStringAsFixed(1)}${reviews > 0 ? ' · $reviews reviews' : ''}'
-                                      : 'Not yet rated',
+                                      ? '${rating.toStringAsFixed(1)}${reviews > 0 ? ' · ${l10n.clientBookingReviewsCount(reviews)}' : ''}'
+                                      : l10n.clientBookingNotYetRated,
                                   style: TextStyle(
                                       color: rating > 0
                                           ? Theme.of(context)
@@ -2043,14 +2051,21 @@ class _ConfirmationDialog extends StatelessWidget {
                     if (activeSessions.length == 1 &&
                         activeSessions[0].date != null &&
                         activeSessions[0].time != null) ...[
-                      _infoRow(context, Icons.calendar_today_rounded, 'Date',
-                          _dateLabel(activeSessions[0].date!)),
+                      _infoRow(
+                          context,
+                          Icons.calendar_today_rounded,
+                          l10n.clientBookingLabelDate,
+                          _dateLabel(context, activeSessions[0].date!)),
                       SizedBox(height: 10),
-                      _infoRow(context, Icons.access_time_rounded, 'Time',
+                      _infoRow(
+                          context,
+                          Icons.access_time_rounded,
+                          l10n.clientBookingLabelTime,
                           '${activeSessions[0].time!} — ${_addHour(activeSessions[0].time!)}'),
                     ] else ...[
                       Text(
-                        'Scheduled Sessions (${activeSessions.length})',
+                        l10n.clientBookingScheduledSessionsCount(
+                            activeSessions.length),
                         style: TextStyle(
                           color: Theme.of(context).colorScheme.onSurface,
                           fontSize: 13,
@@ -2092,7 +2107,9 @@ class _ConfirmationDialog extends StatelessWidget {
                                             .withValues(alpha: 0.15),
                                         borderRadius: BorderRadius.circular(6),
                                       ),
-                                      child: Text('Session ${idx + 1}',
+                                      child: Text(
+                                          l10n.clientBookingSessionLabel(
+                                              idx + 1),
                                           style: TextStyle(
                                               color: Theme.of(context)
                                                   .colorScheme
@@ -2104,8 +2121,11 @@ class _ConfirmationDialog extends StatelessWidget {
                                     Expanded(
                                       child: Text(
                                         s.isComplete
-                                            ? '${_dateLabel(s.date!)} at ${s.time!}'
-                                            : 'Not scheduled yet',
+                                            ? l10n.clientBookingSessionDateAtTime(
+                                                _dateLabel(context, s.date!),
+                                                s.time!)
+                                            : l10n
+                                                .clientBookingNotScheduledYet,
                                         style: TextStyle(
                                             color: Theme.of(context)
                                                 .colorScheme
@@ -2117,7 +2137,8 @@ class _ConfirmationDialog extends StatelessWidget {
                                     if (perSessionPrice > 0) ...[
                                       SizedBox(width: 6),
                                       Text(
-                                        '${perSessionPrice.toInt()} MAD',
+                                        l10n.clientBookingPriceMad(
+                                            perSessionPrice.toInt()),
                                         style: TextStyle(
                                           color: Theme.of(context)
                                               .colorScheme
@@ -2136,18 +2157,25 @@ class _ConfirmationDialog extends StatelessWidget {
                       ),
                     ],
                     SizedBox(height: 10),
-                    _infoRow(context, Icons.location_on_rounded, 'Location',
-                        _locationLabel),
+                    _infoRow(context, Icons.location_on_rounded,
+                        l10n.clientBookingLabelLocation, _locationLabel(context)),
                     if (selectedPackage != null) ...[
                       SizedBox(height: 10),
                       _infoRow(context, Icons.workspace_premium_rounded,
-                          'Package', selectedPackage!.name,
+                          l10n.clientBookingLabelPackage, selectedPackage!.name,
                           valueColor: Theme.of(context).colorScheme.primary),
                     ],
                     if (price > 0) ...[
                       SizedBox(height: 10),
-                      _infoRow(context, Icons.payments_rounded, 'Total Price',
-                          '${price.toInt()} MAD${activeSessions.length > 1 ? ' (${(price / activeSessions.length).toInt()} MAD / session)' : ' / session'}',
+                      _infoRow(
+                          context,
+                          Icons.payments_rounded,
+                          l10n.clientBookingLabelTotalPrice,
+                          activeSessions.length > 1
+                              ? l10n.clientBookingTotalPriceMulti(price.toInt(),
+                                  (price / activeSessions.length).toInt())
+                              : l10n.clientBookingTotalPriceSingle(
+                                  price.toInt()),
                           valueColor: Theme.of(context).colorScheme.primary),
                     ],
                   ]),
@@ -2164,7 +2192,7 @@ class _ConfirmationDialog extends StatelessWidget {
                       borderRadius: BorderRadius.circular(11),
                       border: Border.all(color: context.fitlek.border),
                     ),
-                    child: Text('CANCEL',
+                    child: Text(l10n.clientBookingBtnCancel,
                         textAlign: TextAlign.center,
                         style: TextStyle(
                             color: context.fitlek.textSecondary,
@@ -2196,7 +2224,7 @@ class _ConfirmationDialog extends StatelessWidget {
                             offset: Offset(0, 4))
                       ],
                     ),
-                    child: Text('CONFIRM',
+                    child: Text(l10n.clientBookingBtnConfirm,
                         textAlign: TextAlign.center,
                         style: TextStyle(
                             color: Theme.of(context).colorScheme.onPrimary,
@@ -2248,31 +2276,9 @@ class _ConfirmationDialog extends StatelessWidget {
         ],
       );
 
-  String _dateLabel(DateTime d) {
-    const m = [
-      'January',
-      'February',
-      'March',
-      'April',
-      'May',
-      'June',
-      'July',
-      'August',
-      'September',
-      'October',
-      'November',
-      'December'
-    ];
-    const w = [
-      'Monday',
-      'Tuesday',
-      'Wednesday',
-      'Thursday',
-      'Friday',
-      'Saturday',
-      'Sunday'
-    ];
-    return '${w[d.weekday - 1]} ${d.day} ${m[d.month - 1]}';
+  String _dateLabel(BuildContext context, DateTime d) {
+    final locale = Localizations.localeOf(context).toString();
+    return DateFormat('EEEE d MMMM', locale).format(d);
   }
 
   String _addHour(String t) {

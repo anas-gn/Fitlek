@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:fitlek1/l10n/app_localizations.dart';
 import 'dart:ui' as ui;
 import '../components/campaign_dialog.dart';
 export '../components/campaign_dialog.dart';
@@ -72,8 +73,9 @@ class CampaignService {
     final item = await ApiService.get('/campaigns/$id');
     if (!context.mounted) return;
     if (item['ok'] != true) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('This announcement has expired or is unavailable.')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(AppLocalizations.of(context)
+              .campaignServiceAnnouncementExpired)));
       return;
     }
     await ApiService.post('/campaigns/$id/seen', {});
@@ -113,8 +115,9 @@ class CampaignService {
         if (await launchUrl(uri, mode: LaunchMode.externalApplication)) return;
       } catch (_) {}
       if (context.mounted)
-        ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Could not open this link.')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(
+                AppLocalizations.of(context).campaignServiceOpenLinkFailed)));
       return;
     }
     final session =
@@ -144,10 +147,11 @@ class CampaignService {
           coachRating: coach.rating ?? 0,
           sessionStart: DateTime.now(),
           sessionEnd: DateTime.now().add(const Duration(hours: 1)),
-          location: 'To be defined',
+          location: AppLocalizations.of(context).campaignServiceLocationTbd,
           status: 'pending',
           price: 0,
-          companyName: 'Independent');
+          companyName:
+              AppLocalizations.of(context).campaignServiceCompanyIndependent);
       await Navigator.of(context).push(MaterialPageRoute(
           builder: (_) => CoachDetailScreen(
               session: reservation,

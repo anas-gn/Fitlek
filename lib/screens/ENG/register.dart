@@ -19,6 +19,7 @@ import 'welcome.dart';
 import 'clientHome.dart';
 import '../../mainLayoutCoach.dart';
 import 'package:fitlek1/constants/urls.dart';
+import 'package:fitlek1/l10n/app_localizations.dart';
 import '../../services/apiService.dart';
 import '../../services/notification_service.dart';
 import '../../theme/fitlek_theme_extension.dart';
@@ -115,22 +116,25 @@ class _RegisterScreenState extends State<RegisterScreen>
       final continued = await showDialog<bool>(
           context: context,
           builder: (ctx) => StatefulBuilder(
-              builder: (ctx, update) => AppDialog(
-                    title: const Text('Your interests'),
-                    content: SingleChildScrollView(
-                        child: _buildSpecialtiesSelector(
-                            interests: true, update: () => update(() {}))),
-                    actions: [
-                      TextButton(
-                          onPressed: () => Navigator.pop(ctx, false),
-                          child: const Text('Cancel')),
-                      FilledButton(
-                          onPressed: _selectedInterests.isEmpty
-                              ? null
-                              : () => Navigator.pop(ctx, true),
-                          child: const Text('Continue'))
-                    ],
-                  )));
+              builder: (ctx, update) {
+                final l = AppLocalizations.of(ctx);
+                return AppDialog(
+                  title: Text(l.registerInterestsDialogTitle),
+                  content: SingleChildScrollView(
+                      child: _buildSpecialtiesSelector(
+                          interests: true, update: () => update(() {}))),
+                  actions: [
+                    TextButton(
+                        onPressed: () => Navigator.pop(ctx, false),
+                        child: Text(l.registerCancel)),
+                    FilledButton(
+                        onPressed: _selectedInterests.isEmpty
+                            ? null
+                            : () => Navigator.pop(ctx, true),
+                        child: Text(l.registerContinue))
+                  ],
+                );
+              }));
       if (!mounted || continued != true) return false;
     }
     if (_location?['city']?.toString().isNotEmpty == true &&
@@ -274,62 +278,62 @@ class _RegisterScreenState extends State<RegisterScreen>
     setState(() => _errorMsg = null);
   }
 
-  String? _validateStep(int step) {
+  String? _validateStep(int step, AppLocalizations l) {
     switch (step) {
       case 0:
-        if (_role == null) return 'Select your role to continue';
+        if (_role == null) return l.registerErrorSelectRole;
         if (!_acceptedTerms) {
-          return 'You must accept the Sirvya Legal & Compliance Framework to create an account.';
+          return l.registerErrorAcceptTerms;
         }
         return null;
       case 1:
-        if (_firstNameCtrl.text.trim().isEmpty) return 'First name required';
-        if (_lastNameCtrl.text.trim().isEmpty) return 'Last name required';
+        if (_firstNameCtrl.text.trim().isEmpty) return l.registerErrorFirstNameRequired;
+        if (_lastNameCtrl.text.trim().isEmpty) return l.registerErrorLastNameRequired;
         if (!RegExp(r'^[\w.+-]+@[\w-]+\.[a-z]{2,}$', caseSensitive: false)
             .hasMatch(_emailCtrl.text.trim())) {
-          return 'Invalid email';
+          return l.registerErrorInvalidEmail;
         }
-        if (_heightCtrl.text.trim().isEmpty) return 'Height required';
+        if (_heightCtrl.text.trim().isEmpty) return l.registerErrorHeightRequired;
         final height =
             double.tryParse(_heightCtrl.text.trim().replaceAll(',', '.'));
         if (height == null || !height.isFinite || height <= 0 || height > 300) {
-          return 'Invalid height';
+          return l.registerErrorInvalidHeight;
         }
         if (_role == 'client') {
           final weight =
               double.tryParse(_weightCtrl.text.trim().replaceAll(',', '.'));
           if (weight == null || !weight.isFinite || weight <= 0 || weight > 500) {
-            return 'Enter a valid weight in kg';
+            return l.registerErrorInvalidWeight;
           }
         }
         if (_role == 'client' && _selectedInterests.isEmpty) {
-          return 'Choose at least one interest (up to 5)';
+          return l.registerErrorChooseInterest;
         }
         if ((_role == 'client' || _role == 'coach') &&
             ((_location?['city']?.toString().trim().isEmpty ?? true) ||
                 _location?['latitude'] == null ||
                 _location?['longitude'] == null)) {
-          return 'Press Use my current location to fill your location';
+          return l.registerErrorLocationRequired;
         }
         if ((_role == 'coach' || _role == 'advisor') &&
             _selectedSpecialties.isEmpty) {
-          return 'Please select at least one specialty (up to 5)';
+          return l.registerErrorChooseSpecialty;
         }
         return null;
       case 2:
         if (_passwordCtrl.text.length < 6) {
-          return 'Password too short (min 6 chars)';
+          return l.registerErrorPasswordTooShort;
         }
         if (_passwordCtrl.text != _confirmCtrl.text) {
-          return 'Passwords do not match';
+          return l.registerErrorPasswordsMismatch;
         }
         return null;
       case 3:
-        if (_gender == null) return 'Select your gender to continue';
+        if (_gender == null) return l.registerErrorSelectGender;
         return null;
       case 4:
         if (_otpCtrl.text.trim().length != 6) {
-          return 'Enter 6-digit verification code sent to your email';
+          return l.registerErrorOtpLength;
         }
         return null;
       default:
@@ -338,7 +342,7 @@ class _RegisterScreenState extends State<RegisterScreen>
   }
 
   void _nextStep() async {
-    final err = _validateStep(_step);
+    final err = _validateStep(_step, AppLocalizations.of(context));
     if (err != null) {
       setState(() => _errorMsg = err);
       return;
@@ -358,6 +362,7 @@ class _RegisterScreenState extends State<RegisterScreen>
   }
 
   Future<bool> _sendSignUpOTP() async {
+    final l = AppLocalizations.of(context);
     setState(() {
       _loading = true;
       _errorMsg = null;
@@ -376,11 +381,11 @@ class _RegisterScreenState extends State<RegisterScreen>
         return true;
       } else {
         setState(() => _errorMsg =
-            data['error'] as String? ?? 'Failed to send verification code');
+            data['error'] as String? ?? l.registerErrorSendOtpFailed);
         return false;
       }
     } catch (_) {
-      setState(() => _errorMsg = 'Unable to reach the server');
+      setState(() => _errorMsg = l.registerErrorServerUnreachable);
       return false;
     } finally {
       if (mounted) setState(() => _loading = false);
@@ -388,6 +393,7 @@ class _RegisterScreenState extends State<RegisterScreen>
   }
 
   Future<void> _verifyAndRegister() async {
+    final l = AppLocalizations.of(context);
     setState(() {
       _loading = true;
       _errorMsg = null;
@@ -409,13 +415,13 @@ class _RegisterScreenState extends State<RegisterScreen>
         await _register();
       } else {
         setState(() {
-          _errorMsg = data['error'] as String? ?? 'Invalid verification code';
+          _errorMsg = data['error'] as String? ?? l.registerErrorInvalidOtp;
           _loading = false;
         });
       }
     } catch (_) {
       setState(() {
-        _errorMsg = 'Network error verifying code';
+        _errorMsg = l.registerErrorVerifyOtpNetwork;
         _loading = false;
       });
     }
@@ -487,25 +493,29 @@ class _RegisterScreenState extends State<RegisterScreen>
         if (!mounted) return;
         _showSuccess();
       } else {
+        if (!mounted) return;
         setState(() =>
-            _errorMsg = data['error'] as String? ?? 'Registration failed');
+            _errorMsg = data['error'] as String? ?? AppLocalizations.of(context).registerErrorFailed);
       }
     } catch (_) {
-      setState(() => _errorMsg = 'Unable to reach the server');
+      if (mounted) {
+        setState(() => _errorMsg = AppLocalizations.of(context).registerErrorServerUnreachable);
+      }
     } finally {
       if (mounted) setState(() => _loading = false);
     }
   }
 
   Future<void> _registerWithGoogle() async {
+    final l = AppLocalizations.of(context);
     if (_role == null) {
       setState(
-          () => _errorMsg = 'Select your role before continuing with Google.');
+          () => _errorMsg = l.registerErrorSelectRoleGoogle);
       return;
     }
     if (!_acceptedTerms) {
       setState(
-          () => _errorMsg = 'Please agree to the Terms of Service to sign up.');
+          () => _errorMsg = l.registerErrorAgreeTermsSocial);
       return;
     }
 
@@ -579,7 +589,7 @@ class _RegisterScreenState extends State<RegisterScreen>
           break;
         default:
           setState(() {
-            _errorMsg = 'Unrecognized role: ';
+            _errorMsg = AppLocalizations.of(context).registerErrorUnrecognizedRole(role);
             _googleLoading = false;
           });
           return;
@@ -608,21 +618,22 @@ class _RegisterScreenState extends State<RegisterScreen>
     } catch (e) {
       if (kDebugMode) debugPrint('❌ GOOGLE REGISTER ERROR: ');
       setState(() {
-        _errorMsg = 'Google sign-up failed. Please try again.';
+        _errorMsg = AppLocalizations.of(context).registerErrorGoogleFailed;
         _googleLoading = false;
       });
     }
   }
 
   Future<void> _registerWithApple() async {
+    final l = AppLocalizations.of(context);
     if (_role == null) {
       setState(
-          () => _errorMsg = 'Select your role before continuing with Apple.');
+          () => _errorMsg = l.registerErrorSelectRoleApple);
       return;
     }
     if (!_acceptedTerms) {
       setState(
-          () => _errorMsg = 'Please agree to the Terms of Service to sign up.');
+          () => _errorMsg = l.registerErrorAgreeTermsSocial);
       return;
     }
 
@@ -696,7 +707,7 @@ class _RegisterScreenState extends State<RegisterScreen>
           break;
         default:
           setState(() {
-            _errorMsg = 'Unrecognized role: ';
+            _errorMsg = AppLocalizations.of(context).registerErrorUnrecognizedRole(role);
             _appleLoading = false;
           });
           return;
@@ -727,7 +738,7 @@ class _RegisterScreenState extends State<RegisterScreen>
     } catch (e) {
       if (kDebugMode) debugPrint('❌ APPLE REGISTER ERROR: ');
       setState(() {
-        _errorMsg = 'Apple sign-up failed. Please try again.';
+        _errorMsg = AppLocalizations.of(context).registerErrorAppleFailed;
         _appleLoading = false;
       });
     }
@@ -741,91 +752,94 @@ class _RegisterScreenState extends State<RegisterScreen>
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
-      builder: (ctx) => SafeArea(
-        child: SingleChildScrollView(
-          padding: EdgeInsets.fromLTRB(
-            28,
-            40,
-            28,
-            24 + MediaQuery.of(ctx).viewInsets.bottom,
-          ),
-          child: Column(mainAxisSize: MainAxisSize.min, children: [
-            Container(
-              width: 80,
-              height: 80,
-              decoration: BoxDecoration(
-                color: AppColors.sand.withValues(alpha: 0.15),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(Icons.check_rounded,
-                  color: AppColors.sand, size: 40),
+      builder: (ctx) {
+        final l = AppLocalizations.of(ctx);
+        return SafeArea(
+          child: SingleChildScrollView(
+            padding: EdgeInsets.fromLTRB(
+              28,
+              40,
+              28,
+              24 + MediaQuery.of(ctx).viewInsets.bottom,
             ),
-            const SizedBox(height: 24),
-            const Text(
-              'Account created!',
-              style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 26,
-                  fontWeight: FontWeight.w900),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              'Welcome $firstName. Your account is pending approval.',
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                  color: Colors.white.withValues(alpha: 0.65),
-                  fontSize: 14,
-                  height: 1.6),
-            ),
-            const SizedBox(height: 32),
-            GestureDetector(
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.pushReplacement(
-                  context,
-                  PageRouteBuilder(
-                    pageBuilder: (_, __, ___) => const LoginScreen(),
-                    transitionsBuilder: (_, a, __, child) =>
-                        FadeTransition(opacity: a, child: child),
-                    transitionDuration: const Duration(milliseconds: 500),
-                  ),
-                );
-              },
-              child: Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(vertical: 16),
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              Container(
+                width: 80,
+                height: 80,
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      AppColors.sand,
-                      AppColors.sand.withValues(alpha: 0.85)
+                  color: AppColors.sand.withValues(alpha: 0.15),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.check_rounded,
+                    color: AppColors.sand, size: 40),
+              ),
+              const SizedBox(height: 24),
+              Text(
+                l.registerSuccessTitle,
+                style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 26,
+                    fontWeight: FontWeight.w900),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                l.registerSuccessPendingApproval(firstName),
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.65),
+                    fontSize: 14,
+                    height: 1.6),
+              ),
+              const SizedBox(height: 32),
+              GestureDetector(
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.pushReplacement(
+                    context,
+                    PageRouteBuilder(
+                      pageBuilder: (_, __, ___) => const LoginScreen(),
+                      transitionsBuilder: (_, a, __, child) =>
+                          FadeTransition(opacity: a, child: child),
+                      transitionDuration: const Duration(milliseconds: 500),
+                    ),
+                  );
+                },
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        AppColors.sand,
+                        AppColors.sand.withValues(alpha: 0.85)
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(14),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.sand.withValues(alpha: 0.3),
+                        blurRadius: 16,
+                        offset: const Offset(0, 6),
+                      ),
                     ],
                   ),
-                  borderRadius: BorderRadius.circular(14),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.sand.withValues(alpha: 0.3),
-                      blurRadius: 16,
-                      offset: const Offset(0, 6),
-                    ),
-                  ],
-                ),
-                child: const Text(
-                  'Log in',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                      color: AppColors.cyprus,
-                      fontSize: 15,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 0.5),
+                  child: Text(
+                    l.registerLogInButton,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                        color: AppColors.cyprus,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0.5),
+                  ),
                 ),
               ),
-            ),
-          ]),
-        ),
-      ),
+            ]),
+          ),
+        );
+      },
     );
   }
 
@@ -837,114 +851,116 @@ class _RegisterScreenState extends State<RegisterScreen>
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
-      builder: (ctx) => SafeArea(
-        child: SingleChildScrollView(
-          padding: EdgeInsets.fromLTRB(
-            28,
-            40,
-            28,
-            24 + MediaQuery.of(ctx).viewInsets.bottom,
-          ),
-          child: Column(mainAxisSize: MainAxisSize.min, children: [
-            Container(
-              width: 80,
-              height: 80,
-              decoration: BoxDecoration(
-                color: AppColors.sand.withValues(alpha: 0.15),
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(Icons.check_rounded,
-                  color: AppColors.sand, size: 40),
+      builder: (ctx) {
+        final l = AppLocalizations.of(ctx);
+        return SafeArea(
+          child: SingleChildScrollView(
+            padding: EdgeInsets.fromLTRB(
+              28,
+              40,
+              28,
+              24 + MediaQuery.of(ctx).viewInsets.bottom,
             ),
-            const SizedBox(height: 24),
-            const Text(
-              'Account created!',
-              style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 26,
-                  fontWeight: FontWeight.w900),
-            ),
-            const SizedBox(height: 12),
-            RichText(
-              textAlign: TextAlign.center,
-              text: TextSpan(children: [
-                TextSpan(
-                  text: 'Welcome ${_firstNameCtrl.text.trim()}. ',
-                  style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.65),
-                      fontSize: 14,
-                      height: 1.6),
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              Container(
+                width: 80,
+                height: 80,
+                decoration: BoxDecoration(
+                  color: AppColors.sand.withValues(alpha: 0.15),
+                  shape: BoxShape.circle,
                 ),
-                if (_role == 'coach')
-                  const TextSpan(
-                    text:
-                        'You can now log in. Your Sirvya verified badge is pending verification, which can take up to 48 hours.',
-                    style: TextStyle(color: _orange, fontSize: 14, height: 1.6),
-                  )
-                else if (_role == 'advisor')
-                  const TextSpan(
-                    text: 'Your account is pending approval.',
-                    style: TextStyle(color: _orange, fontSize: 14, height: 1.6),
-                  )
-                else
+                child: const Icon(Icons.check_rounded,
+                    color: AppColors.sand, size: 40),
+              ),
+              const SizedBox(height: 24),
+              Text(
+                l.registerSuccessTitle,
+                style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 26,
+                    fontWeight: FontWeight.w900),
+              ),
+              const SizedBox(height: 12),
+              RichText(
+                textAlign: TextAlign.center,
+                text: TextSpan(children: [
                   TextSpan(
-                    text: 'You can now log in.',
+                    text: l.registerSuccessWelcomePrefix(_firstNameCtrl.text.trim()),
                     style: TextStyle(
                         color: Colors.white.withValues(alpha: 0.65),
                         fontSize: 14,
                         height: 1.6),
                   ),
-              ]),
-            ),
-            const SizedBox(height: 32),
-            GestureDetector(
-              onTap: () {
-                Navigator.pop(context);
-                Navigator.pushReplacement(
-                  context,
-                  PageRouteBuilder(
-                    pageBuilder: (_, __, ___) => const LoginScreen(),
-                    transitionsBuilder: (_, a, __, child) =>
-                        FadeTransition(opacity: a, child: child),
-                    transitionDuration: const Duration(milliseconds: 500),
-                  ),
-                );
-              },
-              child: Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      AppColors.sand,
-                      AppColors.sand.withValues(alpha: 0.85)
+                  if (_role == 'coach')
+                    TextSpan(
+                      text: l.registerSuccessCoachBadgeNote,
+                      style: const TextStyle(color: _orange, fontSize: 14, height: 1.6),
+                    )
+                  else if (_role == 'advisor')
+                    TextSpan(
+                      text: l.registerSuccessAdvisorPendingNote,
+                      style: const TextStyle(color: _orange, fontSize: 14, height: 1.6),
+                    )
+                  else
+                    TextSpan(
+                      text: l.registerSuccessClientNote,
+                      style: TextStyle(
+                          color: Colors.white.withValues(alpha: 0.65),
+                          fontSize: 14,
+                          height: 1.6),
+                    ),
+                ]),
+              ),
+              const SizedBox(height: 32),
+              GestureDetector(
+                onTap: () {
+                  Navigator.pop(context);
+                  Navigator.pushReplacement(
+                    context,
+                    PageRouteBuilder(
+                      pageBuilder: (_, __, ___) => const LoginScreen(),
+                      transitionsBuilder: (_, a, __, child) =>
+                          FadeTransition(opacity: a, child: child),
+                      transitionDuration: const Duration(milliseconds: 500),
+                    ),
+                  );
+                },
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        AppColors.sand,
+                        AppColors.sand.withValues(alpha: 0.85)
+                      ],
+                    ),
+                    borderRadius: BorderRadius.circular(14),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.sand.withValues(alpha: 0.3),
+                        blurRadius: 16,
+                        offset: const Offset(0, 6),
+                      ),
                     ],
                   ),
-                  borderRadius: BorderRadius.circular(14),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.sand.withValues(alpha: 0.3),
-                      blurRadius: 16,
-                      offset: const Offset(0, 6),
-                    ),
-                  ],
-                ),
-                child: const Text(
-                  'Log in',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                      color: AppColors.cyprus,
-                      fontSize: 15,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: 0.5),
+                  child: Text(
+                    l.registerLogInButton,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                        color: AppColors.cyprus,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0.5),
+                  ),
                 ),
               ),
-            ),
-          ]),
-        ),
-      ),
+            ]),
+          ),
+        );
+      },
     );
   }
 
@@ -1092,29 +1108,30 @@ class _RegisterScreenState extends State<RegisterScreen>
     );
   }
 
-  static const _stepLabels = [
-    'STEP 1 / 5',
-    'STEP 2 / 5',
-    'STEP 3 / 5',
-    'STEP 4 / 5',
-    'STEP 5 / 5'
+  List<String> _stepLabels(AppLocalizations l) => [
+    l.registerStep1Label,
+    l.registerStep2Label,
+    l.registerStep3Label,
+    l.registerStep4Label,
+    l.registerStep5Label,
   ];
-  static const _stepTitles = [
-    'What is\nyour role?',
-    'Who are you?',
-    'Secure\nyour account',
-    'Terms &\nPreferences',
-    'Verify your\nemail OTP'
+  List<String> _stepTitles(AppLocalizations l) => [
+    l.registerStep1Title,
+    l.registerStep2Title,
+    l.registerStep3Title,
+    l.registerStep4Title,
+    l.registerStep5Title,
   ];
-  static const _stepSubs = [
-    'Choose how you\'ll use SIRVYA.',
-    'Tell us what to call you.',
-    'Create a strong password.',
-    'Personalize & agree to legal terms.',
-    'Enter the 6-digit code sent to your email address.',
+  List<String> _stepSubs(AppLocalizations l) => [
+    l.registerStep1Sub,
+    l.registerStep2Sub,
+    l.registerStep3Sub,
+    l.registerStep4Sub,
+    l.registerStep5Sub,
   ];
 
   Widget _buildStepHeader() {
+    final l = AppLocalizations.of(context);
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
@@ -1123,7 +1140,7 @@ class _RegisterScreenState extends State<RegisterScreen>
           borderRadius: BorderRadius.circular(20),
         ),
         child: Text(
-          _stepLabels[_step],
+          _stepLabels(l)[_step],
           style: const TextStyle(
             color: AppColors.sand,
             fontSize: 11,
@@ -1134,7 +1151,7 @@ class _RegisterScreenState extends State<RegisterScreen>
       ),
       const SizedBox(height: 16),
       Text(
-        _stepTitles[_step],
+        _stepTitles(l)[_step],
         style: const TextStyle(
           fontSize: 34,
           fontWeight: FontWeight.w900,
@@ -1145,7 +1162,7 @@ class _RegisterScreenState extends State<RegisterScreen>
       ),
       const SizedBox(height: 10),
       Text(
-        _stepSubs[_step],
+        _stepSubs(l)[_step],
         style: TextStyle(
           fontSize: 14,
           height: 1.5,
@@ -1173,13 +1190,14 @@ class _RegisterScreenState extends State<RegisterScreen>
   }
 
   Widget _buildStep4() {
+    final l = AppLocalizations.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _RegisterField(
           controller: _otpCtrl,
-          label: '6-digit OTP Code',
-          hint: '123456',
+          label: l.registerOtpLabel,
+          hint: l.registerOtpHint,
           icon: Icons.pin_rounded,
           keyboardType: TextInputType.number,
         ),
@@ -1188,7 +1206,7 @@ class _RegisterScreenState extends State<RegisterScreen>
           children: [
             Expanded(
               child: Text(
-                'Code sent to ${_emailCtrl.text.trim()} via noreply@devunivers.com',
+                l.registerOtpSentTo(_emailCtrl.text.trim()),
                 style: TextStyle(
                   color: Colors.white.withValues(alpha: 0.6),
                   fontSize: 12,
@@ -1200,8 +1218,8 @@ class _RegisterScreenState extends State<RegisterScreen>
               onPressed: _loading ? null : _sendSignUpOTP,
               icon: const Icon(Icons.refresh_rounded,
                   color: AppColors.sand, size: 16),
-              label: const Text('Resend Code',
-                  style: TextStyle(color: AppColors.sand, fontSize: 12)),
+              label: Text(l.registerOtpResend,
+                  style: const TextStyle(color: AppColors.sand, fontSize: 12)),
             ),
           ],
         ),
@@ -1211,10 +1229,11 @@ class _RegisterScreenState extends State<RegisterScreen>
 
   // Step 0: Role Selection
   Widget _buildStep0() {
+    final l = AppLocalizations.of(context);
     return Column(children: [
       _RoleTile(
-        label: 'Client',
-        description: 'Find a coach and book sessions.',
+        label: l.registerRoleClientLabel,
+        description: l.registerRoleClientDesc,
         icon: Icons.person_rounded,
         selected: _role == 'client',
         onTap: () => setState(() {
@@ -1224,8 +1243,8 @@ class _RegisterScreenState extends State<RegisterScreen>
       ),
       const SizedBox(height: 12),
       _RoleTile(
-        label: 'Coach',
-        description: 'Manage your clients and grow your business.',
+        label: l.registerRoleCoachLabel,
+        description: l.registerRoleCoachDesc,
         icon: Icons.fitness_center_rounded,
         selected: _role == 'coach',
         onTap: () => setState(() {
@@ -1237,8 +1256,8 @@ class _RegisterScreenState extends State<RegisterScreen>
       if (_role != null) ...[
         _RegisterField(
             controller: _referralCtrl,
-            label: 'Inviter code (optional)',
-            hint: 'Enter your coach’s invitation code',
+            label: l.registerInviterCodeLabel,
+            hint: l.registerInviterCodeHint,
             icon: Icons.card_giftcard_rounded,
             onChanged: _onReferralChanged,
             suffix: _referralSuffixIcon()),
@@ -1267,7 +1286,7 @@ class _RegisterScreenState extends State<RegisterScreen>
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 14),
           child: Text(
-            'OR',
+            AppLocalizations.of(context).registerOr,
             style: TextStyle(
               color: Colors.white.withValues(alpha: 0.4),
               fontSize: 11,
@@ -1285,6 +1304,7 @@ class _RegisterScreenState extends State<RegisterScreen>
   }
 
   Widget _buildGoogleButton() {
+    final l = AppLocalizations.of(context);
     final enabled =
         _role != null && !_googleLoading && !_loading && !_appleLoading;
     return GestureDetector(
@@ -1324,8 +1344,8 @@ class _RegisterScreenState extends State<RegisterScreen>
                       const SizedBox(width: 12),
                       Text(
                         _role == null
-                            ? 'SELECT A ROLE FIRST'
-                            : 'CONTINUE WITH GOOGLE',
+                            ? l.registerSelectRoleFirst
+                            : l.registerContinueGoogle,
                         style: const TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.w800,
@@ -1342,6 +1362,7 @@ class _RegisterScreenState extends State<RegisterScreen>
   }
 
   Widget _buildAppleButton() {
+    final l = AppLocalizations.of(context);
     final enabled =
         _role != null && !_appleLoading && !_loading && !_googleLoading;
     return GestureDetector(
@@ -1366,15 +1387,15 @@ class _RegisterScreenState extends State<RegisterScreen>
                       strokeWidth: 2.5,
                     ),
                   )
-                : const Row(
+                : Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.apple_rounded,
+                      const Icon(Icons.apple_rounded,
                           color: Colors.black, size: 26),
-                      SizedBox(width: 10),
+                      const SizedBox(width: 10),
                       Text(
-                        'CONTINUE WITH APPLE',
-                        style: TextStyle(
+                        l.registerContinueApple,
+                        style: const TextStyle(
                           color: Colors.black,
                           fontWeight: FontWeight.w800,
                           fontSize: 13,
@@ -1389,15 +1410,58 @@ class _RegisterScreenState extends State<RegisterScreen>
     );
   }
 
+  String _localizedNutritionGoalLabel(String? goalType, AppLocalizations l) {
+    switch (goalType) {
+      case 'balanced':
+        return l.registerNutritionGoalBalanced;
+      case 'lose':
+        return l.registerNutritionGoalLose;
+      case 'gain':
+        return l.registerNutritionGoalGain;
+      case 'maintain':
+        return l.registerNutritionGoalMaintain;
+      default:
+        return l.registerNutritionGoalPersonal;
+    }
+  }
+
+  String _localizedSpecialtyLabel(String raw, AppLocalizations l) {
+    switch (raw) {
+      case 'Musculation':
+        return l.registerSpecialtyStrength;
+      case 'Perte de poids':
+        return l.registerSpecialtyWeightLoss;
+      case 'Yoga':
+        return l.registerSpecialtyYoga;
+      case 'CrossFit':
+        return l.registerSpecialtyCrossFit;
+      case 'Boxe':
+        return l.registerSpecialtyBoxing;
+      case 'Nutrition':
+        return l.registerSpecialtyNutrition;
+      case 'Pilates':
+        return l.registerSpecialtyPilates;
+      case 'Cardio':
+        return l.registerSpecialtyCardio;
+      case 'Stretching':
+        return l.registerSpecialtyStretching;
+      case 'Functional Training':
+        return l.registerSpecialtyFunctional;
+      default:
+        return raw;
+    }
+  }
+
   // Step 1: Identity
   Widget _buildStep1() {
+    final l = AppLocalizations.of(context);
     return Column(children: [
       Row(children: [
         Expanded(
           child: _RegisterField(
             controller: _firstNameCtrl,
-            label: 'First name',
-            hint: 'Anas',
+            label: l.registerFirstNameLabel,
+            hint: l.registerFirstNameHint,
             icon: Icons.person_rounded,
           ),
         ),
@@ -1405,8 +1469,8 @@ class _RegisterScreenState extends State<RegisterScreen>
         Expanded(
           child: _RegisterField(
             controller: _lastNameCtrl,
-            label: 'Last name',
-            hint: 'Benali',
+            label: l.registerLastNameLabel,
+            hint: l.registerLastNameHint,
             icon: Icons.badge_rounded,
           ),
         ),
@@ -1414,16 +1478,16 @@ class _RegisterScreenState extends State<RegisterScreen>
       const SizedBox(height: 14),
       _RegisterField(
         controller: _emailCtrl,
-        label: 'Email address',
-        hint: 'you@email.ma',
+        label: l.registerEmailLabel,
+        hint: l.registerEmailHint,
         icon: Icons.email_rounded,
         keyboardType: TextInputType.emailAddress,
       ),
       const SizedBox(height: 14),
       _RegisterField(
         controller: _heightCtrl,
-        label: 'Height (cm)',
-        hint: '175',
+        label: l.registerHeightLabel,
+        hint: l.registerHeightHint,
         icon: Icons.straighten_rounded,
         keyboardType: TextInputType.number,
       ),
@@ -1431,8 +1495,8 @@ class _RegisterScreenState extends State<RegisterScreen>
         const SizedBox(height: 14),
         _RegisterField(
             controller: _weightCtrl,
-            label: 'Weight (kg)',
-            hint: '70',
+            label: l.registerWeightLabel,
+            hint: l.registerWeightHint,
             icon: Icons.monitor_weight_rounded,
             keyboardType: const TextInputType.numberWithOptions(decimal: true)),
       ],
@@ -1454,17 +1518,16 @@ class _RegisterScreenState extends State<RegisterScreen>
                       ? Theme.of(context).colorScheme.primary
                       : null,
                 ),
-                title: const Text('Your nutrition goal (optional)'),
+                title: Text(l.registerNutritionGoalTitle),
                 subtitle: Text(_nutritionPlan != null
-                    ? (nutritionGoalLabels[_nutritionPlan!['goalType']] ??
-                        'Personal goal')
+                    ? _localizedNutritionGoalLabel(_nutritionPlan!['goalType'] as String?, l)
                     : (_skippedNutritionGoal
-                        ? 'Skipped · You can set this up later in your profile'
-                        : 'Optional · Tap to configure or skip for now')),
+                        ? l.registerNutritionGoalSkipped
+                        : l.registerNutritionGoalOptional)),
                 trailing: _nutritionPlan != null
                     ? IconButton(
                         icon: const Icon(Icons.close_rounded, size: 20),
-                        tooltip: 'Clear goal',
+                        tooltip: l.registerNutritionGoalClearTooltip,
                         onPressed: () => setState(() {
                           _nutritionPlan = null;
                           _skippedNutritionGoal = true;
@@ -1476,8 +1539,8 @@ class _RegisterScreenState extends State<RegisterScreen>
                             onPressed: () => setState(() {
                               _skippedNutritionGoal = true;
                             }),
-                            child: const Text('Skip',
-                                style: TextStyle(fontWeight: FontWeight.w600)),
+                            child: Text(l.registerNutritionGoalSkip,
+                                style: const TextStyle(fontWeight: FontWeight.w600)),
                           )),
                 onTap: _chooseNutritionGoal)),
       ],
@@ -1491,13 +1554,16 @@ class _RegisterScreenState extends State<RegisterScreen>
 
   Widget _buildSpecialtiesSelector(
       {bool interests = false, VoidCallback? update}) {
+    final l = AppLocalizations.of(context);
     final selectedValues =
         interests ? _selectedInterests : _selectedSpecialties;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-            '${interests ? 'Your interests' : 'Coaching specialties'} (${selectedValues.length}/5)',
+            interests
+                ? l.registerInterestsHeader(selectedValues.length)
+                : l.registerSpecialtiesHeader(selectedValues.length),
             style: TextStyle(
                 color: update == null
                     ? Colors.white
@@ -1506,8 +1572,8 @@ class _RegisterScreenState extends State<RegisterScreen>
         const SizedBox(height: 8),
         Text(
             interests
-                ? 'Choose up to 5 interests to personalize your coach recommendations.'
-                : 'Choose up to 5 specialties.',
+                ? l.registerInterestsSub
+                : l.registerSpecialtiesSub,
             style: TextStyle(
                 color: update == null
                     ? Colors.white70
@@ -1520,7 +1586,7 @@ class _RegisterScreenState extends State<RegisterScreen>
             children: _specialtyOptions.map((name) {
               final selected = selectedValues.contains(name);
               return FilterChip(
-                  label: Text(name),
+                  label: Text(_localizedSpecialtyLabel(name, l)),
                   labelStyle: TextStyle(
                     color: selected
                         ? const Color(0xFF064B43)
@@ -1562,11 +1628,12 @@ class _RegisterScreenState extends State<RegisterScreen>
 
   // Step 2: Security
   Widget _buildStep2() {
+    final l = AppLocalizations.of(context);
     return Column(children: [
       _RegisterField(
         controller: _passwordCtrl,
-        label: 'Password',
-        hint: '••••••••',
+        label: l.registerPasswordLabel,
+        hint: l.registerPasswordHint,
         icon: Icons.lock_rounded,
         obscure: _obscurePass,
         showToggle: true,
@@ -1577,8 +1644,8 @@ class _RegisterScreenState extends State<RegisterScreen>
       const SizedBox(height: 14),
       _RegisterField(
         controller: _confirmCtrl,
-        label: 'Confirm password',
-        hint: '••••••••',
+        label: l.registerConfirmPasswordLabel,
+        hint: l.registerConfirmPasswordHint,
         icon: Icons.lock_outline_rounded,
         obscure: _obscureConf,
         showToggle: true,
@@ -1592,23 +1659,24 @@ class _RegisterScreenState extends State<RegisterScreen>
 
   // Step 3: Gender & Legal Agreement
   Widget _buildStep3() {
+    final l = AppLocalizations.of(context);
     return Column(children: [
       _GenderTile(
-        label: 'Male',
+        label: l.registerGenderMale,
         icon: Icons.male_rounded,
         selected: _gender == 'Male',
         onTap: () => setState(() => _gender = 'Male'),
       ),
       const SizedBox(height: 12),
       _GenderTile(
-        label: 'Female',
+        label: l.registerGenderFemale,
         icon: Icons.female_rounded,
         selected: _gender == 'Female',
         onTap: () => setState(() => _gender = 'Female'),
       ),
       const SizedBox(height: 12),
       _GenderTile(
-        label: 'Other',
+        label: l.registerGenderOther,
         icon: Icons.person_outline_rounded,
         selected: _gender == 'Other',
         onTap: () => setState(() => _gender = 'Other'),
@@ -1617,8 +1685,8 @@ class _RegisterScreenState extends State<RegisterScreen>
         const SizedBox(height: 20),
         _RegisterField(
           controller: _referralCtrl,
-          label: 'Invitation code (optional)',
-          hint: 'e.g. A1B2C3D4E5F6',
+          label: l.registerInvitationCodeLabel,
+          hint: l.registerInvitationCodeHint,
           icon: Icons.card_giftcard_rounded,
           onChanged: _onReferralChanged,
           suffix: _referralSuffixIcon(),
@@ -1627,7 +1695,7 @@ class _RegisterScreenState extends State<RegisterScreen>
         Padding(
           padding: const EdgeInsets.only(left: 2),
           child: Text(
-            'Invited by a coach? Enter their code to credit your signup.',
+            l.registerInvitationCodeHelper,
             style: TextStyle(
                 color: Colors.white.withValues(alpha: 0.55),
                 fontSize: 12,
@@ -1636,17 +1704,17 @@ class _RegisterScreenState extends State<RegisterScreen>
         ),
         if (_referralStatus == _ReferralStatus.invalid) ...[
           const SizedBox(height: 6),
-          const Padding(
-            padding: EdgeInsets.only(left: 2),
-            child: Text('This code is not recognized.',
-                style: TextStyle(color: _red, fontSize: 12)),
+          Padding(
+            padding: const EdgeInsets.only(left: 2),
+            child: Text(l.registerInvitationCodeInvalid,
+                style: const TextStyle(color: _red, fontSize: 12)),
           ),
         ] else if (_referralStatus == _ReferralStatus.valid) ...[
           const SizedBox(height: 6),
-          const Padding(
-            padding: EdgeInsets.only(left: 2),
-            child: Text('Valid coach code',
-                style: TextStyle(color: _green, fontSize: 12)),
+          Padding(
+            padding: const EdgeInsets.only(left: 2),
+            child: Text(l.registerInvitationCodeValid,
+                style: const TextStyle(color: _green, fontSize: 12)),
           ),
         ],
       ],
@@ -1654,6 +1722,7 @@ class _RegisterScreenState extends State<RegisterScreen>
   }
 
   Widget _buildTermsAcceptanceTile() {
+    final l = AppLocalizations.of(context);
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -1705,16 +1774,16 @@ class _RegisterScreenState extends State<RegisterScreen>
                     text: TextSpan(
                       children: [
                         TextSpan(
-                          text: 'I agree to the ',
+                          text: l.registerTermsAgreePrefix,
                           style: TextStyle(
                             color: Colors.white.withValues(alpha: 0.85),
                             fontSize: 13,
                             height: 1.4,
                           ),
                         ),
-                        const TextSpan(
-                          text: 'Sirvya Master Legal & Compliance Framework',
-                          style: TextStyle(
+                        TextSpan(
+                          text: l.registerTermsAgreeLink,
+                          style: const TextStyle(
                             color: AppColors.sand,
                             fontWeight: FontWeight.bold,
                             decoration: TextDecoration.underline,
@@ -1723,8 +1792,7 @@ class _RegisterScreenState extends State<RegisterScreen>
                           ),
                         ),
                         TextSpan(
-                          text:
-                              ' including Terms of Service, Privacy Policy & Disclaimers.',
+                          text: l.registerTermsAgreeSuffix,
                           style: TextStyle(
                             color: Colors.white.withValues(alpha: 0.85),
                             fontSize: 13,
@@ -1752,9 +1820,9 @@ class _RegisterScreenState extends State<RegisterScreen>
               ),
               icon: const Icon(Icons.description_rounded,
                   size: 14, color: AppColors.sand),
-              label: const Text(
-                'Read Full Framework',
-                style: TextStyle(
+              label: Text(
+                l.registerTermsReadButton,
+                style: const TextStyle(
                   color: AppColors.sand,
                   fontSize: 12,
                   fontWeight: FontWeight.w700,
@@ -1776,6 +1844,7 @@ class _RegisterScreenState extends State<RegisterScreen>
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (ctx) {
+        final l = AppLocalizations.of(ctx);
         return DraggableScrollableSheet(
           expand: false,
           initialChildSize: 0.85,
@@ -1803,10 +1872,10 @@ class _RegisterScreenState extends State<RegisterScreen>
                       const Icon(Icons.gavel_rounded,
                           color: AppColors.sand, size: 24),
                       const SizedBox(width: 10),
-                      const Expanded(
+                      Expanded(
                         child: Text(
-                          'SIRVYA MASTER LEGAL FRAMEWORK',
-                          style: TextStyle(
+                          l.registerTermsModalHeader,
+                          style: const TextStyle(
                             color: Colors.white,
                             fontSize: 16,
                             fontWeight: FontWeight.w900,
@@ -1829,69 +1898,44 @@ class _RegisterScreenState extends State<RegisterScreen>
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           _buildLegalTextSection(
-                            'General Information',
-                            'Effective Date: November 2026\nVersion: 1.0.3\nOperating Entity: DevUnivers (Morocco)\nContact: privacy@devunivers.com | support@devunivers.com\nPlatform: Sirvya Mobile Application & Associated Infrastructure',
+                            l.registerTermsSecGeneralTitle,
+                            l.registerTermsSecGeneralBody,
                           ),
                           _buildLegalTextSection(
-                            'Legal Framework & International Scope',
-                            'Sirvya is operated by DevUnivers in Morocco and designed for global accessibility. This comprehensive legal framework governs your use of Sirvya worldwide. It adheres to Moroccan privacy regulations (Law 09-08 / CNDP) and aligns with international data protection benchmarks including the EU General Data Protection Regulation (GDPR) and global consumer protection standards.',
+                            l.registerTermsSecScopeTitle,
+                            l.registerTermsSecScopeBody,
                           ),
                           _buildLegalTextSection(
-                            'Definitions',
-                            '• Platform: Refers to the Sirvya application, its associated web infrastructure, AI services, and systems provided by DevUnivers.\n'
-                                '• Company: Refers to DevUnivers, the operating legal entity.\n'
-                                '• User: Any individual creating an account on the Platform to track nutrition, workouts, book services, or interact with Coaches/Gyms.\n'
-                                '• Coach: An independent fitness professional or personal trainer offering services or advice via the Platform.\n'
-                                '• Gym: An independent fitness facility or studio listed on the Platform.',
+                            l.registerTermsSecDefsTitle,
+                            l.registerTermsSecDefsBody,
                           ),
                           _buildLegalTextSection(
-                            '1. Terms of Service (ToS)',
-                            '1.1 Acceptance of Terms\nBy accessing, creating an account, or using Sirvya, you agree to be bound by these Terms of Service. If you do not agree to these terms, you must discontinue use and uninstall the app.\n\n'
-                                '1.2 Eligibility & Age Requirements\nUsers must be at least 18 years old (or the legal age of majority in their jurisdiction) to independently register. Minors between 13 and 17 may only use the platform under parental/guardian supervision and verifiable consent. Sirvya is strictly not intended for children under 13.\n\n'
-                                '1.3 Account Security & Integrity\nYou are responsible for safeguarding your credentials. Account sharing, selling, automated scraping, reverse engineering, security tampering, or unauthorized commercial exploitation is strictly prohibited.\n\n'
-                                '1.4 Subscription & Marketplace Terms\nWhile certain core features are currently provided free or in beta, Sirvya reserves the right to introduce optional premium features, subscriptions, or transaction fees with clear prior notice.\n\n'
-                                '1.5 Limitation of Liability\nTo the maximum extent permitted by applicable law, DevUnivers, Sirvya, and their affiliates shall not be liable for indirect, incidental, punitive, or consequential damages resulting from app usage, workout activities, nutritional tracking, or interactions with independent third parties.\n\n'
-                                '1.6 Governing Law & International Users\nThese Terms are governed by and construed in accordance with the laws of the Kingdom of Morocco. If you are an individual consumer residing outside Morocco (such as in the European Union, United Kingdom, United States, or GCC), nothing in these Terms deprives you of the mandatory statutory consumer protections provided by the laws of your country of habitual residence. In case of any concern, we encourage contacting support@devunivers.com for informal amicable resolution.',
+                            l.registerTermsSecTosTitle,
+                            l.registerTermsSecTosBody,
                           ),
                           _buildLegalTextSection(
-                            '2. Privacy Policy & Data Protection',
-                            '2.1 Data Collection & Purpose\nWe collect personal and health-related fitness data exclusively to provide personalized fitness tracking, coach discovery, and nutrition analytics (name, email, age, height, weight, BMI, meal logs, macros, booking records, and chat communications).\n\n'
-                                '2.2 Health & Biometric Data Consent\nTracking nutrition, calories, body weight, and workout metrics involves health-related data. By using these optional features, you provide your explicit consent for Sirvya to store and process this data to display your diary, calculate calorie targets, and track fitness progress.\n\n'
-                                '2.3 AI Meal Scanning & Microsoft Azure\nOptional meal photo analysis transmits stripped image data via secure TLS encryption to Microsoft Azure AI (GPT-4 mini) solely to estimate foods, portions, and macros. Photos are processed ephemerally in memory and are not retained in Sirvya server storage.\n\n'
-                                '2.4 Location & OpenStreetMap Nominatim\nWhen granted permission, device location is accessed to detect your city and display nearby coaches. Reverse geocoding is powered by OpenStreetMap Nominatim under OSM privacy safeguards. Your precise GPS coordinates are never broadcast to other users.\n\n'
-                                '2.5 International & GDPR User Rights\nRegardless of your country of residence, you have full control over your personal data:\n'
-                                '• Right to Access: Request a copy of your personal data.\n'
-                                '• Right to Rectification: Correct or update any inaccurate information.\n'
-                                '• Right to Erasure: Request total deletion of your account and linked records.\n'
-                                '• Right to Withdraw Consent: Discontinue health/location tracking at any time.\n'
-                                '• In-App Deletion: You can permanently delete your account directly inside the app settings under your profile.\n'
-                                'For any privacy inquiry, contact privacy@devunivers.com.',
+                            l.registerTermsSecPrivacyTitle,
+                            l.registerTermsSecPrivacyBody,
                           ),
                           _buildLegalTextSection(
-                            '3. Health, Medical & Allergen Disclaimers',
-                            '3.1 NOT A HEALTHCARE PROVIDER\nSIRVYA IS NOT A MEDICAL PLATFORM, MEDICAL DEVICE, OR HEALTHCARE PROVIDER. App content, AI estimates, and Coach services are for informational and lifestyle purposes only and must NEVER replace qualified medical diagnosis or professional healthcare advice.\n\n'
-                                '3.2 CRITICAL ALLERGY WARNING\nNEITHER SIRVYA, ITS AI IMAGE SCANNER, NOR ITS INGREDIENT DATABASES DETECT OR VERIFY ALLERGENS (such as peanuts, tree nuts, gluten, dairy, shellfish, soy, or eggs). NEVER rely on Sirvya or photo scans if you have food allergies, celiac disease, or medical dietary restrictions. Always check manufacturer labels.\n\n'
-                                '3.3 Assumption of Physical Risk\nPhysical exercise entails inherent risks of injury. Consult a licensed physician prior to starting any new training or nutrition regimen. You voluntarily assume all physical risks associated with workouts.\n\n'
-                                '3.4 Emergency Services\nIn the event of a medical emergency, immediately contact your local emergency response services (such as 15/190 in Morocco, 112 in the EU, or 911 in the US).',
+                            l.registerTermsSecHealthTitle,
+                            l.registerTermsSecHealthBody,
                           ),
                           _buildLegalTextSection(
-                            '4. Open Source & Third-Party Database Attribution',
-                            'Food and nutritional information in Sirvya is powered in part by the Open Food Facts global collaborative database (openfoodfacts.org), made available under the Open Database License (ODbL 1.0) and Database Contents License (DbCL). Open Food Facts is an independent open-data project and does not endorse Sirvya.',
+                            l.registerTermsSecOpenSourceTitle,
+                            l.registerTermsSecOpenSourceBody,
                           ),
                           _buildLegalTextSection(
-                            '5. Coach & Gym Terms (Independent Contractors)',
-                            '5.1 Independent Status\nSirvya is a neutral technology platform connecting users with fitness providers. Coaches and Gyms operate as independent businesses and are solely responsible for their sessions, guidance, and qualifications.\n\n'
-                                '5.2 Zero Tolerance for Fraudulent Credentials\nFalsification of professional certifications or misrepresentation results in immediate account expulsion and potential legal reporting.',
+                            l.registerTermsSecCoachTitle,
+                            l.registerTermsSecCoachBody,
                           ),
                           _buildLegalTextSection(
-                            '6. Community Guidelines & Intellectual Property',
-                            '6.1 Community Standards: Zero tolerance for harassment, hate speech, spam, offensive media, or unauthorized commercial solicitation.\n\n'
-                                '6.2 Intellectual Property: Sirvya brand assets, designs, code, and interfaces are the proprietary property of DevUnivers. Users retain ownership of their personal workout content.',
+                            l.registerTermsSecCommunityTitle,
+                            l.registerTermsSecCommunityBody,
                           ),
                           _buildLegalTextSection(
-                            '7. Booking & Cancellation Policy',
-                            '7.1 Commitment: Automated systems detect and prevent fraudulent bookings.\n'
-                                '7.2 Provider Policies: Individual session cancellations are governed by the specific Coach or Gym policy selected at booking.',
+                            l.registerTermsSecBookingTitle,
+                            l.registerTermsSecBookingBody,
                           ),
                         ],
                       ),
@@ -1909,9 +1953,9 @@ class _RegisterScreenState extends State<RegisterScreen>
                       shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(14)),
                     ),
-                    child: const Text(
-                      'I AGREE & ACCEPT TERMS',
-                      style: TextStyle(
+                    child: Text(
+                      l.registerTermsAcceptButton,
+                      style: const TextStyle(
                         color: AppColors.cyprus,
                         fontWeight: FontWeight.w900,
                         fontSize: 14,
@@ -1957,6 +2001,7 @@ class _RegisterScreenState extends State<RegisterScreen>
   }
 
   Widget _buildCTA() {
+    final l = AppLocalizations.of(context);
     return Column(children: [
       _loading
           ? const Center(
@@ -2005,7 +2050,7 @@ class _RegisterScreenState extends State<RegisterScreen>
                       ),
                       const SizedBox(width: 10),
                       Text(
-                        _step < 4 ? 'CONTINUE' : 'VERIFY & CREATE ACCOUNT',
+                        _step < 4 ? l.registerCtaContinue : l.registerCtaVerifyCreate,
                         style: const TextStyle(
                           color: AppColors.cyprus,
                           fontWeight: FontWeight.w900,
@@ -2031,7 +2076,7 @@ class _RegisterScreenState extends State<RegisterScreen>
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 14),
               child: Text(
-                'Already registered?',
+                l.registerAlreadyRegistered,
                 style: TextStyle(
                   color: Colors.white.withValues(alpha: 0.55),
                   fontSize: 11,
@@ -2072,14 +2117,14 @@ class _RegisterScreenState extends State<RegisterScreen>
                   width: 1.5,
                 ),
               ),
-              child: const Row(
+              child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.login_rounded, color: AppColors.sand, size: 18),
-                  SizedBox(width: 10),
+                  const Icon(Icons.login_rounded, color: AppColors.sand, size: 18),
+                  const SizedBox(width: 10),
                   Text(
-                    'LOG IN',
-                    style: TextStyle(
+                    l.registerCtaLogIn,
+                    style: const TextStyle(
                       color: AppColors.sand,
                       fontWeight: FontWeight.w900,
                       fontSize: 14,
@@ -2380,16 +2425,16 @@ class _PasswordStrengthBar extends StatelessWidget {
     }
   }
 
-  String get _label {
+  String _label(AppLocalizations l) {
     switch (_strength) {
       case 1:
-        return 'Weak';
+        return l.registerPasswordWeak;
       case 2:
-        return 'Medium';
+        return l.registerPasswordMedium;
       case 3:
-        return 'Good';
+        return l.registerPasswordGood;
       case 4:
-        return 'Strong';
+        return l.registerPasswordStrong;
       default:
         return '';
     }
@@ -2398,6 +2443,7 @@ class _PasswordStrengthBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (password.isEmpty) return const SizedBox.shrink();
+    final l = AppLocalizations.of(context);
     return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
       Row(
         children: List.generate(
@@ -2419,7 +2465,7 @@ class _PasswordStrengthBar extends StatelessWidget {
       ),
       const SizedBox(height: 8),
       Text(
-        'Security: $_label',
+        l.registerPasswordSecurity(_label(l)),
         style: TextStyle(
           color: _strengthColor,
           fontSize: 12,

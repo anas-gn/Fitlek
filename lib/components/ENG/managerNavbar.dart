@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:fitlek1/l10n/app_localizations.dart';
 import '../../theme/fitlek_theme_extension.dart';
 
 class ManagerNavbar extends StatelessWidget {
@@ -13,6 +14,7 @@ class ManagerNavbar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
     final fitlek = context.fitlek;
@@ -38,11 +40,31 @@ class ManagerNavbar extends StatelessWidget {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              _NavItem(icon: Icons.dashboard_rounded, label: 'Dashboard', isSelected: currentIndex == 0, onTap: () => onTap(0)),
-              _NavItem(icon: Icons.group_rounded, label: 'Clients', isSelected: currentIndex == 1, onTap: () => onTap(1)),
-              _NavItem(icon: Icons.sports_rounded, label: 'Coaches', isSelected: currentIndex == 2, onTap: () => onTap(2)),
-              _NavItem(icon: Icons.calendar_month_rounded, label: 'Reservations', isSelected: currentIndex == 3, onTap: () => onTap(3)),
-              _NavItem(icon: Icons.more_horiz_rounded, label: 'More', isSelected: currentIndex == 4, onTap: () => onTap(4)),
+              _NavItem(
+                  icon: Icons.dashboard_rounded,
+                  label: l10n.managerNavbarDashboard,
+                  isSelected: currentIndex == 0,
+                  onTap: () => onTap(0)),
+              _NavItem(
+                  icon: Icons.group_rounded,
+                  label: l10n.managerNavbarClients,
+                  isSelected: currentIndex == 1,
+                  onTap: () => onTap(1)),
+              _NavItem(
+                  icon: Icons.sports_rounded,
+                  label: l10n.managerNavbarCoaches,
+                  isSelected: currentIndex == 2,
+                  onTap: () => onTap(2)),
+              _NavItem(
+                  icon: Icons.calendar_month_rounded,
+                  label: l10n.managerNavbarReservations,
+                  isSelected: currentIndex == 3,
+                  onTap: () => onTap(3)),
+              _NavItem(
+                  icon: Icons.more_horiz_rounded,
+                  label: l10n.managerNavbarMore,
+                  isSelected: currentIndex == 4,
+                  onTap: () => onTap(4)),
             ],
           ),
         ),

@@ -1,3 +1,4 @@
+import 'package:fitlek1/l10n/app_localizations.dart';
 import '../../services/live_updates.dart';
 import '../../components/notification_card.dart';
 import '../../services/notification_navigation.dart';
@@ -38,7 +39,7 @@ class _ClientNotificationsScreenState extends State<ClientNotificationsScreen>
           ? null
           : result['error'] ??
               result['message'] ??
-              'Could not load notifications';
+              AppLocalizations.of(context).clientNotificationsLoadFailed;
       if (result['ok'] == true)
         _items = (result['data'] as List? ?? [])
             .map((e) => Map<String, dynamic>.from(e))
@@ -65,15 +66,15 @@ class _ClientNotificationsScreenState extends State<ClientNotificationsScreen>
       });
     } else {
       ApiService.showError(
-          context, result['message'] ?? 'Could not mark notifications read.');
+          context, result['message'] ?? AppLocalizations.of(context).clientNotificationsMarkReadFailed);
     }
   }
 
   @override
   Widget build(BuildContext context) => Scaffold(
-        appBar: AppBar(title: const Text('Notifications'), actions: [
+        appBar: AppBar(title: Text(AppLocalizations.of(context).clientNotificationsTitle), actions: [
           IconButton(
-              tooltip: 'Mark all as read',
+              tooltip: AppLocalizations.of(context).clientNotificationsMarkAllRead,
               onPressed: _items.any(NotificationCard.unread) ? _readAll : null,
               icon: const Icon(Icons.done_all)),
         ]),
@@ -82,7 +83,7 @@ class _ClientNotificationsScreenState extends State<ClientNotificationsScreen>
             : _error != null
                 ? Center(
                     child: TextButton(
-                        onPressed: _load, child: Text('$_error · Retry')))
+                        onPressed: _load, child: Text(AppLocalizations.of(context).clientNotificationsErrorRetry(_error!))))
                 : RefreshIndicator(
                     onRefresh: _load,
                     child: ListView.builder(
@@ -95,9 +96,9 @@ class _ClientNotificationsScreenState extends State<ClientNotificationsScreen>
                               unreadCount:
                                   _items.where(NotificationCard.unread).length);
                         if (_items.isEmpty)
-                          return const Padding(
-                              padding: EdgeInsets.all(32),
-                              child: Text('No notifications yet.'));
+                          return Padding(
+                              padding: const EdgeInsets.all(32),
+                              child: Text(AppLocalizations.of(context).clientNotificationsEmpty));
                         final item = _items[index - 1];
                         return NotificationCard(
                             item: item, onTap: () => _open(item));

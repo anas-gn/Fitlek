@@ -1,5 +1,6 @@
 import '../components/app_dialog.dart';
 import 'package:flutter/material.dart';
+import 'package:fitlek1/l10n/app_localizations.dart';
 import 'package:geolocator/geolocator.dart';
 import 'apiService.dart';
 import '../screens/ENG/userLocationSettings.dart';
@@ -34,15 +35,25 @@ class LocationReminderDialog extends StatelessWidget {
   final String role;
   const LocationReminderDialog({super.key, required this.role});
   @override
-  Widget build(BuildContext context) => AppDialog(
-    icon: const Icon(Icons.near_me_rounded, size: 36),
-    title: Text(role == 'coach' ? 'Help nearby clients find you' : 'Find coaches closer to you'),
-    content: SingleChildScrollView(child: Text(role == 'coach'
-        ? 'Enable location to help clients discover you nearby and see an approximate distance. Only your city and distance are shown; your address stays private.'
-        : 'Enable location for nearby coach recommendations and approximate distances. Only your city is public; your address stays private.')),
-    actions: [
-      TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Not now')),
-      FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Enable location')),
-    ],
-  );
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return AppDialog(
+      icon: const Icon(Icons.near_me_rounded, size: 36),
+      title: Text(role == 'coach'
+          ? l10n.locationReminderTitleCoach
+          : l10n.locationReminderTitleClient),
+      content: SingleChildScrollView(
+          child: Text(role == 'coach'
+              ? l10n.locationReminderBodyCoach
+              : l10n.locationReminderBodyClient)),
+      actions: [
+        TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(l10n.locationReminderNotNow)),
+        FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(l10n.locationReminderEnable)),
+      ],
+    );
+  }
 }

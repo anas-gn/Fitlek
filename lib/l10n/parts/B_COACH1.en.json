@@ -1,0 +1,615 @@
+{
+  "coachAccountBack": "Back",
+  "coachAccountCancel": "Cancel",
+  "coachAccountCopiedToClipboard": "{label} copied to clipboard",
+  "@coachAccountCopiedToClipboard": {
+    "placeholders": {
+      "label": {
+        "type": "String"
+      }
+    }
+  },
+  "coachAccountDeleteCannotNow": "Cannot delete account right now.",
+  "coachAccountDeleteCheckEmailSubtitle": "Check your email for the 6-digit confirmation code.",
+  "coachAccountDeleteCodeExpired": "Code expired.",
+  "coachAccountDeleteCodeExpiresIn": "Code expires in {mins}:{secs}",
+  "@coachAccountDeleteCodeExpiresIn": {
+    "placeholders": {
+      "mins": {
+        "type": "String"
+      },
+      "secs": {
+        "type": "String"
+      }
+    }
+  },
+  "coachAccountDeleteConfirmButton": "Delete Account",
+  "coachAccountDeleteEnterCodeInstructions": "Enter the code sent to your email to confirm deletion.",
+  "coachAccountDeleteItem1": "Your coach profile and public visibility",
+  "coachAccountDeleteItem2": "Your packages, photos and certifications",
+  "coachAccountDeleteItem3": "Your conversation history and client links",
+  "coachAccountDeleteItem4": "All active and past reservation records",
+  "coachAccountDeletePermanentSubtitle": "This action is permanent and cannot be undone.",
+  "coachAccountDeleteResendCode": "Resend code",
+  "coachAccountDeleteSendCodeButton": "Send Verification Code",
+  "coachAccountDeleteSendCodeFailed": "Failed to send code. Please try again.",
+  "coachAccountDeleteTitle": "Delete Coach Account",
+  "coachAccountDeleteUnderstandCheckbox": "I understand that deleting my account is permanent and irreversible.",
+  "coachAccountDeleteVerifyTitle": "Verify Deletion",
+  "coachAccountDeleteWhatWillBeDeleted": "The following data will be permanently removed:",
+  "coachAccountEnterFullCode": "Please enter the full 6-digit code.",
+  "coachAccountServerUnreachable": "Server unreachable. Please check your connection.",
+  "coachAccountThemeDark": "Dark",
+  "coachAccountThemeLight": "Light",
+  "coachAccountThemeSystem": "System default",
+  "coachAccountVerificationFailed": "Verification failed. Please try again.",
+  "coachCalendarActionAccept": "Accept",
+  "coachCalendarActionAwaitingClient": "Awaiting client response",
+  "coachCalendarActionCancelReservation": "Cancel Reservation",
+  "coachCalendarActionProposePrice": "Propose Price",
+  "coachCalendarActionReject": "Decline",
+  "coachCalendarAddBlockedPeriod": "Add Blocked Time",
+  "coachCalendarAwaitingYourPriceOffer": "Awaiting your price offer",
+  "coachCalendarBlockHours": "Block specific hours",
+  "coachCalendarBlockSpecificHoursSubtitle": "Select the time interval you want to make unavailable.",
+  "coachCalendarBlockTheseHours": "Block These Hours",
+  "coachCalendarBlockedPeriodsSubtitle": "Times you marked as unavailable for clients.",
+  "coachCalendarBlockedPeriodsTitle": "Blocked Periods",
+  "coachCalendarCancel": "Cancel",
+  "coachCalendarCancelDialogTitle": "Cancel Reservation",
+  "coachCalendarConfirm": "Confirm",
+  "coachCalendarDurationMinutes": "{duration} min",
+  "@coachCalendarDurationMinutes": {
+    "placeholders": {
+      "duration": {
+        "type": "int"
+      }
+    }
+  },
+  "coachCalendarEnterReasonHint": "Reason (optional)",
+  "coachCalendarFailed": "Action failed. Please try again.",
+  "coachCalendarLegendBlocked": "Blocked",
+  "coachCalendarLegendReservation": "Reservation",
+  "coachCalendarLocationArranged": "Location by agreement",
+  "coachCalendarLocationGym": "Gym",
+  "coachCalendarLocationHome": "Client's Home",
+  "coachCalendarNoBlockedPeriods": "No blocked periods for this date.",
+  "coachCalendarNoReservationsThisDay": "No reservations scheduled for this day.",
+  "coachCalendarNoteOptionalHint": "Note (optional)",
+  "coachCalendarPriceAwaitingClient": "{price} MAD proposed · Awaiting client",
+  "coachCalendarPricePerSession": "{price} MAD / session",
+  "@coachCalendarPricePerSession": {
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
+  },
+  "coachCalendarPricePerSessionLabel": "Price per session (MAD)",
+  "coachCalendarProposePriceBody": "Enter your proposed price for this session.",
+  "coachCalendarProposePriceTitle": "Propose a Price",
+  "coachCalendarRejectDialogTitle": "Decline Reservation",
+  "coachCalendarReservationDetailsTitle": "Reservation Details",
+  "coachCalendarReservationNumber": "Reservation #{id}",
+  "@coachCalendarReservationNumber": {
+    "placeholders": {
+      "id": {
+        "type": "String"
+      }
+    }
+  },
+  "coachCalendarReservationUnavailable": "Reservation information unavailable.",
+  "coachCalendarSendOffer": "Send Offer",
+  "coachCalendarSendPriceError": "Please enter a valid price.",
+  "coachCalendarSlotBooked": "Slot booked",
+  "coachCalendarStatusCancelled": "Cancelled",
+  "coachCalendarStatusConfirmed": "Confirmed",
+  "coachCalendarStatusExpired": "Expired",
+  "coachCalendarStatusPending": "Pending",
+  "coachCalendarStatusPriceDeclined": "Price declined",
+  "coachCalendarStatusPriceOffered": "Price offered",
+  "coachCalendarTabAvailability": "Availability",
+  "coachCalendarTabReservations": "Reservations",
+  "coachCalendarTimeEnd": "End Time",
+  "coachCalendarTimeStart": "Start Time",
+  "coachCalendarTitle": "Calendar",
+  "coachCalendarWorkingHours": "Working Hours: {start}:00 – {end}:00",
+  "@coachCalendarWorkingHours": {
+    "placeholders": {
+      "start": {
+        "type": "int"
+      },
+      "end": {
+        "type": "int"
+      }
+    }
+  },
+  "coachDashboardActivitySubtitle": "Here is your coaching activity overview.",
+  "coachDashboardAgreedPrices": "Agreed prices ({period})",
+  "@coachDashboardAgreedPrices": {
+    "placeholders": {
+      "period": {
+        "type": "String"
+      }
+    }
+  },
+  "coachDashboardClientFallback": "Client",
+  "coachDashboardCoachFallback": "Coach",
+  "coachDashboardDaysAgoLong": "{days, plural, =1{1 day ago} other{{days} days ago}}",
+  "@coachDashboardDaysAgoLong": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "coachDashboardDaysAgoShort": "{days}d ago",
+  "@coachDashboardDaysAgoShort": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "coachDashboardFilterThisMonth": "This Month",
+  "coachDashboardFilterThisWeek": "This Week",
+  "coachDashboardFilterToday": "Today",
+  "coachDashboardGoodMorning": "Good morning",
+  "coachDashboardHoursAgoLong": "{hours, plural, =1{1 hour ago} other{{hours} hours ago}}",
+  "@coachDashboardHoursAgoLong": {
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      }
+    }
+  },
+  "coachDashboardHoursAgoShort": "{hours}h ago",
+  "@coachDashboardHoursAgoShort": {
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      }
+    }
+  },
+  "coachDashboardInvitationPoints": "Invitation Points",
+  "coachDashboardInvitations": "Invitations",
+  "coachDashboardInvitationsThisWeek": "{count} this week",
+  "@coachDashboardInvitationsThisWeek": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "coachDashboardJustNow": "Just now",
+  "coachDashboardLoadErrorSubtitle": "Unable to load dashboard data. Check your connection.",
+  "coachDashboardLoadErrorTitle": "Could Not Load Dashboard",
+  "coachDashboardMinutesAgoLong": "{minutes, plural, =1{1 minute ago} other{{minutes} minutes ago}}",
+  "@coachDashboardMinutesAgoLong": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "coachDashboardMinutesAgoShort": "{minutes}m ago",
+  "@coachDashboardMinutesAgoShort": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "coachDashboardNoNotificationsSubtitle": "Updates and reminders will show up here.",
+  "coachDashboardNoNotificationsTitle": "No Notifications",
+  "coachDashboardNoUpcomingReservationsSubtitle": "Upcoming bookings will appear here.",
+  "coachDashboardNoUpcomingReservationsTitle": "No Upcoming Sessions",
+  "coachDashboardNotificationFallback": "Notification",
+  "coachDashboardNotificationsTitle": "Notifications",
+  "coachDashboardPeriodClients": "{count, plural, =1{1 client ({period})} other{{count} clients ({period})}}",
+  "@coachDashboardPeriodClients": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "period": {
+        "type": "String"
+      }
+    }
+  },
+  "coachDashboardPeriodThisMonth": "this month",
+  "coachDashboardPeriodThisWeek": "this week",
+  "coachDashboardPeriodToday": "today",
+  "coachDashboardRecentReservations": "Recent Reservations",
+  "coachDashboardRetry": "Retry",
+  "coachDashboardSetYourAvailability": "Set Your Availability",
+  "coachDashboardStatClients": "Clients",
+  "coachDashboardStatReservations": "Reservations",
+  "coachDashboardStatRevenue": "Revenue (MAD)",
+  "coachDashboardTierLabel": "Tier: {tier}",
+  "@coachDashboardTierLabel": {
+    "placeholders": {
+      "tier": {
+        "type": "int"
+      }
+    }
+  },
+  "coachDashboardTitle": "Dashboard",
+  "coachDashboardTotalClients": "Total Clients",
+  "coachDashboardUpcomingReservations": "Upcoming Sessions",
+  "coachDashboardViewAll": "View all",
+  "coachDashboardWantsToConnect": "Wants to connect · {timeAgo}",
+  "@coachDashboardWantsToConnect": {
+    "placeholders": {
+      "timeAgo": {
+        "type": "String"
+      }
+    }
+  },
+  "coachEditProfileAdd": "Add",
+  "coachEditProfileAddCertificationButton": "Add Certification",
+  "coachEditProfileAddCertificationHint": "e.g., NASM Certified Personal Trainer",
+  "coachEditProfileAddCertificationTitle": "Add Certification",
+  "coachEditProfileAddGalleryImageButton": "Add Photo",
+  "coachEditProfileAddPackageButton": "Add Package",
+  "coachEditProfileAddSpecialtyButton": "Add Specialty",
+  "coachEditProfileAddSpecialtyHint": "Select or type specialty",
+  "coachEditProfileAddSpecialtyTitle": "Add Specialty",
+  "coachEditProfileBioHint": "Share your coaching philosophy, experience, and what clients can expect.",
+  "coachEditProfileBioLabel": "Biography",
+  "coachEditProfileBioTitle": "About You",
+  "coachEditProfileCancel": "Cancel",
+  "coachEditProfileCertificationsSubtitle": "Showcase your degrees and certifications.",
+  "coachEditProfileCertificationsTitle": "Certifications",
+  "coachEditProfileCityHint": "e.g., Casablanca",
+  "coachEditProfileCityLabel": "City",
+  "coachEditProfileDeletePackageConfirm": "Delete package \"{name}\"?",
+  "@coachEditProfileDeletePackageConfirm": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "coachEditProfileDeletePackageTitle": "Delete Package",
+  "coachEditProfileDeletePhotoConfirm": "Remove this photo from your gallery?",
+  "coachEditProfileDeletePhotoTitle": "Remove Photo",
+  "coachEditProfileExperienceHint": "e.g., 5 years",
+  "coachEditProfileExperienceLabel": "Experience",
+  "coachEditProfileGallerySubtitle": "High quality photos build client confidence.",
+  "coachEditProfileGalleryTitle": "Photo Gallery",
+  "coachEditProfileHourlyRateHint": "e.g., 300",
+  "coachEditProfileHourlyRateLabel": "Hourly Rate (MAD)",
+  "coachEditProfileInstagramHint": "e.g., coach_fitness",
+  "coachEditProfileInstagramLabel": "Instagram",
+  "coachEditProfilePackageSessionsChip": "{count, plural, =1{1 session} other{{count} sessions}}",
+  "@coachEditProfilePackageSessionsChip": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "coachEditProfilePackagesSubtitle": "Offer multi-session discounts or specialized packs.",
+  "coachEditProfilePackagesTitle": "Coaching Packages",
+  "coachEditProfilePersonalInfoTitle": "Personal Information",
+  "coachEditProfilePhoneLabel": "Phone Number",
+  "coachEditProfileProfessionalTitle": "Professional Title",
+  "coachEditProfileProfessionalTitleHint": "e.g., Strength & Conditioning Coach",
+  "coachEditProfileSave": "Save",
+  "coachEditProfileSaveSuccess": "Profile updated successfully.",
+  "coachEditProfileSaving": "Saving…",
+  "coachEditProfileSpecialtiesSubtitle": "Help clients find you by your areas of expertise.",
+  "coachEditProfileSpecialtiesTitle": "Specialties",
+  "coachEditProfileTitle": "Edit Profile",
+  "coachProfileAboutConfigured": "Biography configured",
+  "coachProfileAboutDefault": "No biography added yet.",
+  "coachProfileCancel": "Cancel",
+  "coachProfileCoachFallback": "Coach",
+  "coachProfileCompletedSnack": "Profile completed!",
+  "coachProfileEditProfile": "Edit Profile",
+  "coachProfileInfoExperience": "Experience: {exp}",
+  "@coachProfileInfoExperience": {
+    "placeholders": {
+      "exp": {
+        "type": "String"
+      }
+    }
+  },
+  "coachProfileInfoLanguages": "Languages: {lang}",
+  "@coachProfileInfoLanguages": {
+    "placeholders": {
+      "lang": {
+        "type": "String"
+      }
+    }
+  },
+  "coachProfileInfoLocation": "Location",
+  "coachProfileInfoProfessionalTitle": "Title",
+  "coachProfileInfoSpecialties": "Specialties",
+  "coachProfileLoadError": "Could not load coach profile.",
+  "coachProfileLoading": "Loading profile…",
+  "coachProfileLocationNotSet": "Location not set",
+  "coachProfileLogOutConfirmMessage": "Are you sure you want to log out?",
+  "coachProfileLogOutTitle": "Log Out",
+  "coachProfileMenuAboutYou": "About You",
+  "coachProfileMenuAccount": "Account Settings",
+  "coachProfileMenuExpertise": "Expertise & Specialties",
+  "coachProfileMenuFeedback": "My feedback",
+  "coachProfileMenuFeedbackSubtitle": "Client reviews and ratings",
+  "coachProfileMenuLocations": "Coaching Locations",
+  "coachProfileMenuLocationsSubtitle": "Manage gyms and training areas",
+  "coachProfileMenuPackages": "Packages & Pricing",
+  "coachProfileMenuPackagesSubtitle": "Set your session rates",
+  "coachProfileMenuPhotos": "Photo Gallery",
+  "coachProfileMenuVisibility": "Profile Visibility",
+  "coachProfileNotSet": "Not specified",
+  "coachProfilePersonalTrainerFallback": "Personal Trainer",
+  "coachProfilePhotoUpdated": "Profile photo updated.",
+  "coachProfilePhotosCount": "{count, plural, =1{1 photo} other{{count} photos}}",
+  "@coachProfilePhotosCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "coachProfilePreviewProfile": "Preview Public Profile",
+  "coachProfileProfessionalInfoEmpty": "No professional info provided.",
+  "coachProfileProfessionalInformationSection": "Professional Details",
+  "coachProfilePublicProfileBadge": "Public",
+  "coachProfileRetry": "Retry",
+  "coachProfileSaveError": "Failed to save profile.",
+  "coachProfileStatBookings": "Bookings",
+  "coachProfileStatClients": "Clients",
+  "coachProfileStatPoints": "Points",
+  "coachProfileStepAvatar": "Add a profile photo to your profile.",
+  "coachProfileStepBio": "Add your biography to your profile.",
+  "coachProfileStepCertifications": "Add certifications to your profile.",
+  "coachProfileStepCity": "Add your city to your profile.",
+  "coachProfileStepClientLevels": "Specify accepted client levels.",
+  "coachProfileStepCoachingFormats": "Choose coaching formats.",
+  "coachProfileStepEmail": "Add your email to your profile.",
+  "coachProfileStepExperience": "Add your experience to your profile.",
+  "coachProfileStepFirstName": "Add your first name to your profile.",
+  "coachProfileStepGallery": "Add photos to your gallery.",
+  "coachProfileStepGender": "Specify your gender.",
+  "coachProfileStepGymAddress": "Add gym location.",
+  "coachProfileStepGymImage": "Add a gym photo.",
+  "coachProfileStepGymName": "Add your gym name.",
+  "coachProfileStepInstagram": "Add your Instagram handle.",
+  "coachProfileStepLanguages": "Add spoken languages.",
+  "coachProfileStepLastName": "Add your last name.",
+  "coachProfileStepPackage": "Add a coaching package.",
+  "coachProfileStepPhone": "Add your phone number.",
+  "coachProfileStepProfessionalTitle": "Add your professional title.",
+  "coachProfileStepServiceArea": "Set your coaching zone.",
+  "coachProfileStepSpecialties": "Select your specialties.",
+  "coachProfileTitle": "Coach Profile",
+  "coachProfileUploadFailed": "Failed to upload photo.",
+  "coachClientDetailDisconnectInviteTitle": "Disconnect invitation",
+  "coachClientDetailDisconnectInviteMessage": "Disconnect your invitation with {name}? Clients with bookings remain visible so you can manage their sessions. Their account and sessions are kept.",
+  "@coachClientDetailDisconnectInviteMessage": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "coachClientDetailCancel": "Cancel",
+  "coachClientDetailDisconnect": "Disconnect",
+  "coachClientDetailTitle": "Client",
+  "coachClientDetailLoadError": "Unable to load client",
+  "coachClientDetailRetry": "Retry",
+  "coachClientDetailNoSessions": "No sessions yet",
+  "coachClientDetailReport": "Report Client",
+  "coachClientDetailBlock": "Block Client",
+  "coachClientDetailReportTitle": "Report {name}",
+  "@coachClientDetailReportTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "coachClientDetailReportSubtitle": "Why are you reporting this user? We take these reports seriously.",
+  "coachClientDetailSubmit": "Submit",
+  "coachClientDetailBlockTitle": "Block {name}?",
+  "@coachClientDetailBlockTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "coachClientDetailBlockMessage": "They will not be able to book sessions or message you again.",
+  "coachClientDetailBlockConfirm": "Block",
+  "coachDashboardStatConfirmed": "Confirmed",
+  "coachDashboardStatConfirmedValue": "Confirmed Sessions",
+  "coachDashboardStatPending": "Pending",
+  "coachDashboardStatusAcceptedPoints": "+{points} pts",
+  "@coachDashboardStatusAcceptedPoints": {
+    "placeholders": {
+      "points": {
+        "type": "String"
+      }
+    }
+  },
+  "coachDashboardStatusCancelled": "Cancelled",
+  "coachDashboardStatusConfirmed": "Confirmed",
+  "coachDashboardStatusDeclined": "Declined",
+  "coachDashboardStatusPending": "Pending",
+  "coachDashboardStatusUnknown": "Unknown",
+  "coachDashboardTierProgress": "{progress}% to {nextTier} · {remaining} pts left",
+  "@coachDashboardTierProgress": {
+    "placeholders": {
+      "progress": {
+        "type": "int"
+      },
+      "nextTier": {
+        "type": "int"
+      },
+      "remaining": {
+        "type": "int"
+      }
+    }
+  },
+  "coachDashboardTomorrow": "Tomorrow",
+  "coachDashboardYesterday": "Yesterday",
+  "coachProfileCompletionTitle": "Profile Completion",
+  "coachProfileGalleryPreview": "Gallery Preview",
+  "coachProfileInfoBio": "Biography",
+  "coachProfileInfoCertifications": "Certifications",
+  "coachEditProfileAddOtherSpecialty": "+ Add custom specialty",
+  "coachEditProfileAddPackageTitle": "Add New Package",
+  "coachEditProfileBioRequired": "Biography is required.",
+  "coachEditProfileCertificationExists": "This certification is already added.",
+  "coachEditProfileCustomSpecialties": "Custom Specialties",
+  "coachEditProfileDelete": "Delete",
+  "coachEditProfileDirectMessagingSubtitle": "Allow prospective clients to contact you before booking.",
+  "coachEditProfileDirectMessagingTitle": "Direct Messaging",
+  "coachEditProfileEditPackageTitle": "Edit Package",
+  "coachEditProfileEmailHint": "your.email@example.com",
+  "coachEditProfileEmailInvalid": "Please enter a valid email address.",
+  "coachEditProfileEmailLabel": "Email Address",
+  "coachEditProfileEmailRequired": "Email address is required.",
+  "coachEditProfileEnterFullName": "Please enter your full name.",
+  "coachEditProfileFullNameLabel": "Full Name",
+  "coachEditProfileFullNameValidator": "Please enter your full name.",
+  "coachEditProfileGalleryAdded": "Photo added to gallery.",
+  "coachEditProfileGalleryEmpty": "No photos in your gallery yet.",
+  "coachEditProfileGalleryMaxImages": "Maximum 12 gallery photos allowed.",
+  "coachEditProfileGenderFemale": "Female",
+  "coachEditProfileGenderLabel": "Gender",
+  "coachEditProfileGenderMale": "Male",
+  "coachEditProfileGenderOther": "Other",
+  "coachEditProfileGenericError": "Something went wrong. Please try again.",
+  "coachEditProfileImageDeleted": "Photo removed from gallery.",
+  "coachEditProfileMaxCertifications": "Maximum 10 certifications allowed.",
+  "coachEditProfileMaxPackagesReached": "Maximum packages limit reached.",
+  "coachEditProfileMaxSpecialties": "Maximum 8 specialties allowed.",
+  "coachEditProfileNoCertifications": "No certifications added yet.",
+  "coachEditProfilePackageAdded": "Package created successfully.",
+  "coachEditProfilePackageDeleted": "Package deleted.",
+  "coachEditProfilePackageDescriptionHint": "Describe what is included in this package...",
+  "coachEditProfilePackageDescriptionLabel": "Package Description",
+  "coachEditProfilePackageHidden": "Hidden from clients",
+  "coachEditProfilePackageNameHint": "e.g., 10-Session Kickstart",
+  "coachEditProfilePackageNameLabel": "Package Name",
+  "coachEditProfilePackageNameRequired": "Package name is required.",
+  "coachEditProfilePackageSessionsHint": "Number of sessions",
+  "coachEditProfilePackageSessionsLabel": "Included Sessions",
+  "coachEditProfilePackageSetPriceSubtitle": "Clients will see this price when booking.",
+  "coachEditProfilePackageSetPriceTitle": "Session Price",
+  "coachEditProfilePackageUpdated": "Package updated successfully.",
+  "coachEditProfilePackageVisibleToClients": "Visible to clients on your profile",
+  "coachEditProfilePackagesDescription": "Manage the packs and session offers displayed on your public profile.",
+  "coachEditProfilePhoneHint": "+212 6XX XXX XXX",
+  "coachEditProfilePhotoReady": "Photo ready to save.",
+  "coachEditProfilePriceOnRequest": "Price on request",
+  "coachEditProfileProfessionalTitleLabel": "Professional Title",
+  "coachEditProfilePublicProfileSubtitle": "Allow clients to discover your profile in search results.",
+  "coachEditProfilePublicProfileTitle": "Public Profile",
+  "coachEditProfileSaveChangesButton": "Save changes",
+  "coachEditProfileSectionAccountSettings": "Account Settings",
+  "coachEditProfileSectionBasicInfo": "Basic Information",
+  "coachEditProfileSectionCertifications": "Certifications & Credentials",
+  "coachEditProfileSectionContactLocation": "Contact & Location",
+  "coachEditProfileSectionGallery": "Photo Gallery",
+  "coachEditProfileSectionPackages": "Packages & Pricing",
+  "coachEditProfileSectionSpecialties": "Coaching Specialties",
+  "coachEditProfileSpecialtiesDescription": "Select the training areas you specialize in to match with the right clients.",
+  "coachEditProfileSpecialtyExists": "This specialty is already added.",
+  "coachEditProfileSubtitle": "Keep your coaching info updated to attract more clients.",
+  "coachEditProfileUpdate": "Update",
+  "coachEditProfileUpdateError": "Failed to update profile.",
+  "coachEditProfileUpdatedSnack": "Profile updated successfully.",
+  "coachEditProfileUploadFailed": "Failed to upload photo.",
+  "@coachCalendarPriceAwaitingClient": {
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
+  },
+  "coachDashboardPercentOfTotal": "{percent}% of total",
+  "@coachDashboardPercentOfTotal": {
+    "placeholders": {
+      "percent": {
+        "type": "String"
+      }
+    }
+  },
+  "coachDashboardVerificationPendingTitle": "Verification in Progress",
+  "coachDashboardVerificationPendingBody": "Your credentials are being reviewed by the SIRVYA team.",
+  "coachEditProfileErrorWithDetail": "Error: {detail}",
+  "@coachEditProfileErrorWithDetail": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "coachEditProfileGalleryLimitWarning": "You can only add up to {max} photos.",
+  "@coachEditProfileGalleryLimitWarning": {
+    "placeholders": {
+      "max": {
+        "type": "int"
+      }
+    }
+  },
+  "coachEditProfileUploadFailedForFile": "Failed to upload {file}",
+  "@coachEditProfileUploadFailedForFile": {
+    "placeholders": {
+      "file": {
+        "type": "String"
+      }
+    }
+  },
+  "coachEditProfileImageDeleteFailed": "Failed to remove image.",
+  "coachEditProfileNetworkError": "Network error: {error}",
+  "@coachEditProfileNetworkError": {
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "coachProfileErrorWithDetail": "Error: {detail}",
+  "@coachProfileErrorWithDetail": {
+    "placeholders": {
+      "detail": {
+        "type": "String"
+      }
+    }
+  },
+  "coachCalendarBlockAction": "Block",
+  "coachAccountTitle": "Account & referrals",
+  "coachAccountReferralTitle": "Coach Referral",
+  "coachAccountReferralSubtitle": "Invite friends and earn rewards",
+  "coachAccountCopy": "Copy",
+  "coachAccountCode": "Code",
+  "coachAccountScanToInvite": "Scan to invite",
+  "coachAccountCopyCode": "Copy code",
+  "coachAccountReferralRewardDesc": "Earn {points} bonus points for every professional coach you onboard to the SIRVYA ecosystem.",
+  "@coachAccountReferralRewardDesc": {
+    "placeholders": {
+      "points": {
+        "type": "int"
+      }
+    }
+  },
+  "coachAccountPrivateAccount": "Private account",
+  "coachAccountEmail": "Email",
+  "coachAccountChangeEmailSubtitle": "Change email with verification.",
+  "coachAccountEmailUpdated": "Email updated successfully",
+  "coachAccountPhone": "Phone",
+  "coachAccountPhoneUpdated": "Phone updated successfully",
+  "coachAccountPasswordSecurity": "Password & security",
+  "coachAccountPasswordUpdated": "Password updated successfully",
+  "coachAccountAppearance": "Appearance",
+  "coachAccountChooseAppTheme": "Choose the app theme",
+  "coachAccountNotifications": "Notifications",
+  "coachAccountBlockedUsers": "Blocked Users",
+  "coachAccountDeleteAccount": "Delete Account"
+}

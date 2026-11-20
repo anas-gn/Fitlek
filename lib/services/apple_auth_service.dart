@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'package:http/http.dart' as http;
 import 'package:fitlek1/constants/urls.dart';
+import 'package:fitlek1/services/svc_l10n.dart';
 import 'google_auth_service.dart' show GoogleAuthResult;
 import 'social_auth_errors.dart';
 
@@ -40,8 +41,7 @@ class AppleAuthService {
   }) async {
     try {
       if (kIsWeb || defaultTargetPlatform != TargetPlatform.iOS) {
-        throw Exception(
-            'Apple sign-in is currently available on iPhone and iPad.');
+        throw Exception(svcL10n.appleAuthIosOnly);
       }
       final rawNonce = generateNonce();
       final nonce = sha256ofString(rawNonce);
@@ -64,7 +64,7 @@ class AppleAuthService {
       final User? firebaseUser = userCredential.user;
 
       if (firebaseUser == null) {
-        throw Exception('Firebase authentication failed.');
+        throw Exception(svcL10n.appleAuthFirebaseFailed);
       }
       final name = [appleCredential.givenName, appleCredential.familyName]
           .whereType<String>()
@@ -74,7 +74,7 @@ class AppleAuthService {
 
       final String? firebaseIdToken = await firebaseUser.getIdToken();
       if (firebaseIdToken == null) {
-        throw Exception('Could not retrieve Firebase ID token.');
+        throw Exception(svcL10n.appleAuthIdTokenFailed);
       }
 
       if (kDebugMode) {
@@ -124,7 +124,7 @@ class AppleAuthService {
             body['user'] as Map<String, dynamic>?;
 
         if (accessToken == null || accessToken.isEmpty || user == null) {
-          throw Exception('Invalid response from server.');
+          throw Exception(svcL10n.appleAuthInvalidResponse);
         }
 
         return GoogleAuthResult(
@@ -135,12 +135,13 @@ class AppleAuthService {
           isApproved: body['isApproved'] == true || user['isApproved'] == true,
         );
       } else if (response.statusCode == 403) {
-        throw Exception(body['error'] as String? ?? 'Account suspended.');
+        throw Exception(
+            body['error'] as String? ?? svcL10n.appleAuthAccountSuspended);
       } else {
         throw Exception(
           body['error'] as String? ??
               body['message'] as String? ??
-              'Apple sign-in error (${response.statusCode})',
+              svcL10n.appleAuthSignInError(response.statusCode),
         );
       }
     } catch (e) {

@@ -1,3 +1,5 @@
+import 'package:fitlek1/l10n/app_localizations.dart';
+import 'package:intl/intl.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:qr_flutter/qr_flutter.dart';
@@ -44,7 +46,7 @@ class _CoachInviteClientsState extends State<CoachInviteClients>
     if (!mounted) return;
     setState(() {
       if (results.any((r) => r['ok'] != true)) {
-        _error = 'Unable to load invitations. Please try again.';
+        _error = AppLocalizations.of(context).coachInviteClientsLoadError;
       } else {
         final data = results[0];
         _code = '${data['invitationCode'] ?? ''}';
@@ -65,21 +67,22 @@ class _CoachInviteClientsState extends State<CoachInviteClients>
     await Clipboard.setData(ClipboardData(text: value));
     if (mounted)
       ScaffoldMessenger.of(context)
-          .showSnackBar(const SnackBar(content: Text('Copied to clipboard')));
+          .showSnackBar(SnackBar(content: Text(AppLocalizations.of(context).coachInviteClientsCopied)));
   }
 
   Future<void> _share(BuildContext buttonContext) async {
     final box = buttonContext.findRenderObject() as RenderBox?;
     try {
       await SharePlus.instance.share(ShareParams(
-          title: 'Join me on SIRVYA',
-          text:
-              'You are invited to join me on SIRVYA. Find your coach or grow your coaching business.\n\n$_link\n\nInvitation code: $_code',
+          title: AppLocalizations.of(context).coachInviteClientsShareTitle,
+          text: AppLocalizations.of(context)
+              .coachInviteClientsShareText(_link, _code),
           sharePositionOrigin:
               box == null ? null : box.localToGlobal(Offset.zero) & box.size));
     } catch (_) {
       if (mounted)
-        await _copy('Join me on SIRVYA: $_link\nInvitation code: $_code');
+        await _copy(AppLocalizations.of(context)
+            .coachInviteClientsShareFallback(_link, _code));
     }
   }
 
@@ -87,7 +90,7 @@ class _CoachInviteClientsState extends State<CoachInviteClients>
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme, f = context.fitlek;
     return Scaffold(
-      appBar: AppBar(title: const Text('Invite & grow')),
+      appBar: AppBar(title: Text(AppLocalizations.of(context).coachInviteClientsTitle)),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : RefreshIndicator(
@@ -102,16 +105,17 @@ class _CoachInviteClientsState extends State<CoachInviteClients>
                           if (_error != null) ...[
                             Text(_error!, style: TextStyle(color: f.error)),
                             TextButton(
-                                onPressed: _load, child: const Text('Retry'))
+                                onPressed: _load,
+                                child: Text(AppLocalizations.of(context).coachInviteClientsRetry))
                           ],
-                          Text('Grow your SIRVYA network',
+                          Text(AppLocalizations.of(context).coachInviteClientsHeading,
                               style: TextStyle(
                                   color: cs.onSurface,
                                   fontSize: 23,
                                   fontWeight: FontWeight.w800)),
                           const SizedBox(height: 8),
                           Text(
-                              'One code for clients and coaches. Track the people who successfully sign up through your invitation.',
+                              AppLocalizations.of(context).coachInviteClientsIntro,
                               style: TextStyle(
                                   color: f.textSecondary, height: 1.5)),
                           const SizedBox(height: 20),
@@ -134,7 +138,7 @@ class _CoachInviteClientsState extends State<CoachInviteClients>
                                           size: 170,
                                           backgroundColor: Colors.white)),
                                 const SizedBox(height: 16),
-                                const Text('Your invitation code'),
+                                Text(AppLocalizations.of(context).coachInviteClientsYourCode),
                                 const SizedBox(height: 6),
                                 SelectableText(_code,
                                     style: TextStyle(
@@ -154,14 +158,14 @@ class _CoachInviteClientsState extends State<CoachInviteClients>
                                               : () => _copy(_code),
                                           icon: const Icon(Icons.copy_rounded,
                                               size: 18),
-                                          label: const Text('Copy code')),
+                                          label: Text(AppLocalizations.of(context).coachInviteClientsCopyCode)),
                                       OutlinedButton.icon(
                                           onPressed: _link.isEmpty
                                               ? null
                                               : () => _copy(_link),
                                           icon: const Icon(Icons.link_rounded,
                                               size: 18),
-                                          label: const Text('Copy link')),
+                                          label: Text(AppLocalizations.of(context).coachInviteClientsCopyLink)),
                                       Builder(
                                           builder: (ctx) => FilledButton.icon(
                                               onPressed: _link.isEmpty
@@ -170,32 +174,33 @@ class _CoachInviteClientsState extends State<CoachInviteClients>
                                               icon: const Icon(
                                                   Icons.share_rounded,
                                                   size: 18),
-                                              label: const Text('Share'))),
+                                              label: Text(AppLocalizations.of(context).coachInviteClientsShare))),
                                     ]),
                               ])),
                           const SizedBox(height: 20),
                           Row(children: [
                             Expanded(
-                                child: _stat('$_clients', 'Clients joined')),
+                                child: _stat('$_clients', AppLocalizations.of(context).coachInviteClientsClientsJoined)),
                             const SizedBox(width: 10),
                             Expanded(
-                                child: _stat('$_coaches', 'Coaches joined'))
+                                child: _stat('$_coaches', AppLocalizations.of(context).coachInviteClientsCoachesJoined))
                           ]),
                           const SizedBox(height: 10),
-                          _stat('$_points points', 'Your total reward balance'),
+                          _stat(AppLocalizations.of(context).coachInviteClientsPoints(_points),
+                              AppLocalizations.of(context).coachInviteClientsRewardBalance),
                           const SizedBox(height: 20),
-                          Text('How rewards work',
+                          Text(AppLocalizations.of(context).coachInviteClientsHowRewards,
                               style: TextStyle(
                                   color: cs.onSurface,
                                   fontSize: 16,
                                   fontWeight: FontWeight.w700)),
                           const SizedBox(height: 8),
                           Text(
-                              'Coach: 40 points after a new account is created.\nClient: 20 points when you accept their connection in Clients. Sharing or opening a link does not earn points.',
+                              AppLocalizations.of(context).coachInviteClientsRewardRules,
                               style: TextStyle(
                                   color: f.textSecondary, height: 1.6)),
                           const SizedBox(height: 24),
-                          Text('People you invited',
+                          Text(AppLocalizations.of(context).coachInviteClientsPeopleInvited,
                               style: TextStyle(
                                   color: cs.onSurface,
                                   fontSize: 17,
@@ -205,7 +210,7 @@ class _CoachInviteClientsState extends State<CoachInviteClients>
                               spacing: 8,
                               children: ['All', 'Clients', 'Coaches']
                                   .map((value) => ChoiceChip(
-                                      label: Text(value),
+                                      label: Text(_filterLabel(value)),
                                       selected: _filter == value,
                                       onSelected: (_) =>
                                           setState(() => _filter = value)))
@@ -215,7 +220,7 @@ class _CoachInviteClientsState extends State<CoachInviteClients>
                             Padding(
                                 padding: const EdgeInsets.all(20),
                                 child: Text(
-                                    'No signups in this category yet. Share your link to get started.',
+                                    AppLocalizations.of(context).coachInviteClientsEmpty,
                                     textAlign: TextAlign.center,
                                     style: TextStyle(color: f.textMuted))),
                           ..._history.where(_matches).map((r) => _person(r)),
@@ -223,6 +228,15 @@ class _CoachInviteClientsState extends State<CoachInviteClients>
                       ))),
             ),
     );
+  }
+
+  String _filterLabel(String v) {
+    final l = AppLocalizations.of(context);
+    return v == 'Clients'
+        ? l.coachInviteClientsFilterClients
+        : v == 'Coaches'
+            ? l.coachInviteClientsFilterCoaches
+            : l.coachInviteClientsFilterAll;
   }
 
   bool _matches(dynamic r) =>
@@ -246,14 +260,16 @@ class _CoachInviteClientsState extends State<CoachInviteClients>
     final cs = Theme.of(context).colorScheme, f = context.fitlek;
     final name = '${r['firstName'] ?? ''} ${r['lastName'] ?? ''}'.trim();
     final date = DateTime.tryParse('${r['createdAt']}')?.toLocal();
-    final role = r['role'] == 'coach' ? 'Coach' : 'Client';
+    final l = AppLocalizations.of(context);
+    final isCoach = r['role'] == 'coach';
+    final role = isCoach ? l.coachInviteClientsRoleCoach : l.coachInviteClientsRoleClient;
     final status = r['status'] == 'pending'
-        ? 'Connection pending'
+        ? l.coachInviteClientsStatusPending
         : r['status'] == 'accepted'
-            ? 'Connected'
+            ? l.coachInviteClientsStatusConnected
             : r['status'] == 'refused'
-                ? 'Connection declined'
-                : 'Registered';
+                ? l.coachInviteClientsStatusDeclined
+                : l.coachInviteClientsStatusRegistered;
     return Card(
         child: Padding(
             padding: const EdgeInsets.all(14),
@@ -261,7 +277,7 @@ class _CoachInviteClientsState extends State<CoachInviteClients>
               CircleAvatar(
                   backgroundColor: f.card2,
                   child: Icon(
-                      role == 'Coach'
+                      isCoach
                           ? Icons.fitness_center_rounded
                           : Icons.person_outline_rounded,
                       color: cs.primary)),
@@ -276,14 +292,14 @@ class _CoachInviteClientsState extends State<CoachInviteClients>
                         style: TextStyle(
                             color: cs.onSurface, fontWeight: FontWeight.w700)),
                     const SizedBox(height: 4),
-                    Text('$role • $status',
+                    Text(l.coachInviteClientsRoleStatus(role, status),
                         style: TextStyle(color: f.textSecondary, fontSize: 12)),
                     if (date != null)
-                      Text('${date.day}/${date.month}/${date.year}',
+                      Text(DateFormat.yMd(Localizations.localeOf(context).toString()).format(date),
                           style: TextStyle(color: f.textMuted, fontSize: 11))
                   ])),
               const SizedBox(width: 8),
-              Text('+${r['pointsAwarded'] ?? 0} pts',
+              Text(l.coachInviteClientsPointsAwarded(int.tryParse('${r['pointsAwarded']}') ?? 0),
                   style: TextStyle(
                       color: cs.primary, fontWeight: FontWeight.w700)),
             ])));
